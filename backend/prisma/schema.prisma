@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum UserStatus {
+  pending
+  approved
+  rejected
+}
+
+enum RoleName {
+  admin
+  ketua_lppm
+  dosen
+  reviewer
+  mahasiswa
+}
+
+enum ProposalStatus {
+  draft
+  diajukan
+  review
+  revisi
+  disetujui
+  ditolak
+}
+
+enum JenisKegiatan {
+  penelitian
+  pengabdian
+}
+
+enum NotifType {
+  proposal_diajukan
+  proposal_disetujui
+  proposal_ditolak
+  proposal_revisi
+  reviewer_ditugaskan
+  review_selesai
+  laporan_diunggah
+  deletion_request
+  deletion_approved
+  deletion_cancelled
+}
+
+enum DeletionRequestStatus {
+  pending
+  approved
+  cancelled
+  expired
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      RoleName   @unique
+  users     UserRole[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model User {
+  id             Int        @id @default(autoincrement())
+  email          String     @unique
+  name           String
+  fullName       String?
+  password       String
+  status         UserStatus @default(pending)
+
+  nidn           String?    @unique
+  tempatLahir    String?
+  tanggalLahir   DateTime?
+  institusi      String?
+  programStudi   String?
+  alamat         String?
+  kontak         String?
+
+  nim            String?    @unique
+  prodi          String?
+  noHp           String?
+
+  roles               UserRole[]
+  refreshTokens       RefreshToken[]
+  passwordResets      PasswordResetToken[]
+  proposalsDibuat     Proposal[]          @relation("ProposalPengusul")
+  anggotaProposal     ProposalAnggota[]
+  reviewerTugasan     ReviewerTugasan[]
+  reviews             ProposalReview[]
+  activityLogs        ActivityLog[]
+  notifications       Notification[]
+  laporanHarian       LaporanHarian[]
+  deletionRequests    PeriodeDeletionRequest[] @relation("DeletionRequester")
+  deletionApprovals   PeriodeDeletionRequest[] @relation("DeletionApprover")
+
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(512)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserRole {
+  userId    Int
+  roleId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, roleId])
+}
+
+model Periode {
+  id             Int           @id @default(autoincrement())
+  nama           String
+  tahun          Int
+  jenis          JenisKegiatan
+  tanggalMulai   DateTime
+  tanggalSelesai DateTime
+  isAktif        Boolean       @default(true)
+  proposals      Proposal[]
+  deletionRequests PeriodeDeletionRequest[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([tahun, jenis])
+}
+
+model PeriodeDeletionRequest {
+  id          Int                   @id @default(autoincrement())
+  periodeId   Int
+  requesterId Int
+  approverId  Int?
+  status      DeletionRequestStatus @default(pending)
+  expiresAt   DateTime
+  periode     Periode               @relation(fields: [periodeId], references: [id], onDelete: Cascade)
+  requester   User                  @relation("DeletionRequester", fields: [requesterId], references: [id])
+  approver    User?                 @relation("DeletionApprover", fields: [approverId], references: [id])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([periodeId])
+  @@index([requesterId])
+  @@index([status])
+}
+
+model Proposal {
+  id             Int             @id @default(autoincrement())
+  judul          String
+  abstrak        String          @db.Text
+  jenis          JenisKegiatan
+  status         ProposalStatus  @default(draft)
+  anggaran       Decimal?        @db.Decimal(15, 2)
+  catatanRevisi  String?         @db.Text
+  pengusulId     Int
+  periodeId      Int?
+  dokumenUrl     String?
+  dokumenNama    String?
+  dokumenMime    String?
+  dokumenUkuran  Int?
+  dokumenBlob    Bytes?    @db.LongBlob
+  submittedAt    DateTime?
+  approvedAt     DateTime?
+
+  pengusul        User              @relation("ProposalPengusul", fields: [pengusulId], references: [id])
+  periode         Periode?          @relation(fields: [periodeId], references: [id])
+  anggota         ProposalAnggota[]
+  reviewerTugasan ReviewerTugasan[]
+  reviews         ProposalReview[]
+  laporan         LaporanProposal[]
+  laporanHarian   LaporanHarian[]
+  dokumenLampiran DokumenLampiran[]
+  activityLogs    ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, jenis])
+  @@index([pengusulId])
+  @@index([periodeId])
+}
+
+model ProposalAnggota {
+  id               Int            @id @default(autoincrement())
+  proposalId       Int
+  userId           Int
+  peran            String         @default("anggota")
+  statusUndangan   StatusUndangan @default(pending)
+  proposal         Proposal       @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user             User           @relation(fields: [userId], references: [id])
+  createdAt        DateTime       @default(now())
+
+  @@unique([proposalId, userId])
+}
+
+enum StatusUndangan {
+  pending
+  diterima
+  ditolak
+}
+
+model ReviewerTugasan {
+  id         Int      @id @default(autoincrement())
+  proposalId Int
+  reviewerId Int
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([proposalId, reviewerId])
+}
+
+model ProposalReview {
+  id              Int             @id @default(autoincrement())
+  proposalId      Int
+  reviewerId      Int
+  nilaiRelevansi  String?         @db.Text
+  nilaiMetodologi String?         @db.Text
+  nilaiAnggaran   String?         @db.Text
+  nilaiLuaran     String?         @db.Text
+  catatan         String?         @db.Text
+  rekomendasi     ProposalStatus?
+  isDone          Boolean         @default(false)
+  proposal        Proposal        @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  reviewer        User            @relation(fields: [reviewerId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([proposalId, reviewerId])
+}
+
+model LaporanProposal {
+  id           Int      @id @default(autoincrement())
+  proposalId   Int
+  jenis        String
+  judul        String
+  dokumenUrl   String?
+  dokumenBlob  Bytes?   @db.LongBlob
+  dokumenNama  String?
+  dokumenMime  String?
+  dokumenUkuran Int?
+  keterangan   String?  @db.Text
+  proposal     Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([proposalId])
+}
+
+model DokumenLampiran {
+  id         Int      @id @default(autoincrement())
+  proposalId Int
+  namaFile   String
+  fileUrl    String?  // nullable — diisi jika pakai link, null jika pakai upload langsung
+  ukuran     Int?
+  fileBlob   Bytes?   // blob file yang di-upload langsung
+  fileMime   String?  // MIME type file (application/pdf, dll)
+  fileNama   String?  // nama asli file saat upload
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([proposalId])
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  type      NotifType
+  judul     String
+  pesan     String    @db.Text
+  isRead    Boolean   @default(false)
+  refId     Int?
+  refType   String?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId, isRead])
+}
+
+model ActivityLog {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  action     String
+  entityType String?
+  entityId   Int?
+  detail     String?   @db.Text
+  proposalId Int?
+  ipAddress  String?
+  userAgent  String?   @db.Text
+  user       User      @relation(fields: [userId], references: [id])
+  proposal   Proposal? @relation(fields: [proposalId], references: [id])
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([proposalId])
+}
+
+model LaporanHarian {
+  id              Int      @id @default(autoincrement())
+  proposalId      Int
+  userId          Int
+  tanggal         DateTime
+  kegiatan        String   @db.Text
+  dokumenNama     String?
+  dokumenMime     String?
+  dokumenUkuran   Int?
+  dokumenBlob     Bytes?   @db.LongBlob
+  linkGdrive      String?
+  proposal        Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([proposalId])
+  @@index([userId])
+}

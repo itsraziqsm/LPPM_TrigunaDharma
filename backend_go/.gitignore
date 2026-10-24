@@ -1,0 +1,40 @@
+# Binaries
+/bin/
+/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server/server
+main
+
+# Test & coverage
+*.test
+*.out
+coverage.*
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Go workspace & vendor (opsional)
+go.work
+vendor/
+
+# Uploads
+uploads/
+
+# OS & editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Binary hasil build
+/server

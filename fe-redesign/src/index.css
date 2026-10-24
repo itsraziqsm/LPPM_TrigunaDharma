@@ -1,0 +1,473 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   LPPM — Design system "Navy Akademik"
+   --------------------------------------------------------------------------
+   Prinsip:
+   1. Satu warna merek — navy — dibawa lewat kedalaman, bukan kejenuhan.
+      Semua abu-abu dibuat bernuansa navy, sehingga halaman terasa satu keluarga.
+   2. Garis tipis (hairline) menggantikan bayangan. Bayangan hanya untuk
+      lapisan melayang (dropdown, modal).
+   3. Serif (Newsreader) untuk judul halaman dan angka ringkasan;
+      sans (Plus Jakarta Sans) untuk semua yang bersifat operasional.
+   4. Status = titik kecil + kata, bukan blok warna yang ramai.
+   5. Kelas Tailwind bawaan (gray, slate, blue, green, red, ...) dipetakan ulang
+      ke palet ini di blok @theme, sehingga seluruh komponen otomatis selaras.
+   ========================================================================== */
+
+@theme {
+  /* ── Tipografi ──────────────────────────────────────────────────────── */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, Cambria, "Times New Roman", serif;
+
+  /* Skala tipe yang lebih tenang: isi 14px, keterangan 13px, caption 12px */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.4rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.65rem;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 1.75rem;
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: 2.125rem;
+  --text-4xl: 2.125rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* ── Radius: kontrol 8px, wadah 10–12px, modal 12–16px ─────────────── */
+  --radius-xs: 0.1875rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
+
+  /* ── Bayangan: nyaris tak terlihat, kecuali lapisan melayang ────────── */
+  --shadow-2xs: 0 1px 1px 0 rgb(13 28 63 / 0.03);
+  --shadow-xs: 0 1px 2px 0 rgb(13 28 63 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(13 28 63 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(13 28 63 / 0.07);
+  --shadow-lg: 0 12px 28px -6px rgb(13 28 63 / 0.12);
+  --shadow-xl: 0 24px 56px -12px rgb(13 28 63 / 0.2);
+  --shadow-2xl: 0 32px 72px -16px rgb(13 28 63 / 0.28);
+
+  /* ── Navy (warna merek) ─────────────────────────────────────────────── */
+  --color-navy-50: #f1f4fa;
+  --color-navy-100: #e2e8f4;
+  --color-navy-200: #c5d1e8;
+  --color-navy-300: #9db0d6;
+  --color-navy-400: #7189bd;
+  --color-navy-500: #4e69a6;
+  --color-navy-600: #355190;
+  --color-navy-700: #263f77;
+  --color-navy-800: #1b3060;
+  --color-navy-900: #12234a;
+  --color-navy-950: #0b1733;
+
+  /* Kuningan (aksen sangat hemat: hanya lambang merek & penanda aktif) */
+  --color-brass-300: #d8be86;
+  --color-brass-400: #c9a862;
+  --color-brass-500: #b8924a;
+
+  /* Permukaan khusus */
+  --color-canvas: #f4f6fa;
+  --color-rail: #0d1c3f;
+
+  /* ── Pemetaan ulang palet bawaan Tailwind ───────────────────────────── */
+  --color-black: #0b1733;
+
+  /* Netral bernuansa navy (slate = gray) */
+  --color-slate-50: #f6f8fb;
+  --color-slate-100: #eef1f6;
+  --color-slate-200: #e1e6ee;
+  --color-slate-300: #cbd3df;
+  --color-slate-400: #98a3b7;
+  --color-slate-500: #687590;
+  --color-slate-600: #4f5d77;
+  --color-slate-700: #3a4760;
+  --color-slate-800: #243049;
+  --color-slate-900: #141e36;
+  --color-slate-950: #0a1226;
+  --color-gray-50: #f6f8fb;
+  --color-gray-100: #eef1f6;
+  --color-gray-200: #e1e6ee;
+  --color-gray-300: #cbd3df;
+  --color-gray-400: #98a3b7;
+  --color-gray-500: #687590;
+  --color-gray-600: #4f5d77;
+  --color-gray-700: #3a4760;
+  --color-gray-800: #243049;
+  --color-gray-900: #141e36;
+  --color-gray-950: #0a1226;
+
+  /* Biru / indigo / sky -> navy */
+  --color-blue-50: #f1f4fa;
+  --color-blue-100: #e2e8f4;
+  --color-blue-200: #c5d1e8;
+  --color-blue-300: #9db0d6;
+  --color-blue-400: #7189bd;
+  --color-blue-500: #4e69a6;
+  --color-blue-600: #263f77;
+  --color-blue-700: #1b3060;
+  --color-blue-800: #12234a;
+  --color-blue-900: #0b1733;
+  --color-blue-950: #08112a;
+  --color-indigo-50: #f1f4fa;
+  --color-indigo-100: #e2e8f4;
+  --color-indigo-200: #c5d1e8;
+  --color-indigo-300: #9db0d6;
+  --color-indigo-400: #7189bd;
+  --color-indigo-500: #4e69a6;
+  --color-indigo-600: #263f77;
+  --color-indigo-700: #1b3060;
+  --color-indigo-800: #12234a;
+  --color-indigo-900: #0b1733;
+  --color-sky-50: #f1f4fa;
+  --color-sky-100: #e2e8f4;
+  --color-sky-200: #c5d1e8;
+  --color-sky-500: #4e69a6;
+  --color-sky-600: #263f77;
+  --color-sky-700: #1b3060;
+
+  /* Hijau (disetujui / berhasil) — diredam */
+  --color-green-50: #eef7f2;
+  --color-green-100: #d9eee2;
+  --color-green-200: #b5dcc6;
+  --color-green-300: #86c3a3;
+  --color-green-400: #52a37c;
+  --color-green-500: #348a63;
+  --color-green-600: #2a7552;
+  --color-green-700: #235e43;
+  --color-green-800: #1d4b37;
+  --color-green-900: #183e2f;
+  --color-emerald-50: #eef7f2;
+  --color-emerald-100: #d9eee2;
+  --color-emerald-200: #b5dcc6;
+  --color-emerald-300: #86c3a3;
+  --color-emerald-400: #52a37c;
+  --color-emerald-500: #348a63;
+  --color-emerald-600: #2a7552;
+  --color-emerald-700: #235e43;
+  --color-emerald-800: #1d4b37;
+  --color-emerald-900: #183e2f;
+
+  /* Merah (ditolak / bahaya) — diredam */
+  --color-red-50: #fcf1f0;
+  --color-red-100: #f9e0de;
+  --color-red-200: #f2c2be;
+  --color-red-300: #e79a94;
+  --color-red-400: #d86b63;
+  --color-red-500: #c54a42;
+  --color-red-600: #a93b34;
+  --color-red-700: #8b312c;
+  --color-red-800: #702a26;
+  --color-red-900: #5c2623;
+  --color-rose-50: #fcf1f0;
+  --color-rose-100: #f9e0de;
+  --color-rose-200: #f2c2be;
+  --color-rose-300: #e79a94;
+  --color-rose-400: #d86b63;
+  --color-rose-500: #c54a42;
+  --color-rose-600: #a93b34;
+  --color-rose-700: #8b312c;
+  --color-rose-800: #702a26;
+
+  /* Kuning / amber / oranye (revisi / perhatian) — diredam */
+  --color-yellow-50: #fbf6e9;
+  --color-yellow-100: #f6ebc9;
+  --color-yellow-200: #edd898;
+  --color-yellow-300: #e0be62;
+  --color-yellow-400: #cfa03a;
+  --color-yellow-500: #b8862a;
+  --color-yellow-600: #9a6c20;
+  --color-yellow-700: #7a541c;
+  --color-yellow-800: #63441b;
+  --color-yellow-900: #52391a;
+  --color-amber-50: #fbf6e9;
+  --color-amber-100: #f6ebc9;
+  --color-amber-200: #edd898;
+  --color-amber-300: #e0be62;
+  --color-amber-400: #cfa03a;
+  --color-amber-500: #b8862a;
+  --color-amber-600: #9a6c20;
+  --color-amber-700: #7a541c;
+  --color-amber-800: #63441b;
+  --color-amber-900: #52391a;
+  --color-orange-50: #fbf3ea;
+  --color-orange-100: #f6e2cb;
+  --color-orange-200: #edc79a;
+  --color-orange-500: #c0702a;
+  --color-orange-600: #a25a20;
+  --color-orange-700: #80471c;
+
+  /* Ungu (sedang direview) — diredam */
+  --color-purple-50: #f4f2fb;
+  --color-purple-100: #e8e4f6;
+  --color-purple-200: #d3cbec;
+  --color-purple-300: #b5a8dd;
+  --color-purple-400: #9484cb;
+  --color-purple-500: #7664b8;
+  --color-purple-600: #5f4e9e;
+  --color-purple-700: #4b3e80;
+  --color-purple-800: #3d3368;
+  --color-violet-50: #f4f2fb;
+  --color-violet-100: #e8e4f6;
+  --color-violet-500: #7664b8;
+  --color-violet-600: #5f4e9e;
+  --color-violet-700: #4b3e80;
+
+  /* Teal — diredam */
+  --color-teal-50: #eef6f6;
+  --color-teal-100: #d8ebeb;
+  --color-teal-200: #b3d7d7;
+  --color-teal-500: #3e8d8d;
+  --color-teal-600: #2f7777;
+  --color-teal-700: #265f5f;
+}
+
+/* ==========================================================================
+   Dasar
+   ========================================================================== */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-slate-200);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-slate-800);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-slate-900);
+    text-wrap: balance;
+  }
+
+  /* Judul halaman bergaya buku: serif, rapat, tenang */
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.012em;
+  }
+
+  ::selection {
+    background-color: var(--color-navy-200);
+    color: var(--color-navy-950);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-navy-500);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-300) transparent;
+  }
+
+  /* Angka sejajar rapi di tabel & ringkasan */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Satu momen masuk yang halus (halaman masuk / daftar) */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Komponen
+   ========================================================================== */
+@layer components {
+  /* ── Tombol ─────────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex h-10 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-colors duration-150;
+  }
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .btn-sm {
+    @apply h-8 px-3 text-xs;
+  }
+  .btn-primary {
+    @apply bg-navy-800 text-white hover:bg-navy-900 active:bg-navy-950;
+  }
+  .btn-secondary {
+    @apply border-slate-300 bg-white text-navy-900 hover:border-slate-400 hover:bg-slate-50;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-slate-600 hover:bg-slate-100 hover:text-navy-900;
+  }
+  .btn-danger {
+    @apply border-red-200 bg-white text-red-700 hover:bg-red-50;
+  }
+  /* Tindakan yang tidak dapat dibatalkan (konfirmasi hapus) */
+  .btn-destructive {
+    @apply bg-red-700 text-white hover:bg-red-800 active:bg-red-900;
+  }
+  /* Tombol ikon persegi (tutup dialog / panel) */
+  .icon-btn {
+    @apply grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-navy-900;
+  }
+
+  /* ── Form ───────────────────────────────────────────────────────────── */
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-slate-800;
+  }
+  .input {
+    @apply block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 transition placeholder:text-slate-400 hover:border-slate-400 focus:border-navy-600 focus:outline-none focus:ring-4 focus:ring-navy-600/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  select.input {
+    @apply appearance-none bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23687590' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+  }
+
+  /* ── Permukaan ──────────────────────────────────────────────────────── */
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white;
+  }
+
+  /* ── Lencana status: titik + kata ───────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .badge::before {
+    content: "";
+    @apply size-1.5 shrink-0 rounded-full bg-current opacity-70;
+  }
+  .badge-neutral {
+    @apply bg-slate-100 text-slate-600;
+  }
+  .badge-info {
+    @apply bg-navy-50 text-navy-700;
+  }
+  .badge-review {
+    @apply bg-purple-50 text-purple-600;
+  }
+  .badge-warning {
+    @apply bg-yellow-50 text-yellow-700;
+  }
+  .badge-success {
+    @apply bg-green-50 text-green-700;
+  }
+  .badge-danger {
+    @apply bg-red-50 text-red-700;
+  }
+  /* Teks biasa dengan bentuk lencana (tanpa titik / latar) — untuk label peran */
+  .badge-plain {
+    @apply bg-transparent px-0 font-medium capitalize text-slate-500;
+  }
+  .badge-plain::before {
+    display: none;
+  }
+  /* Penanda kategori (peran, jenis): pil netral tanpa titik — titik hanya untuk status */
+  .badge-tag {
+    @apply bg-slate-100 font-medium text-slate-600;
+  }
+  .badge-tag::before {
+    display: none;
+  }
+
+  /* ── Tabel ──────────────────────────────────────────────────────────── */
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-slate-200 bg-white;
+  }
+  .table {
+    @apply w-full border-collapse text-left text-base;
+  }
+  .table thead th {
+    @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500;
+  }
+  .table tbody td {
+    @apply border-b border-slate-100 px-4 py-3.5 align-middle text-slate-700;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tbody tr:hover td {
+    @apply bg-slate-50/70;
+  }
+  /* Tabel padat: jarak sel horizontal lebih rapat untuk tabel dengan banyak kolom */
+  .table-tight thead th,
+  .table-tight tbody td {
+    @apply px-3;
+  }
+
+  /* ── Halaman ────────────────────────────────────────────────────────── */
+  .page {
+    @apply mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 lg:px-10 lg:py-10;
+  }
+  .page-header {
+    @apply mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+  }
+  .page-title {
+    @apply font-serif text-3xl font-medium text-navy-950;
+  }
+  .page-desc {
+    @apply mt-1.5 max-w-2xl text-base text-slate-500;
+  }
+
+  /* ── Lapisan melayang ───────────────────────────────────────────────── */
+  .overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 px-4 py-6;
+  }
+  .dialog {
+    @apply w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl;
+  }
+
+  /* ── Indikator memuat ───────────────────────────────────────────────── */
+  .spinner {
+    @apply inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent;
+  }
+}
