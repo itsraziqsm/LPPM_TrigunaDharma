@@ -186,7 +186,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
   `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya`, `/kegiatan/penelitian`,
-  `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]` (dosen), `/notifikasi` (semua peran), `/undangan`
+  `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/luaran` (dosen), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` (`roles` berisi reviewer atau `hasTugasan`). `Sidebar.jsx`
@@ -232,6 +232,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.
   Lonceng & halaman disinkronkan lewat `src/utils/notificationEvents.js`; jumlah belum dibaca
   diambil dari `GET /notifications?onlyUnread=true` → `meta.total`.
+- **Halaman galat**: `src/components/ErrorState.jsx` (tampilan) + `src/utils/errorCodes.js` (teks/ikon
+  per kode 400, 401, 403, 404, 408, 429, 500, 501, 502, 503, 504). `src/pages/ErrorPage.jsx` mandiri
+  dipakai untuk `/error/:code`, route tak dikenal (`*` → 404, sebelumnya redirect ke /login) dan
+  `errorElement` router (galat render → 500). Fitur yang belum dibangun memakai `ErrorState`
+  kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
+  keputusan Pihak Kampus.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
   beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa

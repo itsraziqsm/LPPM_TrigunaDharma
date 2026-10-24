@@ -15,6 +15,7 @@ import ProfilePage from './ProfilePage'
 import ExportPage from './ExportPage' // ← BARU
 import KegiatanPage from './KegiatanPage'
 import UsulanPage from './UsulanPage'
+import LuaranPage from './LuaranPage'
 import NotifikasiPage from './NotifikasiPage'
 
 const ROLE_LABEL = {
@@ -103,6 +104,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'proposal-saya') return <ProposalDosenPage />
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
+      if (page === 'luaran') return <LuaranPage />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       // Dosen yang punya tugasan bisa akses halaman penugasan

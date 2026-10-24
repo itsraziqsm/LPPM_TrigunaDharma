@@ -125,5 +125,7 @@ Data yang **menunggu API**:
 - **Halaman laporan** (buat/isi/detail laporan, `POST/PATCH /laporan…`) belum dibuat di frontend
   walaupun API-nya sudah ada (`backend_go/new-api.md`). Tombol "Laporan Penelitian/Pengabdian"
   sementara membuka tab Laporan di Riwayat; notifikasi laporan belum punya tautan.
-- Menu **Luaran** dan **Panduan** dari desain belum ada halamannya. "Luaran" bergantung pada W-01.
+- Menu **Luaran** (`/luaran`, dosen) sudah ada tetapi menampilkan **501 Not Implemented**:
+  fitur menunggu kelanjutan perkembangan dari Pihak Kampus (berkaitan dengan W-01).
+- Menu **Panduan** dari desain belum ada halamannya.
 - Halaman **Pengaturan** sudah ada di `/profil` (dibuka dari kartu nama di bawah sidebar).

@@ -3,10 +3,12 @@ import { PrivateRoute, GuestRoute } from './guards'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import DashboardLayout from '../pages/DashboardLayout'
+import ErrorPage from '../pages/ErrorPage'
 
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
+    errorElement: <ErrorPage routeError />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
@@ -14,6 +16,7 @@ const router = createBrowserRouter([
   },
   {
     element: <PrivateRoute />,
+    errorElement: <ErrorPage routeError />,
     children: [
       { path: '/dashboard', element: <DashboardLayout /> },
       { path: '/periode', element: <DashboardLayout page="periode" /> },
@@ -25,6 +28,7 @@ const router = createBrowserRouter([
       { path: '/laporan-harian', element: <DashboardLayout page="laporan-harian" /> },
       { path: '/profil', element: <DashboardLayout page="profil" /> },
       { path: '/notifikasi', element: <DashboardLayout page="notifikasi" /> },
+      { path: '/luaran', element: <DashboardLayout page="luaran" /> },
       { path: '/export', element: <DashboardLayout page="export" /> }, // ← BARU
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },
@@ -34,7 +38,10 @@ const router = createBrowserRouter([
       { path: '/kegiatan/pengabdian/usulan/:id', element: <DashboardLayout page="usulan" jenis="pengabdian" /> },
     ],
   },
-  { path: '*', element: <Navigate to="/login" replace /> },
+  // Halaman galat: /error/401, /error/403, /error/408, /error/500, /error/503, dst.
+  { path: '/error/:code', element: <ErrorPage /> },
+  { path: '/', element: <Navigate to="/dashboard" replace /> },
+  { path: '*', element: <ErrorPage code={404} /> },
 ])
 
 export default router

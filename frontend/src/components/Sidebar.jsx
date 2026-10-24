@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
-import { BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
+import { BadgeDollarSign, BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -52,6 +52,11 @@ const DOSEN_NAV_ITEMS = [
       { path: '/kegiatan/penelitian', label: 'Penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
       { path: '/kegiatan/pengabdian', label: 'Pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
+  },
+  {
+    path: '/luaran', label: 'Luaran', icon: (
+      <BadgeDollarSign className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
   },
   {
     path: '/proposal-saya', label: 'Proposal Saya', icon: (
