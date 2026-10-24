@@ -144,7 +144,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 ### Arsitektur
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
-  `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya` (dosen), `/undangan`
+  `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya`, `/kegiatan/penelitian`,
+  `/kegiatan/pengabdian` (dosen), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` (`roles` berisi reviewer atau `hasTugasan`). `Sidebar.jsx`
@@ -161,6 +162,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   bersama `DashboardBody` tanpa ledger). Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
+- Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,
+  dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
+  `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis).
+- Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - `src/pages/periode/*`, `src/pages/ProposalDosen/*` — subkomponen halaman besar.
 - `src/utils/exportPDF.js` (jspdf + autotable), `exportExcel.js` (xlsx).
 - Gaya: Tailwind 4 dengan token di `@theme` `src/index.css` (skala `navy-*`, aksen

@@ -39,8 +39,32 @@ Data yang **menunggu API**:
 | W-10 | Header aplikasi: nama + foto di kanan atas | Foto profil | Sama dengan W-07 | Di luar lingkup dashboard; sidebar saat ini sudah menampilkan nama & peran. |
 | W-11 | Kartu **Dokumen Diproses** (akurasi) | Jumlah proposal berstatus `review` | Tambahkan key `review` ke `GET /dosen/proposals/stats` | Bukan blocker (frontend sudah menghitung selisih), tapi lebih tepat dari backend. |
 
+## Menu Kegiatan → Penelitian / Pengabdian (`frontend/src/pages/KegiatanPage.jsx`)
+
+Route `/kegiatan/penelitian` dan `/kegiatan/pengabdian` (dosen), dari grup menu **Kegiatan** di
+sidebar.
+
+Data yang **sudah** tersambung ke API yang ada:
+
+| Elemen | Sumber |
+|---|---|
+| Ringkasan Total / Disetujui / Diproses / Ditolak, jumlah per chip status | `GET /dosen/proposals?jenis=…&status=…&limit=1` → `meta.total` (6 permintaan, satu per status) |
+| Daftar (judul, periode, anggaran, status), cari, filter status, paginasi | `GET /dosen/proposals?jenis=…&status=…&search=…&page=…&limit=10` |
+| Tombol Detail | `GET /dosen/proposals/:id` (modal detail yang sama dengan Proposal Saya) |
+
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-12 | Kartu **Luaran tercatat** dan kolom **Luaran** per kegiatan | Jumlah/daftar luaran per proposal | Bagian dari W-01, mis. `GET /proposals/:id/luaran` + total di stats | Belum ada tabel luaran. |
+| W-13 | Kolom **Tahapan** per kegiatan | Tahap resmi tiap proposal | Field `tahapan` di respons `GET /dosen/proposals` (lihat W-03) | Di daftar sengaja tidak diturunkan dari laporan agar tidak 1 permintaan per baris. |
+| W-14 | Kolom **Skema** (penelitian) | Skema/hibah penelitian (mis. PDP, Penelitian Dasar) | Kolom `skema` di `Proposal` + ikut di list & form | Belum ada kolom; form proposal juga belum memintanya. |
+| W-15 | Kolom **Mitra** (pengabdian) | Mitra sasaran pengabdian | Kolom/tabel `mitra` untuk proposal pengabdian | Belum ada kolom; form proposal juga belum memintanya. |
+| W-16 | Bagian **{Penelitian/Pengabdian} sebagai anggota tim** | Proposal milik dosen lain di mana user adalah anggota `diterima` | `GET /dosen/proposals?peran=anggota` atau `GET /dosen/proposals/as-member?jenis=…` | `/dosen/proposals` dan `/proposals/my` hanya memfilter `pengusulId` (ketua). Undangan tetap di menu Undangan Tim. |
+| W-17 | Ringkasan per status (efisiensi) | Jumlah per status untuk satu jenis | `GET /dosen/proposals/stats?jenis=…` (+ key `review`, lihat W-11) | Bukan blocker; mengganti 6 permintaan menjadi 1. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
-- Menu sidebar **Penelitian**, **Pengabdian**, **Luaran**, **Pengaturan**, **Panduan** dari
-  desain belum ada halamannya. Sidebar tetap memakai menu yang sudah ada (Dashboard,
-  Proposal Saya, Undangan Tim, Penugasan Review bila ada tugasan). "Luaran" bergantung pada W-01.
+- Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
+- Menu **Luaran**, **Pengaturan**, **Panduan** dari desain belum ada halamannya. "Luaran"
+  bergantung pada W-01; "Pengaturan" saat ini setara halaman Profil (`/profil`).

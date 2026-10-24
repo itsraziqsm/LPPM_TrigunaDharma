@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
@@ -48,6 +48,19 @@ const ADMIN_NAV_ITEMS = [
 ]
 
 const DOSEN_NAV_ITEMS = [
+  // Grup bertingkat: dirender oleh NavGroup (buka-tutup, otomatis terbuka
+  // bila salah satu anaknya aktif).
+  {
+    path: '/kegiatan', label: 'Kegiatan', icon: (
+      <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4" />
+      </svg>
+    ),
+    children: [
+      { path: '/kegiatan/penelitian', label: 'Penelitian' },
+      { path: '/kegiatan/pengabdian', label: 'Pengabdian' },
+    ],
+  },
   {
     path: '/proposal-saya', label: 'Proposal Saya', icon: (
       <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -95,6 +108,60 @@ function getRoleNames(roles) {
   if (!roles || roles.length === 0) return []
   if (typeof roles[0] === 'string') return roles
   return roles.map(r => r.role?.name || r.name || '')
+}
+
+const navLinkClass = ({ isActive }) =>
+  `relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
+    isActive
+      ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brass-400'
+      : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+  }`
+
+function NavGroup({ item, onNavigate }) {
+  const { pathname } = useLocation()
+  const childActive = item.children.some((c) => pathname.startsWith(c.path))
+  // Pilihan manual berlaku di halaman tempat ia dibuat; saat pindah halaman
+  // grup otomatis terbuka bila anaknya aktif (Sidebar tidak dipasang ulang
+  // antar-route karena DashboardLayout tetap komponen yang sama).
+  const [manual, setManual] = useState({ path: null, open: false })
+  const expanded = manual.path === pathname ? manual.open : childActive || manual.open
+  const listId = `nav-group-${item.label.toLowerCase()}`
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setManual({ path: pathname, open: !expanded })}
+        aria-expanded={expanded}
+        aria-controls={listId}
+        className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
+          childActive ? 'text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+        }`}
+      >
+        <span className="shrink-0">{item.icon}</span>
+        <span className="flex-1 truncate text-left">{item.label}</span>
+        <svg
+          className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+      {expanded ? (
+        <div id={listId} className="ml-[1.3rem] flex flex-col gap-0.5 border-l border-white/10 py-0.5 pl-2">
+          {item.children.map((child) => (
+            <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
+              <span className="flex-1 truncate">{child.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 // Dipanggil dari UndanganPage setelah user respond, agar badge langsung update
@@ -219,18 +286,14 @@ export default function Sidebar() {
         {/* Navigasi utama */}
         <nav aria-label="Navigasi utama" className="min-h-0 flex-1 overflow-y-auto px-3 pt-2">
           <div className="flex flex-col gap-0.5">
-            {allNavItems.map((item) => (
+            {allNavItems.map((item) => item.children ? (
+              <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} />
+            ) : (
               <NavLink
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brass-400'
-                      : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
-                  }`
-                }
+                className={navLinkClass}
               >
                 <span className="shrink-0">
                   {item.icon}

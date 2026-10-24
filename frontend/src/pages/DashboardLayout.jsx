@@ -10,6 +10,7 @@ import ReviewTugasanPage from './ReviewTugasanPage'
 import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
 import ExportPage from './ExportPage' // ← BARU
+import KegiatanPage from './KegiatanPage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -25,7 +26,7 @@ function getRoleNames(roles) {
   return roles.map((r) => r.role?.name || r.name || '')
 }
 
-export default function DashboardLayout({ page }) {
+export default function DashboardLayout({ page, jenis }) {
   const user = useAuthStore((s) => s.user)
   const loading = useAuthStore((s) => s.loading)
 
@@ -79,6 +80,8 @@ export default function DashboardLayout({ page }) {
 
     if (isDosen) {
       if (page === 'proposal-saya') return <ProposalDosenPage />
+      // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
+      if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       // Dosen yang punya tugasan bisa akses halaman penugasan
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />

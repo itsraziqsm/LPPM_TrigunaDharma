@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import ApiPending from '../../components/ApiPending'
 import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
 import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
@@ -13,8 +14,6 @@ import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
 // Bagian yang belum punya endpoint ditampilkan sebagai placeholder dengan
 // penanda "API belum ada". Daftarnya: docs/waitingApi-list.md (root repo).
 // ---------------------------------------------------------------------------
-
-const WAITING_TITLE = 'Endpoint API belum tersedia (lihat docs/waitingApi-list.md)'
 
 // Label tanpa awalan "Tahapan" (awalan disembunyikan di layar sempit).
 const STAGES = ['Seleksi/Usulan', 'Pelaksanaan Kegiatan', 'Seleksi/Lanjutan', 'Pasca Pelaksanaan Kegiatan']
@@ -102,18 +101,6 @@ const ICONS = {
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </Icon>
   ),
-}
-
-// ── Penanda placeholder ─────────────────────────────────────────────────────
-function ApiPending({ className = '' }) {
-  return (
-    <span
-      title={WAITING_TITLE}
-      className={`inline-flex items-center gap-1 rounded-md border font-sans border-dashed border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800 ${className}`}
-    >
-      API belum ada
-    </span>
-  )
 }
 
 function SectionTitle({ id, children }) {
