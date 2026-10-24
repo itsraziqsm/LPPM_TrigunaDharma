@@ -104,18 +104,18 @@ Data yang **sudah** tersambung:
 | Buat laporan (pilih proposal disetujui) | `/kegiatan/:jenis/laporan/baru` (`LaporanPage.jsx`) | `GET /laporan/eligible`, `POST /laporan` |
 | Index laporan: ringkasan, ajukan, hapus, status & hasil review (pengusul; anggota baca saja) | `/kegiatan/:jenis/laporan/:id` (`LaporanPage.jsx`) | `GET/DELETE /laporan/:id`, `POST /laporan/:id/submit`, `GET /laporan/:id/dokumen` |
 | Isi laporan (wizard desain UI Laporan: Informasi Umum → Informasi Laporan → Dokumen → Preview, + Simpan draf) | `/kegiatan/:jenis/laporan/:id/isi` (`LaporanIsiPage.jsx`) | `GET/PATCH /laporan/:id` (judul, abstrak, ringkasanHasil, luaranTercapai, realisasiAnggaran, dokumenUrl), `POST /laporan/:id/dokumen`, capaian luaran |
+| Link Jurnal & Link Video / Dokumentasi (Dokumen & Preview) — W-29 | `/kegiatan/:jenis/laporan/:id/isi` | Tanpa field khusus di laporan: disimpan sebagai `buktiUrl` item luaran proposal berjenis `jurnal`/`prosiding` (Link Jurnal) dan `media_massa` (Link Video) lewat `PATCH /luaran/:id/capaian` (`null` = hapus). Satu tautan per target; menambah target hanya saat proposal draft/revisi. |
 | Laporan Masuk (Ketua LPPM/Admin): tugaskan reviewer, keputusan | `/laporan-masuk[?id=]` (`LaporanMasukPage.jsx`) | `GET /laporan`, `POST/DELETE /laporan/:id/reviewers`, `PATCH /laporan/:id/status` |
 | Tab Laporan di Penugasan Review (reviewer) | `/penugasan?tab=laporan` | `GET /laporan/tugasan`, `POST /laporan/:id/reviews[/finalize]` |
 | Tautan notifikasi `refType: laporan` | `/notifikasi` | — |
 | Capaian luaran (pengusul isi saat laporan draft/revisi; lainnya baca saja) | halaman laporan, Laporan Masuk, review laporan | `GET /luaran/proposal/:proposalId`, `PATCH /luaran/:id/capaian`, `POST/GET /luaran/:id/bukti` |
 
-Data yang **menunggu API** (wizard Isi Laporan, `frontend/src/pages/LaporanIsiPage.jsx`):
+Data yang **menunggu API** (wizard Isi Laporan, `frontend/src/pages/LaporanIsiPage.jsx`; backend tidak diubah dari sisi frontend):
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
 | W-27 | **Kata Kunci** laporan (Informasi Laporan & Preview) | Kata kunci laporan yang bisa diubah | Terima `kataKunci` (array, aturan sama dengan proposal) di `PATCH /laporan/:id` | Saat ini ditampilkan baca saja dari salinan proposal (`laporan.kataKunci`). |
 | W-28 | **Metode Penelitian** (Informasi Laporan & Preview, khusus penelitian) | Metode penelitian laporan | Kolom `metodePenelitian` (TEXT) di laporan penelitian, ikut `PATCH /laporan/:id` & respons | Input nonaktif. |
-| W-29 | **Link Jurnal** (bisa lebih dari satu, tambah/hapus) dan **Link Video / Dokumentasi** (Dokumen & Preview: Publikasi/Jurnal, Video/Dokumentasi) | Daftar tautan publikasi & tautan video laporan | Field `linkJurnal` (array URL) dan `linkVideo` (URL) di `PATCH /laporan/:id` & respons, atau tabel tautan laporan | Input nonaktif. Bukti per target luaran sudah bisa lewat Capaian luaran (`buktiUrl`). |
 
 
 ## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)

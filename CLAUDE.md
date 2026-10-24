@@ -267,7 +267,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   laporan) dan wizard **Isi Laporan** `LaporanIsiPage.jsx` (`/:id/isi`, desain UI Laporan
   Penelitian/Pengabdian: Informasi Umum (baca saja dari proposal + anggota) → Informasi Laporan →
   Dokumen & Luaran (file/URL, capaian luaran) → Preview; Simpan draf di tengah, Simpan → kembali
-  ke index; kata kunci/metode/link jurnal & video = `ApiPending` W-27..W-29), Ketua/Admin di `LaporanMasukPage.jsx`
+  ke index; Link Jurnal/Video = `buktiUrl` item luaran jurnal/prosiding & media_massa lewat
+  `PATCH /luaran/:id/capaian`; kata kunci laporan & metode penelitian = `ApiPending` W-27, W-28), Ketua/Admin di `LaporanMasukPage.jsx`
   (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran

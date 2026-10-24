@@ -168,7 +168,7 @@ function CapaianForm({ item, onDone, onCancel }) {
   )
 }
 
-export default function LuaranCapaian({ proposalId, editable = false }) {
+export default function LuaranCapaian({ proposalId, editable = false, onSaved }) {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -188,7 +188,8 @@ export default function LuaranCapaian({ proposalId, editable = false }) {
   const reload = useCallback(() => {
     setEditingId(null)
     setTick((t) => t + 1)
-  }, [])
+    onSaved?.()
+  }, [onSaved])
 
   if (error) return <p className="text-sm text-red-700">{error}</p>
   if (!items) return <span className="spinner block text-navy-600" aria-hidden="true" />

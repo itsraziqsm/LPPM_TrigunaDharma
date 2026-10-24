@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, Info, Plus, Save, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, Info, Save, Trash2, Users } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
+import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import useAuthStore from '../store/authStore'
 import ApiPending from '../components/ApiPending'
 import { FieldError, PreviewTable, Required, StepCard, Stepper } from '../components/Wizard'
@@ -15,9 +16,11 @@ import { rupiah } from './laporan/format'
 //   Informasi Umum → Informasi Laporan → Dokumen & Luaran → Preview
 // Route /kegiatan/:jenis/laporan/:id/isi. Hanya pengusul saat laporan draft/revisi;
 // selain itu kembali ke halaman laporan (index). Data: GET/PATCH /laporan/:id,
-// POST /laporan/:id/dokumen, capaian luaran (LuaranCapaian). Field desain tanpa
-// endpoint (kata kunci laporan, metode penelitian, link jurnal & video) memakai
-// ApiPending — lihat docs/waitingApi-list.md (W-27..W-29).
+// POST /laporan/:id/dokumen, capaian luaran (LuaranCapaian). Link Jurnal & Link
+// Video = bukti (`buktiUrl`) item luaran proposal berjenis jurnal/prosiding dan
+// media massa (PATCH /luaran/:id/capaian) — backend tidak punya field link khusus
+// di laporan. Kata kunci laporan & metode penelitian belum ada field-nya
+// (ApiPending, docs/waitingApi-list.md W-27, W-28).
 // ---------------------------------------------------------------------------
 
 const STEPS = [
@@ -34,8 +37,13 @@ const FIELDS = ['judul', 'abstrak', 'luaranTercapai', 'ringkasanHasil', 'realisa
 const STEP_FIELDS = {
   umum: [],
   laporan: ['judul', 'abstrak', 'ringkasanHasil', 'luaranTercapai', 'realisasiAnggaran'],
-  dokumen: ['dokumen', 'dokumenUrl'],
+  dokumen: ['dokumen', 'dokumenUrl', 'links'],
 }
+
+// Item luaran yang tautan buktinya tampil sebagai Link Jurnal / Link Video.
+const JURNAL_JENIS = ['jurnal', 'prosiding']
+const VIDEO_JENIS = ['media_massa']
+const isUrl = (v) => /^https?:\/\/\S+$/i.test(v)
 
 const formFrom = (l) => Object.fromEntries(FIELDS.map((k) => [k, l?.[k] == null ? '' : String(l[k])]))
 
@@ -45,8 +53,9 @@ function errorText(e, fallback) {
   return e.response?.data?.message || fallback
 }
 
-function validate(form, file, laporan) {
+function validate(form, file, laporan, links) {
   const e = {}
+  if ((links || []).some((l) => l.url.trim() && !isUrl(l.url.trim()))) e.links = 'Link jurnal/video harus berupa URL (https://…).'
   const judul = form.judul.trim()
   if (judul.length < 5) e.judul = 'Judul laporan minimal 5 karakter.'
   const abstrak = form.abstrak.trim()
@@ -124,6 +133,9 @@ export default function LaporanIsiPage({ jenis }) {
   const [busy, setBusy] = useState('') // draft | save
   const [msg, setMsg] = useState(null)
   const [dragOver, setDragOver] = useState(false)
+  // Tautan bukti item luaran: { id, jenis, target, url, orig }
+  const [links, setLinks] = useState(null)
+  const [luaranTick, setLuaranTick] = useState(0)
   const topRef = useRef(null)
   const firstStep = useRef(true)
 
@@ -134,6 +146,21 @@ export default function LaporanIsiPage({ jenis }) {
     }
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [step])
+
+  // Muat ulang daftar tautan dari item luaran (setelah simpan tautan/capaian).
+  // `keep` = { id: url } isian yang belum tersimpan (mis. URL belum valid) dipertahankan.
+  function loadLinks(proposalId, keep = {}) {
+    luaranApi
+      .byProposal(proposalId)
+      .then((r) =>
+        setLinks(
+          (r.data.data || [])
+            .filter((i) => JURNAL_JENIS.includes(i.jenis) || VIDEO_JENIS.includes(i.jenis))
+            .map((i) => ({ id: i.id, jenis: i.jenis, target: i.target, url: keep[i.id] ?? i.buktiUrl ?? '', orig: i.buktiUrl || '' })),
+        ),
+      )
+      .catch(() => setLinks([]))
+  }
 
   useEffect(() => {
     let alive = true
@@ -158,6 +185,7 @@ export default function LaporanIsiPage({ jenis }) {
         setLaporan(l)
         setForm(formFrom(l))
         setLoadState('ready')
+        loadLinks(l.proposalId)
       })
       .catch((e) => {
         if (!alive) return
@@ -169,7 +197,7 @@ export default function LaporanIsiPage({ jenis }) {
     }
   }, [id, jenis, navigate, user?.id])
 
-  const errors = useMemo(() => validate(form, file, laporan), [form, file, laporan])
+  const errors = useMemo(() => validate(form, file, laporan, links), [form, file, laporan, links])
   const current = STEPS[step].key
   const err = (k) => (showErrors[current] ? errors[k] : null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -236,6 +264,23 @@ export default function LaporanIsiPage({ jenis }) {
       } catch (e) {
         uploadWarn = errorText(e, 'file laporan gagal diunggah')
       }
+    }
+    let linksSaved = false
+    const keep = {}
+    for (const l of links || []) {
+      const v = l.url.trim()
+      if (v === l.orig) continue
+      if (v && !isUrl(v)) {
+        skipped.push(`link "${l.target}"`)
+        keep[l.id] = l.url
+        continue
+      }
+      await luaranApi.saveCapaian(l.id, { buktiUrl: v || null })
+      linksSaved = true
+    }
+    if (linksSaved) {
+      loadLinks(laporan.proposalId, keep)
+      setLuaranTick((t) => t + 1)
     }
     const fresh = (await laporanApi.getById(laporan.id)).data.data
     setLaporan(fresh)
@@ -529,36 +574,63 @@ export default function LaporanIsiPage({ jenis }) {
               )}
             </div>
 
-            <div>
-              <span className="label">Link Jurnal</span>
-              <div className="flex gap-3">
-                <input className="input" disabled placeholder="https://jurnal.example.com/…" aria-label="Link jurnal" />
-                <button type="button" className="btn btn-ghost text-red-700" disabled>
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  Hapus
-                </button>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <button type="button" className="btn btn-secondary btn-sm" disabled>
-                  <Plus className="size-4" aria-hidden="true" />
-                  Tambah Link Jurnal
-                </button>
-                <ApiPending />
-              </div>
-            </div>
-
-            <div>
-              <span className="label">Link Video / Dokumentasi</span>
-              <input className="input" disabled placeholder="https://youtube.com/…" aria-label="Link video" />
-              <ApiPending className="mt-1.5" />
-            </div>
+            {[
+              ['Link Jurnal', JURNAL_JENIS, 'https://jurnal.example.com/…', 'jurnal atau prosiding'],
+              ['Link Video / Dokumentasi', VIDEO_JENIS, 'https://youtube.com/…', 'video kegiatan / media massa'],
+            ].map(([title, jenisList, ph, desc]) => {
+              const rows = (links || []).filter((l) => jenisList.includes(l.jenis))
+              return (
+                <div key={title}>
+                  <span className="label">{title}</span>
+                  {links === null ? (
+                    <span className="spinner block text-navy-600" aria-hidden="true" />
+                  ) : rows.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
+                      Proposal tidak punya target luaran {desc}. Target luaran ditambahkan saat proposal masih draft/revisi.
+                    </p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {rows.map((l) => (
+                        <li key={l.id}>
+                          <label htmlFor={`li-link-${l.id}`} className="mb-1 block text-xs text-slate-500">
+                            {LUARAN_JENIS[l.jenis] || l.jenis}: {l.target}
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              id={`li-link-${l.id}`}
+                              type="url"
+                              className="input"
+                              value={l.url}
+                              placeholder={ph}
+                              onChange={(e) => setLinks((prev) => prev.map((x) => (x.id === l.id ? { ...x, url: e.target.value } : x)))}
+                              aria-invalid={Boolean(l.url.trim() && !isUrl(l.url.trim()))}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-ghost shrink-0 text-red-700 hover:bg-red-50"
+                              disabled={!l.url}
+                              onClick={() => setLinks((prev) => prev.map((x) => (x.id === l.id ? { ...x, url: '' } : x)))}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              Hapus
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+            <FieldError message={err('links')} />
+            <p className="-mt-3 text-xs text-slate-500">Tautan disimpan sebagai bukti capaian target luaran terkait.</p>
 
             <section className="space-y-3 border-t border-slate-200 pt-5">
               <div>
                 <h3 className="text-base font-semibold text-navy-950">Capaian luaran</h3>
                 <p className="text-sm text-slate-500">Isi capaian tiap target luaran beserta buktinya (link atau file).</p>
               </div>
-              <LuaranCapaian proposalId={laporan.proposalId} editable />
+              <LuaranCapaian key={luaranTick} proposalId={laporan.proposalId} editable onSaved={() => loadLinks(laporan.proposalId)} />
             </section>
           </div>
         </StepCard>
@@ -586,20 +658,30 @@ export default function LaporanIsiPage({ jenis }) {
             <section className="space-y-3">
               <h3 className="text-base font-semibold text-navy-950">{luaranLabel}</h3>
               <dl className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <dt className="text-sm font-semibold text-slate-900">Publikasi / Jurnal</dt>
-                  <dd className="mt-1">
-                    <ApiPending />
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-semibold text-slate-900">Video / Dokumentasi</dt>
-                  <dd className="mt-1">
-                    <ApiPending />
-                  </dd>
-                </div>
+                {[
+                  ['Publikasi / Jurnal', JURNAL_JENIS],
+                  ['Video / Dokumentasi', VIDEO_JENIS],
+                ].map(([title, jenisList]) => {
+                  const urls = (links || []).filter((l) => jenisList.includes(l.jenis) && l.url.trim())
+                  return (
+                    <div key={title}>
+                      <dt className="text-sm font-semibold text-slate-900">{title}</dt>
+                      <dd className="mt-1 space-y-0.5 text-sm">
+                        {urls.length === 0 ? (
+                          <span className="text-slate-500">—</span>
+                        ) : (
+                          urls.map((l) => (
+                            <a key={l.id} href={l.url.trim()} target="_blank" rel="noreferrer" className="block break-all font-semibold text-navy-700 hover:text-navy-900">
+                              {l.url.trim()}
+                            </a>
+                          ))
+                        )}
+                      </dd>
+                    </div>
+                  )
+                })}
               </dl>
-              <LuaranCapaian proposalId={laporan.proposalId} />
+              <LuaranCapaian key={luaranTick} proposalId={laporan.proposalId} />
             </section>
 
             <section className="space-y-3">
