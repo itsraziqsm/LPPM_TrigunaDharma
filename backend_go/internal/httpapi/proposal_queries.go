@@ -82,6 +82,9 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 	if err != nil || len(items) == 0 {
 		return items, err
 	}
+	if err := attachTahapan(ctx, q, items); err != nil {
+		return nil, err
+	}
 	if err := attachOne(ctx, q, items, "__pengusulId", "pengusul",
 		"SELECT `id` AS `__k`,"+prefixed("u", shape.pengusulCols, "")+" FROM `User` u WHERE u.`id` IN (%s)"); err != nil {
 		return nil, err
@@ -148,6 +151,55 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 	}
 	stripInternal(items)
 	return items, nil
+}
+
+// tahapanList: 4 tahap resmi kegiatan (W-03/W-13), urutan 1–4.
+var tahapanList = []struct{ kode, label string }{
+	{"seleksi_usulan", "Seleksi/Usulan"},
+	{"pelaksanaan", "Pelaksanaan Kegiatan"},
+	{"seleksi_lanjutan", "Seleksi/Lanjutan"},
+	{"pasca_pelaksanaan", "Pasca Pelaksanaan"},
+}
+
+// tahapanIndex derives the stage from the proposal status and its laporan
+// status ("" when there is no laporan):
+//
+//	proposal belum disetujui                    → Seleksi/Usulan
+//	disetujui, laporan belum ada / draft        → Pelaksanaan Kegiatan
+//	laporan diajukan / review / revisi / ditolak → Seleksi/Lanjutan
+//	laporan disetujui                           → Pasca Pelaksanaan
+func tahapanIndex(proposalStatus, laporanStatus string) int {
+	switch {
+	case proposalStatus != "disetujui":
+		return 0
+	case laporanStatus == "" || laporanStatus == "draft":
+		return 1
+	case laporanStatus == "disetujui":
+		return 3
+	}
+	return 2
+}
+
+// attachTahapan adds `tahapan: {kode, label, urutan}` right after the scalar
+// columns of each proposal (Go saja, W-03/W-13).
+func attachTahapan(ctx context.Context, q dbtx, items []O) error {
+	ids := uniqueIDs(items, "id")
+	laporan := map[int64]string{}
+	if len(ids) > 0 {
+		rows, err := queryObjs(ctx, q, "SELECT `proposalId`,`status` FROM `Laporan` WHERE `proposalId` IN ("+placeholders(len(ids))+")", idArgs(ids)...)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			laporan[row.Int64("proposalId")] = row.Str("status")
+		}
+	}
+	for i := range items {
+		idx := tahapanIndex(items[i].Str("status"), laporan[items[i].Int64("id")])
+		t := tahapanList[idx]
+		items[i].Set("tahapan", O{{"kode", t.kode}, {"label", t.label}, {"urutan", int64(idx + 1)}})
+	}
+	return nil
 }
 
 func (s *Server) loadProposal(ctx context.Context, q dbtx, shape proposalShape, id int64) (O, error) {

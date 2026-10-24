@@ -11,7 +11,7 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 ## API sudah tersedia — tinggal disambungkan di frontend
 
 Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 10). Setelah UI-nya disambungkan dan penanda `ApiPending` dihapus, hapus barisnya dari
+bagian 10 untuk Grup A, bagian 11 untuk Grup B). Setelah UI-nya disambungkan dan penanda `ApiPending` dihapus, hapus barisnya dari
 tabel ini.
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
@@ -23,6 +23,13 @@ tabel ini.
 | W-16 | Kegiatan: bagian sebagai anggota tim | `GET /dosen/proposals/as-member?jenis=…&status=…&search=…&page=…` | Detail untuk anggota pakai `GET /proposals/:id`, bukan `/dosen/proposals/:id`. |
 | W-14 | Kegiatan: kolom Skema (penelitian) | Field `skema` di respons & body create/update proposal | Hanya untuk penelitian; form proposal perlu input baru. |
 | W-15 | Kegiatan: kolom Mitra (pengabdian) | Field `mitra` di respons & body create/update proposal | Hanya untuk pengabdian; form proposal perlu input baru. |
+| W-03 | Dashboard dosen: Tahapan pada Usulan Terakhir | Field `tahapan` `{kode, label, urutan}` di semua respons proposal (dihitung dari status proposal + laporan baru) | Ganti perkiraan dari laporan kemajuan/akhir; tidak perlu panggilan tambahan. |
+| W-13 | Kegiatan: kolom Tahapan | Field `tahapan` di `GET /dosen/proposals` (dan `as-member`) | Sudah ada per baris, tanpa permintaan tambahan. |
+| W-04 | Profil: Nilai SINTA | Field `sintaId`, `sintaScore` di `/auth/me` & profil; diisi dosen lewat `PATCH /users/profile/me` | Form Pengaturan perlu input SINTA ID & skor. |
+| W-07 | Statistik Dosen & Pengaturan: Foto profil | `POST /users/profile/foto` (multipart `file`, JPG/PNG/WebP maks 2 MB), `DELETE /users/profile/foto`, field `fotoUrl` | `<img src={API_BASE_URL + user.fotoUrl}>`; panggil `fetchMe()` setelah upload/hapus. |
+| W-10 | Header aplikasi: foto di kanan atas | Sama dengan W-07 (`fotoUrl` di `/auth/me`) | |
+| W-20 | Pengaturan: Unduh data akun | `GET /users/profile/export` → file JSON (tanpa isi dokumen) | Unduh dengan `responseType: 'blob'`. |
+| W-21 | Pengaturan: Hapus akun ini | `DELETE /users/profile/me` body `{ password }` | Akun dinonaktifkan + dianonimkan; setelah 200 frontend wajib logout. |
 | W-19 | Pengaturan: Program Studi sebagai dropdown | `GET /program-studi` (publik) + CRUD admin | Kirim `nama` terpilih ke `programStudi`/`prodi`; bisa juga dipakai di form registrasi. |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
@@ -33,7 +40,7 @@ Data yang **sudah** tersambung ke API yang ada:
 |---|---|
 | Dokumen Diterima / Ditolak / Diproses | `GET /dosen/proposals/stats` (`disetujui`, `ditolak`, `diajukan` + review*) |
 | Usulan Terakhir (judul, status, jenis, periode) | `GET /dosen/proposals?limit=6` (baris pertama) |
-| Tahapan usulan (diturunkan) | status proposal + `GET /proposals/:id/laporan` (lihat W-03) |
+| Tahapan usulan (diturunkan) | status proposal + `GET /proposals/:id/laporan` (sementara; backend kini mengirim `tahapan`, lihat W-03 di "API sudah tersedia") |
 | Profil: Pengabdian, Penelitian | `GET /dosen/proposals?jenis=…&status=disetujui&limit=1` → `meta.total` |
 | Nama & email | `GET /auth/me` |
 
@@ -47,12 +54,8 @@ Data yang **menunggu API**:
 |---|---|---|---|---|
 | W-01 | Kartu **Luaran Dapat Diklaim** | Jumlah luaran (output kegiatan) yang bisa diklaim dosen | `GET /dosen/luaran/stats` → `{ dapatDiklaim: number }` | Belum ada tabel/model "Luaran" sama sekali; perlu desain skema + migrasi. Menu "Luaran" di desain juga belum ada. |
 | W-02 | Profil: **Jurnal** dan Statistik Dosen: **Jurnal Diterbitkan** | Jumlah jurnal/publikasi dosen | `GET /dosen/publikasi/stats` → `{ jurnal: number }` | Belum ada tabel publikasi/jurnal. |
-| W-03 | **Tahapan** pada Usulan Terakhir | Tahap resmi: Seleksi/Usulan → Pelaksanaan Kegiatan → Seleksi/Lanjutan → Pasca Pelaksanaan | Field `tahapan` di `Proposal` (enum) atau `GET /dosen/proposals/:id/tahapan` | Sementara diturunkan: belum `disetujui` → Seleksi/Usulan; `disetujui` → Pelaksanaan; ada laporan `kemajuan` → Seleksi/Lanjutan; ada laporan `akhir` → Pasca. Ini perkiraan, bukan data resmi. |
-| W-04 | Profil: **Nilai Sinta** | Skor SINTA dosen | Kolom `sintaScore` di `User` (+ ikut di `/auth/me`) atau `GET /dosen/sinta` | Bisa diisi manual oleh admin atau sinkron dari SINTA (sumber perlu diputuskan). |
 | W-05 | Profil: **Sertifikasi** | Jumlah sertifikasi dosen | `GET /dosen/sertifikasi/stats` → `{ total: number }` | Belum ada tabel sertifikasi. |
 | W-06 | Profil: **Nilai Kepercayaan** | Skor kepercayaan, mis. `4.7/5.0` | `GET /dosen/kepercayaan` → `{ nilai: number, skala: 5 }` | Definisi/rumus skor belum ada. Perlu keputusan bisnis. |
-| W-07 | Statistik Dosen: **Foto profil** | URL/berkas foto dosen | `POST/GET /users/profile/photo` + field `fotoUrl` di profil (`/auth/me`) | Sementara tampil inisial nama. |
-| W-10 | Header aplikasi: nama + foto di kanan atas | Foto profil | Sama dengan W-07 | Di luar lingkup dashboard; sidebar saat ini sudah menampilkan nama & peran. |
 
 ## Menu Kegiatan → Status Penelitian / Pengabdian (`frontend/src/pages/KegiatanPage.jsx`)
 
@@ -74,7 +77,6 @@ Data yang **menunggu API**:
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
 | W-12 | ~~Kartu Luaran tercatat & kolom Luaran~~ | — | — | **Selesai sebagian**: kolom Luaran kini memakai field `luaran` (target) dan `luaranTercapai` (laporan) dari API baru; kartu diganti "Laporan Diterima" sesuai desain. Rekap luaran yang dapat diklaim tetap menunggu W-01. |
-| W-13 | Kolom **Tahapan** per kegiatan | Tahap resmi tiap proposal | Field `tahapan` di respons `GET /dosen/proposals` (lihat W-03) | Di daftar sengaja tidak diturunkan dari laporan agar tidak 1 permintaan per baris. |
 
 ## Usulan Penelitian / Pengabdian (`frontend/src/pages/UsulanPage.jsx`)
 
@@ -114,10 +116,7 @@ Data yang **menunggu API**:
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
-| W-07 | **Foto Profil** (pilih file + Perbarui Foto) | Unggah & ambil foto profil | Sama dengan W-07 di atas (`POST /users/profile/photo`, field `fotoUrl`) | Pemilih file sudah ada, tombol Perbarui Foto nonaktif. Upload saat ini hanya menerima PDF/DOCX, jadi perlu aturan gambar tersendiri. |
 | W-18 | **Status verifikasi email** ("Akun email anda belum diverifikasi. Klik disini") | Status verifikasi + kirim ulang email verifikasi | Field `emailVerifiedAt` di `GET /auth/me` + `POST /auth/verify-email/resend` + `POST /auth/verify-email` | Belum ada kolom/alur verifikasi. Email juga belum bisa diubah oleh user (tidak termasuk field `PATCH /users/profile/me`). |
-| W-20 | Zona Berbahaya: **Unduh data akun** | Arsip data & dokumen milik user | `GET /users/profile/export` (ZIP/JSON) | Tombol nonaktif. |
-| W-21 | Zona Berbahaya: **Hapus akun ini** | Hapus akun sendiri | `DELETE /users/profile/me` dengan konfirmasi password | `DELETE /users/:id` hanya untuk admin. Perlu aturan bisnis: proposal/review milik user memakai FK `RESTRICT`, jadi kemungkinan cukup nonaktifkan/anonimkan akun, bukan hapus fisik. Tombol nonaktif. |
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

@@ -7,12 +7,15 @@ API, dikelompokkan per rilis:
 - **Bagian 10** — Grup A dari `docs/waitingApi-list.md`: profil sendiri (W-08), jabatan
   fungsional (W-09), statistik dosen (W-11, W-17), proposal sebagai anggota (W-16), skema
   penelitian (W-14), mitra pengabdian (W-15), master program studi (W-19).
+- **Bagian 11** — Grup B: tahapan kegiatan (W-03/W-13), nilai SINTA (W-04), foto profil
+  (W-07/W-10), unduh data akun (W-20), hapus akun sendiri (W-21).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
 - Format respons sama seperti endpoint lain: `{ success, message, data[, meta] }`
 - Migrasi DB: `migrations/20261024000000_split_proposal_penelitian_pengabdian`,
-  `migrations/20261025000000_profil_skema_mitra_program_studi`
+  `migrations/20261025000000_profil_skema_mitra_program_studi`,
+  `migrations/20261026000000_sinta_foto_hapus_akun`
 
 ---
 
@@ -52,7 +55,9 @@ Berlaku untuk semua respons proposal (`/proposals`, `/proposals/my`, `/proposals
   "skema": "Penelitian Dosen Pemula",   // BARU (bagian 10) — hanya penelitian, pengabdian selalu null
   "mitra": null,                        // BARU (bagian 10) — hanya pengabdian, penelitian selalu null
   "catatanRevisi": null,
-  // ... field lain tetap sama
+  // ... field lain tetap sama ...
+  "updatedAt": "2026-10-24T14:44:04.764Z",
+  "tahapan": { "kode": "pelaksanaan", "label": "Pelaksanaan Kegiatan", "urutan": 2 } // BARU (bagian 11)
 }
 ```
 
@@ -708,4 +713,171 @@ export const programStudiApi = {
   update: (id, data) => api.patch(`/program-studi/${id}`, data),
   remove: (id) => api.delete(`/program-studi/${id}`),
 };
+```
+
+---
+
+## 11. Grup B waiting API
+
+| ID | Elemen UI | API |
+|---|---|---|
+| W-03 / W-13 | Tahapan pada Usulan Terakhir & kolom Tahapan di Kegiatan | Field `tahapan` di **semua** respons proposal |
+| W-04 | Nilai SINTA | Field `sintaId`, `sintaScore` di `/auth/me` & profil; diisi dosen lewat `PATCH /users/profile/me` |
+| W-07 / W-10 | Foto profil (dashboard, Pengaturan, header) | `POST/DELETE /users/profile/foto`, gambar di `GET /users/:id/foto`, field `fotoUrl` |
+| W-20 | Zona Berbahaya: Unduh data akun | `GET /users/profile/export` (file JSON) |
+| W-21 | Zona Berbahaya: Hapus akun ini | `DELETE /users/profile/me` (konfirmasi password) |
+
+### 11.1 Tahapan kegiatan (W-03, W-13)
+
+Setiap objek proposal (list, detail, create/update/submit/status, `/dosen/proposals`,
+`/dosen/proposals/as-member`, `/proposals`, `/proposals/my`) kini punya field `tahapan`
+setelah `updatedAt`:
+
+```json
+"tahapan": { "kode": "seleksi_lanjutan", "label": "Seleksi/Lanjutan", "urutan": 3 }
+```
+
+Tahapan **dihitung otomatis** dari status proposal dan status laporannya (fitur `/laporan`):
+
+| urutan | kode | label | Kondisi |
+|---|---|---|---|
+| 1 | `seleksi_usulan` | Seleksi/Usulan | proposal belum `disetujui` (draft, diajukan, review, revisi, ditolak) |
+| 2 | `pelaksanaan` | Pelaksanaan Kegiatan | proposal `disetujui`; laporan belum dibuat atau masih `draft` |
+| 3 | `seleksi_lanjutan` | Seleksi/Lanjutan | laporan `diajukan`, `review`, `revisi`, atau `ditolak` |
+| 4 | `pasca_pelaksanaan` | Pasca Pelaksanaan | laporan `disetujui` |
+
+- Untuk progress bar, pakai `urutan` (1–4). Untuk teks, pakai `label`.
+- Proposal `ditolak` tetap di tahap 1. Bedakan lewat field `status`.
+- Perkiraan lama di frontend (dari laporan kemajuan/akhir) bisa dihapus.
+- Field ini tidak bisa diubah langsung, karena hanya hasil perhitungan.
+
+### 11.2 Nilai SINTA (W-04)
+
+Field baru di `GET /auth/me`, `GET/PATCH /users/profile/me`:
+
+| Field | Tipe | Keterangan |
+|---|---|---|
+| `sintaId` | string \| null | ID author SINTA |
+| `sintaScore` | integer \| null | Skor SINTA, ≥ 0 |
+
+Diisi oleh dosen sendiri lewat `PATCH /users/profile/me`:
+
+```json
+{ "sintaId": "6012345", "sintaScore": 245 }
+```
+
+- `sintaScore` boleh angka (`245`), string angka (`"245"`), atau `null`/`""` untuk mengosongkan.
+- Nilai negatif, desimal, atau bukan angka → `400 "sintaScore harus bilangan bulat 0 atau lebih"`.
+
+### 11.3 Foto profil (W-07, W-10)
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| POST | `/users/profile/foto` | login | Unggah/ganti foto sendiri (multipart, field **`file`**) |
+| DELETE | `/users/profile/foto` | login | Hapus foto sendiri |
+| GET | `/users/:id/foto` | **publik** | Mengirim gambar (bisa langsung dipakai di `<img>`) |
+
+Aturan unggah: **JPG, PNG, atau WebP**, maks **2 MB**, isi file dicek (magic bytes).
+
+```json
+// POST /users/profile/foto → 200
+{ "success": true, "message": "Foto profil berhasil diperbarui",
+  "data": { "fotoUrl": "/users/9/foto?v=1793027045123", "fotoMime": "image/png", "fotoUkuran": 48213 } }
+```
+
+Error:
+
+| Status | message |
+|---|---|
+| 400 | `"File foto tidak ditemukan dalam request."` |
+| 400 | `"Foto harus berformat JPG, PNG, atau WebP."` (berdasarkan Content-Type file) |
+| 400 | `"Isi file bukan gambar JPG, PNG, atau WebP yang valid."` (berdasarkan isi file) |
+| 400 | `"Ukuran foto maksimal 2 MB."` |
+| 404 | `"Foto profil belum ada"` (DELETE tanpa foto) · `"Foto tidak ditemukan"` (GET) |
+
+**`fotoUrl`** ada di `GET /auth/me` (di akhir) dan di `GET/PATCH /users/profile/me` (sebelum
+`createdAt`). Nilainya `null` kalau belum ada foto. URL ini **relatif terhadap base URL API**:
+
+```jsx
+import { API_BASE_URL } from '../api/axios';
+// user.fotoUrl = "/users/9/foto?v=1793027045123"
+{user.fotoUrl
+  ? <img src={`${API_BASE_URL}${user.fotoUrl}`} alt="" className="h-10 w-10 rounded-full object-cover" />
+  : <Inisial nama={user.name} />}
+```
+
+- Parameter `v` berubah setiap foto diganti, jadi browser boleh menyimpan cache gambar. Setelah
+  upload atau hapus, panggil `fetchMe()` agar `fotoUrl` ikut diperbarui.
+- `GET /users/:id/foto` **tidak butuh token**, supaya bisa dipakai langsung di `<img>`. Siapa pun
+  yang tahu id user bisa melihat fotonya.
+
+### 11.4 Unduh data akun (W-20)
+
+**`GET /users/profile/export`** (login) mengirim **file JSON**
+(`Content-Disposition: attachment; filename="data-akun-<id>.json"`). Respons ini **tanpa**
+envelope `{success, message, data}`:
+
+```jsonc
+{
+  "exportedAt": "2026-10-24T15:40:00.000Z",
+  "profil": { /* sama dengan GET /users/profile/me */ },
+  "proposal": [ /* proposal sebagai pengusul */ ],
+  "laporan": [ /* laporan sebagai pengusul */ ],
+  "keanggotaan": [ /* undangan/keanggotaan tim + judul proposal */ ],
+  "laporanHarian": [ /* laporan harian (mahasiswa) */ ],
+  "review": [ /* review yang ditulis user sebagai reviewer */ ],
+  "notifikasi": [ /* semua notifikasi */ ],
+  "aktivitas": [ /* log aktivitas user */ ]
+}
+```
+
+Isi file dokumen (PDF/DOCX/foto) **tidak** ikut, hanya metadatanya (nama, mime, ukuran).
+
+```js
+const res = await api.get('/users/profile/export', { responseType: 'blob' });
+const url = URL.createObjectURL(res.data);
+const a = Object.assign(document.createElement('a'), { href: url, download: `data-akun-${user.id}.json` });
+a.click(); URL.revokeObjectURL(url);
+```
+
+### 11.5 Hapus akun sendiri (W-21)
+
+**`DELETE /users/profile/me`** (login), body JSON:
+
+```json
+{ "password": "password-saat-ini" }
+```
+
+| Status | message |
+|---|---|
+| 200 | `"Akun berhasil dihapus"` (tanpa `data`) |
+| 422 | password kosong/tidak dikirim (`errors.password`) |
+| 400 | `"Password salah"` |
+| 400 | `"Akun admin terakhir tidak dapat dihapus"` |
+
+Yang terjadi saat akun dihapus. Akun **dinonaktifkan dan dianonimkan**, bukan dihapus fisik, supaya
+arsip LPPM tetap utuh:
+
+- status menjadi `rejected` sehingga tidak bisa login lagi (login → `500 "Invalid credentials"`);
+- semua refresh token dicabut;
+- nama menjadi `"Pengguna Dihapus"`, email menjadi `deleted-<id>@deleted.invalid`, semua field profil
+  (NIDN/NIM, kontak, alamat, TTL, prodi, jabatan, SINTA) dikosongkan, dan foto dihapus;
+- undangan tim yang belum dijawab otomatis menjadi `ditolak`;
+- proposal, laporan, review, dan riwayat **tetap ada** (pengusulnya tampil sebagai "Pengguna Dihapus").
+
+Access token yang sedang dipakai masih berlaku sampai kedaluwarsa (maks 15 menit). Jadi setelah
+respons 200, **frontend wajib langsung logout** (hapus token dan arahkan ke `/login`).
+
+### 11.6 Contoh pemanggilan (axios)
+
+```js
+// tambahan di src/api/users.js
+uploadFoto: (file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/users/profile/foto', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+},
+deleteFoto: () => api.delete('/users/profile/foto'),
+exportAccount: () => api.get('/users/profile/export', { responseType: 'blob' }),
+deleteAccount: (password) => api.delete('/users/profile/me', { data: { password } }),
 ```

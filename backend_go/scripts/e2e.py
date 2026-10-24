@@ -108,7 +108,7 @@ b = expect("login missing fields", req("POST", "/api/v1/auth/login", body={}), 4
 check("login missing → Required", b["errors"] == {"email": ["Required"], "password": ["Required"]}, b)
 expect("bad json", req("POST", "/api/v1/auth/login", raw=b'{"x":', ctype="application/json"), 400)
 b = expect("me", req("GET", "/api/v1/auth/me", dosen1), 200, "Current user")
-check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional"] and b["data"]["hasTugasan"] is False, b)
+check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl"] and b["data"]["hasTugasan"] is False, b)
 expect("me bad token", req("GET", "/api/v1/auth/me", "xxx"), 401, "Token invalid or expired")
 expect("refresh blank", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "   "}), 400, "Refresh token required")
 expect("refresh unknown", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "nope"}), 500, "Refresh token invalid or expired")
@@ -199,7 +199,8 @@ expect("create proposal forbidden", req("POST", "/api/v1/proposals", admin, {}),
 b = expect("create proposal", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggaran": 15000000.5, "dokumenUrl": "https://drive.google.com/x", "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": dosen2User["id"], "peran": "co-peneliti"}]}), 201, "Proposal created")
 P = b["data"]
 pid = P["id"]
-check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
+check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
+check("tahapan draft", P["tahapan"] == {"kode": "seleksi_usulan", "label": "Seleksi/Usulan", "urutan": 1}, P["tahapan"])
 check("proposal values", P["status"] == "draft" and P["anggaran"] == "15000000.5" and P["periode"]["id"] == periodePen and list(P["periode"].keys()) == ["id", "nama", "tahun"] and list(P["pengusul"].keys()) == ["id", "name", "fullName", "email", "programStudi", "nidn"], P)
 check("proposal anggota", [a["user"]["id"] for a in P["anggota"]] == [mhs1User["id"], dosen2User["id"]] and P["anggota"][0]["peran"] == "anggota" and list(P["anggota"][0].keys()) == ["id", "peran", "user"], P["anggota"])
 expect("create dup anggota", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": mhs1User["id"]}]}), 409, "Resource already exists")
@@ -232,7 +233,7 @@ expect("detail accepted member", req("GET", f"/api/v1/proposals/{pid}", mhs1), 2
 
 # dosen module
 b = expect("dosen list", req("GET", "/api/v1/dosen/proposals?status=draft", dosen1), 200, "Proposals fetched")
-check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
+check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
 expect("dosen list bad status", req("GET", "/api/v1/dosen/proposals?status=x", dosen1), 500)
 b = expect("dosen stats", req("GET", "/api/v1/dosen/proposals/stats", dosen1), 200, "Stats fetched")
 check("stats shape", list(b["data"].keys()) == ["total", "draft", "diajukan", "disetujui", "revisi", "ditolak", "review"] and b["data"]["total"] == sum(v for k, v in b["data"].items() if k != "total"), b)
@@ -381,6 +382,8 @@ L = b["data"]
 lapId = L["id"]
 check("laporan shape", list(L.keys()) == LAP_KEYS, list(L.keys()))
 check("laporan values", L["tipe"] == "laporan" and L["proposalId"] == pid and L["status"] == "draft" and L["jenis"] == "penelitian" and L["anggaran"] == "15000000.5" and L["proposal"]["id"] == pid and lapId != pid, L)
+tah = lambda: req("GET", f"/api/v1/dosen/proposals/{pid}", dosen1)[1]["data"]["tahapan"]["kode"]
+check("tahapan pelaksanaan", tah() == "pelaksanaan", tah())
 expect("laporan create duplicate", req("POST", "/api/v1/laporan", dosen1, {"proposalId": pid}), 409, "Proposal ini sudah memiliki laporan")
 b = expect("laporan eligible after", req("GET", "/api/v1/laporan/eligible", dosen1), 200)
 check("laporan eligible excludes pid", all(x["id"] != pid for x in b["data"]), b["data"])
@@ -401,6 +404,7 @@ expect("laporan detail stranger", req("GET", f"/api/v1/laporan/{lapId}", dosen5)
 expect("laporan assign before submit", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [rev1User["id"]]}), 400, "Laporan harus berstatus diajukan atau review untuk ditugaskan reviewer")
 b = expect("laporan submit", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 200, "Laporan berhasil diajukan")
 check("laporan diajukan", b["data"]["status"] == "diajukan" and b["data"]["submittedAt"] is not None, b["data"])
+check("tahapan seleksi lanjutan", tah() == "seleksi_lanjutan", tah())
 n = req("GET", "/api/v1/notifications?limit=50", ketua)[1]["data"]
 check("ketua laporan notif", any(x["type"] == "laporan_diajukan" and x["refId"] == lapId and x["refType"] == "laporan" for x in n), n[:3])
 expect("laporan edit after submit", req("PATCH", f"/api/v1/laporan/{lapId}", dosen1, {"ringkasanHasil": "x"}), 400, "Laporan hanya bisa diubah saat status draft atau revisi")
@@ -427,6 +431,7 @@ check("laporan detail keys", list(b["data"].keys())[-4:] == ["proposal", "anggot
 expect("laporan status by dosen", req("PATCH", f"/api/v1/laporan/{lapId}/status", dosen1, {"status": "disetujui"}), 403)
 b = expect("laporan status disetujui", req("PATCH", f"/api/v1/laporan/{lapId}/status", ketua, {"status": "disetujui"}), 200, "Status laporan diperbarui")
 check("laporan approved", b["data"]["status"] == "disetujui" and b["data"]["approvedAt"] is not None, b["data"])
+check("tahapan pasca", tah() == "pasca_pelaksanaan", tah())
 n = req("GET", "/api/v1/notifications?limit=50", dosen1)[1]["data"]
 check("pengusul laporan notif", any(x["type"] == "laporan_disetujui" and x["refId"] == lapId for x in n) and any(x["type"] == "review_selesai" and x["refType"] == "laporan" for x in n), n[:3])
 b = expect("laporan list admin", req("GET", "/api/v1/laporan?status=disetujui&jenis=penelitian", admin), 200, "Laporan fetched")
@@ -455,7 +460,7 @@ check("moved jenis", b["data"]["id"] == mv and b["data"]["jenis"] == "pengabdian
 expect("delete moved", req("DELETE", f"/api/v1/dosen/proposals/{mv}", dosen5), 200)
 
 # ── grup A waiting API (W-08, W-09, W-11, W-16, W-17, W-19) ──
-PROFILE_KEYS = ["id", "email", "name", "fullName", "status", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "createdAt", "roles"]
+PROFILE_KEYS = ["id", "email", "name", "fullName", "status", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "createdAt", "roles"]
 b = expect("profile me", req("GET", "/api/v1/users/profile/me", dosen1), 200, "Profile fetched")
 check("profile me shape", list(b["data"].keys()) == PROFILE_KEYS and b["data"]["id"] == dosen1User["id"], list(b["data"].keys()))
 b = expect("profile jabatan", req("PATCH", "/api/v1/users/profile/me", dosen1, {"jabatanFungsional": "Lektor"}), 200, "Profile updated")
@@ -491,6 +496,56 @@ b = req("GET", "/api/v1/program-studi?semua=true")[1]
 check("prodi semua", any(x["id"] == ps["id"] for x in b["data"]))
 expect("prodi delete", req("DELETE", f"/api/v1/program-studi/{ps['id']}", admin), 200, "Program studi berhasil dihapus")
 expect("prodi delete missing", req("DELETE", f"/api/v1/program-studi/{ps['id']}", admin), 404, "Program studi tidak ditemukan")
+
+# ── grup B waiting API (W-04, W-07, W-20, W-21; W-03 dicek di alur laporan) ──
+b = expect("sinta save", req("PATCH", "/api/v1/users/profile/me", dosen1, {"sintaId": "6012345", "sintaScore": 120}), 200, "Profile updated")
+check("sinta saved", b["data"]["sintaId"] == "6012345" and b["data"]["sintaScore"] == 120, b["data"])
+expect("sinta negative", req("PATCH", "/api/v1/users/profile/me", dosen1, {"sintaScore": -1}), 400, "sintaScore harus bilangan bulat 0 atau lebih")
+expect("sinta text", req("PATCH", "/api/v1/users/profile/me", dosen1, {"sintaScore": "abc"}), 400)
+b = expect("sinta string number", req("PATCH", "/api/v1/users/profile/me", dosen1, {"sintaScore": "245"}), 200)
+check("sinta string saved", b["data"]["sintaScore"] == 245, b["data"])
+check("me sinta", req("GET", "/api/v1/auth/me", dosen1)[1]["data"]["sintaScore"] == 245)
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+body, ct = multipart({}, ("file", "foto.png", "image/png", PNG))
+b = expect("foto upload", req("POST", "/api/v1/users/profile/foto", dosen1, raw=body, ctype=ct), 200, "Foto profil berhasil diperbarui")
+fotoUrl = b["data"]["fotoUrl"]
+check("foto upload shape", list(b["data"].keys()) == ["fotoUrl", "fotoMime", "fotoUkuran"] and fotoUrl.startswith(f"/users/{dosen1User['id']}/foto?v=") and b["data"]["fotoMime"] == "image/png", b["data"])
+check("me fotoUrl", req("GET", "/api/v1/auth/me", dosen1)[1]["data"]["fotoUrl"] == fotoUrl)
+check("profile fotoUrl", req("GET", "/api/v1/users/profile/me", dosen1)[1]["data"]["fotoUrl"] == fotoUrl)
+st, _, hdrs, content = req("GET", "/api/v1" + fotoUrl)
+check("foto public get", st == 200 and content == PNG and hdrs["Content-Type"] == "image/png" and hdrs["Cross-Origin-Resource-Policy"] == "cross-origin", (st, dict(hdrs)))
+body, ct = multipart({}, ("file", "x.pdf", "application/pdf", PDF))
+expect("foto pdf mimetype", req("POST", "/api/v1/users/profile/foto", dosen1, raw=body, ctype=ct), 400, "Foto harus berformat JPG, PNG, atau WebP.")
+body, ct = multipart({}, ("file", "x.png", "image/png", PDF))
+expect("foto fake png", req("POST", "/api/v1/users/profile/foto", dosen1, raw=body, ctype=ct), 400, "Isi file bukan gambar JPG, PNG, atau WebP yang valid.")
+body, ct = multipart({}, ("file", "big.png", "image/png", PNG + b"\x00" * (2 * 1024 * 1024)))
+expect("foto too large", req("POST", "/api/v1/users/profile/foto", dosen1, raw=body, ctype=ct), 400, "Ukuran foto maksimal 2 MB.")
+expect("foto no file", req("POST", "/api/v1/users/profile/foto", dosen1, {}), 400, "File foto tidak ditemukan dalam request.")
+expect("foto delete", req("DELETE", "/api/v1/users/profile/foto", dosen1), 200, "Foto profil dihapus")
+expect("foto delete again", req("DELETE", "/api/v1/users/profile/foto", dosen1), 404, "Foto profil belum ada")
+expect("foto gone", req("GET", f"/api/v1/users/{dosen1User['id']}/foto"), 404, "Foto tidak ditemukan")
+check("me fotoUrl null", req("GET", "/api/v1/auth/me", dosen1)[1]["data"]["fotoUrl"] is None)
+expect("foto bad id", req("GET", "/api/v1/users/abc/foto"), 400)
+st, b, hdrs, _ = req("GET", "/api/v1/users/profile/export", dosen1)
+check("export account", st == 200 and hdrs["Content-Disposition"] == f'attachment; filename="data-akun-{dosen1User["id"]}.json"' and list(b.keys()) == ["exportedAt", "profil", "proposal", "laporan", "keanggotaan", "laporanHarian", "review", "notifikasi", "aktivitas"] and len(b["proposal"]) > 0, (st, list(b.keys()) if isinstance(b, dict) else b))
+expect("export no token", req("GET", "/api/v1/users/profile/export"), 401)
+# hapus akun: daftar → disetujui admin → login → hapus
+delEmail = f"hapus{uuid.uuid4().hex[:6]}@lppm.dev"
+b = expect("register for delete", req("POST", "/api/v1/auth/register/mahasiswa", body={"email": delEmail, "name": "Akan Dihapus", "password": "password123", "nim": "99" + uuid.uuid4().hex[:8]}), 201)
+delId = b["data"]["id"]
+expect("approve for delete", req("PATCH", f"/api/v1/users/{delId}/status", admin, {"status": "approved"}), 200)
+st, b, *_ = req("POST", "/api/v1/auth/login", body={"email": delEmail, "password": "password123"})
+delTok, delRefresh = b["data"]["accessToken"], b["data"]["refreshToken"]
+expect("delete account no password", req("DELETE", "/api/v1/users/profile/me", delTok, {}), 422)
+expect("delete account wrong password", req("DELETE", "/api/v1/users/profile/me", delTok, {"password": "salah12345"}), 400, "Password salah")
+expect("delete account", req("DELETE", "/api/v1/users/profile/me", delTok, {"password": "password123"}), 200, "Akun berhasil dihapus")
+expect("deleted cannot login", req("POST", "/api/v1/auth/login", body={"email": delEmail, "password": "password123"}), 500, "Invalid credentials")
+expect("deleted refresh revoked", req("POST", "/api/v1/auth/refresh", body={"refreshToken": delRefresh}), 500, "Refresh token invalid or expired")
+b = req("GET", f"/api/v1/users/{delId}", admin)[1]["data"]
+check("deleted anonymised", b["name"] == "Pengguna Dihapus" and b["email"] == f"deleted-{delId}@deleted.invalid" and b["status"] == "rejected" and b["nim"] is None, b)
+admins = req("GET", "/api/v1/users?role=admin&status=approved", admin)[1]["meta"]["total"]
+if admins == 1:
+    expect("delete last admin", req("DELETE", "/api/v1/users/profile/me", admin, {"password": "admin123456"}), 400, "Akun admin terakhir tidak dapat dihapus")
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

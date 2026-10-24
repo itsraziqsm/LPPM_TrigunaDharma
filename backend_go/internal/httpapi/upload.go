@@ -29,6 +29,35 @@ type uploadedFile struct {
 // 10MB}, fileFilter: PDF/DOCX only}).single(field). Errors raised by multer
 // have no HTTP status, so Node answers them with 500.
 func multerSingle(field string) step {
+	return multerFile(field, uploadRule{
+		allowed: []string{"application/pdf", mimeDOCX}, maxBytes: maxUploadBytes,
+		filterMsg: "Hanya file PDF atau DOCX yang diizinkan.", tooLargeMsg: "File too large",
+		status: http.StatusInternalServerError,
+	})
+}
+
+// uploadRule configures multerFile. status is used for the filter and size
+// errors (500 for the Node-compatible document uploads).
+type uploadRule struct {
+	allowed     []string
+	maxBytes    int
+	filterMsg   string
+	tooLargeMsg string
+	status      int
+}
+
+const maxFotoBytes = 2 * 1024 * 1024
+
+// multerImage accepts one JPG/PNG/WebP image up to 2 MB (foto profil, Go saja).
+func multerImage(field string) step {
+	return multerFile(field, uploadRule{
+		allowed: []string{"image/jpeg", "image/png", "image/webp"}, maxBytes: maxFotoBytes,
+		filterMsg: "Foto harus berformat JPG, PNG, atau WebP.", tooLargeMsg: "Ukuran foto maksimal 2 MB.",
+		status: http.StatusBadRequest,
+	})
+}
+
+func multerFile(field string, rule uploadRule) step {
 	return func(c *Ctx) error {
 		mediaType, params, err := mime.ParseMediaType(c.r.Header.Get("Content-Type"))
 		if err != nil || !strings.HasPrefix(mediaType, "multipart/") {
@@ -74,17 +103,17 @@ func multerSingle(field string) step {
 			if mt, _, err := mime.ParseMediaType(mimetype); err == nil {
 				mimetype = mt
 			}
-			if mimetype != "application/pdf" && mimetype != mimeDOCX {
+			if !validEnum(mimetype, rule.allowed) {
 				part.Close()
-				return plainError("Hanya file PDF atau DOCX yang diizinkan.")
+				return httpError(rule.status, rule.filterMsg)
 			}
-			data, err := io.ReadAll(io.LimitReader(part, maxUploadBytes+1))
+			data, err := io.ReadAll(io.LimitReader(part, int64(rule.maxBytes)+1))
 			part.Close()
 			if err != nil {
 				return plainError("Unexpected end of form")
 			}
-			if len(data) > maxUploadBytes {
-				return plainError("File too large")
+			if len(data) > rule.maxBytes {
+				return httpError(rule.status, rule.tooLargeMsg)
 			}
 			file = &uploadedFile{fieldname: name, originalname: filename, mimetype: mimetype, data: data, size: int64(len(data))}
 		}

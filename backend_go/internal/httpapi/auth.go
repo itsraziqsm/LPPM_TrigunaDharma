@@ -410,7 +410,8 @@ func (s *Server) resetPassword(c *Ctx) error {
 	return c.ok("Password reset successfully", noData)
 }
 
-const meProfileColumns = "`nidn`,`nim`,`prodi`,`programStudi`,`institusi`,`kontak`,`noHp`,`alamat`,`tempatLahir`,`tanggalLahir`,`jabatanFungsional`"
+const meProfileColumns = "u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`jabatanFungsional`," +
+	"u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`"
 
 func (s *Server) me(c *Ctx) error {
 	ctx := c.r.Context()
@@ -434,11 +435,14 @@ func (s *Server) me(c *Ctx) error {
 		{"status", user.Status}, {"roles", user.Roles}, {"hasTugasan", count > 0},
 	}
 	// W-08 (Go saja): field profil ikut dikirim agar frontend bisa langsung menampilkannya.
-	profile, err := queryObj(ctx, s.db, "SELECT "+meProfileColumns+" FROM `User` WHERE `id` = ?", c.user.UserID)
+	profile, err := queryObj(ctx, s.db, "SELECT "+meProfileColumns+" FROM `User` u WHERE u.`id` = ?", c.user.UserID)
 	if err != nil {
 		return err
 	}
-	data = append(data, profile...)
+	if profile != nil {
+		setFotoURL(&profile, c.user.UserID)
+		data = append(data, profile...)
+	}
 	return c.ok("Current user", data)
 }
 

@@ -84,7 +84,8 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   misc.go (notifikasi, dashboard, activity log, export),
   kegiatan.go (helper tulis ke tabel Penelitian/Pengabdian via registri Kegiatan),
   laporan_kegiatan.go (fitur laporan baru, /api/v1/laporan),
-  program_studi.go (master program studi, /api/v1/program-studi)
+  program_studi.go (master program studi, /api/v1/program-studi),
+  profil_akun.go (SINTA, foto profil, unduh data akun, hapus akun sendiri)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -92,7 +93,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 335 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 371 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -121,7 +122,11 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
    punya key `review` dan filter `?jenis=`; `GET /dosen/proposals/as-member` baru; field
    `skema` (penelitian) dan `mitra` (pengabdian) di proposal; `/api/v1/program-studi`
    baru (GET publik).
-6. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+6. Tambahan Grup B (lihat `new-api.md` bagian 11): field `tahapan` di semua respons
+   proposal; `sintaId`/`sintaScore`/`fotoUrl` di `/auth/me` dan profil; foto profil
+   (`POST/DELETE /users/profile/foto`, `GET /users/:id/foto` publik); `GET
+   /users/profile/export`; `DELETE /users/profile/me` (nonaktif + anonimkan).
+7. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

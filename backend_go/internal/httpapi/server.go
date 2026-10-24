@@ -76,6 +76,7 @@ func (s *Server) Close() error {
 // plus the Go-only laporan routes.
 func (s *Server) registerRoutes() {
 	s.registerAuthRoutes()
+	s.registerUserFotoRoutes() // publik, harus sebelum router /users yang ber-authenticate
 	s.registerUserRoutes()
 	s.registerPeriodeRoutes()
 	s.registerProposalRoutes()

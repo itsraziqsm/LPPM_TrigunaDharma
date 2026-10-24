@@ -17,8 +17,10 @@ var (
 	roleNames   = []string{"admin", "ketua_lppm", "dosen", "reviewer", "mahasiswa"}
 	userStatus  = []string{"pending", "approved", "rejected"}
 	userColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`createdAt`"
-	// profileColumns: profil milik sendiri (GET/PATCH /users/profile/me), = userColumns + jabatanFungsional.
-	profileColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`jabatanFungsional`,u.`createdAt`"
+	// profileColumns: profil milik sendiri (GET/PATCH /users/profile/me) = userColumns +
+	// jabatanFungsional, sintaId, sintaScore; fotoUrl dihitung dari UserFoto (__foto).
+	profileColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`," +
+		"u.`jabatanFungsional`,u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`,u.`createdAt`"
 
 	paginationSchema = zObj(
 		withDefault("page", zNum().Coerce().Int().Min(1), float64(1)),
@@ -36,6 +38,10 @@ func (s *Server) registerUserRoutes() {
 	g.get("/search", s.searchUsers)
 	g.get("/profile/me", s.getProfile) // baru (W-08), tidak ada di Node
 	g.patch("/profile/me", s.updateProfile)
+	g.delete("/profile/me", validateBody(deleteAccountSchema), s.deleteOwnAccount) // baru (W-21)
+	g.get("/profile/export", s.exportAccount)                                      // baru (W-20)
+	g.post("/profile/foto", multerImage("file"), s.uploadProfileFoto)              // baru (W-07)
+	g.delete("/profile/foto", s.deleteProfileFoto)                                 // baru (W-07)
 	g.patch("/profile/password", s.changePassword)
 	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
 	g.get("/:id", authorize("admin", "ketua_lppm"), s.getUser)
@@ -100,6 +106,7 @@ func (s *Server) profileByID(ctx context.Context, id int64) (O, error) {
 	if err != nil || len(users) == 0 {
 		return nil, err
 	}
+	setFotoURL(&users[0], id)
 	if err := attachUserRoles(ctx, s.db, users, "id"); err != nil {
 		return nil, err
 	}
@@ -266,7 +273,7 @@ func (s *Server) assignRoles(c *Ctx) error {
 // The Node service passes req.body straight to prisma.user.update(); only
 // the profile fields of the User model are accepted here (password, status,
 // email... are ignored instead of being written blindly).
-var profileFields = []string{"name", "fullName", "alamat", "kontak", "noHp", "institusi", "programStudi", "prodi", "tempatLahir", "tanggalLahir", "nidn", "nim", "jabatanFungsional"}
+var profileFields = []string{"name", "fullName", "alamat", "kontak", "noHp", "institusi", "programStudi", "prodi", "tempatLahir", "tanggalLahir", "nidn", "nim", "jabatanFungsional", "sintaId", "sintaScore"}
 
 func (s *Server) updateProfile(c *Ctx) error {
 	id := c.user.UserID
@@ -280,6 +287,15 @@ func (s *Server) updateProfile(c *Ctx) error {
 	for _, field := range profileFields {
 		value, exists := body[field]
 		if !exists {
+			continue
+		}
+		if field == "sintaScore" { // Go saja (W-04): bilangan bulat >= 0, string angka, atau null
+			score, err := parseSintaScore(value)
+			if err != nil {
+				return err
+			}
+			sets = append(sets, "`sintaScore` = ?")
+			args = append(args, score)
 			continue
 		}
 		if field == "tanggalLahir" {
