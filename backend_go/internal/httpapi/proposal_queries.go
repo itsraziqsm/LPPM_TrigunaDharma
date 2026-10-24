@@ -25,7 +25,7 @@ type proposalShape struct {
 var (
 	// proposal.service.ts → proposalSelect
 	proposalListShape = proposalShape{
-		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols: []string{"id", "name", "fullName", "email", "programStudi", "nidn"},
 		periodeCols:  []string{"id", "nama", "tahun"},
 		tugasanRevID: true,
@@ -40,7 +40,7 @@ var (
 	}
 	// Proposaldosen.service.ts → proposalDosenSelect
 	proposalDosenShape = proposalShape{
-		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols:  []string{"id", "name", "fullName", "email", "nidn", "programStudi"},
 		periodeCols:   []string{"id", "nama", "tahun", "jenis"},
 		anggotaStatus: true,
@@ -82,6 +82,7 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 	if err != nil || len(items) == 0 {
 		return items, err
 	}
+	decodeKataKunci(items)
 	if err := attachTahapan(ctx, q, items); err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 		anggotaCols += ",a.`statusUndangan`"
 	}
 	grouped, err := attachMany(ctx, q, items, "id", "anggota",
-		"SELECT a.`proposalId` AS `__k`,"+anggotaCols+",u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email` "+
+		"SELECT a.`proposalId` AS `__k`,"+anggotaCols+",u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp` "+
 			"FROM `ProposalAnggota` a JOIN `User` u ON u.`id` = a.`userId` WHERE a.`proposalId` IN (%s) ORDER BY a.`id` ASC")
 	if err != nil {
 		return nil, err
@@ -329,10 +330,13 @@ func proposalWriteFields(body map[string]any) ([]string, []any) {
 	cols := []string{}
 	args := []any{}
 	// jenis bukan kolom fisik: menentukan tabel Penelitian/Pengabdian.
-	for _, field := range []string{"judul", "abstrak", "anggaran", "luaran", "skema", "mitra", "periodeId", "dokumenUrl"} {
+	for _, field := range []string{"judul", "abstrak", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "periodeId", "dokumenUrl"} {
 		v, ok := body[field]
 		if !ok {
 			continue
+		}
+		if field == "kataKunci" {
+			v = encodeKataKunci(v)
 		}
 		if field == "periodeId" {
 			v = int64(v.(float64))

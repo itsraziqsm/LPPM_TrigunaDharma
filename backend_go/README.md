@@ -87,7 +87,8 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   program_studi.go (master program studi, /api/v1/program-studi),
   profil_akun.go (SINTA, foto profil, unduh data akun, hapus akun sendiri),
   luaran.go (item luaran kegiatan, /api/v1/luaran), kepercayaan.go (nilai kepercayaan),
-  verifikasi_email.go (verifikasi email opsional)
+  verifikasi_email.go (verifikasi email opsional), master.go (master rumpun ilmu, bidang,
+  luaran), kata_kunci.go (validasi & simpan kata kunci)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -95,7 +96,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 423 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 448 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -132,7 +133,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
    kegiatan + statistik), `GET /dosen/kepercayaan`, verifikasi email
    (`emailVerifiedAt` di `/auth/me` & profil, `POST /auth/verify-email[/resend]`). Tanpa
    `SMTP_HOST` di luar production, link verifikasi hanya dicetak ke log.
-8. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+8. W-22 sampai W-25 (lihat `new-api.md` bagian 13): field `rumpunIlmu`, `bidang`,
+   `kataKunci` (array) di proposal & laporan; `kontak`/`noHp` di pencarian user, pencarian
+   anggota, dan `anggota[].user`; `/api/v1/master/{rumpun-ilmu,bidang,luaran}`.
+9. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

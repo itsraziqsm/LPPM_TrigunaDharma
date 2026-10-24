@@ -11,7 +11,7 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 ## API sudah tersedia — tinggal disambungkan di frontend
 
 Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 12 untuk Grup C) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
+bagian 12 untuk Grup C, bagian 13 untuk W-22 sampai W-25) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
 dan penanda `ApiPending` dihapus, pindahkan barisnya ke tabel "Sudah disambungkan".
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
@@ -20,6 +20,10 @@ dan penanda `ApiPending` dihapus, pindahkan barisnya ke tabel "Sudah disambungka
 | W-02 | Profil: Jurnal · Statistik Dosen: Jurnal Diterbitkan | `GET /luaran/stats` → `jurnal` | |
 | W-12 | Kegiatan: Luaran tercatat & daftar luaran per kegiatan | `GET /luaran/stats` → `total`; item per proposal `GET /luaran/proposal/:proposalId` (+ CRUD target, capaian, bukti) | Target diisi di wizard Usulan (setelah draft tersimpan), capaian di halaman laporan. |
 | W-06 | Profil: Nilai Kepercayaan | `GET /dosen/kepercayaan` → `{ nilai, skala: 5, komponen[] }` | `nilai` bisa `null` untuk dosen tanpa riwayat; rumus di new-api.md 12.2. |
+| W-22 | Usulan: Rumpun Ilmu & Bidang | Field `rumpunIlmu`, `bidang` di create/update/respons proposal; pilihan dari `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=…` | Nilai disimpan sebagai teks (nama dari master). |
+| W-23 | Usulan: Kontak di tabel Anggota | `kontak`, `noHp` di `GET /users/search`, `members/search`, dan `anggota[].user` | **Alamat tidak disediakan** (keputusan privasi). Hapus kolom Alamat dari UI. |
+| W-24 | Usulan: Kata Kunci | Field `kataKunci` (array string, maks 10 × 50 karakter) di create/update/respons proposal | Respons selalu array; `[]` mengosongkan. |
+| W-25 | Usulan: pilihan Luaran Tambahan | `GET /master/luaran?jenis=…` | 7 pilihan pertama sama dengan `LUARAN_OPTIONS`; ganti daftar statis. |
 | W-18 | Pengaturan: Status verifikasi email + kirim ulang | `emailVerifiedAt` di `/auth/me`; `POST /auth/verify-email/resend`; `POST /auth/verify-email` | Perlu halaman publik `/verify-email?token=` yang memanggil verify. |
 
 ### Sudah disambungkan
@@ -99,11 +103,7 @@ Data yang **menunggu API**:
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
-| W-22 | **Rumpun Ilmu** dan **Bidang Penelitian/Pengabdian** (langkah Identitas & Preview) | Rumpun ilmu & bidang per proposal + daftar pilihannya | Kolom `rumpunIlmu`, `bidang` di Penelitian/Pengabdian (ikut create/update/respons) + `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=…` | Input nonaktif. |
-| W-23 | Kolom **Alamat** dan **Kontak** di tabel Anggota | Alamat & kontak user hasil pencarian | Tambahkan `alamat`, `kontak`/`noHp` ke respons `GET /users/search` (dan `anggota.user` di detail proposal) | Pertimbangkan privasi: mungkin cukup kontak saja. |
-| W-24 | **Kata Kunci** (langkah Dokumen & Preview) | Kata kunci proposal | Kolom `kataKunci` (teks/JSON array) di Penelitian/Pengabdian, ikut create/update/respons | Input nonaktif. |
 | W-26 | Langkah **Mitra** (pengabdian): **Jenis Mitra**, **Alamat Mitra**, **Kontak Mitra**, **Pernyataan Kebutuhan** | Detail mitra selain nama | Kolom `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` di Pengabdian (ikut create/update/respons, disalin ke laporan) atau tabel `Mitra` + master jenis mitra | Saat ini hanya nama mitra yang tersimpan (field `mitra`). Input lain nonaktif. |
-| W-25 | Daftar pilihan **Luaran Tambahan** | Master jenis luaran | `GET /master/luaran?jenis=…` | Sementara daftar statis di frontend; nilai dikirim sebagai teks ke field `luaran`. |
 
 ## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
 

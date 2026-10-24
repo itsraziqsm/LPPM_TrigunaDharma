@@ -274,7 +274,7 @@ func (s *Server) dosenSearchMembers(c *Ctx) error {
 	}
 	like := "%" + q + "%"
 	users, err := queryObjs(ctx, s.db,
-		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`nidn`,u.`nim`,u.`programStudi`,u.`prodi` FROM `User` u "+
+		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`nidn`,u.`nim`,u.`programStudi`,u.`prodi`,u.`kontak`,u.`noHp` FROM `User` u "+
 			"WHERE u.`id` <> ? AND u.`status` = 'approved' AND (u.`name` LIKE ? OR u.`fullName` LIKE ? OR u.`email` LIKE ? OR u.`nidn` LIKE ? OR u.`nim` LIKE ?) "+
 			"AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` IN ('dosen','mahasiswa')) "+
 			"ORDER BY u.`id` ASC LIMIT 10",

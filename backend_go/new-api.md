@@ -11,6 +11,8 @@ API, dikelompokkan per rilis:
   (W-07/W-10), unduh data akun (W-20), hapus akun sendiri (W-21).
 - **Bagian 12** — Grup C: luaran kegiatan terstruktur (W-01, W-02, W-12), nilai kepercayaan
   (W-06), verifikasi email (W-18). Sertifikasi (W-05) ditunda.
+- **Bagian 13** — W-22 sampai W-25: rumpun ilmu & bidang, kontak anggota di pencarian, kata
+  kunci, master jenis luaran.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -18,7 +20,8 @@ API, dikelompokkan per rilis:
 - Migrasi DB: `migrations/20261024000000_split_proposal_penelitian_pengabdian`,
   `migrations/20261025000000_profil_skema_mitra_program_studi`,
   `migrations/20261026000000_sinta_foto_hapus_akun`,
-  `migrations/20261027000000_luaran_verifikasi_email`
+  `migrations/20261027000000_luaran_verifikasi_email`,
+  `migrations/20261028000000_rumpun_bidang_kata_kunci_master`
 
 ---
 
@@ -1086,4 +1089,117 @@ getKepercayaan: (params = {}) => api.get('/dosen/kepercayaan', { params }),   //
 // tambahan di src/api/auth.js
 resendVerification: () => api.post('/auth/verify-email/resend'),
 verifyEmail: (token) => api.post('/auth/verify-email', { token }),
+```
+
+---
+
+## 13. W-22 sampai W-25
+
+| ID | Elemen UI | API |
+|---|---|---|
+| W-22 | Rumpun Ilmu & Bidang (wizard Usulan: Identitas & Preview) | Field `rumpunIlmu`, `bidang` di proposal + `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=` |
+| W-23 | Kolom Kontak di tabel Anggota | `kontak`, `noHp` di `GET /users/search`, `GET /dosen/proposals/members/search`, dan `anggota[].user` |
+| W-24 | Kata Kunci (wizard: Dokumen & Preview) | Field `kataKunci` (array string) di proposal |
+| W-25 | Daftar pilihan Luaran Tambahan | `GET /master/luaran?jenis=` |
+
+### 13.1 Field baru di proposal (W-22, W-24)
+
+Berlaku untuk `POST/PATCH /proposals` dan `POST/PATCH /dosen/proposals` (semua opsional). Field
+ini juga muncul di semua respons proposal (setelah `mitra`) dan di objek laporan (disalin dari
+proposal saat laporan dibuat).
+
+| Field | Tipe | Aturan |
+|---|---|---|
+| `rumpunIlmu` | string | Teks bebas. Disarankan `nama` dari `GET /master/rumpun-ilmu` |
+| `bidang` | string | Teks bebas. Disarankan `nama` dari `GET /master/bidang?jenis=<jenis proposal>` |
+| `kataKunci` | string[] | Maks **10**, tiap kata kunci maks **50** karakter. Spasi di awal/akhir dipangkas, item kosong dibuang, duplikat (huruf besar/kecil diabaikan) digabung. `[]` mengosongkan |
+
+```jsonc
+// request
+{ "rumpunIlmu": "Ilmu Teknik", "bidang": "Teknologi Informasi dan Komunikasi",
+  "kataKunci": [" sistem informasi ", "IoT", "iot", ""] }
+// respons proposal
+"rumpunIlmu": "Ilmu Teknik",
+"bidang": "Teknologi Informasi dan Komunikasi",
+"kataKunci": ["sistem informasi", "IoT"]
+```
+
+- Di respons, `kataKunci` **selalu array** (`[]` jika kosong).
+- `kataKunci` yang bukan array, lebih dari 10, atau item lebih dari 50 karakter →
+  422 (`errors.kataKunci`).
+- Backend tidak mewajibkan nilai `rumpunIlmu`/`bidang` ada di master, sama seperti `programStudi`.
+  Jadi data lama tetap valid walau master berubah.
+
+### 13.2 Kontak anggota (W-23)
+
+Hanya **kontak** yang ditambahkan. Alamat **tidak** ditampilkan ke sesama pengguna (keputusan
+privasi).
+
+- `GET /users/search` dan `GET /dosen/proposals/members/search`: tiap item mendapat `kontak` dan
+  `noHp` (sebelum `roles`).
+- `anggota[].user` di respons proposal (list & detail, `/proposals` maupun `/dosen/proposals`) dan
+  di detail laporan: `{ id, name, fullName, email, kontak, noHp }`.
+
+Tampilkan `noHp || kontak || '—'`. Kolom **Alamat** di tabel Anggota sebaiknya dihapus dari UI.
+
+### 13.3 Master data (W-22, W-25)
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| GET | `/master/:kategori` | login | Item aktif, urut `urutan` lalu `nama`. `?jenis=penelitian\|pengabdian` → item untuk jenis itu + item umum. `?semua=true` → termasuk nonaktif |
+| POST | `/master/:kategori` | admin | Tambah item |
+| PATCH | `/master/:kategori/:id` | admin | Ubah item (semua field opsional) |
+| DELETE | `/master/:kategori/:id` | admin | Hapus item |
+
+`:kategori` = **`rumpun-ilmu`** \| **`bidang`** \| **`luaran`**. Kategori lain →
+`404 "Master data tidak dikenal. Pilihan: rumpun-ilmu, bidang, luaran"`.
+
+```json
+{ "success": true, "message": "Master data fetched",
+  "data": [ { "id": 32, "nama": "Artikel jurnal nasional terakreditasi (SINTA)", "jenisKegiatan": null, "jenisLuaran": "jurnal",
+              "urutan": 1, "isAktif": true, "createdAt": "...", "updatedAt": "..." } ] }
+```
+
+| Field | Keterangan |
+|---|---|
+| `jenisKegiatan` | `penelitian` \| `pengabdian` \| `null` (berlaku untuk keduanya) |
+| `jenisLuaran` | Hanya untuk master `luaran`: jenis item luaran (`jurnal`, `prosiding`, `hki`, `buku`, `produk`, `media_massa`, `lainnya`), cocok dengan field `jenis` di `POST /luaran` (bagian 12.1) |
+| `urutan` | Urutan tampil (kecil dulu) |
+
+Body POST/PATCH: `nama` (wajib saat POST, di-trim, min 2, unik per kategori), `jenisKegiatan`
+(atau `null`), `jenisLuaran` (atau `null`, hanya untuk `luaran`, kalau tidak →
+`400 "jenisLuaran hanya untuk master luaran"`), `urutan` (int ≥ 0), `isAktif` (boolean).
+Respons: `201 "Master data berhasil dibuat"`, `200 "Master data berhasil diperbarui"`,
+`200 "Master data berhasil dihapus"`. Nama duplikat → `409 "Resource already exists"`; id tidak
+ada di kategori itu → `404 "Master data tidak ditemukan"`. `?jenis=` selain dua nilai di atas → `400`.
+
+**Isi awal** (bisa diubah admin):
+- **Rumpun ilmu**: 12 rumpun ilmu tingkat 1 DIKTI (MIPA, Ilmu Tanaman, Ilmu Hewani, Ilmu Kedokteran,
+  Ilmu Kesehatan, Ilmu Teknik, Ilmu Bahasa, Ilmu Ekonomi, Ilmu Sosial Humaniora, Agama dan
+  Filsafat, Seni Desain dan Media, Ilmu Pendidikan).
+- **Bidang**: 11 bidang fokus penelitian (Pangan, Energi, Kesehatan dan Obat, TIK, dst.) dan 8
+  bidang pengabdian (Pendidikan dan Literasi, Kesehatan Masyarakat, Pemberdayaan Ekonomi dan
+  UMKM, Teknologi Tepat Guna, dst.).
+- **Luaran**: 7 pilihan pertama **sama persis** dengan `LUARAN_OPTIONS` di `UsulanPage.jsx`
+  (urutannya juga sama), ditambah 3 pilihan khusus jenis kegiatan. Nilai yang dipilih tetap
+  dikirim sebagai teks ke field `luaran`. `jenisLuaran`-nya bisa dipakai saat membuat item luaran
+  terstruktur (`POST /luaran`).
+
+### 13.4 Contoh pemanggilan (axios)
+
+```js
+// src/api/master.js (baru)
+export const masterApi = {
+  list:   (kategori, params = {}) => api.get(`/master/${kategori}`, { params }), // kategori: 'rumpun-ilmu' | 'bidang' | 'luaran'
+  create: (kategori, data) => api.post(`/master/${kategori}`, data),
+  update: (kategori, id, data) => api.patch(`/master/${kategori}/${id}`, data),
+  remove: (kategori, id) => api.delete(`/master/${kategori}/${id}`),
+};
+
+// wizard Usulan
+const [rumpun, bidang, luaran] = await Promise.all([
+  masterApi.list('rumpun-ilmu'),
+  masterApi.list('bidang', { jenis }),
+  masterApi.list('luaran', { jenis }),
+]);
 ```

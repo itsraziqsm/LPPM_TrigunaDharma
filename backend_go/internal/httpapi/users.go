@@ -414,7 +414,7 @@ func (s *Server) searchUsers(c *Ctx) error {
 	}
 	ctx := c.r.Context()
 	users, err := queryObjs(ctx, s.db,
-		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`programStudi`,u.`prodi`,u.`nim`,u.`nidn` FROM `User` u WHERE "+where+" ORDER BY u.`name` ASC LIMIT ?",
+		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`programStudi`,u.`prodi`,u.`nim`,u.`nidn`,u.`kontak`,u.`noHp` FROM `User` u WHERE "+where+" ORDER BY u.`name` ASC LIMIT ?",
 		append(args, limit)...)
 	if err != nil {
 		return err

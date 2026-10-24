@@ -25,7 +25,7 @@ import (
 // sama, dengan proposalId = id laporan (id unik global dari `Kegiatan`).
 
 var (
-	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
+	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
 		"catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 
 	laporanListQuerySchema = zObj(
@@ -167,6 +167,7 @@ func (s *Server) loadLaporanKegiatan(ctx context.Context, detail bool, tail stri
 	if err != nil || len(items) == 0 {
 		return items, err
 	}
+	decodeKataKunci(items)
 	if err := attachOne(ctx, s.db, items, "__pengusulId", "pengusul",
 		"SELECT `id` AS `__k`,`id`,`name`,`fullName`,`email`,`nidn`,`programStudi` FROM `User` WHERE `id` IN (%s)"); err != nil {
 		return nil, err
@@ -181,7 +182,7 @@ func (s *Server) loadLaporanKegiatan(ctx context.Context, detail bool, tail stri
 	}
 	if detail {
 		grouped, err := attachMany(ctx, s.db, items, "__proposalId", "anggota",
-			"SELECT a.`proposalId` AS `__k`,a.`id`,a.`peran`,a.`statusUndangan`,u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email` "+
+			"SELECT a.`proposalId` AS `__k`,a.`id`,a.`peran`,a.`statusUndangan`,u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp` "+
 				"FROM `ProposalAnggota` a JOIN `User` u ON u.`id` = a.`userId` WHERE a.`proposalId` IN (%s) ORDER BY a.`id` ASC")
 		if err != nil {
 			return nil, err
@@ -417,10 +418,10 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 
 	// Data proposal disalin sebagai isi awal laporan (termasuk skema/mitra).
 	var abstrak string
-	var anggaran, luaran, skema, mitra sql.NullString
+	var anggaran, luaran, skema, mitra, rumpunIlmu, bidang, kataKunci sql.NullString
 	var periodeID sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`skema`,`mitra`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
-		Scan(&abstrak, &anggaran, &luaran, &skema, &mitra, &periodeID); err != nil {
+	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`skema`,`mitra`,`rumpunIlmu`,`bidang`,`kataKunci`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
+		Scan(&abstrak, &anggaran, &luaran, &skema, &mitra, &rumpunIlmu, &bidang, &kataKunci, &periodeID); err != nil {
 		return err
 	}
 	var periode any
@@ -437,6 +438,8 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 		"pengusulId", "periodeId", "dokumenUrl", "createdAt", "updatedAt"}
 	insertArgs := []any{proposalID, values["judul"], values["abstrak"], "draft", nullableString(anggaran), nullableString(luaran),
 		values["luaranTercapai"], values["ringkasanHasil"], values["realisasiAnggaran"], p.PengusulID, periode, values["dokumenUrl"], now, now}
+	insertCols = append(insertCols, "rumpunIlmu", "bidang", "kataKunci")
+	insertArgs = append(insertArgs, nullableString(rumpunIlmu), nullableString(bidang), nullableString(kataKunci))
 	// skema/mitra hanya ada di tabel jenisnya masing-masing.
 	if p.Jenis == "penelitian" {
 		insertCols, insertArgs = append(insertCols, "skema"), append(insertArgs, nullableString(skema))

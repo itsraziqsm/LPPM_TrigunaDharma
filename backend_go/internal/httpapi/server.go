@@ -87,6 +87,7 @@ func (s *Server) registerRoutes() {
 	s.registerProgramStudiRoutes()    // baru, tidak ada di Node
 	s.registerLuaranRoutes()          // baru, tidak ada di Node
 	s.registerKepercayaanRoutes()     // baru, tidak ada di Node
+	s.registerMasterRoutes()          // baru, tidak ada di Node
 	s.registerNotificationRoutes()
 	s.registerDashboardRoutes()
 	s.registerActivityLogRoutes()
