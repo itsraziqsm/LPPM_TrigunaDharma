@@ -247,7 +247,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
   Anggota (dosen & mahasiswa dipisah, `AnggotaSearch fixedRole`) → **Mitra** (nama → field
-  `mitra`, wajib) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
+  `mitra`, wajib; jenis dari `GET /master/jenis-mitra`, alamat, kontak, pernyataan kebutuhan →
+  `mitraJenis/Alamat/Kontak/Kebutuhan`) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
   (item `/luaran`: jenis `LUARAN_JENIS`, target, tanggal target) yang disinkronkan
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang

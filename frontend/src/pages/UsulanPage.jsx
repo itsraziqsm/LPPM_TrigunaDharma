@@ -20,7 +20,6 @@ import { periodeApi } from '../api/periode'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import { masterApi } from '../api/master'
 import useAuthStore from '../store/authStore'
-import ApiPending from '../components/ApiPending'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
 import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
 
@@ -31,9 +30,8 @@ import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
 //   /kegiatan/:jenis/usulan/:id   ubah proposal (hanya draft/revisi)
 // Data: POST/PATCH /dosen/proposals, POST/PATCH/DELETE /luaran (item target luaran,
 // disinkronkan setelah proposal tersimpan), POST /proposals/:id/dokumen-utama,
-// GET /periode, GET /users/search, GET /master/(rumpun-ilmu|bidang|luaran).
-// Field tanpa endpoint (detail mitra, W-26) memakai ApiPending dan dicatat di
-// docs/waitingApi-list.md.
+// GET /periode, GET /users/search, GET /master/(rumpun-ilmu|bidang|luaran|jenis-mitra).
+// Detail mitra (pengabdian): mitraJenis, mitraAlamat, mitraKontak, mitraKebutuhan.
 // Pengabdian (desain terpisah): 5 langkah dengan langkah Mitra, anggota dosen &
 // mahasiswa dipisah.
 // ---------------------------------------------------------------------------
@@ -309,11 +307,15 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     luaran: '',
     skema: '',
     mitra: '',
+    mitraJenis: '',
+    mitraAlamat: '',
+    mitraKontak: '',
+    mitraKebutuhan: '',
     rumpunIlmu: '',
     bidang: '',
     kataKunci: '',
   })
-  const [master, setMaster] = useState({ rumpun: [], bidang: [], luaran: [] })
+  const [master, setMaster] = useState({ rumpun: [], bidang: [], luaran: [], jenisMitra: [] })
   const [anggota, setAnggota] = useState([])
   const [luaranItems, setLuaranItems] = useState([])
   const [luaranOrig, setLuaranOrig] = useState([])
@@ -364,8 +366,12 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         .list(kategori, params)
         .then((r) => r.data.data || [])
         .catch(() => [])
-    Promise.all([list('rumpun-ilmu'), list('bidang', { jenis: form.jenis }), list('luaran', { jenis: form.jenis })]).then(
-      ([rumpun, bidang, luaran]) => alive && setMaster({ rumpun, bidang, luaran }),
+    Promise.all([
+      list('rumpun-ilmu'),
+      list('bidang', { jenis: form.jenis }),
+      list('luaran', { jenis: form.jenis }),
+      form.jenis === 'pengabdian' ? list('jenis-mitra', { jenis: 'pengabdian' }) : [],
+    ]).then(([rumpun, bidang, luaran, jenisMitra]) => alive && setMaster({ rumpun, bidang, luaran, jenisMitra }),
     )
     return () => {
       alive = false
@@ -396,6 +402,10 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           luaran: p.luaran || '',
           skema: p.skema || '',
           mitra: p.mitra || '',
+          mitraJenis: p.mitraJenis || '',
+          mitraAlamat: p.mitraAlamat || '',
+          mitraKontak: p.mitraKontak || '',
+          mitraKebutuhan: p.mitraKebutuhan || '',
           rumpunIlmu: p.rumpunIlmu || '',
           bidang: p.bidang || '',
           kataKunci: (p.kataKunci || []).join(', '),
@@ -506,6 +516,10 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
       ...(form.jenis === 'penelitian' && (form.skema.trim() || editing) ? { skema: form.skema.trim() } : {}),
       ...(form.jenis === 'pengabdian' && (form.mitra.trim() || editing) ? { mitra: form.mitra.trim() } : {}),
+      // Detail mitra: hanya pengabdian; string kosong dikirim null (mengosongkan).
+      ...(form.jenis === 'pengabdian'
+        ? Object.fromEntries(['mitraJenis', 'mitraAlamat', 'mitraKontak', 'mitraKebutuhan'].map((k) => [k, form[k].trim() || null]))
+        : {}),
       ...(form.rumpunIlmu || editing ? { rumpunIlmu: form.rumpunIlmu } : {}),
       ...(form.bidang || editing ? { bidang: form.bidang } : {}),
       kataKunci: parseKataKunci(form.kataKunci),
@@ -880,31 +894,35 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <label htmlFor="u-jenis-mitra" className="label">
                 Jenis Mitra
               </label>
-              <select id="u-jenis-mitra" className="input" disabled>
-                <option>Pilih jenis mitra</option>
+              <select id="u-jenis-mitra" className="input" value={form.mitraJenis} onChange={set('mitraJenis')}>
+                <option value="">-- Pilih jenis mitra --</option>
+                <MasterOptions items={master.jenisMitra} current={form.mitraJenis} />
               </select>
-              <ApiPending className="mt-1.5" />
             </div>
             <div className="md:col-span-2">
               <label htmlFor="u-alamat-mitra" className="label">
                 Alamat Mitra
               </label>
-              <input id="u-alamat-mitra" className="input" disabled placeholder="Alamat lengkap mitra" />
-              <ApiPending className="mt-1.5" />
+              <input id="u-alamat-mitra" className="input" value={form.mitraAlamat} onChange={set('mitraAlamat')} placeholder="Alamat lengkap mitra" />
             </div>
             <div className="md:col-span-2">
               <label htmlFor="u-kontak-mitra" className="label">
                 Kontak Mitra
               </label>
-              <input id="u-kontak-mitra" className="input" disabled placeholder="Nomor telepon / email mitra" />
-              <ApiPending className="mt-1.5" />
+              <input id="u-kontak-mitra" className="input" value={form.mitraKontak} onChange={set('mitraKontak')} placeholder="Nomor telepon / email mitra" />
             </div>
             <div className="md:col-span-2">
               <label htmlFor="u-kebutuhan" className="label">
                 Pernyataan Kebutuhan Mitra
               </label>
-              <textarea id="u-kebutuhan" rows={4} className="input resize-y" disabled placeholder="Permasalahan dan kebutuhan mitra" />
-              <ApiPending className="mt-1.5" />
+              <textarea
+                id="u-kebutuhan"
+                rows={4}
+                className="input resize-y"
+                value={form.mitraKebutuhan}
+                onChange={set('mitraKebutuhan')}
+                placeholder="Permasalahan dan kebutuhan mitra"
+              />
             </div>
           </div>
         </StepCard>
@@ -1164,10 +1182,10 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 <PreviewTable
                   rows={[
                     ['Nama Mitra', form.mitra || '—'],
-                    ['Alamat', <ApiPending key="ma" />],
-                    ['Kontak', <ApiPending key="mk" />],
-                    ['Jenis Mitra', <ApiPending key="mj" />],
-                    ['Pernyataan Kebutuhan', <ApiPending key="mp" />],
+                    ['Alamat', form.mitraAlamat || '—'],
+                    ['Kontak', form.mitraKontak || '—'],
+                    ['Jenis Mitra', form.mitraJenis || '—'],
+                    ['Pernyataan Kebutuhan', form.mitraKebutuhan || '—'],
                   ]}
                 />
               </section>

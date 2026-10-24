@@ -169,6 +169,14 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh, readOnly =
                                         <InfoRow label="Periode" value={detail.periode ? `${detail.periode.nama} (${detail.periode.tahun})` : '—'} />
                                         {detail.skema ? <InfoRow label="Skema" value={detail.skema} /> : null}
                                         {detail.mitra ? <InfoRow label="Mitra" value={detail.mitra} /> : null}
+                                        {detail.jenis === 'pengabdian' ? (
+                                            <>
+                                                <InfoRow label="Jenis Mitra" value={detail.mitraJenis || '—'} />
+                                                <InfoRow label="Alamat Mitra" value={detail.mitraAlamat || '—'} />
+                                                <InfoRow label="Kontak Mitra" value={detail.mitraKontak || '—'} />
+                                                <InfoRow label="Kebutuhan Mitra" value={detail.mitraKebutuhan || '—'} />
+                                            </>
+                                        ) : null}
                                         <InfoRow label="Rumpun Ilmu" value={detail.rumpunIlmu || '—'} />
                                         <InfoRow label="Bidang" value={detail.bidang || '—'} />
                                         <InfoRow label="Kata Kunci" value={(detail.kataKunci || []).join(', ') || '—'} />

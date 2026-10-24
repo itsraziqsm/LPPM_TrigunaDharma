@@ -10,16 +10,11 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 14) tetapi **belum
-disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
-
-| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
-|---|---|---|---|
-| W-26 | Usulan pengabdian, langkah Mitra: Jenis, Alamat, Kontak, Pernyataan Kebutuhan | Field `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` di create/update/respons proposal (disalin ke laporan); pilihan jenis dari `GET /master/jenis-mitra?jenis=pengabdian` | Khusus pengabdian; `null` mengosongkan; nilai bukan null untuk penelitian ditolak 400. |
+Tidak ada. Semua API baru (`backend_go/new-api.md` bagian 10–14) sudah disambungkan.
 
 ### Sudah disambungkan
 
-Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bagian 13:
+Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), bagian 13, dan bagian 14:
 
 | ID | Disambungkan di |
 |---|---|
@@ -39,6 +34,7 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 | W-23 | Kolom Kontak tabel Anggota (`noHp`, bila kosong `kontak`); kolom Alamat dihapus (privasi) |
 | W-24 | Kata Kunci (dipisah koma → array `kataKunci`, maks 10 × 50) di Dokumen, Preview & modal detail |
 | W-25 | `GET /master/luaran?jenis=` → pilihan "Tambah dari daftar luaran" di editor Target Luaran (item `/luaran` dengan `jenis` = `jenisLuaran`) |
+| W-26 | Langkah Mitra (pengabdian): Jenis Mitra (dropdown `GET /master/jenis-mitra?jenis=pengabdian`), Alamat, Kontak, Pernyataan Kebutuhan → `mitraJenis/Alamat/Kontak/Kebutuhan` (kosong dikirim `null`); tampil di Preview & modal detail |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -91,7 +87,7 @@ Data yang **sudah** tersambung ke API yang ada:
 |---|---|
 | Judul, jenis, periode (+ Tahun Pelaksanaan dari `periode.tahun`), anggaran, abstrak, anggota + peran | `POST /dosen/proposals` / `PATCH /dosen/proposals/:id` (`anggotaIds`), `GET /periode?isAktif=true` |
 | Target Luaran (banyak item: jenis, target, tanggal target) | `GET /luaran/proposal/:id`, `POST/PATCH/DELETE /luaran`; field teks `luaran` diisi ringkasan item |
-| Skema Penelitian (Identitas, penelitian) · Nama Mitra (langkah Mitra, pengabdian, wajib) | field `skema` / `mitra` |
+| Skema Penelitian (Identitas, penelitian) · Nama Mitra (wajib) + Jenis, Alamat, Kontak, Pernyataan Kebutuhan Mitra (langkah Mitra, pengabdian) | field `skema` / `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` |
 | Upload Proposal (wajib di wizard) | `POST /proposals/:id/dokumen-utama` setelah proposal tersimpan |
 | Cari anggota (+ kontak) | `GET /users/search` |
 | Rumpun Ilmu, Bidang, Kata Kunci | field `rumpunIlmu`, `bidang`, `kataKunci`; pilihan dari `GET /master/(rumpun-ilmu\|bidang)` |
