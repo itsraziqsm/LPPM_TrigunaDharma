@@ -13,6 +13,7 @@ import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
 import ExportPage from './ExportPage' // ← BARU
 import KegiatanPage from './KegiatanPage'
+import NotifikasiPage from './NotifikasiPage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -78,6 +79,7 @@ export default function DashboardLayout({ page, jenis }) {
 
   const renderContent = () => {
     if (page === 'profil') return <ProfilePage />
+    if (page === 'notifikasi') return <NotifikasiPage />
 
     if (isAdminOrKetua) {
       if (page === 'periode') return <PeriodePage />

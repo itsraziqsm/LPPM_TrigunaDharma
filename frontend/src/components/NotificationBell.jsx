@@ -1,15 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
+import { Link } from 'react-router-dom'
 import { notificationApi } from '../api/notification'
 import { Bell, X } from 'lucide-react'
-
-function timeAgo(dateStr) {
-    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
-    if (diff < 60) return `${diff}d yang lalu`
-    if (diff < 3600) return `${Math.floor(diff / 60)}m yang lalu`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}j yang lalu`
-    return `${Math.floor(diff / 86400)} hari lalu`
-}
+import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
+import { timeAgo } from '../pages/dashboard/format'
 
 const DROPDOWN_WIDTH = 320
 
@@ -26,10 +21,15 @@ export default function NotificationBell() {
     const fetchNotifications = async () => {
         setLoading(true)
         try {
-            const res = await notificationApi.getAll({ limit: 20 })
+            const [res, unreadRes] = await Promise.all([
+                notificationApi.getAll({ limit: 20 }),
+                // Jumlah belum dibaca dari server (meta.total), bukan hanya dari 20 terbaru
+                notificationApi.getAll({ onlyUnread: true, limit: 1 }).catch(() => null),
+            ])
             const data = res.data.data || []
             setNotifications(data)
-            setUnread(data.filter((n) => !n.isRead).length)
+            const total = Number(unreadRes?.data?.meta?.total)
+            setUnread(Number.isFinite(total) ? total : data.filter((n) => !n.isRead).length)
         } catch {
             // silent
         } finally {
@@ -40,7 +40,13 @@ export default function NotificationBell() {
     useEffect(() => {
         fetchNotifications()
         const interval = setInterval(fetchNotifications, 60_000)
-        return () => clearInterval(interval)
+        // Muat ulang bila halaman /notifikasi mengubah data
+        const onChange = (e) => { if (e.detail?.source !== 'bell') fetchNotifications() }
+        window.addEventListener(NOTIF_EVENT, onChange)
+        return () => {
+            clearInterval(interval)
+            window.removeEventListener(NOTIF_EVENT, onChange)
+        }
     }, [])
 
     // Hitung posisi: selalu muncul di bawah bell, sejajarkan ke kanan bell,
@@ -76,12 +82,14 @@ export default function NotificationBell() {
         await notificationApi.markRead(id)
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
         setUnread((c) => Math.max(0, c - 1))
+        notifyNotificationsChanged('bell')
     }
 
     const handleMarkAllRead = async () => {
         await notificationApi.markAllRead()
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
         setUnread(0)
+        notifyNotificationsChanged('bell')
     }
 
     const handleDelete = async (id, e) => {
@@ -90,6 +98,7 @@ export default function NotificationBell() {
         const removed = notifications.find((n) => n.id === id)
         setNotifications((prev) => prev.filter((n) => n.id !== id))
         if (removed && !removed.isRead) setUnread((c) => Math.max(0, c - 1))
+        notifyNotificationsChanged('bell')
     }
 
     const dropdown = open
@@ -145,6 +154,13 @@ export default function NotificationBell() {
                         ))
                     )}
                 </div>
+                <Link
+                    to="/notifikasi"
+                    onClick={() => setOpen(false)}
+                    className="block border-t border-slate-200 bg-slate-50/60 px-4 py-2.5 text-center text-sm font-semibold text-navy-700 transition-colors hover:bg-slate-50 hover:text-navy-900"
+                >
+                    Lihat semua notifikasi
+                </Link>
             </div>,
             document.body
         )
