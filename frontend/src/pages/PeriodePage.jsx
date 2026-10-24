@@ -4,6 +4,7 @@ import useAuthStore from '../store/authStore'
 import { getRoleNames, JENIS_LABEL, EMPTY_FORM } from './periode/periodeConstants'
 import { Badge, Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
+import { Plus } from 'lucide-react'
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -196,9 +197,7 @@ export default function PeriodePage() {
           {canManage && (
             <div className="flex shrink-0 items-start sm:justify-end">
               <button onClick={openCreate} className="btn btn-primary">
-                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
-                </svg>
+                <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
                 Tambah Periode
               </button>
             </div>

@@ -4,6 +4,7 @@ import { periodeApi } from '../../api/periode'
 import { Modal, FormField } from './components'
 import { AnggotaSearch } from './AnggotaSearch'
 import { PERAN_OPTIONS } from './constants'
+import { Check, ChevronDown, CircleAlert, CircleCheck, CloudUpload, FileText, Plus } from 'lucide-react'
 
 // ── Aturan Validasi ────────────────────────────────────────────────────────────
 const RULES = {
@@ -63,9 +64,7 @@ function FieldError({ message }) {
     if (!message) return null
     return (
         <div className="mt-1.5 flex items-start gap-1.5" role="alert">
-            <svg className="mt-0.5 size-4 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
+            <CircleAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
             <p className="text-sm leading-relaxed text-red-700">{message}</p>
         </div>
     )
@@ -75,9 +74,7 @@ function FieldSuccess({ show }) {
     if (!show) return null
     return (
         <div className="mt-1.5 flex items-start gap-1.5">
-            <svg className="mt-0.5 size-4 shrink-0 text-green-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+            <CircleCheck className="mt-0.5 size-4 shrink-0 text-green-600" aria-hidden="true" />
             <p className="text-sm text-green-700">Data pada bagian ini sudah sesuai.</p>
         </div>
     )
@@ -470,9 +467,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
                                 {dokumenExisting && !dokumenFile && (
                                     <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
                                         <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-green-50 text-green-700">
-                                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
+                                            <FileText className="size-5" strokeWidth={1.5} aria-hidden="true" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-base font-semibold text-slate-900">{dokumenExisting.nama}</p>
@@ -493,9 +488,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
                                 {dokumenFile && (
                                     <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
                                         <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
+                                            <FileText className="size-5" strokeWidth={1.5} aria-hidden="true" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="truncate text-base font-semibold text-slate-900">{dokumenFile.name}</p>
@@ -524,9 +517,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
                                         onDrop={handleDrop}
                                     >
                                         <div className="grid size-11 place-items-center rounded-full bg-navy-50 text-navy-700">
-                                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                            </svg>
+                                            <CloudUpload className="size-5" strokeWidth={1.5} aria-hidden="true" />
                                         </div>
                                         <div>
                                             <p className="text-base font-semibold text-slate-800">
@@ -573,9 +564,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
 
                         <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-slate-600">
                             {showAnggota ? 'Sembunyikan' : 'Tampilkan'}
-                            <svg className={`size-4 transition-transform ${showAnggota ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 9l-7 7-7-7" />
-                            </svg>
+                            <ChevronDown className={`size-4 transition-transform ${showAnggota ? 'rotate-180' : ''}`} strokeWidth={1.8} aria-hidden="true" />
                         </span>
                     </button>
 
@@ -634,9 +623,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
 
                 {submitError && (
                     <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3" role="alert">
-                        <svg className="mt-0.5 size-4 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+                        <CircleAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
                         <p className="text-sm leading-relaxed text-red-700">{submitError}</p>
                     </div>
                 )}
@@ -658,9 +645,7 @@ export function ProposalFormModal({ editData, onClose, onSaved }) {
                             </>
                         ) : (
                             <>
-                                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isEdit ? "M5 13l4 4L19 7" : "M12 4v16m8-8H4"} />
-                                </svg>
+                                {isEdit ? <Check className="size-4" strokeWidth={2} aria-hidden="true" /> : <Plus className="size-4" strokeWidth={2} aria-hidden="true" />}
                                 {isEdit ? 'Simpan perubahan' : 'Buat proposal'}
                             </>
                         )}

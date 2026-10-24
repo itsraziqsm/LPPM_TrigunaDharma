@@ -166,6 +166,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
   `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis).
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
+- Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
+  beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa
+  SVG inline hanya ada di berkas tak terpakai (`App.jsx`, `DashboardDosen.jsx`,
+  `DashboardMahasiswa.jsx`).
 - `src/pages/periode/*`, `src/pages/ProposalDosen/*` — subkomponen halaman besar.
 - `src/utils/exportPDF.js` (jspdf + autotable), `exportExcel.js` (xlsx).
 - Gaya: Tailwind 4 dengan token di `@theme` `src/index.css` (skala `navy-*`, aksen

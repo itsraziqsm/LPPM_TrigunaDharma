@@ -5,6 +5,7 @@ import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { ProposalFormModal } from './ProposalDosen/ProposalFormModal'
 import { UndanganSection } from './ProposalDosen/UndanganSection'
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR } from './ProposalDosen/constants'
+import { Download, FileText, Plus, Search } from 'lucide-react'
 
 function TabButton({ active, children, badge, onClick }) {
     return (
@@ -78,9 +79,7 @@ function EmptyProposalState({ onCreate }) {
     return (
         <div className="px-6 py-16 text-center">
             <div className="mx-auto grid size-12 place-items-center rounded-full bg-navy-50 text-navy-700">
-                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6M7 4h7l5 5v11a1 1 0 01-1 1H7a1 1 0 01-1-1V5a1 1 0 011-1z" />
-                </svg>
+                <FileText className="size-6" strokeWidth={1.5} aria-hidden="true" />
             </div>
             <h3 className="mt-4 text-lg font-semibold text-navy-950">Belum ada proposal</h3>
             <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-slate-500">
@@ -88,9 +87,7 @@ function EmptyProposalState({ onCreate }) {
                 dalam satu tempat.
             </p>
             <button onClick={onCreate} className="btn btn-primary mt-6">
-                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
-                </svg>
+                <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
                 Buat Proposal
             </button>
         </div>
@@ -255,16 +252,12 @@ export default function ProposalDosenPage() {
                     {tab === 'proposal' && (
                         <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
                             <HeaderButton href="/template-proposal.docx" download="Template_Proposal.docx">
-                                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 16v-8m0 8l-3-3m3 3l3-3M4 20h16" />
-                                </svg>
+                                <Download className="size-4" strokeWidth={1.8} aria-hidden="true" />
                                 Download Template
                             </HeaderButton>
 
                             <HeaderButton onClick={() => setShowCreate(true)} dark>
-                                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
-                                </svg>
+                                <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
                                 Buat Proposal
                             </HeaderButton>
                         </div>
@@ -310,15 +303,7 @@ export default function ProposalDosenPage() {
 
                                     <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
                                         <div className="relative lg:w-72">
-                                            <svg
-                                                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                                aria-hidden="true"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
-                                            </svg>
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
                                             <input
                                                 type="text"
                                                 placeholder="Cari judul atau abstrak..."

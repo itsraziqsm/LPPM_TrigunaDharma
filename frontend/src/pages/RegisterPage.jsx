@@ -1,18 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import { BookOpen, Check, ChevronLeft, CircleAlert, Eye, EyeOff } from 'lucide-react'
 
 const EyeIcon = ({ open }) => open
   ? (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
+    <Eye size={16} aria-hidden="true" />
   ) : (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
+    <EyeOff size={16} aria-hidden="true" />
   )
 
 const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, half }) => (
@@ -56,9 +51,7 @@ export default function RegisterPage() {
     <main className="fixed inset-0 grid place-items-center overflow-y-auto bg-canvas px-6">
       <section className="rise w-full max-w-sm text-center" aria-labelledby="success-title">
         <div className="mx-auto grid size-14 place-items-center rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check size={26} strokeWidth={2.2} aria-hidden="true" />
         </div>
         <h2 id="success-title" className="mt-6 font-serif text-3xl font-medium text-navy-950">Pendaftaran Terkirim</h2>
         <p className="mt-3 text-base text-slate-600">
@@ -68,9 +61,7 @@ export default function RegisterPage() {
           Anda akan dapat masuk setelah akun disetujui.
         </p>
         <Link to="/login" className="btn btn-secondary mt-8">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
+          <ChevronLeft size={14} strokeWidth={2.5} aria-hidden="true" />
           Kembali ke Login
         </Link>
       </section>
@@ -83,10 +74,7 @@ export default function RegisterPage() {
       <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">
           <div className="grid size-10 place-items-center rounded-[11px] bg-white/[0.07] ring-1 ring-inset ring-white/10">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brass-400" aria-hidden="true">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-            </svg>
+            <BookOpen className="text-brass-400" size={22} strokeWidth={1.8} aria-hidden="true" />
           </div>
           <h1 className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
         </header>
@@ -125,10 +113,7 @@ export default function RegisterPage() {
           {/* Merek ringkas untuk layar kecil */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
             <div className="grid size-10 place-items-center rounded-[11px] bg-rail">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-brass-400" aria-hidden="true">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
+              <BookOpen className="text-brass-400" size={20} strokeWidth={1.8} aria-hidden="true" />
             </div>
             <span className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>
@@ -153,11 +138,7 @@ export default function RegisterPage() {
 
           {error && (
             <div className="mt-6 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-700" role="alert" aria-live="polite">
-              <svg className="mt-0.5 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+              <CircleAlert className="mt-0.5 shrink-0" size={16} aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}

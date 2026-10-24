@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Link } from 'react-router-dom'
 import { TONE } from './format'
+import { Check, ChevronRight, RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Blok tampilan dashboard. Semua peran memakai blok yang sama; yang berbeda
@@ -10,27 +11,19 @@ import { TONE } from './format'
 // ── Ikon ────────────────────────────────────────────────────────────────────
 function Chevron({ className = 'size-4' }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
+    <ChevronRight strokeWidth={1.8} aria-hidden="true" />
   )
 }
 
 function RefreshIcon() {
   return (
-    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </svg>
+    <RefreshCw className="size-4" strokeWidth={1.8} aria-hidden="true" />
   )
 }
 
 function CheckIcon() {
   return (
-    <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
+    <Check className="size-[18px]" aria-hidden="true" />
   )
 }
 

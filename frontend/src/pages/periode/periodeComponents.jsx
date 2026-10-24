@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 // ─── Shared UI Components ─────────────────────────────────────────────────────
 
 export function Badge({ label, className }) {
@@ -8,9 +9,7 @@ export function Badge({ label, className }) {
 export function CloseButton({ onClick, label = 'Tutup' }) {
     return (
         <button onClick={onClick} className="icon-btn" aria-label={label} title={label}>
-            <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
         </button>
     )
 }

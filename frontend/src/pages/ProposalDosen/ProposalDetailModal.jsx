@@ -4,6 +4,7 @@ import { Modal, Badge, InfoRow, SectionBox } from './components'
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR, UNDANGAN_COLOR } from './constants'
 import { LaporanTab } from './LaporanTab'
 import { DokumenTab } from './DokumenTab'
+import { FileText } from 'lucide-react'
 
 // ── Modal Detail Proposal ─────────────────────────────────────────────────────
 export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
@@ -176,9 +177,7 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
                                                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
                                                     <div className="flex min-w-0 flex-1 items-start gap-4">
                                                         <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                                                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                            </svg>
+                                                            <FileText className="size-5" strokeWidth={1.5} aria-hidden="true" />
                                                         </div>
 
                                                         <div className="min-w-0 flex-1">

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import api from '../../api/axios'
+import { CloudUpload, FileText, Plus, TriangleAlert } from 'lucide-react'
 
 const MIME_ICON = {
     pdf: { bg: 'bg-red-50', color: 'text-red-600', label: 'PDF' },
@@ -28,9 +29,7 @@ function FileIcon({ name }) {
     const type = getFileType(name)
     return (
         <div className={`grid size-11 shrink-0 place-items-center rounded-lg ${type.bg}`}>
-            <svg className={`size-5 ${type.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <FileText className={`size-5 ${type.color}`} strokeWidth={1.5} aria-hidden="true" />
         </div>
     )
 }
@@ -152,10 +151,7 @@ function UploadDokumenForm({ proposalId, onSuccess, onCancel }) {
                         className={`cursor-pointer rounded-xl border border-dashed px-5 py-8 text-center transition-colors ${dragOver ? 'border-navy-500 bg-navy-50' : 'border-slate-300 bg-white hover:border-navy-400 hover:bg-navy-50/60'}`}
                     >
                         <div className="mx-auto grid size-11 place-items-center rounded-full bg-navy-50 text-navy-700">
-                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
+                            <CloudUpload className="size-5" strokeWidth={1.5} aria-hidden="true" />
                         </div>
                         <p className="mt-3 text-base font-semibold text-slate-800">Klik atau seret file ke area ini</p>
                         <p className="mt-1 text-sm leading-relaxed text-slate-500">Format yang didukung: PDF, DOCX, XLSX. Ukuran maksimal 10 MB.</p>
@@ -173,9 +169,7 @@ function UploadDokumenForm({ proposalId, onSuccess, onCancel }) {
 
             {error && (
                 <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3" role="alert">
-                    <svg className="mt-0.5 size-4 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                    </svg>
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
                     <p className="text-sm leading-relaxed text-red-700">{error}</p>
                 </div>
             )}
@@ -329,9 +323,7 @@ export function DokumenTab({ proposalId, dokumenLampiran = [], status, onRefresh
                     onClick={() => setShowForm(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-5 py-4 text-base font-medium text-slate-700 transition-colors hover:border-navy-400 hover:bg-navy-50/60 hover:text-navy-900"
                 >
-                    <svg className="size-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Plus className="size-5 text-slate-400" aria-hidden="true" />
                     Tambah dokumen lampiran
                 </button>
             )}

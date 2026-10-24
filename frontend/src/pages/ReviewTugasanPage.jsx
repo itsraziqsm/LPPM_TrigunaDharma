@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { reviewerApi } from '../api/reviewer'
 import { proposalApi } from '../api/proposal'
+import { Check, FileText, X } from 'lucide-react'
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
@@ -53,9 +54,7 @@ function Modal({ title, onClose, children, wide }) {
             title="Tutup"
             className="icon-btn"
           >
-            <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </header>
 
@@ -235,9 +234,7 @@ function ReviewModal({ tugasan, onClose, onUpdated }) {
           {isDone ? (
             <section className="space-y-5">
               <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3.5">
-                <svg className="mt-0.5 size-5 shrink-0 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <Check className="mt-0.5 size-5 shrink-0 text-green-700" aria-hidden="true" />
                 <div>
                   <h3 className="text-base font-semibold text-green-800">Review telah diselesaikan</h3>
                   <p className="mt-0.5 text-sm leading-relaxed text-green-800">
@@ -533,9 +530,7 @@ export default function ReviewTugasanPage() {
       ) : tugasan.length === 0 ? (
         <section className="card flex min-h-[320px] flex-col items-center justify-center px-6 py-12 text-center">
           <div className="mb-4 grid size-12 place-items-center rounded-full bg-navy-50 text-navy-700">
-            <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <FileText className="size-6" strokeWidth={1.5} aria-hidden="true" />
           </div>
 
           <h2 className="text-lg font-semibold text-navy-950">Belum ada penugasan review</h2>

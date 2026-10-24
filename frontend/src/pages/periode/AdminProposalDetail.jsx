@@ -1,5 +1,6 @@
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel, SectionLabel } from './periodeComponents'
+import { ChevronLeft } from 'lucide-react'
 
 // ─── Admin Proposal Detail ────────────────────────────────────────────────────
 
@@ -19,9 +20,7 @@ export default function AdminProposalDetail({ proposal, onClose, onBack }) {
                                 className="btn btn-ghost btn-sm -ml-2.5"
                                 title="Kembali"
                             >
-                                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
+                                <ChevronLeft className="size-3.5" aria-hidden="true" />
                                 Kembali ke daftar
                             </button>
                             <span className="text-sm text-slate-500">Detail Proposal</span>

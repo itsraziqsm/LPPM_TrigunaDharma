@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import api from '../../api/axios'
+import { File as FileIcon, FileChartColumn, Plus, TriangleAlert, Upload } from 'lucide-react'
 
 const JENIS_LAPORAN = [
     { value: 'kemajuan', label: 'Laporan Kemajuan' },
@@ -131,9 +132,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
                     <label className="flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center transition-colors hover:border-navy-400 hover:bg-navy-50/60">
                         <div className="flex flex-col items-center gap-2">
                             <div className="grid size-11 place-items-center rounded-full bg-navy-50 text-navy-700">
-                                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                </svg>
+                                <Upload className="size-5" strokeWidth={1.5} aria-hidden="true" />
                             </div>
                             <span className="text-base font-semibold text-slate-800">Klik untuk memilih file laporan</span>
                             <span className="text-sm text-slate-500">Format PDF atau DOCX, ukuran maksimal {MAX_SIZE_MB} MB</span>
@@ -149,9 +148,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
                 ) : (
                     <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
                         <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            </svg>
+                            <FileIcon className="size-5" strokeWidth={1.5} aria-hidden="true" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="truncate text-base font-semibold text-slate-900">{file.name}</p>
@@ -183,9 +180,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
 
             {error && (
                 <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3" role="alert">
-                    <svg className="mt-0.5 size-4 shrink-0 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                    </svg>
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
                     <p className="text-sm leading-relaxed text-red-700">{error}</p>
                 </div>
             )}
@@ -266,9 +261,7 @@ function LaporanCard({ laporan, canDelete, onDelete }) {
             <div className="flex flex-col gap-4 md:flex-row md:items-start">
                 <div className="flex min-w-0 flex-1 items-start gap-4">
                     <div className="mt-0.5 grid size-11 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <FileChartColumn className="size-5" strokeWidth={1.5} aria-hidden="true" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -350,9 +343,7 @@ export function LaporanTab({ proposalId, laporan = [], status, onRefresh }) {
                     onClick={() => setShowForm(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-5 py-4 text-base font-medium text-slate-700 transition-colors hover:border-navy-400 hover:bg-navy-50/60 hover:text-navy-900"
                 >
-                    <svg className="size-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
+                    <Plus className="size-5 text-slate-400" aria-hidden="true" />
                     Unggah laporan baru
                 </button>
             )}

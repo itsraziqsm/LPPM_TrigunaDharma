@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
+import { X } from 'lucide-react'
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -243,9 +244,7 @@ function Modal({ title, onClose, children }) {
         <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-4">
           <h3 className="text-lg font-semibold text-navy-950">{title}</h3>
           <button onClick={onClose} className="icon-btn" aria-label="Tutup" title="Tutup">
-            <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </div>
         <div className="px-6 py-5">{children}</div>
@@ -307,9 +306,7 @@ function UserDetail({ user, isAdmin, onClose, onStatusChange, onRoleChange, onDe
           <h2 className="text-lg font-semibold text-navy-950">Profil Pengguna</h2>
         </div>
         <button onClick={onClose} className="icon-btn" aria-label="Tutup Panel" title="Tutup Panel">
-          <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
         </button>
       </header>
 

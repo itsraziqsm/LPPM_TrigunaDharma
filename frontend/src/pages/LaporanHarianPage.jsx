@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../api/axios'
 import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { ChevronLeft, ChevronRight, CircleCheck, CloudUpload, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
 
@@ -63,9 +64,7 @@ function Modal({ title, onClose, children, wide }) {
             title="Tutup"
             className="icon-btn"
           >
-            <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </header>
         {/* Penggulir tanpa padding agar footer lengket menempel di dasar dialog */}
@@ -213,9 +212,7 @@ function FormLaporan({ proposal, onClose, onSuccess }) {
                       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-green-50 text-green-700">
-                            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                            <CircleCheck className="size-5" strokeWidth={1.8} aria-hidden="true" />
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-base font-medium text-slate-900">{file.name}</p>
@@ -247,9 +244,7 @@ function FormLaporan({ proposal, onClose, onSuccess }) {
                         className="flex cursor-pointer flex-col items-center px-6 py-8 text-center transition-colors hover:bg-navy-50/60"
                       >
                         <span className="grid size-11 place-items-center rounded-full bg-navy-50 text-navy-700">
-                          <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
+                          <CloudUpload className="size-5" strokeWidth={1.5} aria-hidden="true" />
                         </span>
                         <span className="mt-3 text-base font-semibold text-slate-800">
                           Pilih dokumen laporan harian
@@ -440,9 +435,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 px-6 py-14 text-center">
         <div className="mb-4 grid size-12 place-items-center rounded-full bg-navy-50 text-navy-700">
-          <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+          <FileText className="size-6" strokeWidth={1.5} aria-hidden="true" />
         </div>
         <p className="text-base font-semibold text-slate-800">Belum ada laporan harian</p>
         <p className="mt-1.5 max-w-md text-sm leading-relaxed text-slate-500">
@@ -490,9 +483,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                           className="btn btn-ghost btn-sm -ml-3 text-navy-800"
                           title="Buka dokumen"
                         >
-                          <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
+                          <FileText className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
                           <span className="max-w-[180px] truncate">{l.dokumenNama}</span>
                         </button>
                         {l.dokumenUkuran && (
@@ -511,9 +502,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                         rel="noreferrer"
                         className="btn btn-ghost btn-sm -ml-3 text-navy-800"
                       >
-                        <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                        <ExternalLink className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
                         Lihat Dokumen
                       </a>
                     ) : (
@@ -532,9 +521,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                           {downloading === l.id ? (
                             <span className="spinner" aria-hidden="true" />
                           ) : (
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                            <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />
                           )}
                           Unduh Dokumen
                         </button>
@@ -546,9 +533,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                         className="btn btn-danger btn-sm"
                         title="Hapus laporan"
                       >
-                        <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
                         Hapus Laporan
                       </button>
                     </div>
@@ -583,9 +568,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                       onClick={() => laporanHarianApi.openDokumen(l.id)}
                       className="btn btn-secondary btn-sm"
                     >
-                      <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                      <FileText className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
                       Buka Dokumen
                     </button>
                     <p className="break-words text-sm text-slate-600">{l.dokumenNama}</p>
@@ -607,9 +590,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                     rel="noreferrer"
                     className="btn btn-secondary btn-sm mt-1.5"
                   >
-                    <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
+                    <ExternalLink className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
                     Lihat Dokumen
                   </a>
                 ) : (
@@ -628,9 +609,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                   {downloading === l.id ? (
                     <span className="spinner" aria-hidden="true" />
                   ) : (
-                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+                    <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />
                   )}
                   Unduh Dokumen
                 </button>
@@ -641,9 +620,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
                 disabled={deleting === l.id}
                 className="btn btn-danger btn-sm"
               >
-                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 Hapus Laporan
               </button>
             </div>
@@ -656,9 +633,7 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
           onClick={() => downloadRekap(laporan, judulProposal)}
           className="btn btn-secondary"
         >
-          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
+          <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />
           Unduh Rekap (.pdf)
         </button>
       </div>
@@ -697,9 +672,7 @@ function ProposalCard({ proposal, onClick }) {
 
         <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-sm font-medium text-slate-500 transition-colors group-hover:text-navy-800">
           <span className="hidden sm:inline">Lihat Detail</span>
-          <svg className="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
-          </svg>
+          <ChevronRight className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
         </span>
       </div>
 
@@ -768,9 +741,7 @@ function ProposalDetail({ proposal, onBack }) {
           onClick={onBack}
           className="btn btn-ghost btn-sm -ml-3"
         >
-          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ChevronLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
           Kembali ke Daftar Proposal
         </button>
       </div>
@@ -804,9 +775,7 @@ function ProposalDetail({ proposal, onBack }) {
               onClick={() => setShowForm(true)}
               className="btn btn-primary"
             >
-              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
-              </svg>
+              <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
               Input Laporan Harian
             </button>
           </div>
@@ -939,9 +908,7 @@ export default function LaporanHarianPage() {
           Cari Proposal
         </label>
         <div className="relative max-w-xl">
-          <svg className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
           <input
             id="lh-cari"
             type="text"
@@ -969,9 +936,7 @@ export default function LaporanHarianPage() {
       ) : filtered.length === 0 ? (
         <section className="card flex min-h-[320px] flex-col items-center justify-center px-6 py-12 text-center">
           <div className="mb-4 grid size-12 place-items-center rounded-full bg-navy-50 text-navy-700">
-            <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <FileText className="size-6" strokeWidth={1.5} aria-hidden="true" />
           </div>
           <h2 className="text-lg font-semibold text-navy-950">
             {search ? 'Tidak ada proposal ditemukan' : 'Anda belum menjadi anggota proposal'}

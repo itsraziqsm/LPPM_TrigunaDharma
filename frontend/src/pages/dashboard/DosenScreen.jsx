@@ -1,5 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  Award,
+  BadgeCheck,
+  Check,
+  DollarSign,
+  HeartHandshake,
+  Microscope,
+  NotebookText,
+  RefreshCw,
+  Star,
+  Timer,
+  X,
+} from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
 import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
@@ -18,89 +31,19 @@ import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
 // Label tanpa awalan "Tahapan" (awalan disembunyikan di layar sempit).
 const STAGES = ['Seleksi/Usulan', 'Pelaksanaan Kegiatan', 'Seleksi/Lanjutan', 'Pasca Pelaksanaan Kegiatan']
 
-// ── Ikon ────────────────────────────────────────────────────────────────────
-function Icon({ className = 'size-7', strokeWidth = 1.6, children }) {
-  return (
-    <svg
-      className={className}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  )
-}
-
+// ── Ikon (lucide-react) ─────────────────────────────────────────────────────
 const ICONS = {
-  check: (p) => (
-    <Icon {...p} strokeWidth={2.4}>
-      <path d="M5 12.5l4.5 4.5L19 7.5" />
-    </Icon>
-  ),
-  cross: (p) => (
-    <Icon {...p} strokeWidth={2.4}>
-      <path d="M7 7l10 10M17 7L7 17" />
-    </Icon>
-  ),
-  timer: (p) => (
-    <Icon {...p} strokeWidth={2}>
-      <circle cx="12" cy="13.5" r="7" />
-      <path d="M12 13.5V10M10 3h4M12 3v3.5M18.5 6.5l1.5-1.5" />
-    </Icon>
-  ),
-  dollar: (p) => (
-    <Icon {...p} strokeWidth={1.8}>
-      <path d="M12 3v18M16.5 7.5c0-1.7-2-3-4.5-3s-4.5 1.3-4.5 3.2c0 4.3 9 2.5 9 6.8 0 1.9-2 3.3-4.5 3.3s-4.5-1.4-4.5-3.1" />
-    </Icon>
-  ),
-  // Ikon "heart-handshake" & "microscope" mengikuti Tabler Icons (MIT).
-  pengabdian: (p) => (
-    <Icon {...p}>
-      <path d="M19.5 12.572L12 20l-7.5-7.428A5 5 0 1112 6.006a5 5 0 117.5 6.572" />
-      <path d="M12 6L8.707 9.293a1 1 0 000 1.414l.543.543c.69.69 1.81.69 2.5 0l1-1a3.182 3.182 0 014.5 0l2.25 2.25M12.5 15.5l2 2M15 13l2 2" />
-    </Icon>
-  ),
-  penelitian: (p) => (
-    <Icon {...p}>
-      <path d="M5 21h14M6 18h2M7 18v3M9 11l3 3 6-6-3-3zM10.5 12.5L9 14M17 3l3 3M12 21a6 6 0 003.715-10.712" />
-    </Icon>
-  ),
-  jurnal: (p) => (
-    <Icon {...p}>
-      <path d="M7 3h11a1 1 0 011 1v16a1 1 0 01-1 1H7a2 2 0 01-2-2V5a2 2 0 012-2zM5 7h2M5 11h2M5 15h2M12 3v7l2-1.5 2 1.5V3" />
-    </Icon>
-  ),
-  sinta: (p) => (
-    <Icon {...p} strokeWidth={1.4}>
-      <path
-        fill="currentColor"
-        d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9L12 3.5z"
-      />
-    </Icon>
-  ),
-  sertifikasi: (p) => (
-    <Icon {...p}>
-      <path d="M4 5h16v11H4zM7 9h7M7 12h4M16.5 13.5v6l1.5-1 1.5 1v-6M18 14a2 2 0 100-4 2 2 0 000 4z" />
-    </Icon>
-  ),
-  kepercayaan: (p) => (
-    <Icon {...p} strokeWidth={1.8}>
-      <path d="M12 2.8l2.3 1.7 2.9-.1.9 2.7 2.3 1.7-.9 2.7.9 2.7-2.3 1.7-.9 2.7-2.9-.1L12 21.2l-2.3-1.7-2.9.1-.9-2.7-2.3-1.7.9-2.7-.9-2.7 2.3-1.7.9-2.7 2.9.1L12 2.8z" />
-      <path d="M8.8 12.2l2.2 2.2 4.2-4.4" strokeWidth={2.2} />
-    </Icon>
-  ),
-  refresh: (p) => (
-    <Icon {...p} strokeWidth={1.8}>
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </Icon>
-  ),
+  check: Check,
+  cross: X,
+  timer: Timer,
+  dollar: DollarSign,
+  pengabdian: HeartHandshake,
+  penelitian: Microscope,
+  jurnal: NotebookText,
+  sinta: (props) => <Star {...props} fill="currentColor" />,
+  sertifikasi: Award,
+  kepercayaan: BadgeCheck,
+  refresh: RefreshCw,
 }
 
 function SectionTitle({ id, children }) {
@@ -170,7 +113,7 @@ function DosenHeader({ now, name, roleLabel, summary, actions, loading, refreshi
           <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
             {updatedAt ? <span>Diperbarui pukul {formatClock(updatedAt)}</span> : null}
             <button type="button" onClick={onReload} disabled={loading || refreshing} className="btn btn-ghost btn-sm">
-              {refreshing ? <span className="spinner" aria-hidden="true" /> : <ICONS.refresh className="size-4" />}
+              {refreshing ? <span className="spinner" aria-hidden="true" /> : <ICONS.refresh className="size-4" aria-hidden="true" />}
               {refreshing ? 'Memuat ulang' : 'Muat ulang'}
             </button>
           </div>
@@ -218,7 +161,7 @@ function DocCard({ tone, label, value, hint, icon: IconCmp, pending, to }) {
         {pending ? <ApiPending className="mt-2" /> : hint ? <p className="mt-2 text-xs text-slate-600">{hint}</p> : null}
       </div>
       <span className={`grid size-14 shrink-0 place-items-center rounded-full ${t.badge}`}>
-        <IconCmp className="size-8" />
+        <IconCmp className="size-8" aria-hidden="true" />
       </span>
     </>
   )
@@ -361,7 +304,7 @@ function MetricCard({ label, value, icon: IconCmp, pending, hint }) {
         {pending ? <ApiPending className="mt-1.5" /> : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
       </div>
       <span className="grid size-[4.5rem] shrink-0 place-items-center rounded-full bg-navy-800 text-white">
-        <IconCmp className="size-9" />
+        <IconCmp className="size-9" aria-hidden="true" />
       </span>
     </li>
   )
@@ -415,7 +358,7 @@ function StatChip({ icon: IconCmp, value, label, pending }) {
   return (
     <li className="flex items-center gap-2.5">
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-yellow-400 text-white">
-        <IconCmp className="size-6" />
+        <IconCmp className="size-6" aria-hidden="true" />
       </span>
       <span className="leading-tight">
         <span className="block text-lg font-semibold tabular-nums lining-nums text-slate-950">{show(value)}</span>

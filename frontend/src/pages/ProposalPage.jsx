@@ -3,6 +3,7 @@ import { proposalApi } from '../api/proposal'
 import { usersApi } from '../api/users'
 import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
+import { X } from 'lucide-react'
 
 const openDokumenWithAuth = async (proposalId) => {
   const token = localStorage.getItem('accessToken')
@@ -73,9 +74,7 @@ function Modal({ title, onClose, children, wide }) {
           </h2>
 
           <button onClick={onClose} className="icon-btn" aria-label="Tutup" title="Tutup">
-            <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </header>
 
