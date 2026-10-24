@@ -166,7 +166,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
   `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis).
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
-  navigasi"; saat ciut hanya logo yang tampil (klik logo untuk membuka). Status disimpan di
+  navigasi"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
+  menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
+  dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;

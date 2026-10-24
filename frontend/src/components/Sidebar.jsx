@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
-import { BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, House, LogOut, Menu, PanelLeftClose, Users, X } from 'lucide-react'
+import { BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -48,8 +48,9 @@ const DOSEN_NAV_ITEMS = [
       <ClipboardList className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),
     children: [
-      { path: '/kegiatan/penelitian', label: 'Penelitian' },
-      { path: '/kegiatan/pengabdian', label: 'Pengabdian' },
+      // Ikon anak dipakai di rail ciut (tampil sebagai ikon terpisah).
+      { path: '/kegiatan/penelitian', label: 'Penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/kegiatan/pengabdian', label: 'Pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
   {
@@ -159,6 +160,14 @@ function writeCollapsed(value) {
 
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
 
+// Tombol ikon di rail ciut: label lewat aria-label + tooltip (title).
+const railItemClass = ({ isActive }) =>
+  `relative grid size-10 place-items-center rounded-lg transition-colors ${
+    isActive
+      ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:-left-[0.875rem] before:w-0.5 before:rounded-full before:bg-brass-400'
+      : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+  }`
+
 // Dipanggil dari UndanganPage setelah user respond, agar badge langsung update
 export function refreshInvitationBadge() {
   window.dispatchEvent(new CustomEvent('invitation-badge-refresh'))
@@ -263,7 +272,11 @@ export default function Sidebar() {
       </div>
 
       {/* ── Lonceng notifikasi (satu instance) ─────────────────────────── */}
-      <div className={`fixed right-2 top-2 z-40 lg:left-[12.5rem] lg:right-auto lg:top-[1.0625rem] ${hideWhenCollapsed}`}>
+      <div
+        className={`fixed right-2 top-2 z-40 lg:right-auto ${
+          collapsed ? 'lg:left-[1.125rem] lg:top-[4.5rem]' : 'lg:left-[12.5rem] lg:top-[1.0625rem]'
+        }`}
+      >
         <NotificationBell />
       </div>
 
@@ -345,8 +358,46 @@ export default function Sidebar() {
         </nav>
 
         {/* Akun & keluar */}
-        {/* Strip kosong saat diciutkan agar logo tetap di atas */}
-        {collapsed ? <div className="hidden flex-1 lg:block" /> : null}
+        {/* Rail ciut (desktop): ikon seluruh menu sebagai akses cepat. Ruang
+            atas (pt-12) untuk lonceng notifikasi yang diposisikan fixed. */}
+        {collapsed ? (
+          <>
+            <nav aria-label="Navigasi utama" className="hidden min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto pt-12 lg:flex">
+              {allNavItems
+                .flatMap((item) => (item.children ? item.children : [item]))
+                .map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    aria-label={item.label}
+                    title={item.label}
+                    className={railItemClass}
+                  >
+                    {item.icon}
+                    {item.badge && pendingCount > 0 && (
+                      <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-rail" aria-hidden="true" />
+                    )}
+                  </NavLink>
+                ))}
+            </nav>
+            <section className="hidden shrink-0 flex-col items-center gap-1 border-t border-white/10 py-3 lg:flex">
+              <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railItemClass}>
+                <span className="grid size-8 place-items-center rounded-full bg-white/10 text-sm font-semibold text-white">
+                  {(user?.name || '?').charAt(0).toUpperCase()}
+                </span>
+              </NavLink>
+              <button
+                type="button"
+                onClick={handleLogout}
+                aria-label="Keluar dari Sistem"
+                title="Keluar dari Sistem"
+                className="grid size-10 place-items-center rounded-lg text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white"
+              >
+                <LogOut className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </section>
+          </>
+        ) : null}
 
         <section className={`shrink-0 border-t border-white/10 p-3 ${hideWhenCollapsed}`}>
           <button
