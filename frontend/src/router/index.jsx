@@ -33,6 +33,8 @@ const router = createBrowserRouter([
       { path: '/laporan-masuk', element: <DashboardLayout page="laporan-masuk" /> },
       { path: '/kegiatan/penelitian/laporan/:id', element: <DashboardLayout page="laporan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian/laporan/:id', element: <DashboardLayout page="laporan" jenis="pengabdian" /> },
+      { path: '/kegiatan/penelitian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="penelitian" /> },
+      { path: '/kegiatan/pengabdian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="pengabdian" /> },
       { path: '/export', element: <DashboardLayout page="export" /> }, // ← BARU
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },

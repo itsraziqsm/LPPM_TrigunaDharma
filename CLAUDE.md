@@ -262,8 +262,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
   lalu kembali ke halaman Status dengan pesan (`location.state.flash`).
 - **Laporan** (API `/laporan`, `src/api/laporan.js`): pengusul di `LaporanPage.jsx`
-  (`/kegiatan/:jenis/laporan/baru` pilih proposal disetujui; `/:id` isi, unggah, ajukan, hapus,
-  hasil review; rute menyesuaikan `jenis` laporan), Ketua/Admin di `LaporanMasukPage.jsx`
+  (`/kegiatan/:jenis/laporan/baru` pilih proposal disetujui → langsung ke wizard; `/:id` = index
+  laporan: ringkasan, tombol Isi laporan, Ajukan, Hapus, hasil review; rute menyesuaikan `jenis`
+  laporan) dan wizard **Isi Laporan** `LaporanIsiPage.jsx` (`/:id/isi`, desain UI Laporan
+  Penelitian/Pengabdian: Informasi Umum (baca saja dari proposal + anggota) → Informasi Laporan →
+  Dokumen & Luaran (file/URL, capaian luaran) → Preview; Simpan draf di tengah, Simpan → kembali
+  ke index; kata kunci/metode/link jurnal & video = `ApiPending` W-27..W-29), Ketua/Admin di `LaporanMasukPage.jsx`
   (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
@@ -303,6 +307,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
   keputusan Pihak Kampus.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
+- Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
+  `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
 - Logo: `src/components/LogoLppm.jsx` (`public/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
   Dharma, juga favicon) dipakai di sidebar, Login/Register, halaman galat, verifikasi email.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
