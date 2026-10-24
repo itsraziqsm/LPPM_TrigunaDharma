@@ -252,7 +252,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Jenis kegiatan tidak bisa diubah (mengikuti
+  route/menu Kegiatan; mode ubah memakai `jenis` proposal). Tombol **Simpan draf** di tengah
+  Sebelumnya/Berikutnya (semua langkah): validasi longgar (backend tetap mensyaratkan judul ≥ 5 &
+  abstrak ≥ 20), POST pertama lalu PATCH (`draftId`, URL diganti ke `/usulan/:id` lewat
+  `history.replaceState`), upload file & sinkron target luaran yang valid, tetap di halaman.
+  Halaman laporan (`LaporanPage`) berupa satu formulir yang sudah punya "Simpan draft".
+  Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
   lalu kembali ke halaman Status dengan pesan (`location.state.flash`).
 - **Laporan** (API `/laporan`, `src/api/laporan.js`): pengusul di `LaporanPage.jsx`
   (`/kegiatan/:jenis/laporan/baru` pilih proposal disetujui; `/:id` isi, unggah, ajukan, hapus,

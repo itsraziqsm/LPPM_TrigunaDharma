@@ -68,7 +68,11 @@ const parseKataKunci = (text) => {
     .map((k) => k.trim())
     .filter((k) => k && !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase()))
 }
-const luaranRingkas = (items) => items.map((i) => `${LUARAN_JENIS[i.jenis] || i.jenis}: ${i.target.trim()}`).join('; ')
+const luaranRingkas = (items) =>
+  items
+    .filter((i) => i.target.trim())
+    .map((i) => `${LUARAN_JENIS[i.jenis] || i.jenis}: ${i.target.trim()}`)
+    .join('; ')
 
 const MAX_FILE = 10 * 1024 * 1024
 const ALLOWED_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
@@ -326,6 +330,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const [agree, setAgree] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  // Simpan draf di tengah wizard: id proposal yang baru dibuat (mode buat) agar
+  // simpan berikutnya memperbarui proposal yang sama, bukan membuat baru.
+  const [draftId, setDraftId] = useState(null)
+  const [drafting, setDrafting] = useState(false)
+  const [draftMsg, setDraftMsg] = useState(null)
   const [dragOver, setDragOver] = useState(false)
   const topRef = useRef(null)
   const firstStep = useRef(true)
@@ -445,7 +454,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const current = steps[Math.min(step, steps.length - 1)].key
   const err = (key) => (showErrors[current] ? errors[key] : null)
 
+  // Pesan galat simpan draf tidak relevan lagi setelah pindah langkah.
+  const clearDraftError = () => setDraftMsg((m) => (m?.type === 'error' ? null : m))
+
   const goNext = () => {
+    clearDraftError()
     const key = current
     const invalid = (STEP_FIELDS[key] || []).some((f) => errors[f])
     if (invalid) {
@@ -458,6 +471,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   }
 
   const goTo = (i) => {
+    clearDraftError()
     // Lompat maju hanya bila langkah-langkah sebelumnya valid.
     for (let s = 0; s < i; s += 1) {
       const key = steps[s].key
@@ -476,8 +490,117 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     setShowErrors((s) => ({ ...s, dokumen: true }))
   }
 
+  const proposalId = id || draftId
+  const editing = Boolean(proposalId)
+
+  // Kirim proposal (POST saat belum ada id, PATCH bila sudah), lalu unggah file
+  // dan sinkronkan target luaran. Mengembalikan daftar peringatan non-fatal.
+  const persist = async ({ draft }) => {
+    const payload = {
+      judul: form.judul.trim(),
+      abstrak: form.abstrak.trim(),
+      jenis: form.jenis,
+      ...(form.periodeId ? { periodeId: Number(form.periodeId) } : {}),
+      ...(form.anggaran ? { anggaran: Number(form.anggaran) } : {}),
+      ...(luaranItems.length ? { luaran: luaranRingkas(luaranItems) } : form.luaran ? { luaran: form.luaran } : {}),
+      // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
+      ...(form.jenis === 'penelitian' && (form.skema.trim() || editing) ? { skema: form.skema.trim() } : {}),
+      ...(form.jenis === 'pengabdian' && (form.mitra.trim() || editing) ? { mitra: form.mitra.trim() } : {}),
+      ...(form.rumpunIlmu || editing ? { rumpunIlmu: form.rumpunIlmu } : {}),
+      ...(form.bidang || editing ? { bidang: form.bidang } : {}),
+      kataKunci: parseKataKunci(form.kataKunci),
+      anggotaIds: anggota.map((a) => ({ userId: a.id, peran: a.peran })),
+    }
+    let savedId = proposalId
+    if (savedId) {
+      await proposalDosenApi.update(savedId, payload)
+    } else {
+      const r = await proposalDosenApi.create(payload)
+      savedId = r.data.data?.id
+    }
+    const warn = []
+    if (file && savedId && !errors.dokumen) {
+      try {
+        await proposalDosenApi.uploadDokumen(savedId, file)
+        setExistingDoc({ nama: file.name, ukuran: file.size })
+        setFile(null)
+      } catch {
+        warn.push('file proposal gagal diunggah')
+      }
+    }
+    if (savedId) {
+      // Draf: target yang belum valid (< 3 karakter) dilewati dulu.
+      const items = draft ? luaranItems.filter((i) => i.target.trim().length >= 3) : luaranItems
+      try {
+        await syncLuaran(savedId, luaranOrig, items)
+      } catch {
+        warn.push('sebagian target luaran gagal disimpan')
+      }
+    }
+    return { savedId, warn }
+  }
+
+  // Simpan draf tanpa validasi lengkap. Backend tetap mensyaratkan judul ≥ 5 dan
+  // abstrak ≥ 20 karakter untuk membuat/memperbarui proposal.
+  const saveDraft = async () => {
+    setSaveError('')
+    setDraftMsg(null)
+    const judul = form.judul.trim()
+    const abstrak = form.abstrak.trim()
+    const missing = [
+      judul.length < 5 && 'judul minimal 5 karakter (langkah Identitas)',
+      abstrak.length < 20 && 'abstrak minimal 20 karakter (langkah Dokumen)',
+    ].filter(Boolean)
+    if (missing.length) {
+      setDraftMsg({ type: 'error', text: `Untuk menyimpan draf, isi dulu ${missing.join(' dan ')}.` })
+      return
+    }
+    const blocking = ['anggaran', 'kataKunci'].map((k) => errors[k]).filter(Boolean)
+    if (blocking.length) {
+      setDraftMsg({ type: 'error', text: blocking.join(' ') })
+      return
+    }
+    setDrafting(true)
+    try {
+      const { savedId, warn } = await persist({ draft: true })
+      if (!id && savedId) {
+        setDraftId(savedId)
+        // URL ikut menjadi mode ubah supaya muat ulang halaman membuka draf ini.
+        window.history.replaceState(window.history.state, '', `/kegiatan/${form.jenis}/usulan/${savedId}`)
+      }
+      const fresh = await luaranApi
+        .byProposal(savedId)
+        .then((r) => r.data.data || [])
+        .catch(() => null)
+      if (fresh) {
+        const saved = fresh.map((l) => ({
+          key: `s${l.id}`,
+          id: l.id,
+          jenis: l.jenis,
+          target: l.target || '',
+          targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
+        }))
+        // Target yang belum valid tetap ada di formulir.
+        setLuaranItems([...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)])
+        setLuaranOrig(saved)
+      }
+      const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      setDraftMsg(
+        warn.length
+          ? { type: 'warning', text: `Draf tersimpan pukul ${time}, tetapi ${warn.join(' dan ')}.` }
+          : { type: 'success', text: `Draf tersimpan pukul ${time}. Anda bisa melanjutkan kapan saja dari halaman ${jenisLabel}.` },
+      )
+    } catch (e) {
+      const errs = e.response?.data?.errors
+      setDraftMsg({ type: 'error', text: errs ? Object.values(errs).flat().join(' ') : e.response?.data?.message || 'Draf gagal disimpan.' })
+    } finally {
+      setDrafting(false)
+    }
+  }
+
   const save = async () => {
     setSaveError('')
+    setDraftMsg(null)
     if (Object.keys(errors).length > 0) {
       goTo(steps.length - 1) // berhenti di langkah pertama yang belum valid
       setSaveError('Masih ada data yang belum lengkap.')
@@ -489,45 +612,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     }
     setSaving(true)
     try {
-      const payload = {
-        judul: form.judul.trim(),
-        abstrak: form.abstrak.trim(),
-        jenis: form.jenis,
-        periodeId: Number(form.periodeId),
-        ...(form.anggaran ? { anggaran: Number(form.anggaran) } : {}),
-        ...(luaranItems.length ? { luaran: luaranRingkas(luaranItems) } : form.luaran ? { luaran: form.luaran } : {}),
-        // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
-        ...(form.jenis === 'penelitian' && (form.skema.trim() || isEdit) ? { skema: form.skema.trim() } : {}),
-        ...(form.jenis === 'pengabdian' && (form.mitra.trim() || isEdit) ? { mitra: form.mitra.trim() } : {}),
-        ...(form.rumpunIlmu || isEdit ? { rumpunIlmu: form.rumpunIlmu } : {}),
-        ...(form.bidang || isEdit ? { bidang: form.bidang } : {}),
-        kataKunci: parseKataKunci(form.kataKunci),
-        anggotaIds: anggota.map((a) => ({ userId: a.id, peran: a.peran })),
-      }
-      let savedId = id
-      if (isEdit) {
-        await proposalDosenApi.update(id, payload)
-      } else {
-        const r = await proposalDosenApi.create(payload)
-        savedId = r.data.data?.id
-      }
-      let uploadFailed = false
-      if (file && savedId) {
-        try {
-          await proposalDosenApi.uploadDokumen(savedId, file)
-        } catch {
-          uploadFailed = true
-        }
-      }
-      let luaranFailed = false
-      if (savedId) {
-        try {
-          await syncLuaran(savedId, luaranOrig, luaranItems)
-        } catch {
-          luaranFailed = true
-        }
-      }
-      const warn = [uploadFailed && 'file proposal gagal diunggah', luaranFailed && 'sebagian target luaran gagal disimpan'].filter(Boolean)
+      const { warn } = await persist({ draft: false })
       navigate(`/kegiatan/${form.jenis}`, {
         state: {
           flash: warn.length
@@ -554,7 +639,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       <div>
         <h1 className="page-title">{title}</h1>
         <p className="page-desc">
-          {isEdit ? 'Perbarui data proposal Anda.' : `Lengkapi empat langkah berikut untuk mengusulkan ${jenisLabel.toLowerCase()}.`}
+          {isEdit ? 'Perbarui data proposal Anda.' : `Lengkapi ${steps.length === 5 ? 'lima' : 'empat'} langkah berikut untuk mengusulkan ${jenisLabel.toLowerCase()}.`}
         </p>
       </div>
       <nav aria-label="Breadcrumb" className="text-sm">
@@ -630,17 +715,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             <div>
               <label htmlFor="u-jenis" className="label">
                 Jenis Kegiatan
-                <Required />
               </label>
-              <select
-                id="u-jenis"
-                className="input"
-                value={form.jenis}
-                onChange={(e) => setForm((f) => ({ ...f, jenis: e.target.value, periodeId: '' }))}
-              >
-                <option value="penelitian">Penelitian</option>
-                <option value="pengabdian">Pengabdian</option>
-              </select>
+              <input id="u-jenis" className="input" value={jenisLabel} readOnly disabled aria-describedby="u-jenis-hint" />
+              <p id="u-jenis-hint" className="mt-1.5 text-xs text-slate-500">
+                Mengikuti menu Kegiatan yang dipilih ({jenisLabel}).
+              </p>
             </div>
 
             <div>
@@ -1149,27 +1228,57 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         </div>
       ) : null}
 
-      {/* ── Navigasi langkah ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3">
+      {draftMsg ? (
+        <div
+          role={draftMsg.type === 'error' ? 'alert' : 'status'}
+          className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
+            draftMsg.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : draftMsg.type === 'warning'
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {draftMsg.type === 'success' ? <Check className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
+          {draftMsg.text}
+        </div>
+      ) : null}
+
+      {/* ── Navigasi langkah: Sebelumnya · Simpan draf · Berikutnya ─────── */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
         {step === 0 ? (
-          <Link to={backTo} className="btn btn-secondary min-w-36">
+          <Link to={backTo} className="btn btn-secondary justify-self-start sm:min-w-36">
             <ArrowLeft className="size-4" aria-hidden="true" />
             Batal
           </Link>
         ) : (
-          <button type="button" onClick={() => setStep(step - 1)} className="btn btn-secondary min-w-36">
+          <button type="button" onClick={() => {
+              clearDraftError()
+              setStep(step - 1)
+            }} className="btn btn-secondary justify-self-start sm:min-w-36">
             <ArrowLeft className="size-4" aria-hidden="true" />
             Sebelumnya
           </button>
         )}
 
+        <button
+          type="button"
+          onClick={saveDraft}
+          disabled={drafting || saving}
+          className="btn btn-ghost border border-dashed border-navy-300 text-navy-800 hover:border-navy-400"
+          title="Simpan sebagai draf tanpa menyelesaikan semua langkah"
+        >
+          {drafting ? <span className="spinner" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
+          {drafting ? 'Menyimpan…' : 'Simpan draf'}
+        </button>
+
         {step < steps.length - 1 ? (
-          <button type="button" onClick={goNext} className="btn btn-primary min-w-36">
+          <button type="button" onClick={goNext} className="btn btn-primary justify-self-end sm:min-w-36">
             Berikutnya
             <ArrowRight className="size-4" aria-hidden="true" />
           </button>
         ) : (
-          <button type="button" onClick={save} disabled={saving || !agree} className="btn min-w-36 bg-green-700 text-white hover:bg-green-800 disabled:opacity-60">
+          <button type="button" onClick={save} disabled={saving || !agree} className="btn justify-self-end bg-green-700 text-white hover:bg-green-800 disabled:opacity-60 sm:min-w-36">
             {saving ? <span className="spinner" aria-hidden="true" /> : <Save className="size-4" aria-hidden="true" />}
             {saving ? 'Menyimpan…' : 'Simpan Proposal'}
           </button>
