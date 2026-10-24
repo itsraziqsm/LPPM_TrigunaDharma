@@ -119,7 +119,8 @@ function DetailPanel({ id, onClose, onChanged }) {
   }
 
   const canAssign = laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
-  const canDecide = laporan && laporan.status !== 'draft'
+  // Laporan yang sudah disetujui berstatus final: status tidak bisa diubah lagi.
+  const canDecide = laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
 
   return (
     <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -261,7 +262,11 @@ function DetailPanel({ id, onClose, onChanged }) {
                   </button>
                 </form>
               ) : (
-                <p className="text-sm text-slate-500">Laporan masih draft dan belum diajukan pengusul.</p>
+                <p className="text-sm text-slate-500">
+                  {laporan.status === 'disetujui'
+                    ? 'Laporan sudah disetujui. Status final dan tidak dapat diubah lagi.'
+                    : 'Laporan masih draft dan belum diajukan pengusul.'}
+                </p>
               )}
             </>
           )}

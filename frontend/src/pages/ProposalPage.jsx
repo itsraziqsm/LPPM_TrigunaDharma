@@ -6,6 +6,9 @@ import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
 import { alertDialog } from '../utils/dialog'
 
+// Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
+const isStatusFinal = (status) => status === 'disetujui'
+
 const openDokumenWithAuth = async (proposalId) => {
   const token = localStorage.getItem('accessToken')
   const base = API_BASE_URL
@@ -187,6 +190,7 @@ export default function ProposalPage() {
   }
 
   const handleOpenStatusModal = async (item) => {
+    if (isStatusFinal(item?.status)) return
     setSelected(item)
     setShowStatusModal(true)
     setNewStatus(item?.status || '')
@@ -214,7 +218,7 @@ export default function ProposalPage() {
 
   const handleSubmitStatus = async (e) => {
     e.preventDefault()
-    if (!selected?.id) return
+    if (!selected?.id || isStatusFinal(selected.status)) return
 
     try {
       setSavingStatus(true)
@@ -439,9 +443,11 @@ export default function ProposalPage() {
 
                             <button
                               onClick={() => handleOpenStatusModal(p)}
-                              className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800"
+                              disabled={isStatusFinal(p.status)}
+                              title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : undefined}
+                              className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800 disabled:cursor-not-allowed disabled:text-slate-400"
                             >
-                              Ubah Status Proposal
+                              {isStatusFinal(p.status) ? 'Status final (disetujui)' : 'Ubah Status Proposal'}
                             </button>
 
                             <button

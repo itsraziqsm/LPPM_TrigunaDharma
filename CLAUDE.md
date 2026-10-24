@@ -269,7 +269,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Dokumen & Luaran (file/URL, capaian luaran) → Preview; Simpan draf di tengah, Simpan → kembali
   ke index; Link Jurnal/Video = `buktiUrl` item luaran jurnal/prosiding & media_massa lewat
   `PATCH /luaran/:id/capaian`; kata kunci laporan & metode penelitian = `ApiPending` W-27, W-28), Ketua/Admin di `LaporanMasukPage.jsx`
-  (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status), reviewer di tab
+  (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
+  form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
