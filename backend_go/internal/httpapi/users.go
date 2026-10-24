@@ -1,547 +1,384 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
-var validRoles = map[string]bool{
-	"admin": true, "ketua_lppm": true, "dosen": true, "reviewer": true, "mahasiswa": true,
+// Node: routes/user.routes.ts, controllers/user.controller.ts,
+// services/user.service.ts.
+
+var (
+	roleNames   = []string{"admin", "ketua_lppm", "dosen", "reviewer", "mahasiswa"}
+	userStatus  = []string{"pending", "approved", "rejected"}
+	userColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`createdAt`"
+
+	paginationSchema = zObj(
+		withDefault("page", zNum().Coerce().Int().Min(1), float64(1)),
+		withDefault("limit", zNum().Coerce().Int().Min(1).Max(100), float64(10)),
+		optional("search", zStr()),
+		optional("role", zEnumOf(roleNames...)),
+		optional("status", zEnumOf(userStatus...)),
+	)
+	updateUserStatusSchema = zObj(required("status", zEnumOf(userStatus...)))
+	assignRoleSchema       = zObj(required("roles", &zArray{elem: zEnumOf(roleNames...), min: 1}))
+)
+
+func (s *Server) registerUserRoutes() {
+	g := s.group("/api/v1/users", s.authenticate)
+	g.get("/search", s.searchUsers)
+	g.patch("/profile/me", s.updateProfile)
+	g.patch("/profile/password", s.changePassword)
+	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
+	g.get("/:id", authorize("admin", "ketua_lppm"), s.getUser)
+	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
+	g.patch("/:id/roles", authorize("admin"), validateBody(assignRoleSchema), s.assignRoles)
+	g.delete("/:id", authorize("admin"), s.deleteUser)
 }
 
-var validUserStatuses = map[string]bool{
-	"pending": true, "approved": true, "rejected": true,
-}
-
-type userRecord struct {
-	ID           int64
-	Email        string
-	Name         string
-	FullName     sql.NullString
-	Status       string
-	NIDN         sql.NullString
-	NIM          sql.NullString
-	Prodi        sql.NullString
-	ProgramStudi sql.NullString
-	Institusi    sql.NullString
-	Kontak       sql.NullString
-	NoHP         sql.NullString
-	Alamat       sql.NullString
-	TempatLahir  sql.NullString
-	TanggalLahir sql.NullTime
-	CreatedAt    time.Time
-	Roles        []string
-}
-
-func (s *Server) registerUserRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/v1/users/search", s.requireAuth(s.searchUsers))
-	mux.HandleFunc("PATCH /api/v1/users/profile/me", s.requireAuth(s.updateOwnProfile))
-	mux.HandleFunc("PATCH /api/v1/users/profile/password", s.requireAuth(s.changeOwnPassword))
-	mux.HandleFunc("GET /api/v1/users", s.requireRoles(s.getUsers, "admin", "ketua_lppm"))
-	mux.HandleFunc("GET /api/v1/users/{id}", s.requireRoles(s.getUser, "admin", "ketua_lppm"))
-	mux.HandleFunc("PATCH /api/v1/users/{id}/status", s.requireRoles(s.updateUserStatus, "admin"))
-	mux.HandleFunc("PATCH /api/v1/users/{id}/roles", s.requireRoles(s.assignUserRoles, "admin"))
-	mux.HandleFunc("DELETE /api/v1/users/{id}", s.requireRoles(s.deleteUser, "admin"))
-}
-
-func (s *Server) getUsers(w http.ResponseWriter, r *http.Request) {
-	page, err := queryInt(r, "page", 1, 1, 1_000_000)
-	if err != nil {
-		validationError(w, "page", "Expected a positive integer")
-		return
-	}
-	limit, err := queryInt(r, "limit", 10, 1, 100)
-	if err != nil {
-		validationError(w, "limit", "Expected an integer between 1 and 100")
-		return
-	}
-	search := strings.TrimSpace(r.URL.Query().Get("search"))
-	if search == "" {
-		search = ""
-	}
-	role := r.URL.Query().Get("role")
-	if role != "" && !validRoles[role] {
-		validationError(w, "role", "Invalid role")
-		return
-	}
-	status := r.URL.Query().Get("status")
-	if status != "" && !validUserStatuses[status] {
-		validationError(w, "status", "Invalid status")
-		return
-	}
-
-	users, total, err := s.listUsers(r, page, limit, search, role, status)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	data := userRecordsJSON(users)
-	sendJSON(w, http.StatusOK, responseEnvelope{
-		Success: true, Message: "Users fetched", Data: data,
-		Meta: map[string]int{"page": page, "limit": limit, "total": total},
-	})
-}
-
-func (s *Server) getUser(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r)
-	if !ok {
-		return
-	}
-	user, err := s.getUserByID(r, id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			s.internalError(w, r, &requestError{message: "User not found", status: http.StatusNotFound})
-		} else {
-			s.internalError(w, r, err)
+// validateQuery mirrors validate(schema, "query"); the parsed query is kept
+// in c.body-independent storage (validatedQuery).
+func (s *Server) validateQuery(schema zSchema) step {
+	return func(c *Ctx) error {
+		out, issues := safeParse(schema, queryAsAny(c.query))
+		if issues != nil {
+			c.s.validationFailed(c.w, c.r, fieldErrors(issues))
+			return errStop
 		}
-		return
-	}
-	sendSuccess(w, "User fetched", user.toJSON(), http.StatusOK)
-}
-
-func (s *Server) updateUserStatus(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r)
-	if !ok {
-		return
-	}
-	var body struct {
-		Status string `json:"status"`
-	}
-	if decodeJSON(w, r, &body) != nil || !validUserStatuses[body.Status] {
-		validationError(w, "status", "Invalid status")
-		return
-	}
-	if _, err := s.getUserByID(r, id); err != nil {
-		s.userLookupError(w, r, err)
-		return
-	}
-	if _, err := s.db.ExecContext(r.Context(), "UPDATE User SET status = ?, updatedAt = NOW() WHERE id = ?", body.Status, id); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	var name, email string
-	var status string
-	if err := s.db.QueryRowContext(r.Context(), "SELECT name, email, status FROM User WHERE id = ?", id).Scan(&name, &email, &status); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Status updated", map[string]any{"id": id, "name": name, "email": email, "status": status}, http.StatusOK)
-}
-
-func (s *Server) assignUserRoles(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r)
-	if !ok {
-		return
-	}
-	var body struct {
-		Roles []string `json:"roles"`
-	}
-	if decodeJSON(w, r, &body) != nil || len(body.Roles) == 0 {
-		validationError(w, "roles", "At least one role is required")
-		return
-	}
-	for _, role := range body.Roles {
-		if !validRoles[role] {
-			validationError(w, "roles", "Invalid role")
-			return
-		}
-	}
-	if _, err := s.getUserByID(r, id); err != nil {
-		s.userLookupError(w, r, err)
-		return
-	}
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err := tx.ExecContext(r.Context(), "DELETE FROM UserRole WHERE userId = ?", id); err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	for _, role := range body.Roles {
-		if _, err := tx.ExecContext(r.Context(),
-			"INSERT INTO UserRole (userId, roleId, createdAt) SELECT ?, id, NOW() FROM Role WHERE name = ?",
-			id, role); err != nil {
-			tx.Rollback()
-			s.internalError(w, r, err)
-			return
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	user, err := s.getUserByID(r, id)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Roles assigned", user.toJSON(), http.StatusOK)
-}
-
-func (s *Server) updateOwnProfile(w http.ResponseWriter, r *http.Request) {
-	body := make(map[string]any)
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	allowed := map[string]string{
-		"name": "name", "fullName": "fullName", "alamat": "alamat", "kontak": "kontak",
-		"noHp": "noHp", "institusi": "institusi", "programStudi": "programStudi",
-		"prodi": "prodi", "tempatLahir": "tempatLahir", "tanggalLahir": "tanggalLahir",
-	}
-	sets := make([]string, 0, len(body))
-	args := make([]any, 0, len(body)+1)
-	for field, column := range allowed {
-		value, exists := body[field]
-		if !exists {
-			continue
-		}
-		if field == "tanggalLahir" && value != nil {
-			text, ok := value.(string)
-			if !ok {
-				validationError(w, field, "Expected a date string")
-				return
-			}
-			parsed, err := time.Parse(time.RFC3339Nano, text)
-			if err != nil {
-				parsed, err = time.Parse("2006-01-02", text)
-			}
-			if err != nil {
-				validationError(w, field, "Invalid datetime")
-				return
-			}
-			value = parsed
-		}
-		if field == "name" && value != nil {
-			text, ok := value.(string)
-			if !ok || len(text) < 2 {
-				validationError(w, field, "Name must contain at least 2 characters")
-				return
-			}
-		}
-		if value != nil {
-			if _, ok := value.(string); !ok {
-				validationError(w, field, "Expected a string")
-				return
-			}
-		}
-		sets = append(sets, "`"+column+"` = ?")
-		args = append(args, value)
-	}
-	if len(sets) > 0 {
-		sets = append(sets, "updatedAt = NOW()")
-		args = append(args, currentUser(r).UserID)
-		query := "UPDATE User SET " + strings.Join(sets, ", ") + " WHERE id = ?"
-		if _, err := s.db.ExecContext(r.Context(), query, args...); err != nil {
-			s.internalError(w, r, err)
-			return
-		}
-	}
-	user, err := s.getUserByID(r, currentUser(r).UserID)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Profile updated", user.toJSON(), http.StatusOK)
-}
-
-func (s *Server) changeOwnPassword(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		OldPassword string `json:"oldPassword"`
-		NewPassword string `json:"newPassword"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	userID := currentUser(r).UserID
-	var hash string
-	if err := s.db.QueryRowContext(r.Context(), "SELECT password FROM User WHERE id = ?", userID).Scan(&hash); err != nil {
-		s.userLookupError(w, r, err)
-		return
-	}
-	if err := bcryptCompare(hash, body.OldPassword); err != nil {
-		s.internalError(w, r, &requestError{message: "Old password is incorrect", status: http.StatusBadRequest})
-		return
-	}
-	newHash, err := hashPassword(body.NewPassword)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err := s.db.ExecContext(r.Context(), "UPDATE User SET password = ?, updatedAt = NOW() WHERE id = ?", newHash, userID); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Password changed successfully", nil, http.StatusOK)
-}
-
-func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathID(w, r)
-	if !ok {
-		return
-	}
-	if _, err := s.getUserByID(r, id); err != nil {
-		s.userLookupError(w, r, err)
-		return
-	}
-	if _, err := s.db.ExecContext(r.Context(), "DELETE FROM User WHERE id = ?", id); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "User deleted", nil, http.StatusOK)
-}
-
-func (s *Server) searchUsers(w http.ResponseWriter, r *http.Request) {
-	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	role := r.URL.Query().Get("role")
-	if role != "" && !validRoles[role] {
-		validationError(w, "role", "Invalid role")
-		return
-	}
-	limit, err := queryInt(r, "limit", 50, 1, 1_000_000)
-	if err != nil {
-		validationError(w, "limit", "Expected a positive integer")
-		return
-	}
-	if limit > 200 {
-		limit = 200
-	}
-	roles := []string{"dosen", "mahasiswa"}
-	if role != "" {
-		roles = []string{role}
-	}
-	args := []any{"approved"}
-	roleMarks := make([]string, len(roles))
-	for i, candidate := range roles {
-		roleMarks[i] = "?"
-		args = append(args, candidate)
-	}
-	where := "u.status = ? AND EXISTS (SELECT 1 FROM UserRole ur JOIN Role r ON r.id = ur.roleId WHERE ur.userId = u.id AND r.name IN (" + strings.Join(roleMarks, ",") + "))"
-	if q != "" {
-		where += " AND (u.name LIKE ? OR u.email LIKE ? OR u.fullName LIKE ? OR u.nidn LIKE ? OR u.nim LIKE ?)"
-		for i := 0; i < 5; i++ {
-			args = append(args, "%"+q+"%")
-		}
-	}
-	query := "SELECT u.id, u.email, u.name, u.fullName, u.status, u.nidn, u.nim, u.prodi, u.programStudi, u.institusi, u.kontak, u.noHp, u.alamat, u.tempatLahir, u.tanggalLahir, u.createdAt FROM User u WHERE " + where + " ORDER BY u.name ASC LIMIT ?"
-	args = append(args, limit)
-	users, err := s.queryUsers(r, query, args...)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	result := make([]map[string]any, 0, len(users))
-	for _, user := range users {
-		result = append(result, map[string]any{
-			"id": user.ID, "name": user.Name, "fullName": nullable(user.FullName),
-			"email": user.Email, "programStudi": nullable(user.ProgramStudi),
-			"prodi": nullable(user.Prodi), "nim": nullable(user.NIM), "nidn": nullable(user.NIDN),
-			"roles": roleObjects(user.Roles),
-		})
-	}
-	sendSuccess(w, "Users found", result, http.StatusOK)
-}
-
-func (s *Server) listUsers(r *http.Request, page, limit int, search, role, status string) ([]userRecord, int, error) {
-	clauses := make([]string, 0, 3)
-	args := make([]any, 0, 5)
-	if status != "" {
-		clauses = append(clauses, "u.status = ?")
-		args = append(args, status)
-	}
-	if search != "" {
-		clauses = append(clauses, "(u.name LIKE ? OR u.email LIKE ? OR u.fullName LIKE ?)")
-		pattern := "%" + search + "%"
-		args = append(args, pattern, pattern, pattern)
-	}
-	if role != "" {
-		clauses = append(clauses, "EXISTS (SELECT 1 FROM UserRole ur JOIN Role r ON r.id = ur.roleId WHERE ur.userId = u.id AND r.name = ?)")
-		args = append(args, role)
-	}
-	where := ""
-	if len(clauses) > 0 {
-		where = " WHERE " + strings.Join(clauses, " AND ")
-	}
-	var total int
-	if err := s.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM User u"+where, args...).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-	offset := (page - 1) * limit
-	listArgs := append(append([]any{}, args...), limit, offset)
-	query := "SELECT u.id, u.email, u.name, u.fullName, u.status, u.nidn, u.nim, u.prodi, u.programStudi, u.institusi, u.kontak, u.noHp, u.alamat, u.tempatLahir, u.tanggalLahir, u.createdAt FROM User u" + where + " ORDER BY u.createdAt DESC LIMIT ? OFFSET ?"
-	users, err := s.queryUsers(r, query, listArgs...)
-	if err != nil {
-		return nil, 0, err
-	}
-	if err := s.loadRoles(r, users); err != nil {
-		return nil, 0, err
-	}
-	return users, total, nil
-}
-
-func (s *Server) getUserByID(r *http.Request, id int64) (*userRecord, error) {
-	query := "SELECT id, email, name, fullName, status, nidn, nim, prodi, programStudi, institusi, kontak, noHp, alamat, tempatLahir, tanggalLahir, createdAt FROM User WHERE id = ?"
-	users, err := s.queryUsers(r, query, id)
-	if err != nil {
-		return nil, err
-	}
-	if len(users) == 0 {
-		return nil, sql.ErrNoRows
-	}
-	if err := s.loadRoles(r, users); err != nil {
-		return nil, err
-	}
-	return &users[0], nil
-}
-
-func (s *Server) queryUsers(r *http.Request, query string, args ...any) ([]userRecord, error) {
-	rows, err := s.db.QueryContext(r.Context(), query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	users := make([]userRecord, 0)
-	for rows.Next() {
-		var user userRecord
-		if err := rows.Scan(
-			&user.ID, &user.Email, &user.Name, &user.FullName, &user.Status,
-			&user.NIDN, &user.NIM, &user.Prodi, &user.ProgramStudi, &user.Institusi,
-			&user.Kontak, &user.NoHP, &user.Alamat, &user.TempatLahir, &user.TanggalLahir, &user.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		users = append(users, user)
-	}
-	return users, rows.Err()
-}
-
-func (s *Server) loadRoles(r *http.Request, users []userRecord) error {
-	if len(users) == 0 {
+		c.validatedQuery = out
 		return nil
 	}
-	marks := make([]string, len(users))
-	args := make([]any, len(users))
-	index := make(map[int64]int, len(users))
-	for i := range users {
-		marks[i] = "?"
-		args[i] = users[i].ID
-		index[users[i].ID] = i
-		users[i].Roles = make([]string, 0, 1)
-	}
-	rows, err := s.db.QueryContext(r.Context(),
-		"SELECT ur.userId, r.name FROM UserRole ur JOIN Role r ON r.id = ur.roleId WHERE ur.userId IN ("+strings.Join(marks, ",")+") ORDER BY r.name",
-		args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var userID int64
-		var role string
-		if err := rows.Scan(&userID, &role); err != nil {
+}
+
+// attachUserRoles adds roles: [{role:{name}}] (Prisma select roles.role.name).
+func attachUserRoles(ctx context.Context, q dbtx, users []O, idKey string) error {
+	ids := uniqueIDs(users, idKey)
+	byUser := map[int64][]any{}
+	if len(ids) > 0 {
+		rows, err := queryObjs(ctx, q, fmt.Sprintf(userRolesByUserIDsQuery, placeholders(len(ids))), idArgs(ids)...)
+		if err != nil {
 			return err
 		}
-		if i, ok := index[userID]; ok {
-			users[i].Roles = append(users[i].Roles, role)
+		for _, row := range rows {
+			k := row.Int64("__k")
+			byUser[k] = append(byUser[k], O{{"role", O{{"name", row.Get("name")}}}})
 		}
 	}
-	return rows.Err()
-}
-
-func (u userRecord) toJSON() map[string]any {
-	var birth any
-	if u.TanggalLahir.Valid {
-		birth = u.TanggalLahir.Time
-	}
-	return map[string]any{
-		"id": u.ID, "email": u.Email, "name": u.Name, "fullName": nullable(u.FullName),
-		"status": u.Status, "nidn": nullable(u.NIDN), "nim": nullable(u.NIM),
-		"prodi": nullable(u.Prodi), "programStudi": nullable(u.ProgramStudi),
-		"institusi": nullable(u.Institusi), "kontak": nullable(u.Kontak), "noHp": nullable(u.NoHP),
-		"alamat": nullable(u.Alamat), "tempatLahir": nullable(u.TempatLahir),
-		"tanggalLahir": birth, "createdAt": u.CreatedAt, "roles": roleObjects(u.Roles),
-	}
-}
-
-func userRecordsJSON(users []userRecord) []map[string]any {
-	result := make([]map[string]any, len(users))
-	for i, user := range users {
-		result[i] = user.toJSON()
-	}
-	return result
-}
-
-func roleObjects(roles []string) []map[string]any {
-	result := make([]map[string]any, 0, len(roles))
-	for _, role := range roles {
-		result = append(result, map[string]any{"role": map[string]string{"name": role}})
-	}
-	return result
-}
-
-func nullable(value sql.NullString) any {
-	if value.Valid {
-		return value.String
+	for i := range users {
+		roles := byUser[users[i].Int64(idKey)]
+		if roles == nil {
+			roles = []any{}
+		}
+		users[i].Set("roles", roles)
 	}
 	return nil
 }
 
-func (s *Server) userLookupError(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, sql.ErrNoRows) {
-		s.internalError(w, r, &requestError{message: "User not found", status: http.StatusNotFound})
-		return
-	}
-	s.internalError(w, r, err)
-}
-
-func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil || id <= 0 {
-		validationError(w, "id", "Expected a positive integer")
-		return 0, false
-	}
-	return id, true
-}
-
-func queryInt(r *http.Request, key string, fallback, min, max int) (int, error) {
-	value := r.URL.Query().Get(key)
-	if value == "" {
-		return fallback, nil
-	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil || parsed < min || parsed > max {
-		return 0, fmt.Errorf("invalid %s", key)
-	}
-	return parsed, nil
-}
-
-func validationError(w http.ResponseWriter, field, message string) {
-	sendJSON(w, http.StatusUnprocessableEntity, responseEnvelope{
-		Success: false,
-		Message: "Validation error",
-		Errors:  map[string][]string{field: {message}},
-	})
-}
-
-func bcryptCompare(hash, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-}
-
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+// selectUsers runs USER_SELECT for the given WHERE clause.
+func (s *Server) selectUsers(ctx context.Context, q dbtx, tail string, args ...any) ([]O, error) {
+	users, err := queryObjs(ctx, q, "SELECT "+userColumns+" FROM `User` u "+tail, args...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(hash), nil
+	if err := attachUserRoles(ctx, q, users, "id"); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (s *Server) userByID(ctx context.Context, q dbtx, id int64) (O, error) {
+	users, err := s.selectUsers(ctx, q, "WHERE u.`id` = ?", id)
+	if err != nil || len(users) == 0 {
+		return nil, err
+	}
+	return users[0], nil
+}
+
+func (s *Server) ensureUserExists(ctx context.Context, id int64) (string, error) {
+	var password string
+	err := s.db.QueryRowContext(ctx, "SELECT `password` FROM `User` WHERE `id` = ?", id).Scan(&password)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", httpError(http.StatusNotFound, "User not found")
+	}
+	return password, err
+}
+
+func (s *Server) getUsers(c *Ctx) error {
+	// controller re-parses the validated query with its own schema
+	q := c.validatedQuery
+	page := q["page"].(float64)
+	limit := q["limit"].(float64)
+	search, _ := q["search"].(string)
+	role, _ := q["role"].(string)
+	status, _ := q["status"].(string)
+
+	clauses := []string{}
+	args := []any{}
+	if status != "" {
+		clauses = append(clauses, "u.`status` = ?")
+		args = append(args, status)
+	}
+	if search != "" {
+		clauses = append(clauses, "(u.`name` LIKE ? OR u.`email` LIKE ? OR u.`fullName` LIKE ?)")
+		like := "%" + search + "%"
+		args = append(args, like, like, like)
+	}
+	if role != "" {
+		clauses = append(clauses, "EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = ?)")
+		args = append(args, role)
+	}
+	where := ""
+	if len(clauses) > 0 {
+		where = "WHERE " + strings.Join(clauses, " AND ")
+	}
+	ctx := c.r.Context()
+	skip, take, err := paginationArgs(page, limit)
+	if err != nil {
+		return err
+	}
+	users, err := s.selectUsers(ctx, s.db, where+" ORDER BY u.`createdAt` DESC LIMIT ? OFFSET ?", append(append([]any{}, args...), take, skip)...)
+	if err != nil {
+		return err
+	}
+	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `User` u "+where, args...)
+	if err != nil {
+		return err
+	}
+	return c.okMeta("Users fetched", users, int64(page), int64(limit), total)
+}
+
+func userIDParam(c *Ctx) (int64, error) {
+	ids, err := positiveIntParams(c, "id")
+	if err != nil {
+		return 0, err
+	}
+	return ids["id"], nil
+}
+
+func (s *Server) getUser(c *Ctx) error {
+	id, err := userIDParam(c)
+	if err != nil {
+		return err
+	}
+	user, err := s.userByID(c.r.Context(), s.db, id)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return httpError(http.StatusNotFound, "User not found")
+	}
+	return c.ok("User fetched", user)
+}
+
+func (s *Server) updateUserStatus(c *Ctx) error {
+	id, err := userIDParam(c)
+	if err != nil {
+		return err
+	}
+	status, _ := getString(c.bodyMap(), "status")
+	ctx := c.r.Context()
+	if _, err := s.ensureUserExists(ctx, id); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET `status` = ?, `updatedAt` = ? WHERE `id` = ?", status, s.nowMs(), id); err != nil {
+		return err
+	}
+	user, err := queryObj(ctx, s.db, "SELECT `id`,`name`,`email`,`status` FROM `User` WHERE `id` = ?", id)
+	if err != nil {
+		return err
+	}
+	return c.ok("Status updated", user)
+}
+
+func (s *Server) assignRoles(c *Ctx) error {
+	id, err := userIDParam(c)
+	if err != nil {
+		return err
+	}
+	ctx := c.r.Context()
+	if _, err := s.ensureUserExists(ctx, id); err != nil {
+		return err
+	}
+	list, _ := c.bodyMap()["roles"].([]any)
+	names := make([]any, 0, len(list))
+	for _, r := range list {
+		names = append(names, r)
+	}
+	now := s.nowMs()
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, "DELETE FROM `UserRole` WHERE `userId` = ?", id); err != nil {
+			return err
+		}
+		if len(names) == 0 {
+			return nil
+		}
+		_, err := tx.ExecContext(ctx,
+			"INSERT INTO `UserRole` (`userId`,`roleId`,`createdAt`) SELECT ?, `id`, ? FROM `Role` WHERE `name` IN ("+placeholders(len(names))+") ORDER BY `id`",
+			append([]any{id, now}, names...)...)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	user, err := s.userByID(ctx, s.db, id)
+	if err != nil {
+		return err
+	}
+	var data any
+	if user != nil {
+		data = user
+	}
+	return c.ok("Roles assigned", data)
+}
+
+// profileFields are the columns PATCH /users/profile/me may change.
+// The Node service passes req.body straight to prisma.user.update(); only
+// the profile fields of the User model are accepted here (password, status,
+// email... are ignored instead of being written blindly).
+var profileFields = []string{"name", "fullName", "alamat", "kontak", "noHp", "institusi", "programStudi", "prodi", "tempatLahir", "tanggalLahir", "nidn", "nim"}
+
+func (s *Server) updateProfile(c *Ctx) error {
+	id := c.user.UserID
+	ctx := c.r.Context()
+	if _, err := s.ensureUserExists(ctx, id); err != nil {
+		return err
+	}
+	body := c.bodyMap()
+	sets := []string{}
+	args := []any{}
+	for _, field := range profileFields {
+		value, exists := body[field]
+		if !exists {
+			continue
+		}
+		if field == "tanggalLahir" {
+			text, isString := value.(string)
+			if value == nil || (isString && text == "") || value == false {
+				continue // falsy → undefined → not updated
+			}
+			if !isString {
+				return plainError("Invalid value for argument `tanggalLahir`: Provided Date object is invalid.")
+			}
+			t, err := parseJSDate(text)
+			if err != nil {
+				return plainError("Invalid value for argument `tanggalLahir`: Provided Date object is invalid.")
+			}
+			sets = append(sets, "`tanggalLahir` = ?")
+			args = append(args, t)
+			continue
+		}
+		switch v := value.(type) {
+		case string:
+			args = append(args, v)
+		case nil:
+			if field == "name" {
+				return plainError("Argument `name` must not be null.")
+			}
+			args = append(args, nil)
+		default:
+			return plainError(fmt.Sprintf("Invalid value for argument `%s`: Expected String.", field))
+		}
+		sets = append(sets, "`"+field+"` = ?")
+	}
+	sets = append(sets, "`updatedAt` = ?")
+	args = append(args, s.nowMs(), id)
+	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+		return err
+	}
+	user, err := s.userByID(ctx, s.db, id)
+	if err != nil {
+		return err
+	}
+	return c.ok("Profile updated", user)
+}
+
+var changePasswordSchema = zObj(required("oldPassword", zStr()), required("newPassword", zStr()))
+
+func (s *Server) changePassword(c *Ctx) error {
+	out, issues := safeParse(changePasswordSchema, c.body)
+	if issues != nil {
+		return zodError(issues)
+	}
+	oldPassword := out["oldPassword"].(string)
+	newPassword := out["newPassword"].(string)
+	ctx := c.r.Context()
+	hash, err := s.ensureUserExists(ctx, c.user.UserID)
+	if err != nil {
+		return err
+	}
+	if !passwordMatches(hash, oldPassword) {
+		return httpError(http.StatusBadRequest, "Old password is incorrect")
+	}
+	newHash, err := hashPassword(newPassword, bcryptSaltRounds)
+	if err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `updatedAt` = ? WHERE `id` = ?", newHash, s.nowMs(), c.user.UserID); err != nil {
+		return err
+	}
+	return c.ok("Password changed successfully", noData)
+}
+
+func (s *Server) deleteUser(c *Ctx) error {
+	id, err := userIDParam(c)
+	if err != nil {
+		return err
+	}
+	ctx := c.r.Context()
+	exists, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `User` WHERE `id` = ?", id)
+	if err != nil {
+		return err
+	}
+	if exists == 0 {
+		return notFoundRecord("User")
+	}
+	if _, err := s.db.ExecContext(ctx, "DELETE FROM `User` WHERE `id` = ?", id); err != nil {
+		return err
+	}
+	return c.ok("User deleted", noData)
+}
+
+var searchQuerySchema = zObj(
+	zField{name: "q", schema: zStr(), optional: true, emptyIsUndef: true},
+	zField{name: "role", schema: zEnumOf(roleNames...), optional: true, emptyIsUndef: true},
+	withDefault("limit", zNum().Coerce().Int().Positive(), float64(50)),
+)
+
+func (s *Server) searchUsers(c *Ctx) error {
+	out, issues := safeParse(searchQuerySchema, queryAsAny(c.query))
+	if issues != nil {
+		return zodError(issues)
+	}
+	q, _ := out["q"].(string)
+	role, _ := out["role"].(string)
+	limit := int64(math.Min(out["limit"].(float64), 200))
+
+	args := []any{"approved"}
+	roleClause := "r.`name` IN ('dosen','mahasiswa')"
+	if role != "" {
+		roleClause = "r.`name` = ?"
+		args = append(args, role)
+	}
+	where := "u.`status` = ? AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND " + roleClause + ")"
+	if q != "" {
+		where += " AND (u.`name` LIKE ? OR u.`email` LIKE ? OR u.`fullName` LIKE ? OR u.`nidn` LIKE ? OR u.`nim` LIKE ?)"
+		like := "%" + q + "%"
+		args = append(args, like, like, like, like, like)
+	}
+	ctx := c.r.Context()
+	users, err := queryObjs(ctx, s.db,
+		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`programStudi`,u.`prodi`,u.`nim`,u.`nidn` FROM `User` u WHERE "+where+" ORDER BY u.`name` ASC LIMIT ?",
+		append(args, limit)...)
+	if err != nil {
+		return err
+	}
+	if err := attachUserRoles(ctx, s.db, users, "id"); err != nil {
+		return err
+	}
+	return c.ok("Users found", users)
 }

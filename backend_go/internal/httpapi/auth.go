@@ -5,32 +5,75 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
+	"math/big"
 	"net/http"
-	"net/mail"
-	"net/url"
-	"runtime/debug"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 )
 
-type authContextKey struct{}
+// Node: src/routes/auth.routes.ts, controllers/auth.controller.ts,
+// services/auth.service.ts.
 
-type tokenPayload struct {
-	UserID int64    `json:"userId"`
-	Email  string   `json:"email"`
-	Roles  []string `json:"roles"`
-	jwt.RegisteredClaims
+const (
+	bcryptSaltRounds        = 12
+	refreshTokenExpiryDays  = 30
+	passwordResetExpiry     = time.Hour
+	dummyPasswordHash       = "$2a$12$dummyhashfordummycomparison00000000000000000000000000"
+	roleOrderBy             = " ORDER BY ur.`roleId` ASC"
+	userRolesByUserIDsQuery = "SELECT ur.`userId` AS __k, r.`name` FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` IN (%s) ORDER BY ur.`userId`, ur.`roleId`"
+)
+
+var (
+	loginSchema = zObj(
+		required("email", zStr().Email()),
+		required("password", zStr().Min(6, "")),
+	)
+	registerDosenSchema = zObj(
+		required("email", zStr().Email()),
+		required("name", zStr().Min(2, "")),
+		optional("fullName", zStr()),
+		required("password", zStr().Min(8, "")),
+		optional("nidn", zStr()),
+		optional("tempatLahir", zStr()),
+		optional("tanggalLahir", zStr().Datetime(false)),
+		optional("institusi", zStr()),
+		optional("programStudi", zStr()),
+		optional("alamat", zStr()),
+		optional("kontak", zStr()),
+	)
+	registerMahasiswaSchema = zObj(
+		required("email", zStr().Email()),
+		required("name", zStr().Min(2, "")),
+		optional("fullName", zStr()),
+		required("password", zStr().Min(8, "")),
+		optional("nim", zStr()),
+		optional("prodi", zStr()),
+		optional("noHp", zStr()),
+		optional("alamat", zStr()),
+	)
+	refreshTokenSchema   = zObj(required("refreshToken", zStr().Min(1, "")))
+	forgotPasswordSchema = zObj(required("email", zStr().Email()))
+	resetPasswordSchema  = zObj(
+		required("token", zStr().Min(1, "")),
+		required("newPassword", zStr().Min(8, "")),
+	)
+)
+
+func (s *Server) registerAuthRoutes() {
+	g := s.group("/api/v1/auth")
+	g.post("/login", s.authLimiter, validateBody(loginSchema), s.login)
+	g.post("/refresh", validateBody(refreshTokenSchema), s.refreshToken)
+	g.post("/logout", validateBody(refreshTokenSchema), s.logout)
+	g.post("/logout-all", s.authenticate, s.logoutAll)
+	g.post("/register/dosen", s.registerLimiter, validateBody(registerDosenSchema), s.registerDosen)
+	g.post("/register/mahasiswa", s.registerLimiter, validateBody(registerMahasiswaSchema), s.registerMahasiswa)
+	g.post("/forgot-password", s.authLimiter, validateBody(forgotPasswordSchema), s.forgotPassword)
+	g.post("/reset-password", s.authLimiter, validateBody(resetPasswordSchema), s.resetPassword)
+	g.get("/me", s.authenticate, s.me)
 }
 
-type authUser struct {
+type userWithRoles struct {
 	ID       int64
 	Email    string
 	Name     string
@@ -40,622 +83,360 @@ type authUser struct {
 	Roles    []string
 }
 
-func (s *Server) registerAuthRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/v1/auth/login", s.authLimited(s.login))
-	mux.HandleFunc("POST /api/v1/auth/refresh", s.refreshToken)
-	mux.HandleFunc("POST /api/v1/auth/logout", s.logout)
-	mux.HandleFunc("POST /api/v1/auth/logout-all", s.requireAuth(s.logoutAll))
-	mux.HandleFunc("POST /api/v1/auth/register/dosen", s.registerLimited(s.registerDosen))
-	mux.HandleFunc("POST /api/v1/auth/register/mahasiswa", s.registerLimited(s.registerMahasiswa))
-	mux.HandleFunc("POST /api/v1/auth/forgot-password", s.authLimited(s.forgotPassword))
-	mux.HandleFunc("POST /api/v1/auth/reset-password", s.authLimited(s.resetPassword))
-	mux.HandleFunc("GET /api/v1/auth/me", s.requireAuth(s.me))
-}
-
-func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, 10*1024)
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(dst); err != nil {
-		return err
+func (s *Server) findUserWithRoles(ctx context.Context, where string, arg any) (*userWithRoles, error) {
+	var u userWithRoles
+	err := s.db.QueryRowContext(ctx,
+		"SELECT `id`,`email`,`name`,`fullName`,`password`,`status` FROM `User` WHERE "+where+" LIMIT 1", arg).
+		Scan(&u.ID, &u.Email, &u.Name, &u.FullName, &u.Password, &u.Status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
 	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		return errors.New("request body must contain only one JSON value")
-	}
-	return nil
-}
-
-func validateEmail(value string) bool {
-	address, err := mail.ParseAddress(value)
-	return err == nil && address.Address == value
-}
-
-func validateRequiredString(value string, min int) bool {
-	return len(strings.TrimSpace(value)) >= min
-}
-
-func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if !validateEmail(body.Email) {
-		validationError(w, "email", "Invalid email")
-		return
-	}
-	if len(body.Password) < 6 {
-		validationError(w, "password", "Password must contain at least 6 characters")
-		return
-	}
-
-	user, err := s.findUserByEmail(r.Context(), body.Email)
-	passwordHash := "$2a$12$dummyhashfordummycomparison00000000000000000000000000"
-	if err == nil {
-		passwordHash = user.Password
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		s.internalError(w, r, err)
-		return
-	}
-	passwordErr := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(body.Password))
-	time.Sleep(300*time.Millisecond + time.Duration(time.Now().UnixNano()%200_000_000))
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.internalError(w, r, err)
-		return
-	}
-	if errors.Is(err, sql.ErrNoRows) || passwordErr != nil {
-		s.internalError(w, r, errors.New("Invalid credentials"))
-		return
-	}
-	if user.Status != "approved" {
-		s.internalError(w, r, errors.New("Account not approved yet"))
-		return
-	}
-
-	access, refresh, err := s.issueTokenPair(r.Context(), user)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	if err := s.logActivity(r.Context(), user.ID, "LOGIN", "Login berhasil", clientIP(r, s.cfg.TrustProxy), r.UserAgent()); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Login successful", map[string]any{
-		"accessToken":  access,
-		"refreshToken": refresh,
-		"user": map[string]any{
-			"id": user.ID, "name": user.Name, "fullName": nullString(user.FullName),
-			"email": user.Email, "status": user.Status, "roles": user.Roles,
-		},
-	}, http.StatusOK)
-}
-
-func (s *Server) refreshToken(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if body.RefreshToken == "" {
-		validationError(w, "refreshToken", "Refresh token is required")
-		return
-	}
-
-	var id, userID int64
-	var expires time.Time
-	var revoked bool
-	err := s.db.QueryRowContext(r.Context(),
-		"SELECT id, userId, expiresAt, revoked FROM RefreshToken WHERE token = ?",
-		body.RefreshToken,
-	).Scan(&id, &userID, &expires, &revoked)
-	if err != nil || revoked || !expires.After(time.Now()) {
-		s.internalError(w, r, errors.New("Refresh token invalid or expired"))
-		return
-	}
-	user, err := s.findUserByID(r.Context(), userID)
-	if err != nil {
-		s.internalError(w, r, errors.New("User not found"))
-		return
-	}
-	if _, err := s.verifyToken(body.RefreshToken, s.cfg.JWTRefreshSecret); err != nil {
-		s.internalError(w, r, errors.New("Refresh token invalid or expired"))
-		return
-	}
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err = tx.ExecContext(r.Context(), "UPDATE RefreshToken SET revoked = TRUE WHERE id = ?", id); err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	access, refresh, err := s.createTokenPairTx(r.Context(), tx, user)
-	if err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Token refreshed", map[string]string{"accessToken": access, "refreshToken": refresh}, http.StatusOK)
-}
-
-func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if body.RefreshToken == "" {
-		validationError(w, "refreshToken", "Refresh token is required")
-		return
-	}
-	if _, err := s.db.ExecContext(r.Context(), "UPDATE RefreshToken SET revoked = TRUE WHERE token = ?", body.RefreshToken); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Logged out successfully", nil, http.StatusOK)
-}
-
-func (s *Server) logoutAll(w http.ResponseWriter, r *http.Request) {
-	user := currentUser(r)
-	if _, err := s.db.ExecContext(r.Context(), "UPDATE RefreshToken SET revoked = TRUE WHERE userId = ? AND revoked = FALSE", user.UserID); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Logged out from all devices", nil, http.StatusOK)
-}
-
-func (s *Server) registerDosen(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Email        string  `json:"email"`
-		Name         string  `json:"name"`
-		FullName     *string `json:"fullName"`
-		Password     string  `json:"password"`
-		NIDN         *string `json:"nidn"`
-		TempatLahir  *string `json:"tempatLahir"`
-		TanggalLahir *string `json:"tanggalLahir"`
-		Institusi    *string `json:"institusi"`
-		ProgramStudi *string `json:"programStudi"`
-		Alamat       *string `json:"alamat"`
-		Kontak       *string `json:"kontak"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if !validateEmail(body.Email) {
-		validationError(w, "email", "Invalid email")
-		return
-	}
-	if !validateRequiredString(body.Name, 2) {
-		validationError(w, "name", "Name must contain at least 2 characters")
-		return
-	}
-	if len(body.Password) < 8 {
-		validationError(w, "password", "Password must contain at least 8 characters")
-		return
-	}
-	var birth any
-	if body.TanggalLahir != nil {
-		parsed, err := time.Parse(time.RFC3339Nano, *body.TanggalLahir)
-		if err != nil {
-			sendError(w, "Validation failed", http.StatusBadRequest)
-			return
-		}
-		birth = parsed
-	}
-	id, err := s.registerUser(r.Context(), "dosen", []string{"email", "name", "fullName", "password", "nidn", "tempatLahir", "tanggalLahir", "institusi", "programStudi", "alamat", "kontak"},
-		[]any{body.Email, body.Name, body.FullName, body.Password, body.NIDN, body.TempatLahir, birth, body.Institusi, body.ProgramStudi, body.Alamat, body.Kontak})
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Registration submitted, awaiting approval", map[string]any{"id": id, "email": body.Email, "name": body.Name, "status": "pending"}, http.StatusCreated)
-}
-
-func (s *Server) registerMahasiswa(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Email    string  `json:"email"`
-		Name     string  `json:"name"`
-		FullName *string `json:"fullName"`
-		Password string  `json:"password"`
-		NIM      *string `json:"nim"`
-		Prodi    *string `json:"prodi"`
-		NoHP     *string `json:"noHp"`
-		Alamat   *string `json:"alamat"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if !validateEmail(body.Email) {
-		validationError(w, "email", "Invalid email")
-		return
-	}
-	if !validateRequiredString(body.Name, 2) {
-		validationError(w, "name", "Name must contain at least 2 characters")
-		return
-	}
-	if len(body.Password) < 8 {
-		validationError(w, "password", "Password must contain at least 8 characters")
-		return
-	}
-	id, err := s.registerUser(r.Context(), "mahasiswa", []string{"email", "name", "fullName", "password", "nim", "prodi", "noHp", "alamat"},
-		[]any{body.Email, body.Name, body.FullName, body.Password, body.NIM, body.Prodi, body.NoHP, body.Alamat})
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Registration submitted, awaiting approval", map[string]any{"id": id, "email": body.Email, "name": body.Name, "status": "pending"}, http.StatusCreated)
-}
-
-func (s *Server) forgotPassword(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Email string `json:"email"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if !validateEmail(body.Email) {
-		validationError(w, "email", "Invalid email")
-		return
-	}
-	time.Sleep(300*time.Millisecond + time.Duration(time.Now().UnixNano()%200_000_000))
-	var id int64
-	var name string
-	err := s.db.QueryRowContext(r.Context(), "SELECT id, name FROM User WHERE email = ?", body.Email).Scan(&id, &name)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.internalError(w, r, err)
-		return
-	}
-	if err == nil {
-		tx, err := s.db.BeginTx(r.Context(), nil)
-		if err != nil {
-			s.internalError(w, r, err)
-			return
-		}
-		if _, err = tx.ExecContext(r.Context(), "UPDATE PasswordResetToken SET used = TRUE WHERE userId = ? AND used = FALSE", id); err != nil {
-			tx.Rollback()
-			s.internalError(w, r, err)
-			return
-		}
-		raw := make([]byte, 32)
-		if _, err = rand.Read(raw); err != nil {
-			tx.Rollback()
-			s.internalError(w, r, err)
-			return
-		}
-		token := hex.EncodeToString(raw)
-		if _, err = tx.ExecContext(r.Context(), "INSERT INTO PasswordResetToken (token, userId, expiresAt, used, createdAt) VALUES (?, ?, ?, FALSE, NOW())", token, id, time.Now().Add(time.Hour)); err != nil {
-			tx.Rollback()
-			s.internalError(w, r, err)
-			return
-		}
-		if err = tx.Commit(); err != nil {
-			s.internalError(w, r, err)
-			return
-		}
-		if err := s.sendPasswordResetEmail(body.Email, name, token); err != nil {
-			s.internalError(w, r, err)
-			return
-		}
-	}
-	sendSuccess(w, "If your email is registered, you will receive a reset link", nil, http.StatusOK)
-}
-
-func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Token       string `json:"token"`
-		NewPassword string `json:"newPassword"`
-	}
-	if decodeJSON(w, r, &body) != nil {
-		validationError(w, "body", "Invalid JSON body")
-		return
-	}
-	if body.Token == "" {
-		validationError(w, "token", "Token is required")
-		return
-	}
-	if len(body.NewPassword) < 8 {
-		validationError(w, "newPassword", "Password must contain at least 8 characters")
-		return
-	}
-	var id, userID int64
-	var expires time.Time
-	var used bool
-	err := s.db.QueryRowContext(r.Context(), "SELECT id, userId, expiresAt, used FROM PasswordResetToken WHERE token = ?", body.Token).Scan(&id, &userID, &expires, &used)
-	if err != nil || used || !expires.After(time.Now()) {
-		s.internalError(w, r, errors.New("Token invalid or expired"))
-		return
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(body.NewPassword), bcryptCost)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err = tx.ExecContext(r.Context(), "UPDATE User SET password = ? WHERE id = ?", string(hash), userID); err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err = tx.ExecContext(r.Context(), "UPDATE PasswordResetToken SET used = TRUE WHERE id = ?", id); err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	if _, err = tx.ExecContext(r.Context(), "UPDATE RefreshToken SET revoked = TRUE WHERE userId = ?", userID); err != nil {
-		tx.Rollback()
-		s.internalError(w, r, err)
-		return
-	}
-	if err = tx.Commit(); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Password reset successfully", nil, http.StatusOK)
-}
-
-func (s *Server) me(w http.ResponseWriter, r *http.Request) {
-	user := currentUser(r)
-	var name string
-	var fullName sql.NullString
-	var email, status string
-	if err := s.db.QueryRowContext(r.Context(), "SELECT name, fullName, email, status FROM User WHERE id = ?", user.UserID).Scan(&name, &fullName, &email, &status); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			sendError(w, "User not found", http.StatusNotFound)
-		} else {
-			s.internalError(w, r, err)
-		}
-		return
-	}
-	rows, err := s.db.QueryContext(r.Context(), "SELECT r.name FROM Role r JOIN UserRole ur ON ur.roleId = r.id WHERE ur.userId = ?", user.UserID)
-	if err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	defer rows.Close()
-	roles := make([]string, 0, 2)
-	for rows.Next() {
-		var role string
-		if err := rows.Scan(&role); err != nil {
-			s.internalError(w, r, err)
-			return
-		}
-		roles = append(roles, role)
-	}
-	if err := rows.Err(); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	var taskCount int
-	if err := s.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM ReviewerTugasan WHERE reviewerId = ?", user.UserID).Scan(&taskCount); err != nil {
-		s.internalError(w, r, err)
-		return
-	}
-	sendSuccess(w, "Current user", map[string]any{
-		"id": user.UserID, "name": name, "fullName": nullString(fullName), "email": email, "status": status,
-		"roles": roles, "hasTugasan": taskCount > 0,
-	}, http.StatusOK)
-}
-
-const bcryptCost = 12
-
-func (s *Server) findUserByEmail(ctx context.Context, email string) (*authUser, error) {
-	var user authUser
-	err := s.db.QueryRowContext(ctx, "SELECT id, email, name, fullName, password, status FROM User WHERE email = ?", email).
-		Scan(&user.ID, &user.Email, &user.Name, &user.FullName, &user.Password, &user.Status)
 	if err != nil {
 		return nil, err
 	}
-	user.Roles, err = s.userRoles(ctx, user.ID)
-	return &user, err
-}
-
-func (s *Server) findUserByID(ctx context.Context, id int64) (*authUser, error) {
-	var user authUser
-	err := s.db.QueryRowContext(ctx, "SELECT id, email, name, fullName, password, status FROM User WHERE id = ?", id).
-		Scan(&user.ID, &user.Email, &user.Name, &user.FullName, &user.Password, &user.Status)
+	u.Roles, err = s.rolesOf(ctx, s.db, u.ID)
 	if err != nil {
 		return nil, err
 	}
-	user.Roles, err = s.userRoles(ctx, user.ID)
-	return &user, err
+	return &u, nil
 }
 
-func (s *Server) userRoles(ctx context.Context, userID int64) ([]string, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT r.name FROM Role r JOIN UserRole ur ON ur.roleId = r.id WHERE ur.userId = ?", userID)
+func (s *Server) rolesOf(ctx context.Context, q dbtx, userID int64) ([]string, error) {
+	rows, err := q.QueryContext(ctx,
+		"SELECT r.`name` FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = ?"+roleOrderBy, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	roles := make([]string, 0, 2)
+	roles := []string{}
 	for rows.Next() {
-		var role string
-		if err := rows.Scan(&role); err != nil {
+		var name string
+		if err := rows.Scan(&name); err != nil {
 			return nil, err
 		}
-		roles = append(roles, role)
+		roles = append(roles, name)
 	}
 	return roles, rows.Err()
 }
 
-func (s *Server) issueTokenPair(ctx context.Context, user *authUser) (string, string, error) {
-	return s.createTokenPair(ctx, nil, user)
+// secureDelay mirrors `300 + Math.random() * 200` ms.
+func (s *Server) secureDelay() {
+	n, _ := rand.Int(rand.Reader, big.NewInt(200))
+	s.sleep(300*time.Millisecond + time.Duration(n.Int64())*time.Millisecond)
 }
 
-func (s *Server) createTokenPairTx(ctx context.Context, tx *sql.Tx, user *authUser) (string, string, error) {
-	return s.createTokenPair(ctx, tx, user)
+func (s *Server) createTokenPair(ctx context.Context, q dbtx, u *userWithRoles) (string, string, error) {
+	access, err := s.signToken(u.ID, u.Email, u.Roles, s.cfg.JWTAccessSecret, s.cfg.JWTAccessExpiry)
+	if err != nil {
+		return "", "", plainError(err.Error())
+	}
+	refresh, err := s.signToken(u.ID, u.Email, u.Roles, s.cfg.JWTRefreshSecret, s.cfg.JWTRefreshExpiry)
+	if err != nil {
+		return "", "", plainError(err.Error())
+	}
+	now := s.nowMs()
+	expiresAt := addDaysLocal(now, refreshTokenExpiryDays)
+	if _, err := q.ExecContext(ctx,
+		"INSERT INTO `RefreshToken` (`token`,`userId`,`expiresAt`,`revoked`,`createdAt`) VALUES (?,?,?,?,?)",
+		refresh, u.ID, expiresAt, false, now); err != nil {
+		return "", "", err
+	}
+	return access, refresh, nil
 }
 
-func (s *Server) createTokenPair(ctx context.Context, tx *sql.Tx, user *authUser) (string, string, error) {
-	now := time.Now()
-	accessExpiry, err := parseDuration(s.cfg.JWTAccessExpiry)
+func (s *Server) login(c *Ctx) error {
+	body := c.bodyMap()
+	email, _ := getString(body, "email")
+	password, _ := getString(body, "password")
+	ctx := c.r.Context()
+
+	user, err := s.findUserWithRoles(ctx, "`email` = ?", email)
 	if err != nil {
-		return "", "", err
+		return err
 	}
-	refreshExpiry, err := parseDuration(s.cfg.JWTRefreshExpiry)
-	if err != nil {
-		return "", "", err
-	}
-	access, err := s.signToken(user, s.cfg.JWTAccessSecret, now.Add(accessExpiry))
-	if err != nil {
-		return "", "", err
-	}
-	refresh, err := s.signToken(user, s.cfg.JWTRefreshSecret, now.Add(refreshExpiry))
-	if err != nil {
-		return "", "", err
-	}
-	expiresAt := now.Add(30 * 24 * time.Hour)
-	if tx == nil {
-		_, err = s.db.ExecContext(ctx, "INSERT INTO RefreshToken (token, userId, expiresAt, revoked, createdAt) VALUES (?, ?, ?, FALSE, NOW())", refresh, user.ID, expiresAt)
+	valid := false
+	if user != nil {
+		valid = passwordMatches(user.Password, password)
 	} else {
-		_, err = tx.ExecContext(ctx, "INSERT INTO RefreshToken (token, userId, expiresAt, revoked, createdAt) VALUES (?, ?, ?, FALSE, NOW())", refresh, user.ID, expiresAt)
+		_ = passwordMatches(dummyPasswordHash, password)
 	}
-	return access, refresh, err
-}
-
-func (s *Server) signToken(user *authUser, secret string, expiry time.Time) (string, error) {
-	claims := tokenPayload{
-		UserID: user.ID, Email: user.Email, Roles: user.Roles,
-		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expiry)},
+	s.secureDelay()
+	if user == nil || !valid {
+		return plainError("Invalid credentials")
 	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
-}
-
-func (s *Server) verifyToken(token, secret string) (*tokenPayload, error) {
-	claims := &tokenPayload{}
-	parsed, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
-		if token.Method != jwt.SigningMethodHS256 {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(secret), nil
+	if user.Status != "approved" {
+		return plainError("Account not approved yet")
+	}
+	access, refresh, err := s.createTokenPair(ctx, s.db, user)
+	if err != nil {
+		return err
+	}
+	if err := s.logActivity(ctx, s.db, c, activityEntry{UserID: user.ID, Action: "LOGIN", Detail: "Login berhasil"}); err != nil {
+		return err
+	}
+	var fullName any
+	if user.FullName.Valid {
+		fullName = user.FullName.String
+	}
+	return c.ok("Login successful", O{
+		{"accessToken", access},
+		{"refreshToken", refresh},
+		{"user", O{
+			{"id", user.ID}, {"name", user.Name}, {"fullName", fullName},
+			{"email", user.Email}, {"status", user.Status}, {"roles", user.Roles},
+		}},
 	})
-	if err != nil || !parsed.Valid {
-		return nil, errors.New("invalid token")
-	}
-	return claims, nil
 }
 
-func (s *Server) registerUser(ctx context.Context, role string, fields []string, values []any) (int64, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(values[3].(string)), bcryptCost)
-	if err != nil {
-		return 0, err
+// requiredStringField mirrors getRequiredStringField in auth.controller.ts.
+func requiredStringField(c *Ctx, name string) (string, bool) {
+	v, _ := c.bodyField(name)
+	s, ok := v.(string)
+	if !ok || strings.TrimSpace(s) == "" {
+		return "", false
 	}
-	values[3] = string(hash)
-	columns := append(append([]string{}, fields...), "status", "createdAt", "updatedAt")
-	marks := strings.TrimSuffix(strings.Repeat("?,", len(columns)), ",")
-	quoted := make([]string, len(columns))
-	for i, field := range columns {
-		quoted[i] = "`" + field + "`"
-	}
-	args := append(values, "pending", time.Now(), time.Now())
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
-	}
-	result, err := tx.ExecContext(ctx, "INSERT INTO User ("+strings.Join(quoted, ",")+") VALUES ("+marks+")", args...)
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	if _, err := tx.ExecContext(ctx,
-		"INSERT INTO UserRole (userId, roleId, createdAt) SELECT ?, id, NOW() FROM Role WHERE name = ?",
-		id, role,
-	); err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-	return id, nil
+	return s, true
 }
 
-func (s *Server) logActivity(ctx context.Context, userID int64, action, detail, ip, userAgent string) error {
-	_, err := s.db.ExecContext(ctx, "INSERT INTO ActivityLog (userId, action, detail, ipAddress, userAgent, createdAt) VALUES (?, ?, ?, ?, ?, NOW())",
-		userID, action, detail, ip, userAgent)
-	return err
+func (s *Server) refreshToken(c *Ctx) error {
+	token, ok := requiredStringField(c, "refreshToken")
+	if !ok {
+		return c.fail(http.StatusBadRequest, "Refresh token required")
+	}
+	ctx := c.r.Context()
+	var id int64
+	var expiresAt time.Time
+	var revoked bool
+	err := s.db.QueryRowContext(ctx, "SELECT `id`,`expiresAt`,`revoked` FROM `RefreshToken` WHERE `token` = ?", token).
+		Scan(&id, &expiresAt, &revoked)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && (revoked || expiresAt.Before(s.now()))) {
+		return plainError("Refresh token invalid or expired")
+	}
+	if err != nil {
+		return err
+	}
+	payload, err := s.verifyToken(token, s.cfg.JWTRefreshSecret)
+	if err != nil {
+		return err
+	}
+	user, err := s.findUserWithRoles(ctx, "`id` = ?", payload.UserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return plainError("User not found")
+	}
+	if _, err := s.db.ExecContext(ctx, "UPDATE `RefreshToken` SET `revoked` = ? WHERE `id` = ?", true, id); err != nil {
+		return err
+	}
+	access, refresh, err := s.createTokenPair(ctx, s.db, user)
+	if err != nil {
+		return err
+	}
+	return c.ok("Token refreshed", O{{"accessToken", access}, {"refreshToken", refresh}})
 }
 
-func nullString(value sql.NullString) any {
-	if value.Valid {
-		return value.String
+func (s *Server) logout(c *Ctx) error {
+	token, ok := requiredStringField(c, "refreshToken")
+	if !ok {
+		return c.fail(http.StatusBadRequest, "Refresh token required")
 	}
-	return nil
+	if _, err := s.db.ExecContext(c.r.Context(), "UPDATE `RefreshToken` SET `revoked` = ? WHERE `token` = ?", true, token); err != nil {
+		return err
+	}
+	return c.ok("Logged out successfully", noData)
 }
 
-func parseDuration(value string) (time.Duration, error) {
-	if duration, err := time.ParseDuration(value); err == nil {
-		return duration, nil
+func (s *Server) logoutAll(c *Ctx) error {
+	if _, err := s.db.ExecContext(c.r.Context(),
+		"UPDATE `RefreshToken` SET `revoked` = ? WHERE `userId` = ? AND `revoked` = ?", true, c.user.UserID, false); err != nil {
+		return err
 	}
-	if strings.HasSuffix(value, "d") {
-		days, err := strconv.Atoi(strings.TrimSuffix(value, "d"))
-		if err != nil || days <= 0 {
-			return 0, fmt.Errorf("invalid token duration %q", value)
+	return c.ok("Logged out from all devices", noData)
+}
+
+func (s *Server) roleID(ctx context.Context, q dbtx, name string) (int64, error) {
+	var id int64
+	err := q.QueryRowContext(ctx, "SELECT `id` FROM `Role` WHERE `name` = ?", name).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, notFoundRecord("Role")
+	}
+	return id, err
+}
+
+// registerUser mirrors authService.registerDosen/registerMahasiswa.
+func (s *Server) registerUser(c *Ctx, role string, optionalFields []string) error {
+	body := c.bodyMap()
+	ctx := c.r.Context()
+	password, _ := getString(body, "password")
+	hash, err := hashPassword(password, bcryptSaltRounds)
+	if err != nil {
+		return err
+	}
+	roleID, err := s.roleID(ctx, s.db, role)
+	if err != nil {
+		return err
+	}
+	now := s.nowMs()
+	columns := []string{"email", "name", "password", "status", "createdAt", "updatedAt"}
+	email, _ := getString(body, "email")
+	name, _ := getString(body, "name")
+	args := []any{email, name, hash, "pending", now, now}
+	for _, field := range optionalFields {
+		value, ok := getString(body, field)
+		if !ok {
+			continue
 		}
-		return time.Duration(days) * 24 * time.Hour, nil
+		var arg any = value
+		if field == "tanggalLahir" {
+			t, err := parseJSDate(value)
+			if err != nil {
+				return plainError("Invalid value for argument `tanggalLahir`: Provided Date object is invalid.")
+			}
+			arg = t
+		}
+		columns = append(columns, field)
+		args = append(args, arg)
 	}
-	return 0, fmt.Errorf("invalid token duration %q", value)
+	quoted := make([]string, len(columns))
+	for i, col := range columns {
+		quoted[i] = "`" + col + "`"
+	}
+	var id int64
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, "INSERT INTO `User` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(columns))+")", args...)
+		if err != nil {
+			return err
+		}
+		id, err = res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, "INSERT INTO `UserRole` (`userId`,`roleId`,`createdAt`) VALUES (?,?,?)", id, roleID, now)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	var storedEmail, storedName, status string
+	if err := s.db.QueryRowContext(ctx, "SELECT `email`,`name`,`status` FROM `User` WHERE `id` = ?", id).Scan(&storedEmail, &storedName, &status); err != nil {
+		return err
+	}
+	return c.created("Registration submitted, awaiting approval", O{
+		{"id", id}, {"email", storedEmail}, {"name", storedName}, {"status", status},
+	})
+}
+
+func (s *Server) registerDosen(c *Ctx) error {
+	return s.registerUser(c, "dosen", []string{"fullName", "nidn", "tempatLahir", "tanggalLahir", "institusi", "programStudi", "alamat", "kontak"})
+}
+
+func (s *Server) registerMahasiswa(c *Ctx) error {
+	return s.registerUser(c, "mahasiswa", []string{"fullName", "nim", "prodi", "noHp", "alamat"})
+}
+
+func (s *Server) forgotPassword(c *Ctx) error {
+	email, _ := getString(c.bodyMap(), "email")
+	ctx := c.r.Context()
+	s.secureDelay()
+	var userID int64
+	var userEmail, name string
+	err := s.db.QueryRowContext(ctx, "SELECT `id`,`email`,`name` FROM `User` WHERE `email` = ?", email).Scan(&userID, &userEmail, &name)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if err == nil {
+		if _, err := s.db.ExecContext(ctx, "UPDATE `PasswordResetToken` SET `used` = ? WHERE `userId` = ? AND `used` = ?", true, userID, false); err != nil {
+			return err
+		}
+		raw := make([]byte, 32)
+		if _, err := rand.Read(raw); err != nil {
+			return err
+		}
+		token := hex.EncodeToString(raw)
+		now := s.nowMs()
+		if _, err := s.db.ExecContext(ctx,
+			"INSERT INTO `PasswordResetToken` (`token`,`userId`,`expiresAt`,`used`,`createdAt`) VALUES (?,?,?,?,?)",
+			token, userID, now.Add(passwordResetExpiry), false, now); err != nil {
+			return err
+		}
+		if err := s.sendPasswordResetEmail(userEmail, name, token); err != nil {
+			s.logger.Printf("Failed to send password reset email to=%s error=%v", userEmail, err)
+			return plainError("Failed to send reset email")
+		}
+		s.logger.Printf("Password reset email sent to %s", userEmail)
+	}
+	return c.ok("If your email is registered, you will receive a reset link", noData)
+}
+
+func (s *Server) resetPassword(c *Ctx) error {
+	body := c.bodyMap()
+	token, _ := getString(body, "token")
+	newPassword, _ := getString(body, "newPassword")
+	ctx := c.r.Context()
+	var id, userID int64
+	var expiresAt time.Time
+	var used bool
+	err := s.db.QueryRowContext(ctx, "SELECT `id`,`userId`,`expiresAt`,`used` FROM `PasswordResetToken` WHERE `token` = ?", token).
+		Scan(&id, &userID, &expiresAt, &used)
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && (used || expiresAt.Before(s.now()))) {
+		return plainError("Token invalid or expired")
+	}
+	if err != nil {
+		return err
+	}
+	hash, err := hashPassword(newPassword, bcryptSaltRounds)
+	if err != nil {
+		return err
+	}
+	now := s.nowMs()
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `updatedAt` = ? WHERE `id` = ?", hash, now, userID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return notFoundRecord("User")
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE `PasswordResetToken` SET `used` = ? WHERE `id` = ?", true, id); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, "UPDATE `RefreshToken` SET `revoked` = ? WHERE `userId` = ?", true, userID)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return c.ok("Password reset successfully", noData)
+}
+
+func (s *Server) me(c *Ctx) error {
+	ctx := c.r.Context()
+	user, err := s.findUserWithRoles(ctx, "`id` = ?", c.user.UserID)
+	if err != nil {
+		return err
+	}
+	count, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` WHERE `reviewerId` = ?", c.user.UserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return c.fail(http.StatusNotFound, "User not found")
+	}
+	var fullName any
+	if user.FullName.Valid {
+		fullName = user.FullName.String
+	}
+	return c.ok("Current user", O{
+		{"id", user.ID}, {"name", user.Name}, {"fullName", fullName}, {"email", user.Email},
+		{"status", user.Status}, {"roles", user.Roles}, {"hasTugasan", count > 0},
+	})
 }
 
 func (s *Server) sendPasswordResetEmail(to, name, token string) error {
-	if s.cfg.SMTPHost == "" {
-		return errors.New("SMTP_HOST is required to send reset email")
+	resetURL := s.cfg.FrontendURL + "/reset-password?token=" + token
+	if s.cfg.FrontendURL == "" {
+		resetURL = "undefined/reset-password?token=" + token
 	}
-	resetURL := strings.TrimRight(s.cfg.FrontendURL, "/") + "/reset-password?token=" + url.QueryEscape(token)
 	return sendSMTP(s.cfg, to, name, resetURL)
 }
-
-func (s *Server) internalError(w http.ResponseWriter, r *http.Request, err error) {
-	s.logger.Printf("request error method=%s path=%s: %v", r.Method, r.URL.Path, err)
-	status := http.StatusInternalServerError
-	message := err.Error()
-	if isDuplicateEntry(err) {
-		status, message = http.StatusConflict, "Resource already exists"
-	} else {
-		var apiErr *requestError
-		if errors.As(err, &apiErr) {
-			status, message = apiErr.status, apiErr.message
-		}
-	}
-	if status == http.StatusInternalServerError && s.cfg.NodeEnv == "production" {
-		message = "Internal server error"
-	}
-	if s.cfg.NodeEnv == "production" || status == http.StatusConflict {
-		sendError(w, message, status)
-		return
-	}
-	sendJSON(w, status, responseEnvelope{
-		Success: false, Message: message, Stack: string(debug.Stack()),
-	})
-}
-
-type requestError struct {
-	message string
-	status  int
-}
-
-func (e *requestError) Error() string { return e.message }

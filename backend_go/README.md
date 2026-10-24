@@ -1,24 +1,103 @@
-# LPPM backend (Go)
+# LPPM Backend (Go)
 
-This directory contains the Go implementation and uses the existing MySQL
-database/schema. The original TypeScript backend remains unchanged while the
-port is developed.
+Port backend Node.js/Express (`backend/`) ke Go. API, database, dan
+format respons **dibuat sama persis** dengan versi Node, sehingga frontend
+tidak perlu diubah: cukup arahkan base URL ke server Go.
 
-## Run
+- Semua 73 endpoint `/api/v1/...` (+ `/health`) dengan urutan route, role, pesan, dan
+  status code yang sama (termasuk perilaku "aneh" Node seperti error
+  "Proposal tidak ditemukan" yang dikembalikan sebagai HTTP 500).
+- Pakai **database MySQL yang sama** (skema Prisma, tabel & kolom sama).
+  Tanggal disimpan dalam UTC seperti Prisma, jadi data lama dan baru konsisten.
+- JSON dibentuk seperti output Prisma: urutan field sama, tanggal
+  `2026-05-16T04:53:59.000Z`, `anggaran` (Decimal) sebagai string `"15000000"`,
+  boolean `true/false`.
+- Token JWT kompatibel dua arah (payload `{userId, email, roles}`, HS256).
+  Jika `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` sama, user yang sudah login
+  di backend Node tidak perlu login ulang. Hash password bcrypt juga kompatibel.
+- Validasi meniru zod (respon 422 `{"errors": {"field": ["pesan"]}}` dengan
+  pesan yang sama), helmet, CORS, rate limit, ETag/304, access log format
+  "combined" di `logs/access.log` (bisa dibaca GoAccess seperti sebelumnya).
+- Upload PDF/DOCX (maks 10 MB, field `file`) dengan validasi magic-bytes.
 
-1. Copy `.env.example` to `.env` and configure the database and JWT secrets.
-2. Install Go 1.23 or newer.
-3. Run `go mod download`, then `go run ./cmd/server`.
+## Menjalankan
 
-The server listens on `PORT` (default `3000`). The `/health` endpoint is
-available without authentication. API routes retain the `/api/v1` prefix.
+Butuh Go 1.23+ dan MySQL/MariaDB.
 
-## Port status
+```bash
+cp .env.example .env          # isi DATABASE_URL & JWT secret (bisa salin dari .env Node)
+go mod download
+go run ./cmd/migrate          # buat/upgrade tabel (setara `npx prisma migrate deploy`)
+go run ./cmd/seed             # opsional: role + akun demo + periode
+go run ./cmd/server           # server di PORT (default 3000)
+```
 
-The Go implementation includes the server foundation, authentication, user
-management, and handlers for proposals, periods, reviewers, reports,
-notifications, dashboard, activity logs, and exports. Route registration and
-the Go test, vet, and build checks pass. Database-backed integration testing
-and full response/business-rule parity against the TypeScript API have not yet
-been verified; validate these against a test database before switching
-frontend or production traffic to this server.
+Build binary produksi:
+
+```bash
+go build -o bin/server ./cmd/server
+go build -o bin/migrate ./cmd/migrate
+go build -o bin/seed ./cmd/seed
+```
+
+Atau dengan Docker: `docker compose up --build` (migrasi otomatis dijalankan
+saat container start).
+
+### Pakai database yang sudah ada dari backend Node
+
+Tidak perlu migrasi ulang. `cmd/migrate` membaca tabel `_prisma_migrations`
+yang sama dengan Prisma, jadi migrasi yang sudah diterapkan oleh Prisma akan
+dilewati. Cek status: `go run ./cmd/migrate -status`.
+
+### Akun dari `cmd/seed`
+
+Sama dengan seeder Node: `admin@lppm.dev / admin123456`,
+`ketua@lppm.dev / ketua123456`, `reviewer1@lppm.dev / reviewer123`,
+`dosen1@lppm.dev / dosen123456`, `mahasiswa1@lppm.dev / mhs1234567`, dst.
+(Seeder Go tidak membuat proposal/review demo acak seperti seeder Node.)
+
+## Struktur
+
+```
+cmd/server      entrypoint HTTP server
+cmd/migrate     runner migrasi (kompatibel _prisma_migrations)
+cmd/seed        seeder role, akun, periode
+migrations/     salinan prisma/migrations dari project Node
+internal/config     pembacaan .env
+internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
+internal/httpapi    router ala Express, middleware, dan semua handler
+  auth.go, users.go, periode.go, proposals.go, proposal_dosen.go,
+  reviewer.go, laporan.go (laporan + dokumen lampiran), laporan_harian.go,
+  misc.go (notifikasi, dashboard, activity log, export)
+scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
+```
+
+## Pengujian
+
+```bash
+go test ./...                                 # unit test (tanpa database)
+python3 scripts/e2e.py http://localhost:3000  # 236 pengecekan end-to-end
+```
+
+`scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
+development yang sudah di-seed, dengan `TRUST_PROXY=true`.
+
+## Perbedaan yang disengaja dengan versi Node
+
+1. `PATCH /api/v1/users/profile/me` hanya mengubah field profil
+   (`name, fullName, alamat, kontak, noHp, institusi, programStudi, prodi,
+   tempatLahir, tanggalLahir, nidn, nim`). Versi Node meneruskan `req.body`
+   langsung ke Prisma sehingga user bisa mengubah `password`/`status`
+   miliknya sendiri; field seperti itu sekarang diabaikan.
+2. `GET /api/v1/mahasiswa/laporan-harian/dokumen/:id` mengirim file asli.
+   Versi Node memakai `res.send(Uint8Array)` yang oleh Express dikirim sebagai
+   teks JSON (file hasil download rusak).
+3. Pesan error internal Prisma (HTTP 500, mis. id bukan angka) teksnya bisa
+   sedikit berbeda; status code-nya sama. Di `NODE_ENV=production` keduanya
+   sama-sama menjadi `"Internal server error"`.
+
+Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`
+dan `PATCH /proposals/laporan/:id` tetap menyertakan isi file
+(`dokumenBlob`/`fileBlob`) dalam bentuk objek `{"0":37,"1":80,...}` demi
+kompatibilitas penuh. Jika frontend tidak memakainya, field ini sebaiknya
+dihapus agar respons lebih ringan.

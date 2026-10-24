@@ -1,268 +1,404 @@
 package httpapi
 
 import (
-	"context"
+	"bytes"
 	"database/sql"
-	"errors"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	mysql "github.com/go-sql-driver/mysql"
+	"unicode/utf8"
 
 	"lppm-backend-go/internal/config"
 )
 
+// Server is the HTTP API; it reproduces the Express app in src/app.ts.
 type Server struct {
 	cfg       config.Config
 	db        *sql.DB
 	logger    *log.Logger
-	accessLog *os.File
+	accessLog io.WriteCloser
+	logMu     sync.Mutex
 	limiter   *rateLimiter
-	handler   http.Handler
+	mounts    []*mount
+	// now is overridable in tests.
+	now func() time.Time
+	// sleep is used for the anti-enumeration delay (overridable in tests).
+	sleep func(time.Duration)
 }
 
+// New builds the server and registers every route of the Node backend.
 func New(cfg config.Config, db *sql.DB) (*Server, error) {
-	if err := os.MkdirAll("logs", 0750); err != nil {
+	if err := os.MkdirAll("logs", 0o750); err != nil {
 		return nil, fmt.Errorf("create logs directory: %w", err)
 	}
-	accessLog, err := os.OpenFile(filepath.Join("logs", "access.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0640)
+	accessLog, err := os.OpenFile(filepath.Join("logs", "access.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o640)
 	if err != nil {
 		return nil, fmt.Errorf("open access log: %w", err)
 	}
-	s := &Server{
-		cfg: cfg, db: db,
-		logger:    log.New(os.Stdout, "", log.LstdFlags|log.LUTC),
-		accessLog: accessLog,
-		limiter:   newRateLimiter(),
-	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", s.health)
-	s.registerAuthRoutes(mux)
-	s.registerUserRoutes(mux)
-	s.registerSimpleDomainRoutes(mux)
-	s.registerProposalRoutes(mux)
-	notFound := func(w http.ResponseWriter, r *http.Request) {
-		sendError(w, "Route "+r.URL.RequestURI()+" not found", http.StatusNotFound)
-	}
-	mux.HandleFunc("/api/v1/", notFound)
-	mux.HandleFunc("/", notFound)
-	s.handler = s.middleware(mux)
+	s := newServer(cfg, db)
+	s.accessLog = accessLog
 	return s, nil
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.handler.ServeHTTP(w, r)
+func newServer(cfg config.Config, db *sql.DB) *Server {
+	s := &Server{
+		cfg:     cfg,
+		db:      db,
+		logger:  log.New(os.Stdout, "", log.LstdFlags),
+		limiter: newRateLimiter(),
+		now:     time.Now,
+		sleep:   time.Sleep,
+	}
+	s.registerRoutes()
+	return s
 }
 
+// Close releases the access log file.
 func (s *Server) Close() error {
-	return s.accessLog.Close()
+	if s.accessLog != nil {
+		return s.accessLog.Close()
+	}
+	return nil
 }
 
-func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
-	sendJSON(w, http.StatusOK, map[string]any{
-		"success": true, "message": "OK", "timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-	})
+// registerRoutes mirrors registerApiRoutes() in app.ts (same mount order).
+func (s *Server) registerRoutes() {
+	s.registerAuthRoutes()
+	s.registerUserRoutes()
+	s.registerPeriodeRoutes()
+	s.registerProposalRoutes()
+	s.registerProposalDosenRoutes()
+	s.registerLaporanHarianRoutes()
+	s.registerReviewerRoutes()
+	s.registerNotificationRoutes()
+	s.registerDashboardRoutes()
+	s.registerActivityLogRoutes()
+	s.registerExportRoutes()
 }
 
-func (s *Server) middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		started := time.Now()
-		w.Header().Set("Content-Security-Policy", "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline'")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
-		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
-		w.Header().Set("Origin-Agent-Cluster", "?1")
-		w.Header().Set("X-DNS-Prefetch-Control", "off")
-		w.Header().Set("X-Download-Options", "noopen")
-		w.Header().Set("X-Permitted-Cross-Domain-Policies", "none")
-		w.Header().Set("X-XSS-Protection", "0")
-		if s.cfg.NodeEnv == "production" {
-			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		}
-		origin := r.Header.Get("Origin")
-		if s.cfg.CORSOrigin == "*" {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-		} else if origin == s.cfg.CORSOrigin {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Add("Vary", "Origin")
-		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			s.writeAccessLog(r, http.StatusNoContent, started)
-			return
-		}
-		remoteIP := clientIP(r, s.cfg.TrustProxy)
-		if !s.limiter.allow("global:"+remoteIP, time.Duration(s.cfg.RateLimitWindowMS)*time.Millisecond, s.cfg.RateLimitMax) {
-			w.Header().Set("RateLimit-Policy", fmt.Sprintf("%d;w=%d", s.cfg.RateLimitMax, s.cfg.RateLimitWindowMS/1000))
-			sendJSON(w, http.StatusTooManyRequests, responseEnvelope{Success: false, Message: "Too many requests, please try again later."})
-			s.writeAccessLog(r, http.StatusTooManyRequests, started)
-			return
-		}
-		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(recorder, r)
-		s.writeAccessLog(r, recorder.status, started)
-	})
+// nowMs returns the current time truncated to milliseconds, like JS Date.
+func (s *Server) nowMs() time.Time {
+	return s.now().Truncate(time.Millisecond)
 }
 
-type statusRecorder struct {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	rec := &responseRecorder{ResponseWriter: w, status: http.StatusOK}
+	c := &Ctx{s: s, w: rec, r: r, query: r.URL.Query(), body: map[string]any{}}
+	c.ip = s.clientIP(r)
+	c.ua = r.UserAgent()
+	defer func() {
+		if p := recover(); p != nil {
+			s.logger.Printf("panic: %v", p)
+			if !rec.wrote {
+				s.handleError(rec, r, fmt.Errorf("%v", p))
+			}
+		}
+		s.writeAccessLog(c, rec, started)
+	}()
+
+	s.setSecurityHeaders(rec)
+	if s.handleCORS(rec, r) {
+		return
+	}
+	if !s.limiter.check(rec, "global:"+c.ip, time.Duration(s.cfg.RateLimitWindowMS)*time.Millisecond, s.cfg.RateLimitMax, true,
+		"Too many requests, please try again later.", s, r) {
+		return
+	}
+	if err := s.parseBody(c); err != nil {
+		s.handleError(rec, r, err)
+		return
+	}
+	if (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.EqualFold(strings.TrimSuffix(r.URL.Path, "/"), "/health") {
+		s.writeBody(rec, r, http.StatusOK, O{
+			{"success", true}, {"message", "OK"}, {"timestamp", formatJSTime(time.Now())},
+		})
+		return
+	}
+	s.dispatch(c)
+}
+
+type responseRecorder struct {
 	http.ResponseWriter
 	status int
+	bytes  int
+	wrote  bool
 }
 
-func (r *statusRecorder) WriteHeader(status int) {
+func (r *responseRecorder) WriteHeader(status int) {
+	if r.wrote {
+		return
+	}
 	r.status = status
+	r.wrote = true
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func (s *Server) writeAccessLog(r *http.Request, status int, started time.Time) {
+func (r *responseRecorder) Write(p []byte) (int, error) {
+	if !r.wrote {
+		r.WriteHeader(http.StatusOK)
+	}
+	n, err := r.ResponseWriter.Write(p)
+	r.bytes += n
+	return n, err
+}
+
+// setSecurityHeaders reproduces helmet() v8 defaults.
+func (s *Server) setSecurityHeaders(w http.ResponseWriter) {
+	h := w.Header()
+	h.Set("Content-Security-Policy", "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests")
+	h.Set("Cross-Origin-Opener-Policy", "same-origin")
+	h.Set("Cross-Origin-Resource-Policy", "same-origin")
+	h.Set("Origin-Agent-Cluster", "?1")
+	h.Set("Referrer-Policy", "no-referrer")
+	h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("X-DNS-Prefetch-Control", "off")
+	h.Set("X-Download-Options", "noopen")
+	h.Set("X-Frame-Options", "SAMEORIGIN")
+	h.Set("X-Permitted-Cross-Domain-Policies", "none")
+	h.Set("X-XSS-Protection", "0")
+}
+
+// handleCORS reproduces the `cors` package with a fixed origin string.
+// It returns true when the request was a preflight that has been answered.
+func (s *Server) handleCORS(w http.ResponseWriter, r *http.Request) bool {
+	h := w.Header()
+	origin := s.cfg.CORSOrigin
+	h.Set("Access-Control-Allow-Origin", origin)
+	if origin != "*" {
+		h.Add("Vary", "Origin")
+	}
+	if r.Method != http.MethodOptions {
+		return false
+	}
+	h.Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE")
+	h.Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+	h.Set("Content-Length", "0")
+	w.WriteHeader(http.StatusNoContent)
+	return true
+}
+
+// clientIP mirrors req.ip. Without trust proxy it is the socket address
+// (Node reports IPv4 peers as IPv4-mapped IPv6, e.g. ::ffff:127.0.0.1);
+// with "trust proxy" = 1 it is the right-most X-Forwarded-For entry.
+func (s *Server) clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.To4() != nil && !strings.Contains(host, ":") {
+		host = "::ffff:" + host
+	}
+	if s.cfg.TrustProxy {
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			parts := strings.Split(forwarded, ",")
+			return strings.TrimSpace(parts[len(parts)-1])
+		}
+	}
+	return host
+}
+
+// writeAccessLog writes the morgan "combined" line to logs/access.log and a
+// short "dev" line to stdout outside production.
+func (s *Server) writeAccessLog(c *Ctx, rec *responseRecorder, started time.Time) {
 	if os.Getenv("BENCHMARK") == "true" {
 		return
 	}
-	ip := clientIP(r, s.cfg.TrustProxy)
-	agent := strings.ReplaceAll(r.UserAgent(), `"`, `\"`)
-	line := fmt.Sprintf("%s - - [%s] \"%s %s %s\" %d - \"%s\" \"%s\"\n",
-		ip, started.Format("02/Jan/2006:15:04:05 -0700"), r.Method, r.URL.RequestURI(), r.Proto,
-		status, r.Referer(), agent)
-	if _, err := s.accessLog.WriteString(line); err != nil {
-		s.logger.Printf("failed to write access log: %v", err)
+	length := rec.Header().Get("Content-Length")
+	if length == "" {
+		length = "-"
 	}
-	if s.cfg.NodeEnv != "production" {
-		s.logger.Printf("%s %s %d %s", r.Method, r.URL.RequestURI(), status, time.Since(started).Round(time.Millisecond))
+	referrer := c.r.Referer()
+	if referrer == "" {
+		referrer = "-"
+	}
+	agent := c.ua
+	if agent == "" {
+		agent = "-"
+	}
+	line := fmt.Sprintf("%s - - [%s] \"%s %s HTTP/%d.%d\" %d %s \"%s\" \"%s\"\n",
+		c.ip, started.UTC().Format("02/Jan/2006:15:04:05 +0000"), c.r.Method, c.r.URL.RequestURI(),
+		c.r.ProtoMajor, c.r.ProtoMinor, rec.status, length, referrer, agent)
+	if s.accessLog != nil {
+		s.logMu.Lock()
+		if _, err := io.WriteString(s.accessLog, line); err != nil {
+			s.logger.Printf("failed to write access log: %v", err)
+		}
+		s.logMu.Unlock()
+	}
+	if s.cfg.NodeEnv == "production" {
+		s.logger.Print(strings.TrimSpace(line))
+	} else {
+		s.logger.Printf("%s %s %d %.3f ms - %s", c.r.Method, c.r.URL.RequestURI(), rec.status,
+			float64(time.Since(started).Microseconds())/1000, length)
 	}
 }
 
-func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		header := r.Header.Get("Authorization")
-		if !strings.HasPrefix(header, "Bearer ") || strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")) == "" {
-			sendError(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		claims, err := s.verifyToken(strings.TrimSpace(strings.TrimPrefix(header, "Bearer ")), s.cfg.JWTAccessSecret)
+// parseBody mirrors express.json({limit:"10kb"}) followed by
+// express.urlencoded({extended:true}).
+func (s *Server) parseBody(c *Ctx) error {
+	r := c.r
+	hasBody := len(r.TransferEncoding) > 0 || r.Header.Get("Transfer-Encoding") != "" || r.Header.Get("Content-Length") != "" || r.ContentLength != 0
+	if !hasBody {
+		return nil
+	}
+	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	switch mediaType {
+	case "application/json":
+		data, err := readLimited(r, 10*1024)
 		if err != nil {
-			sendError(w, "Token invalid or expired", http.StatusUnauthorized)
-			return
+			return err
 		}
-		s.logger.Printf("auth_access userId=%d email=%s method=%s path=%s ip=%s userAgent=%q",
-			claims.UserID, claims.Email, r.Method, r.URL.RequestURI(), clientIP(r, s.cfg.TrustProxy), r.UserAgent())
-		ctx := contextWithUser(r, claims)
-		next(w, r.WithContext(ctx))
-	}
-}
-
-func (s *Server) requireRoles(next http.HandlerFunc, allowed ...string) http.HandlerFunc {
-	return s.requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		claims, ok := r.Context().Value(authContextKey{}).(*tokenPayload)
-		if !ok {
-			sendError(w, "Unauthorized", http.StatusUnauthorized)
-			return
+		trimmed := bytes.TrimSpace(data)
+		if len(trimmed) == 0 {
+			c.body = map[string]any{}
+			return nil
 		}
-		for _, userRole := range claims.Roles {
-			for _, role := range allowed {
-				if userRole == role {
-					next(w, r)
-					return
+		if trimmed[0] != '{' && trimmed[0] != '[' {
+			return httpError(http.StatusBadRequest, jsonSyntaxMessage(string(trimmed)))
+		}
+		var decoded any
+		if err := json.Unmarshal(trimmed, &decoded); err != nil {
+			return httpError(http.StatusBadRequest, jsonSyntaxMessage(string(trimmed)))
+		}
+		c.body = decoded
+	case "application/x-www-form-urlencoded":
+		data, err := readLimited(r, 100*1024)
+		if err != nil {
+			return err
+		}
+		values, err := url.ParseQuery(string(data))
+		if err != nil {
+			return httpError(http.StatusBadRequest, "Bad Request")
+		}
+		body := map[string]any{}
+		for key, list := range values {
+			if len(list) == 1 {
+				body[key] = list[0]
+			} else {
+				items := make([]any, len(list))
+				for i, v := range list {
+					items[i] = v
 				}
+				body[key] = items
 			}
 		}
-		sendError(w, "Forbidden: insufficient permissions", http.StatusForbidden)
-	})
-}
-
-func currentUser(r *http.Request) *tokenPayload {
-	user, _ := r.Context().Value(authContextKey{}).(*tokenPayload)
-	return user
-}
-
-func contextWithUser(r *http.Request, user *tokenPayload) context.Context {
-	return context.WithValue(r.Context(), authContextKey{}, user)
-}
-
-func clientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			return strings.TrimSpace(strings.Split(forwarded, ",")[0])
-		}
+		c.body = body
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil {
-		return host
+	return nil
+}
+
+func readLimited(r *http.Request, limit int64) ([]byte, error) {
+	if r.ContentLength > limit {
+		return nil, httpError(http.StatusRequestEntityTooLarge, "request entity too large")
 	}
-	return r.RemoteAddr
-}
-
-func isDuplicateEntry(err error) bool {
-	var mysqlErr *mysql.MySQLError
-	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
-}
-
-func (s *Server) authLimited(next http.HandlerFunc) http.HandlerFunc {
-	return s.limit(next, 10, 15*time.Minute, "auth")
-}
-
-func (s *Server) registerLimited(next http.HandlerFunc) http.HandlerFunc {
-	return s.limit(next, 5, time.Hour, "register")
-}
-
-func (s *Server) limit(next http.HandlerFunc, max int, window time.Duration, kind string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		message := "Too many attempts, try again in 15 minutes."
-		if kind == "register" {
-			message = "Too many registrations from this IP."
-		}
-		if !s.limiter.allow(kind+":"+clientIP(r, s.cfg.TrustProxy), window, max) {
-			sendJSON(w, http.StatusTooManyRequests, responseEnvelope{Success: false, Message: message})
-			return
-		}
-		next(w, r)
+	data, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+	if err != nil {
+		return nil, httpError(http.StatusBadRequest, "request aborted")
 	}
+	if int64(len(data)) > limit {
+		return nil, httpError(http.StatusRequestEntityTooLarge, "request entity too large")
+	}
+	return data, nil
 }
+
+func jsonSyntaxMessage(body string) string {
+	first, _ := utf8.DecodeRuneInString(body)
+	preview := body
+	if len(preview) > 30 {
+		preview = preview[:30] + "..."
+	}
+	return fmt.Sprintf("Unexpected token '%c', %q is not valid JSON", first, preview)
+}
+
+// ── Rate limiting (express-rate-limit, MemoryStore, fixed window) ─────────
 
 type rateRecord struct {
-	start time.Time
+	reset time.Time
 	count int
 }
 
 type rateLimiter struct {
 	mu      sync.Mutex
-	records map[string]rateRecord
+	records map[string]*rateRecord
 }
 
 func newRateLimiter() *rateLimiter {
-	return &rateLimiter{records: make(map[string]rateRecord)}
+	return &rateLimiter{records: make(map[string]*rateRecord)}
 }
 
-func (l *rateLimiter) allow(key string, window time.Duration, max int) bool {
+// check increments the hit counter for key and writes the rate-limit
+// headers. It returns false (after answering 429) when the limit is hit.
+// standard=true writes draft-6 RateLimit-* headers, false writes the legacy
+// X-RateLimit-* headers.
+func (l *rateLimiter) check(w http.ResponseWriter, key string, window time.Duration, max int, standard bool, message string, s *Server, r *http.Request) bool {
 	now := time.Now()
 	l.mu.Lock()
-	defer l.mu.Unlock()
-	record := l.records[key]
-	if record.start.IsZero() || now.Sub(record.start) >= window {
-		record = rateRecord{start: now}
+	rec := l.records[key]
+	if rec == nil || !now.Before(rec.reset) {
+		rec = &rateRecord{reset: now.Add(window)}
+		l.records[key] = rec
 	}
-	if record.count >= max {
-		l.records[key] = record
-		return false
-	}
-	record.count++
-	l.records[key] = record
-	if len(l.records) > 10000 {
+	rec.count++
+	count, reset := rec.count, rec.reset
+	if len(l.records) > 50000 {
 		for k, v := range l.records {
-			if now.Sub(v.start) > window {
+			if !now.Before(v.reset) {
 				delete(l.records, k)
 			}
 		}
 	}
+	l.mu.Unlock()
+
+	remaining := max - count
+	if remaining < 0 {
+		remaining = 0
+	}
+	secondsLeft := int(reset.Sub(now).Seconds() + 0.999)
+	if secondsLeft < 0 {
+		secondsLeft = 0
+	}
+	h := w.Header()
+	if standard {
+		h.Set("RateLimit-Policy", fmt.Sprintf("%d;w=%d", max, int(window.Seconds())))
+		h.Set("RateLimit-Limit", strconv.Itoa(max))
+		h.Set("RateLimit-Remaining", strconv.Itoa(remaining))
+		h.Set("RateLimit-Reset", strconv.Itoa(secondsLeft))
+	} else {
+		h.Set("X-RateLimit-Limit", strconv.Itoa(max))
+		h.Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		h.Set("X-RateLimit-Reset", strconv.FormatInt((reset.UnixMilli()+999)/1000, 10))
+	}
+	if count > max {
+		h.Set("Retry-After", strconv.Itoa(secondsLeft))
+		s.writeBody(w, r, http.StatusTooManyRequests, O{{"success", false}, {"message", message}})
+		return false
+	}
 	return true
+}
+
+func (s *Server) authLimiter(c *Ctx) error {
+	if !s.limiter.check(c.w, "auth:"+c.ip, 15*time.Minute, 10, true, "Too many attempts, try again in 15 minutes.", s, c.r) {
+		return errStop
+	}
+	return nil
+}
+
+func (s *Server) registerLimiter(c *Ctx) error {
+	if !s.limiter.check(c.w, "register:"+c.ip, time.Hour, 5, false, "Too many registrations from this IP.", s, c.r) {
+		return errStop
+	}
+	return nil
 }

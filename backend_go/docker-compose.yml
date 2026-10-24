@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3233:3233"
+    environment:
+      DATABASE_URL: "mysql://lppm:secret@db:3306/lppm_db"
+      PORT: "3233"
+      NODE_ENV: "production"
+      CORS_ORIGIN: "*"
+      JWT_ACCESS_SECRET: "ganti-dengan-secret-acak"
+      JWT_REFRESH_SECRET: "ganti-dengan-secret-acak-lain"
+      JWT_ACCESS_EXPIRES_IN: "15m"
+      JWT_REFRESH_EXPIRES_IN: "7d"
+      RATE_LIMIT_WINDOW_MS: "900000"
+      RATE_LIMIT_MAX: "100"
+      SMTP_HOST: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_USER: "your_email@gmail.com"
+      SMTP_PASS: "your_app_password"
+      FRONTEND_URL: "http://localhost:5173"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: lppm_db
+      MYSQL_USER: lppm
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:

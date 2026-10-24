@@ -11,9 +11,12 @@ import (
 	"lppm-backend-go/internal/config"
 )
 
+// sendSMTP mirrors utils/email.ts (nodemailer): same sender, subject and
+// HTML body. SMTP_SECURE=true uses implicit TLS, otherwise STARTTLS is used
+// when the server offers it.
 func sendSMTP(cfg config.Config, to, name, resetURL string) error {
 	address := net.JoinHostPort(cfg.SMTPHost, cfg.SMTPPort)
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	dialer := &net.Dialer{Timeout: 15 * time.Second}
 	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
 		return fmt.Errorf("connect SMTP: %w", err)
@@ -40,9 +43,10 @@ func sendSMTP(cfg config.Config, to, name, resetURL string) error {
 		}
 	}
 	if cfg.SMTPUser != "" {
-		auth := smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)
-		if err := client.Auth(auth); err != nil {
-			return fmt.Errorf("authenticate SMTP: %w", err)
+		if ok, _ := client.Extension("AUTH"); ok {
+			if err := client.Auth(smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)); err != nil {
+				return fmt.Errorf("authenticate SMTP: %w", err)
+			}
 		}
 	}
 	if err := client.Mail(cfg.SMTPUser); err != nil {
@@ -55,17 +59,33 @@ func sendSMTP(cfg config.Config, to, name, resetURL string) error {
 	if err != nil {
 		return fmt.Errorf("open SMTP message: %w", err)
 	}
-	subject := "Reset Password"
-	html := fmt.Sprintf(`<h2>Halo, %s</h2><p>Klik link berikut untuk reset password Anda (berlaku 1 jam):</p><a href="%s">Reset Password</a><p>Jika Anda tidak meminta reset password, abaikan email ini.</p><p>Link kadaluarsa dalam 1 jam.</p>`,
-		htmlEscape(name), htmlEscape(resetURL))
+	appName := cfg.AppName
+	if appName == "" {
+		appName = "LPPM App"
+	}
+	html := `
+    <h2>Halo, ` + name + `</h2>
+    <p>Klik link berikut untuk reset password Anda (berlaku 1 jam):</p>
+    <a href="` + resetURL + `" style="
+      display:inline-block;
+      padding:12px 24px;
+      background:#4F46E5;
+      color:#fff;
+      text-decoration:none;
+      border-radius:6px;
+    ">Reset Password</a>
+    <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+    <p style="color:#888;font-size:12px;">Link kadaluarsa dalam 1 jam.</p>
+  `
 	message := strings.Join([]string{
-		fmt.Sprintf("From: \"%s\" <%s>", cfg.AppName, cfg.SMTPUser),
+		fmt.Sprintf("From: \"%s\" <%s>", appName, cfg.SMTPUser),
 		"To: " + to,
-		"Subject: " + subject,
+		"Subject: Reset Password",
 		"MIME-Version: 1.0",
 		"Content-Type: text/html; charset=UTF-8",
+		"Date: " + time.Now().Format(time.RFC1123Z),
 		"",
-		html,
+		strings.ReplaceAll(html, "\n", "\r\n"),
 	}, "\r\n")
 	if _, err := writer.Write([]byte(message)); err != nil {
 		writer.Close()
@@ -75,12 +95,4 @@ func sendSMTP(cfg config.Config, to, name, resetURL string) error {
 		return fmt.Errorf("send SMTP message: %w", err)
 	}
 	return client.Quit()
-}
-
-func htmlEscape(value string) string {
-	value = strings.ReplaceAll(value, "&", "&amp;")
-	value = strings.ReplaceAll(value, "<", "&lt;")
-	value = strings.ReplaceAll(value, ">", "&gt;")
-	value = strings.ReplaceAll(value, "\"", "&quot;")
-	return strings.ReplaceAll(value, "'", "&#39;")
 }
