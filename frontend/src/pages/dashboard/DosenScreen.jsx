@@ -222,7 +222,7 @@ function LatestProposal({ latest, unavailable }) {
     content = (
       <div className="flex flex-col items-start gap-3">
         <p className="text-base text-slate-500">Anda belum memiliki usulan.</p>
-        <Link to="/proposal-saya" className="btn btn-secondary btn-sm">
+        <Link to="/kegiatan/penelitian/usulan" className="btn btn-secondary btn-sm">
           Buat proposal
         </Link>
       </div>

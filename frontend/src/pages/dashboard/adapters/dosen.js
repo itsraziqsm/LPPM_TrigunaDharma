@@ -30,7 +30,7 @@ import {
 
 export const actions = [
   { to: '/undangan', label: 'Undangan tim', variant: 'secondary' },
-  { to: '/proposal-saya', label: 'Buat proposal baru', variant: 'primary' },
+  { to: '/kegiatan/penelitian/usulan', label: 'Buat proposal baru', variant: 'primary' },
 ]
 
 export async function load({ withReviewerDigest }) {
@@ -226,7 +226,7 @@ export async function load({ withReviewerDigest }) {
         toLabel: 'Lihat semua proposal',
         emptyTitle: 'Belum ada proposal',
         emptyDesc: 'Buat proposal pertama Anda untuk periode yang sedang berjalan.',
-        emptyAction: { to: '/proposal-saya', label: 'Buat proposal' },
+        emptyAction: { to: '/kegiatan/penelitian/usulan', label: 'Buat proposal' },
         unavailable: !data.proposals,
       },
 

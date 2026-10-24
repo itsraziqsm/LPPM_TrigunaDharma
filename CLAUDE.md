@@ -186,7 +186,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
   `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya`, `/kegiatan/penelitian`,
-  `/kegiatan/pengabdian` (dosen), `/notifikasi` (semua peran), `/undangan`
+  `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]` (dosen), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` (`roles` berisi reviewer atau `hasTugasan`). `Sidebar.jsx`
@@ -205,7 +205,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
 - Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,
   dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
-  `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis).
+  `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis) = halaman **Status
+  Penelitian/Pengabdian**: kartu Proposal Aktif/Diterima & Laporan Diterima, tombol Usulan &
+  Laporan, Riwayat tab Proposal (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`).
+- **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
+  Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
+  dihapus). Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
+  lalu kembali ke halaman Status dengan pesan (`location.state.flash`).
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
   menu"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,

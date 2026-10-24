@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import useLenis from '../hooks/useLenis'
 import useAuthStore from '../store/authStore'
@@ -13,6 +14,7 @@ import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
 import ExportPage from './ExportPage' // ← BARU
 import KegiatanPage from './KegiatanPage'
+import UsulanPage from './UsulanPage'
 import NotifikasiPage from './NotifikasiPage'
 
 const ROLE_LABEL = {
@@ -41,6 +43,7 @@ export default function DashboardLayout({ page, jenis }) {
   // Dosen/mahasiswa yang punya tugasan review juga dianggap reviewer di sisi UI
   const isReviewer = roleNames.includes('reviewer') || user?.hasTugasan === true
 
+  const location = useLocation()
   const scrollRef = useRef(null)
   const contentRef = useRef(null)
   const ready = Boolean(user) && !loading
@@ -48,11 +51,11 @@ export default function DashboardLayout({ page, jenis }) {
   // jadi wadah luar dibuat setinggi layar tanpa Lenis.
   const selfScrolling = isAdminOrKetua && page === 'users'
   // Smooth scroll untuk area konten; dipasang ulang (dan kembali ke atas) saat
-  // pindah halaman atau jenis kegiatan.
+  // pindah halaman (URL).
   useLenis(scrollRef, {
     contentRef,
     enabled: !selfScrolling,
-    resetKey: ready ? `${page || 'dashboard'}:${jenis || ''}` : 'memuat',
+    resetKey: ready ? location.pathname : 'memuat',
   })
 
   if (!user || loading) {
@@ -100,6 +103,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'proposal-saya') return <ProposalDosenPage />
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
+      if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       // Dosen yang punya tugasan bisa akses halaman penugasan
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />

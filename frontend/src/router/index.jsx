@@ -28,6 +28,10 @@ const router = createBrowserRouter([
       { path: '/export', element: <DashboardLayout page="export" /> }, // ← BARU
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },
+      { path: '/kegiatan/penelitian/usulan', element: <DashboardLayout page="usulan" jenis="penelitian" /> },
+      { path: '/kegiatan/pengabdian/usulan', element: <DashboardLayout page="usulan" jenis="pengabdian" /> },
+      { path: '/kegiatan/penelitian/usulan/:id', element: <DashboardLayout page="usulan" jenis="penelitian" /> },
+      { path: '/kegiatan/pengabdian/usulan/:id', element: <DashboardLayout page="usulan" jenis="pengabdian" /> },
     ],
   },
   { path: '*', element: <Navigate to="/login" replace /> },

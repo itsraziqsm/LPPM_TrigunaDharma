@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { StatCard, Badge } from './ProposalDosen/components'
 import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
-import { ProposalFormModal } from './ProposalDosen/ProposalFormModal'
 import { UndanganSection } from './ProposalDosen/UndanganSection'
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR } from './ProposalDosen/constants'
 import { Download, FileText, Plus, Search } from 'lucide-react'
@@ -153,8 +153,8 @@ export default function ProposalDosenPage() {
     const limit = 10
 
     const [selectedId, setSelectedId] = useState(null)
-    const [editData, setEditData] = useState(null)
-    const [showCreate, setShowCreate] = useState(false)
+    // Buat & ubah proposal kini di halaman Usulan (/kegiatan/:jenis/usulan[/:id])
+    const navigate = useNavigate()
     const [deleting, setDeleting] = useState(null)
 
     const fetchAll = useCallback(() => {
@@ -219,7 +219,7 @@ export default function ProposalDosenPage() {
             {(p.status === 'draft' || p.status === 'revisi') && (
                 <>
                     <button
-                        onClick={() => setEditData(p)}
+                        onClick={() => navigate(`/kegiatan/${p.jenis || 'penelitian'}/usulan/${p.id}`)}
                         className="btn btn-ghost btn-sm px-2.5"
                     >
                         Edit
@@ -256,7 +256,7 @@ export default function ProposalDosenPage() {
                                 Download Template
                             </HeaderButton>
 
-                            <HeaderButton onClick={() => setShowCreate(true)} dark>
+                            <HeaderButton onClick={() => navigate('/kegiatan/penelitian/usulan')} dark>
                                 <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
                                 Buat Proposal
                             </HeaderButton>
@@ -419,7 +419,7 @@ export default function ProposalDosenPage() {
                                 {loading ? (
                                     <ProposalTableSkeleton />
                                 ) : proposals.length === 0 ? (
-                                    <EmptyProposalState onCreate={() => setShowCreate(true)} />
+                                    <EmptyProposalState onCreate={() => navigate('/kegiatan/penelitian/usulan')} />
                                 ) : (
                                     <>
                                         {/* Layar lebar: tabel */}
@@ -586,15 +586,6 @@ export default function ProposalDosenPage() {
                 />
             )}
 
-            {showCreate && <ProposalFormModal onClose={() => setShowCreate(false)} onSaved={fetchAll} />}
-
-            {editData && (
-                <ProposalFormModal
-                    editData={editData}
-                    onClose={() => setEditData(null)}
-                    onSaved={fetchAll}
-                />
-            )}
         </>
     )
 }
