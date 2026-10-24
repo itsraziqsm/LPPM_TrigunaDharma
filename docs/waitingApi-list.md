@@ -10,20 +10,12 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 13) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
-dan penanda `ApiPending` dihapus, pindahkan barisnya ke tabel "Sudah disambungkan".
-
-| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
-|---|---|---|---|
-| W-22 | Usulan: Rumpun Ilmu & Bidang | Field `rumpunIlmu`, `bidang` di create/update/respons proposal; pilihan dari `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=…` | Nilai disimpan sebagai teks (nama dari master). |
-| W-23 | Usulan: Kontak di tabel Anggota | `kontak`, `noHp` di `GET /users/search`, `members/search`, dan `anggota[].user` | **Alamat tidak disediakan** (keputusan privasi). Hapus kolom Alamat dari UI. |
-| W-24 | Usulan: Kata Kunci | Field `kataKunci` (array string, maks 10 × 50 karakter) di create/update/respons proposal | Respons selalu array; `[]` mengosongkan. |
-| W-25 | Usulan: pilihan Luaran Tambahan | `GET /master/luaran?jenis=…` | Daftar statis `LUARAN_OPTIONS` sudah diganti editor item luaran (`/luaran`, jenis baku); master ini belum dipakai. |
+Tidak ada. Semua API Grup A, B, C dan W-22 sampai W-25 (`backend_go/new-api.md` bagian 10–13)
+sudah disambungkan.
 
 ### Sudah disambungkan
 
-Grup A (`new-api.md` bagian 10), Grup B (bagian 11), dan Grup C (bagian 12):
+Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bagian 13:
 
 | ID | Disambungkan di |
 |---|---|
@@ -39,6 +31,10 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), dan Grup C (bagian 12):
 | W-01 / W-02 / W-12 | `GET /luaran/stats` → kartu Luaran Dapat Diklaim (+ "X tercapai dari Y target"), Jurnal, Jurnal Diterbitkan (dashboard). Item luaran: editor **Target Luaran** di langkah Dokumen wizard Usulan (`POST/PATCH/DELETE /luaran`, disinkronkan setelah proposal tersimpan), **Capaian luaran** di halaman laporan (`PATCH /luaran/:id/capaian`, `POST /luaran/:id/bukti`), baca saja di Laporan Masuk & review laporan (`pages/laporan/LuaranCapaian.jsx`) |
 | W-06 | `GET /dosen/kepercayaan` → Nilai Kepercayaan (`4.4/5.0`, "Belum ada data" bila `null`) |
 | W-18 | `emailVerifiedAt` → badge Terverifikasi / Belum diverifikasi + "Kirim ulang email verifikasi" di Pengaturan; halaman publik `/verify-email?token=` (`VerifyEmailPage.jsx`) |
+| W-22 | Rumpun Ilmu & Bidang → dropdown di Identitas (`GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=`), field `rumpunIlmu`/`bidang`, Preview & modal detail |
+| W-23 | Kolom Kontak tabel Anggota (`noHp`, bila kosong `kontak`); kolom Alamat dihapus (privasi) |
+| W-24 | Kata Kunci (dipisah koma → array `kataKunci`, maks 10 × 50) di Dokumen, Preview & modal detail |
+| W-25 | `GET /master/luaran?jenis=` → pilihan "Tambah dari daftar luaran" di editor Target Luaran (item `/luaran` dengan `jenis` = `jenisLuaran`) |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -96,7 +92,8 @@ Data yang **sudah** tersambung ke API yang ada:
 | Target Luaran (banyak item: jenis, target, tanggal target) | `GET /luaran/proposal/:id`, `POST/PATCH/DELETE /luaran`; field teks `luaran` diisi ringkasan item |
 | Skema Penelitian (Identitas, penelitian) · Nama Mitra (langkah Mitra, pengabdian, wajib) | field `skema` / `mitra` |
 | Upload Proposal (wajib di wizard) | `POST /proposals/:id/dokumen-utama` setelah proposal tersimpan |
-| Cari anggota | `GET /users/search` |
+| Cari anggota (+ kontak) | `GET /users/search` |
+| Rumpun Ilmu, Bidang, Kata Kunci | field `rumpunIlmu`, `bidang`, `kataKunci`; pilihan dari `GET /master/(rumpun-ilmu\|bidang)` |
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
 
 Data yang **menunggu API**:

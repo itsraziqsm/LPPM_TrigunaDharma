@@ -248,7 +248,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `mitra`, wajib) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
   (item `/luaran`: jenis `LUARAN_JENIS`, target, tanggal target) yang disinkronkan
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
-  ringkasan item. Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
+  ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
+  (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
   lalu kembali ke halaman Status dengan pesan (`location.state.flash`).
 - **Laporan** (API `/laporan`, `src/api/laporan.js`): pengusul di `LaporanPage.jsx`
   (`/kegiatan/:jenis/laporan/baru` pilih proposal disetujui; `/:id` isi, unggah, ajukan, hapus,

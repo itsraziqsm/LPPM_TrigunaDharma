@@ -167,6 +167,11 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh, readOnly =
                                         <InfoRow label="Status Proposal" value={STATUS_LABEL[detail.status] || detail.status} />
                                         <InfoRow label="Anggaran" value={detail.anggaran ? `Rp ${Number(detail.anggaran).toLocaleString('id-ID')}` : '—'} />
                                         <InfoRow label="Periode" value={detail.periode ? `${detail.periode.nama} (${detail.periode.tahun})` : '—'} />
+                                        {detail.skema ? <InfoRow label="Skema" value={detail.skema} /> : null}
+                                        {detail.mitra ? <InfoRow label="Mitra" value={detail.mitra} /> : null}
+                                        <InfoRow label="Rumpun Ilmu" value={detail.rumpunIlmu || '—'} />
+                                        <InfoRow label="Bidang" value={detail.bidang || '—'} />
+                                        <InfoRow label="Kata Kunci" value={(detail.kataKunci || []).join(', ') || '—'} />
                                         <InfoRow label="Tanggal Diajukan" value={detail.submittedAt ? new Date(detail.submittedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'} />
                                         <InfoRow label="Tanggal Dibuat" value={new Date(detail.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })} />
                                     </SectionBox>

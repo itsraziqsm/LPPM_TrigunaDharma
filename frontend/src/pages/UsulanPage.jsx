@@ -18,6 +18,7 @@ import {
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { periodeApi } from '../api/periode'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
+import { masterApi } from '../api/master'
 import useAuthStore from '../store/authStore'
 import ApiPending from '../components/ApiPending'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
@@ -30,8 +31,9 @@ import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
 //   /kegiatan/:jenis/usulan/:id   ubah proposal (hanya draft/revisi)
 // Data: POST/PATCH /dosen/proposals, POST/PATCH/DELETE /luaran (item target luaran,
 // disinkronkan setelah proposal tersimpan), POST /proposals/:id/dokumen-utama,
-// GET /periode, GET /users/search. Field tanpa endpoint memakai ApiPending dan
-// dicatat di docs/waitingApi-list.md (W-22..W-26).
+// GET /periode, GET /users/search, GET /master/(rumpun-ilmu|bidang|luaran).
+// Field tanpa endpoint (detail mitra, W-26) memakai ApiPending dan dicatat di
+// docs/waitingApi-list.md.
 // Pengabdian (desain terpisah): 5 langkah dengan langkah Mitra, anggota dosen &
 // mahasiswa dipisah.
 // ---------------------------------------------------------------------------
@@ -58,6 +60,14 @@ const stepsFor = (jenis) => (jenis === 'pengabdian' ? STEPS_PENGABDIAN : STEPS)
 // proposal tetap diisi ringkasan item supaya tampilan lama & laporan ikut membaca.
 let luaranKey = 0
 const newLuaran = () => ({ key: `n${(luaranKey += 1)}`, id: null, jenis: 'jurnal', target: '', targetTanggal: '' })
+// Kata kunci diketik dipisah koma; dikirim sebagai array (maks 10 × 50 karakter).
+const parseKataKunci = (text) => {
+  const seen = new Set()
+  return text
+    .split(',')
+    .map((k) => k.trim())
+    .filter((k) => k && !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase()))
+}
 const luaranRingkas = (items) => items.map((i) => `${LUARAN_JENIS[i.jenis] || i.jenis}: ${i.target.trim()}`).join('; ')
 
 const MAX_FILE = 10 * 1024 * 1024
@@ -96,6 +106,9 @@ function validate(form, file, existingDoc, luaranItems) {
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
   if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
+  const kk = parseKataKunci(form.kataKunci)
+  if (kk.length > 10) e.kataKunci = `Maksimal 10 kata kunci (sekarang ${kk.length}).`
+  else if (kk.some((k) => k.length > 50)) e.kataKunci = 'Setiap kata kunci maksimal 50 karakter.'
   if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
@@ -106,7 +119,7 @@ function validate(form, file, existingDoc, luaranItems) {
   return e
 }
 
-const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['abstrak', 'dokumen', 'luaran'] }
+const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['kataKunci', 'abstrak', 'dokumen', 'luaran'] }
 
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
@@ -173,6 +186,20 @@ function kindOf(u) {
   return 'dosen'
 }
 
+// Opsi dari master; nilai tersimpan yang sudah tidak ada di master tetap ditampilkan.
+function MasterOptions({ items, current }) {
+  return (
+    <>
+      {current && !items.some((m) => m.nama === current) ? <option value={current}>{current}</option> : null}
+      {items.map((m) => (
+        <option key={m.id} value={m.nama}>
+          {m.nama}
+        </option>
+      ))}
+    </>
+  )
+}
+
 function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
   return (
     <section className="table-wrap" aria-label="Daftar anggota">
@@ -181,7 +208,6 @@ function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
           <tr>
             <th scope="col">Nama</th>
             <th scope="col">{idLabel}</th>
-            <th scope="col">Alamat</th>
             <th scope="col">Kontak</th>
             <th scope="col">Peran</th>
             <th scope="col">
@@ -192,7 +218,7 @@ function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="py-8 text-center text-slate-500">
+              <td colSpan={5} className="py-8 text-center text-slate-500">
                 {emptyText}
               </td>
             </tr>
@@ -204,12 +230,7 @@ function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
                   <p className="text-xs text-slate-500">{a.email}</p>
                 </td>
                 <td className="whitespace-nowrap tabular-nums">{a.nidn || a.nim || '—'}</td>
-                <td>
-                  <ApiPending className="whitespace-nowrap" />
-                </td>
-                <td>
-                  <ApiPending className="whitespace-nowrap" />
-                </td>
+                <td className="whitespace-nowrap">{a.noHp || a.kontak || '—'}</td>
                 <td>
                   <select
                     aria-label={`Peran ${a.fullName || a.name}`}
@@ -284,7 +305,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     luaran: '',
     skema: '',
     mitra: '',
+    rumpunIlmu: '',
+    bidang: '',
+    kataKunci: '',
   })
+  const [master, setMaster] = useState({ rumpun: [], bidang: [], luaran: [] })
   const [anggota, setAnggota] = useState([])
   const [luaranItems, setLuaranItems] = useState([])
   const [luaranOrig, setLuaranOrig] = useState([])
@@ -322,6 +347,22 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       .finally(() => setLoadingPeriode(false))
   }, [])
 
+  // Master pilihan (W-22, W-25): rumpun ilmu umum; bidang & luaran per jenis.
+  useEffect(() => {
+    let alive = true
+    const list = (kategori, params) =>
+      masterApi
+        .list(kategori, params)
+        .then((r) => r.data.data || [])
+        .catch(() => [])
+    Promise.all([list('rumpun-ilmu'), list('bidang', { jenis: form.jenis }), list('luaran', { jenis: form.jenis })]).then(
+      ([rumpun, bidang, luaran]) => alive && setMaster({ rumpun, bidang, luaran }),
+    )
+    return () => {
+      alive = false
+    }
+  }, [form.jenis])
+
   // Mode ubah: muat proposal lalu isi formulir.
   useEffect(() => {
     if (!isEdit) return
@@ -346,6 +387,9 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           luaran: p.luaran || '',
           skema: p.skema || '',
           mitra: p.mitra || '',
+          rumpunIlmu: p.rumpunIlmu || '',
+          bidang: p.bidang || '',
+          kataKunci: (p.kataKunci || []).join(', '),
         })
         setAnggota(
           (p.anggota || []).map((a) => ({
@@ -355,6 +399,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             email: a.user?.email,
             nidn: a.user?.nidn,
             nim: a.user?.nim,
+            kontak: a.user?.kontak,
+            noHp: a.user?.noHp,
             peran: a.peran || 'anggota',
             kind: kindOf(a.user),
           })),
@@ -453,6 +499,9 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
         ...(form.jenis === 'penelitian' && (form.skema.trim() || isEdit) ? { skema: form.skema.trim() } : {}),
         ...(form.jenis === 'pengabdian' && (form.mitra.trim() || isEdit) ? { mitra: form.mitra.trim() } : {}),
+        ...(form.rumpunIlmu || isEdit ? { rumpunIlmu: form.rumpunIlmu } : {}),
+        ...(form.bidang || isEdit ? { bidang: form.bidang } : {}),
+        kataKunci: parseKataKunci(form.kataKunci),
         anggotaIds: anggota.map((a) => ({ userId: a.id, peran: a.peran })),
       }
       let savedId = id
@@ -650,18 +699,20 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <label htmlFor="u-rumpun" className="label">
                 Rumpun Ilmu
               </label>
-              <input id="u-rumpun" className="input" disabled placeholder="Rumpun ilmu Anda" />
-              <ApiPending className="mt-1.5" />
+              <select id="u-rumpun" className="input" value={form.rumpunIlmu} onChange={set('rumpunIlmu')}>
+                <option value="">-- Pilih rumpun ilmu --</option>
+                <MasterOptions items={master.rumpun} current={form.rumpunIlmu} />
+              </select>
             </div>
 
             <div>
               <label htmlFor="u-bidang" className="label">
                 Bidang {jenisLabel}
               </label>
-              <select id="u-bidang" className="input" disabled>
-                <option>Pilih bidang</option>
+              <select id="u-bidang" className="input" value={form.bidang} onChange={set('bidang')}>
+                <option value="">-- Pilih bidang --</option>
+                <MasterOptions items={master.bidang} current={form.bidang} />
               </select>
-              <ApiPending className="mt-1.5" />
             </div>
 
             <div className="md:col-span-2">
@@ -788,8 +839,16 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <label htmlFor="u-katakunci" className="label">
                 Kata Kunci
               </label>
-              <input id="u-katakunci" className="input" disabled placeholder="Pisahkan dengan koma" />
-              <ApiPending className="mt-1.5" />
+              <input
+                id="u-katakunci"
+                className="input"
+                value={form.kataKunci}
+                onChange={set('kataKunci')}
+                placeholder="mis. sistem pakar, fuzzy, diagnosis"
+                aria-invalid={Boolean(err('kataKunci'))}
+              />
+              <FieldError message={err('kataKunci')} />
+              <p className="mt-1.5 text-xs text-slate-500">Opsional. Pisahkan dengan koma, maksimal 10 kata kunci.</p>
             </div>
 
             <div>
@@ -936,10 +995,30 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Catatan luaran lama: {form.luaran}</p>
               ) : null}
               <FieldError message={err('luaran')} />
-              <button type="button" className="btn btn-secondary btn-sm mt-3" onClick={() => setLuaranItems((prev) => [...prev, newLuaran()])}>
-                <Plus className="size-4" aria-hidden="true" />
-                Tambah target luaran
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {master.luaran.length > 0 ? (
+                  <select
+                    aria-label="Tambah target dari daftar luaran"
+                    className="input w-auto max-w-full"
+                    value=""
+                    onChange={(e) => {
+                      const m = master.luaran.find((x) => String(x.id) === e.target.value)
+                      if (m) setLuaranItems((prev) => [...prev, { ...newLuaran(), jenis: m.jenisLuaran || 'lainnya', target: m.nama }])
+                    }}
+                  >
+                    <option value="">+ Tambah dari daftar luaran…</option>
+                    {master.luaran.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.nama}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLuaranItems((prev) => [...prev, newLuaran()])}>
+                  <Plus className="size-4" aria-hidden="true" />
+                  Tambah target lain
+                </button>
+              </div>
             </fieldset>
           </div>
         </StepCard>
@@ -960,8 +1039,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                   ['Anggaran', rupiah(form.anggaran)],
                   ['Ketua Pengusul', ketua],
                   ...(form.jenis === 'penelitian' ? [['Skema Penelitian', form.skema || '—']] : []),
-                  ['Rumpun Ilmu', <ApiPending key="r" />],
-                  [`Bidang ${jenisLabel}`, <ApiPending key="b" />],
+                  ['Rumpun Ilmu', form.rumpunIlmu || '—'],
+                  [`Bidang ${jenisLabel}`, form.bidang || '—'],
                 ]}
               />
             </section>
@@ -1020,7 +1099,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <PreviewTable
                 rows={[
                   ['Abstrak', form.abstrak || '—'],
-                  ['Kata Kunci', <ApiPending key="k" />],
+                  ['Kata Kunci', parseKataKunci(form.kataKunci).join(', ') || '—'],
                   [
                     'Target Luaran',
                     luaranItems.length ? (
