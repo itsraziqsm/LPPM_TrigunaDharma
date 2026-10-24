@@ -7,7 +7,7 @@ terkait dari daftar ini.
 
 Backend acuan: `backend_go/` (harus tetap kompatibel dengan kontrak Node, lihat `CLAUDE.md`).
 
-## Dashboard Dosen (`fe-redesign/src/pages/dashboard/DosenScreen.jsx`)
+## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
 Data yang **sudah** tersambung ke API yang ada:
 

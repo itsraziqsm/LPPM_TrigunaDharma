@@ -11,7 +11,7 @@ Bahasa domain, pesan API, dan komentar kode mayoritas **bahasa Indonesia**. Pert
 
 ```
 backend_go/     Backend aktif (Go 1.23+, net/http murni, MySQL). Port 1:1 dari backend Node.
-fe-redesign/    Frontend aktif (React 19 + Vite 8 + Tailwind 4 + Zustand + React Router 7).
+frontend/    Frontend aktif (React 19 + Vite 8 + Tailwind 4 + Zustand + React Router 7).
 docs/           Dokumentasi lintas bagian, mis. waitingApi-list.md (UI yang menunggu endpoint).
 Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Prisma asli,
                 termasuk prisma/schema.prisma) dan backend_go_old.zip (draf port Go lama).
@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `fe-redesign/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
+- `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
 ## Prinsip utama (jangan dilanggar tanpa alasan kuat)
 
@@ -130,7 +130,7 @@ mengirim file asli; teks error internal 500 bisa sedikit beda.
 `dosenN@lppm.dev/dosen123456`, `mahasiswaN@lppm.dev/mhs1234567`, plus akun
 `pending.*`/`rejected.*` untuk uji status.
 
-## Frontend (`fe-redesign/`)
+## Frontend (`frontend/`)
 
 ### Perintah
 ```bash
@@ -181,4 +181,4 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Sebelum push perubahan backend: `go vet ./... && go test ./...`; untuk frontend:
   `npm run lint && npm run build`.
 - Jangan commit `.env`, `node_modules/`, `dist/`, `logs/`, atau binary `bin/`.
-- Jika mengubah kontrak API, perbarui pemanggil di `fe-redesign/src/api/` dan dokumen ini.
+- Jika mengubah kontrak API, perbarui pemanggil di `frontend/src/api/` dan dokumen ini.
