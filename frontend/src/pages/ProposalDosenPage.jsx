@@ -6,6 +6,7 @@ import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { UndanganSection } from './ProposalDosen/UndanganSection'
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR } from './ProposalDosen/constants'
 import { Download, FileText, Plus, Search } from 'lucide-react'
+import { alertDialog, confirmDialog } from '../utils/dialog'
 
 function TabButton({ active, children, badge, onClick }) {
     return (
@@ -190,13 +191,13 @@ export default function ProposalDosenPage() {
     }, [page, search, filterStatus, filterJenis]) // eslint-disable-line
 
     const handleDelete = async (id) => {
-        if (!confirm('Hapus proposal ini?')) return
+        if (!(await confirmDialog({ tone: 'danger', title: 'Hapus proposal?', message: 'Proposal draft beserta anggotanya akan dihapus permanen.', confirmText: 'Ya, hapus' }))) return
         setDeleting(id)
         try {
             await proposalDosenApi.delete(id)
             fetchAll()
         } catch (e) {
-            alert(e.response?.data?.message || 'Gagal menghapus proposal.')
+            alertDialog({ title: 'Gagal menghapus proposal', message: e.response?.data?.message || 'Silakan coba lagi.' })
         } finally {
             setDeleting(null)
         }

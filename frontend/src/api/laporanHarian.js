@@ -1,4 +1,5 @@
 import api, { API_BASE_URL } from './axios'
+import { alertDialog } from '../utils/dialog'
 
 const BASE = '/mahasiswa/laporan-harian'
 
@@ -27,7 +28,7 @@ export const laporanHarianApi = {
     const res = await fetch(`${base}${BASE}/dokumen/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) { alert('Gagal membuka dokumen'); return }
+    if (!res.ok) { alertDialog({ title: 'Gagal membuka dokumen', message: 'Dokumen tidak dapat dibuka. Silakan coba lagi.' }); return }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank')

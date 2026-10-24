@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import api from '../../api/axios'
 import { CloudUpload, FileText, Plus, TriangleAlert } from 'lucide-react'
+import { alertDialog, confirmDialog } from '../../utils/dialog'
 
 const MIME_ICON = {
     pdf: { bg: 'bg-red-50', color: 'text-red-600', label: 'PDF' },
@@ -200,7 +201,7 @@ function DokumenCard({ dokumen, canDelete, onDelete }) {
     const fileType = getFileType(dokumen.fileNama || dokumen.namaFile)
 
     const handleDelete = async () => {
-        if (!confirm(`Hapus dokumen "${dokumen.namaFile}"?`)) return
+        if (!(await confirmDialog({ tone: 'danger', title: 'Hapus dokumen?', message: `Dokumen "${dokumen.namaFile}" akan dihapus.`, confirmText: 'Ya, hapus' }))) return
         setDeleting(true)
         try {
             await onDelete(dokumen.id)
@@ -231,7 +232,7 @@ function DokumenCard({ dokumen, canDelete, onDelete }) {
             a.remove()
             window.URL.revokeObjectURL(blobUrl)
         } catch {
-            alert('Gagal mengunduh dokumen. Silakan coba lagi.')
+            alertDialog({ title: 'Gagal mengunduh dokumen', message: 'Silakan coba lagi.' })
         } finally {
             setDownloading(false)
         }

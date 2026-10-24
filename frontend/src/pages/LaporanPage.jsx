@@ -7,6 +7,7 @@ import { JENIS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
+import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
 // Laporan kegiatan untuk pengusul (dosen/mahasiswa) — API /laporan (new-api.md).
@@ -199,7 +200,7 @@ function LaporanDetail({ id, jenis }) {
     if (!laporan.luaranTercapai?.trim() || !adaDokumen) {
       return setMsg({ type: 'error', text: 'Lengkapi luaran tercapai dan dokumen laporan lewat tombol "Isi laporan" sebelum mengajukan.' })
     }
-    if (!confirm('Ajukan laporan ini ke Ketua LPPM? Laporan tidak bisa diubah sampai ada keputusan revisi.')) return
+    if (!(await confirmDialog({ title: 'Ajukan laporan?', message: 'Laporan dikirim ke Ketua LPPM dan tidak bisa diubah sampai ada keputusan revisi.', confirmText: 'Ya, ajukan' }))) return
     setBusy('submit')
     setMsg(null)
     try {
@@ -214,7 +215,7 @@ function LaporanDetail({ id, jenis }) {
   }
 
   const remove = async () => {
-    if (!confirm('Hapus laporan draft ini?')) return
+    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus laporan draft?', message: 'Laporan draft yang dihapus tidak dapat dikembalikan.', confirmText: 'Ya, hapus' }))) return
     setBusy('delete')
     try {
       await laporanApi.remove(laporan.id)

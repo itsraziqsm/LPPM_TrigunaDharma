@@ -6,6 +6,7 @@ import { authApi } from '../api/auth'
 import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import { programStudiApi } from '../api/programStudi'
+import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
 // Halaman Pengaturan (/profil). Kiri: kartu ringkasan profil yang tetap di
@@ -230,7 +231,7 @@ export default function ProfilePage() {
   }
 
   const handlePhotoDelete = async () => {
-    if (!confirm('Hapus foto profil?')) return
+    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus foto profil?', message: 'Foto akan diganti inisial nama Anda.', confirmText: 'Ya, hapus' }))) return
     setPhotoBusy(true)
     setPhotoMsg(null)
     try {

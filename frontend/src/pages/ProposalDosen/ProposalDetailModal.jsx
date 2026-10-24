@@ -6,6 +6,7 @@ import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR, UNDANGAN_COLOR } from './const
 import { LaporanTab } from './LaporanTab'
 import { DokumenTab } from './DokumenTab'
 import { FileText } from 'lucide-react'
+import { confirmDialog } from '../../utils/dialog'
 
 // ── Modal Detail Proposal ─────────────────────────────────────────────────────
 // readOnly: dibuka oleh anggota tim (bukan pengusul) → data dari GET /proposals/:id,
@@ -33,7 +34,7 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh, readOnly =
 
     const handleSubmit = async () => {
         if (!bisaDiajukan) return
-        if (!confirm('Ajukan proposal ini ke PRPM?')) return
+        if (!(await confirmDialog({ title: 'Ajukan proposal?', message: 'Proposal akan dikirim ke LPPM untuk direview dan tidak dapat diubah sampai ada keputusan revisi.', confirmText: 'Ya, ajukan' }))) return
         setSubmitting(true); setMsg('')
         try {
             await proposalDosenApi.submit(proposalId)

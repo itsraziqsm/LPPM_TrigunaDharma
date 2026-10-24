@@ -283,7 +283,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol
   "Keluar dari Sistem" selebar kartu profil, merah saat hover). Sisi kanan sidebar diberi
   bayangan pemisah dari konten (dihapus saat sidebar diciutkan). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel.
-  Keluar selalu lewat `LogoutDialog` (konfirmasi, portal ke body). Status disimpan di
+  Keluar selalu lewat dialog konfirmasi (`ConfirmDialog`, portal ke body). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
   kanan Foto Profil (unggah/hapus), Informasi Profil (+ jabatan fungsional, SINTA, dropdown
@@ -307,6 +307,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `errorElement` router (galat render → 500). Fitur yang belum dibangun memakai `ErrorState`
   kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
   keputusan Pihak Kampus.
+- **Jangan pakai `window.alert/confirm`.** Pakai `confirmDialog({ title, message, tone, confirmText })`
+  / `alertDialog({ title, message })` dari `src/utils/dialog.js` (Promise → `true/false`), dirender
+  `<DialogHost />` (dipasang di `main.jsx`) dengan `src/components/ConfirmDialog.jsx` (gaya dialog
+  Keluar; tone `danger|warning|primary|info|error`). ConfirmDialog juga bisa dipakai langsung.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

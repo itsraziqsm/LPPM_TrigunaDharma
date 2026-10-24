@@ -7,6 +7,7 @@ import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
+import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
 // Laporan Masuk (Ketua LPPM / Admin): daftar semua laporan (GET /laporan),
@@ -84,7 +85,7 @@ function DetailPanel({ id, onClose, onChanged }) {
   }
 
   const unassign = async (reviewerId) => {
-    if (!confirm('Hapus tugasan reviewer ini?')) return
+    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus tugasan reviewer?', message: 'Reviewer ini tidak lagi ditugaskan menilai laporan.', confirmText: 'Ya, hapus' }))) return
     setBusy(true)
     try {
       await laporanApi.removeReviewer(laporan.id, reviewerId)

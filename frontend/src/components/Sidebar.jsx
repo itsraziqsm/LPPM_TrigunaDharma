@@ -1,11 +1,11 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
+import ConfirmDialog from './ConfirmDialog'
 import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
@@ -175,49 +175,6 @@ function writeCollapsed(value) {
 const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl'
 
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
-
-// Konfirmasi sebelum keluar. Dirender lewat portal ke <body> karena <aside>
-// memakai transform (posisi fixed di dalamnya tidak mengacu ke layar).
-function LogoutDialog({ onCancel, onConfirm, busy }) {
-  const cancelRef = useRef(null)
-  useEffect(() => {
-    cancelRef.current?.focus()
-    const onKey = (e) => e.key === 'Escape' && onCancel()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
-
-  return createPortal(
-    <div className="overlay z-[60]" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
-      <section
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="logout-title"
-        aria-describedby="logout-desc"
-        className="dialog max-w-sm px-6 py-6 text-center"
-      >
-        <span className="mx-auto grid size-12 place-items-center rounded-full bg-red-50 text-red-600 ring-8 ring-red-50/60">
-          <LogOut className="size-6" strokeWidth={1.8} aria-hidden="true" />
-        </span>
-        <h2 id="logout-title" className="mt-4 text-lg font-semibold text-navy-950">
-          Keluar dari sistem?
-        </h2>
-        <p id="logout-desc" className="mt-1.5 text-sm leading-relaxed text-slate-500">
-          Sesi Anda akan diakhiri. Perubahan yang belum disimpan di halaman ini akan hilang.
-        </p>
-        <div className="mt-6 grid grid-cols-2 gap-2.5">
-          <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy} className="btn btn-secondary">
-            Batal
-          </button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="btn bg-red-600 text-white hover:bg-red-700">
-            {busy ? 'Keluar…' : 'Ya, keluar'}
-          </button>
-        </div>
-      </section>
-    </div>,
-    document.body,
-  )
-}
 
 // Tombol ikon di rail ciut: label lewat aria-label + tooltip (title).
 const railItemClass = ({ isActive }) =>
@@ -520,7 +477,17 @@ export default function Sidebar() {
       </aside>
 
       {confirmLogout ? (
-        <LogoutDialog busy={loggingOut} onCancel={() => setConfirmLogout(false)} onConfirm={handleLogout} />
+        <ConfirmDialog
+          tone="danger"
+          icon={LogOut}
+          title="Keluar dari sistem?"
+          message="Sesi Anda akan diakhiri. Perubahan yang belum disimpan di halaman ini akan hilang."
+          confirmText="Ya, keluar"
+          busy={loggingOut}
+          busyText="Keluar…"
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={handleLogout}
+        />
       ) : null}
     </>
   )

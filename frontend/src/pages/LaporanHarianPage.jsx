@@ -4,6 +4,7 @@ import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ChevronLeft, ChevronRight, CircleCheck, CloudUpload, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
+import { alertDialog, confirmDialog } from '../utils/dialog'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
 
@@ -416,7 +417,7 @@ async function downloadDokumen(l) {
   const res = await fetch(`${base}/mahasiswa/laporan-harian/dokumen/${l.id}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) { alert('Gagal mengunduh dokumen'); return }
+  if (!res.ok) { alertDialog({ title: 'Gagal mengunduh dokumen', message: 'Silakan coba lagi.' }); return }
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -722,13 +723,13 @@ function ProposalDetail({ proposal, onBack }) {
   useEffect(() => { fetchLaporan() }, [fetchLaporan])
 
   const handleDelete = async (id) => {
-    if (!confirm('Hapus laporan harian ini?')) return
+    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus laporan harian?', message: 'Laporan harian yang dihapus tidak dapat dikembalikan.', confirmText: 'Ya, hapus' }))) return
     setDeleting(id)
     try {
       await laporanHarianApi.delete(id)
       setLaporan(prev => prev.filter(l => l.id !== id))
     } catch {
-      alert('Gagal menghapus laporan.')
+      alertDialog({ title: 'Gagal menghapus laporan', message: 'Silakan coba lagi.' })
     } finally {
       setDeleting(null)
     }

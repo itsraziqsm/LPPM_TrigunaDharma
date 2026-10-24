@@ -4,9 +4,11 @@ import { RouterProvider } from 'react-router-dom'
 import 'lenis/dist/lenis.css'
 import './index.css'
 import router from './router/index.jsx'
+import DialogHost from './components/DialogHost'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <RouterProvider router={router} />
+    <DialogHost />
   </StrictMode>,
 )

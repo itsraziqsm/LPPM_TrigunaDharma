@@ -5,6 +5,7 @@ import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, StatusBadge } from './shared'
 import LuaranCapaian from './LuaranCapaian'
 import { rupiah, tanggal } from './format'
+import { confirmDialog } from '../../utils/dialog'
 
 // Tugasan review LAPORAN untuk reviewer (GET /laporan/tugasan) beserta form
 // penilaian (POST /laporan/:id/reviews, /finalize). Dipakai sebagai tab
@@ -55,7 +56,7 @@ function ReviewLaporanModal({ tugasan, onClose, onUpdated }) {
     )
 
   const save = async (finalize) => {
-    if (finalize && !confirm('Selesaikan review laporan ini? Nilai tidak dapat diubah lagi.')) return
+    if (finalize && !(await confirmDialog({ title: 'Selesaikan review laporan?', message: 'Nilai tidak dapat diubah lagi setelah review diselesaikan.', confirmText: 'Ya, selesaikan' }))) return
     setBusy(finalize ? 'final' : 'save')
     setMsg(null)
     try {

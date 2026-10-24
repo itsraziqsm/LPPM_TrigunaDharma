@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../../api/axios'
+import { alertDialog } from '../../utils/dialog'
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -8,7 +9,7 @@ export const openDokumenWithAuth = async (proposalId) => {
     const res = await fetch(`${base}/proposals/${proposalId}/dokumen-utama`, {
         headers: { Authorization: `Bearer ${token}` }
     })
-    if (!res.ok) { alert('Gagal membuka dokumen'); return }
+    if (!res.ok) { alertDialog({ title: 'Gagal membuka dokumen', message: 'Dokumen tidak dapat dibuka. Silakan coba lagi.' }); return }
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank')

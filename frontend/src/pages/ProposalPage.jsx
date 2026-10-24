@@ -4,6 +4,7 @@ import { usersApi } from '../api/users'
 import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
+import { alertDialog } from '../utils/dialog'
 
 const openDokumenWithAuth = async (proposalId) => {
   const token = localStorage.getItem('accessToken')
@@ -14,7 +15,7 @@ const openDokumenWithAuth = async (proposalId) => {
   })
 
   if (!res.ok) {
-    alert('Gagal membuka dokumen')
+    alertDialog({ title: 'Gagal membuka dokumen', message: 'Dokumen tidak dapat dibuka. Silakan coba lagi.' })
     return
   }
 
@@ -229,7 +230,7 @@ export default function ProposalPage() {
       handleCloseStatusModal()
     } catch (error) {
       console.error(error)
-      alert('Gagal memperbarui status proposal')
+      alertDialog({ title: 'Gagal memperbarui status proposal', message: error.response?.data?.message || 'Silakan coba lagi.' })
     } finally {
       setSavingStatus(false)
     }

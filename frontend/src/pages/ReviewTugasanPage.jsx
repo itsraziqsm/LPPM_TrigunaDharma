@@ -4,6 +4,7 @@ import LaporanTugasan from './laporan/LaporanTugasan'
 import { reviewerApi } from '../api/reviewer'
 import { proposalApi } from '../api/proposal'
 import { Check, FileText, X } from 'lucide-react'
+import { confirmDialog } from '../utils/dialog'
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ function ReviewModal({ tugasan, onClose, onUpdated }) {
   }
 
   const handleFinalize = async () => {
-    if (!confirm('Tandai review ini sebagai selesai? Tindakan ini tidak dapat dibatalkan.')) return
+    if (!(await confirmDialog({ title: 'Tandai review selesai?', message: 'Tindakan ini tidak dapat dibatalkan.', confirmText: 'Ya, selesaikan' }))) return
     setFinalizing(true)
     setMsg({ text: '', ok: false })
     try {

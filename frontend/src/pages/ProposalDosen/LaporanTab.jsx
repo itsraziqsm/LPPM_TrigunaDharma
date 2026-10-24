@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import api from '../../api/axios'
 import { File as FileIcon, FileChartColumn, Plus, TriangleAlert, Upload } from 'lucide-react'
+import { alertDialog, confirmDialog } from '../../utils/dialog'
 
 const JENIS_LAPORAN = [
     { value: 'kemajuan', label: 'Laporan Kemajuan' },
@@ -219,7 +220,7 @@ function LaporanCard({ laporan, canDelete, onDelete }) {
     const jenisLabel = JENIS_LAPORAN.find(j => j.value === laporan.jenis)?.label || laporan.jenis
 
     const handleDelete = async () => {
-        if (!confirm(`Hapus laporan "${laporan.judul}"?`)) return
+        if (!(await confirmDialog({ tone: 'danger', title: 'Hapus laporan?', message: `Laporan "${laporan.judul}" akan dihapus.`, confirmText: 'Ya, hapus' }))) return
         setDeleting(true)
         try {
             await onDelete(laporan.id)
@@ -239,7 +240,7 @@ function LaporanCard({ laporan, canDelete, onDelete }) {
                 window.open(url, '_blank')
                 setTimeout(() => URL.revokeObjectURL(url), 10000)
             } catch {
-                alert('Gagal membuka file laporan.')
+                alertDialog({ title: 'Gagal membuka file laporan', message: 'Silakan coba lagi.' })
             } finally {
                 setDownloading(false)
             }
