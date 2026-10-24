@@ -12,6 +12,7 @@ Bahasa domain, pesan API, dan komentar kode mayoritas **bahasa Indonesia**. Pert
 ```
 backend_go/     Backend aktif (Go 1.23+, net/http murni, MySQL). Port 1:1 dari backend Node.
 fe-redesign/    Frontend aktif (React 19 + Vite 8 + Tailwind 4 + Zustand + React Router 7).
+docs/           Dokumentasi lintas bagian, mis. waitingApi-list.md (UI yang menunggu endpoint).
 Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Prisma asli,
                 termasuk prisma/schema.prisma) dan backend_go_old.zip (draf port Go lama).
 ```
@@ -155,6 +156,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/pages/dashboard/` — dashboard seragam semua peran; data per peran lewat
   `adapters/` (`pengelola`, `dosen`, `mahasiswa`, `reviewer`, `shared`). Status Inggris &
   Indonesia dipetakan ke satu kunci.
+- Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
+  (kartu dokumen, usulan terakhir + tahapan, profil capaian, statistik dosen, lalu blok
+  bersama `DashboardBody` tanpa ledger). Data dari `adapters/dosen.js` (`model.dosen`).
+  Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
+  dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
 - `src/pages/periode/*`, `src/pages/ProposalDosen/*` — subkomponen halaman besar.
 - `src/utils/exportPDF.js` (jspdf + autotable), `exportExcel.js` (xlsx).
 - Gaya: Tailwind 4 dengan token di `@theme` `src/index.css` (skala `navy-*`, aksen

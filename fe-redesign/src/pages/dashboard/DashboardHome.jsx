@@ -1,5 +1,6 @@
 import useAuthStore from '../../store/authStore'
 import DashboardScreen from './DashboardScreen'
+import DosenScreen from './DosenScreen'
 import { adapterKeyForRole } from './adapters'
 import useDashboardData from './useDashboardData'
 
@@ -18,8 +19,11 @@ export default function DashboardHome({ role, isReviewer }) {
 
   if (!adapterKey) return null
 
+  // Dosen memakai tampilan revamp sendiri (DosenScreen) dengan data adapter yang sama.
+  const Screen = adapterKey === 'dosen' ? DosenScreen : DashboardScreen
+
   return (
-    <DashboardScreen
+    <Screen
       role={role}
       adapterKey={adapterKey}
       user={user}

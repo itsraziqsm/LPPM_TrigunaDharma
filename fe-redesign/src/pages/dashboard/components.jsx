@@ -524,13 +524,13 @@ function Unavailable() {
 }
 
 // ── Isi dashboard: susunan yang sama untuk setiap peran ─────────────────────
-export function DashboardBody({ model }) {
+export function DashboardBody({ model, hideKpis = false }) {
   const { kpis, attention, pipeline, list, side, feed, shortcuts } = model
   const pipelineTotal = pipeline.segments.reduce((sum, s) => sum + s.value, 0)
 
   return (
     <>
-      <KpiLedger items={kpis} />
+      {hideKpis ? null : <KpiLedger items={kpis} />}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <div className="space-y-6">

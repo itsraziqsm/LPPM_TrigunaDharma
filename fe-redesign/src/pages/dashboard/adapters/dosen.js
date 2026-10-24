@@ -1,4 +1,5 @@
 import { proposalDosenApi } from '../../../api/Proposaldosen'
+import { proposalApi } from '../../../api/proposal'
 import { periodeApi } from '../../../api/periode'
 import { notificationApi } from '../../../api/notification'
 import {
@@ -49,6 +50,8 @@ export async function load({ withReviewerDigest }) {
     notifications: req('Notifikasi', () =>
       notificationApi.getAll({ limit: 6 }).then((r) => r.data.data || []),
     ),
+    penelitian: req('Jumlah penelitian', () => countDisetujui('penelitian')),
+    pengabdian: req('Jumlah pengabdian', () => countDisetujui('pengabdian')),
     ...(withReviewerDigest ? { tugasan: req('Tugasan review', loadTugasan) } : {}),
   })
 
@@ -63,6 +66,11 @@ export async function load({ withReviewerDigest }) {
     ditolak: Number(stats?.ditolak) || 0,
   }
   const total = Number(stats?.total) || Object.values(counts).reduce((a, b) => a + b, 0)
+  // /dosen/proposals/stats tidak mengirim jumlah "review"; selisih terhadap
+  // total adalah proposal yang sedang direview.
+  if (hasStats && stats.review === undefined) {
+    counts.review = Math.max(0, total - Object.values(counts).reduce((a, b) => a + b, 0))
+  }
   const inProcess = counts.diajukan + counts.review
   const n = (value) => (hasStats ? value : null)
 
@@ -70,6 +78,18 @@ export async function load({ withReviewerDigest }) {
   const invitations = data.invitations || []
   const periods = mapPeriods(data.periods)
   const digest = data.tugasan ? digestTugasan(data.tugasan) : null
+
+  // Usulan terakhir: tahapan diturunkan dari status + laporan (lihat stageOf).
+  const latest = proposals[0] || null
+  let latestLaporan = null
+  if (latest && normalizeStatus(latest.status) === 'disetujui') {
+    try {
+      latestLaporan = await proposalApi.getLaporan(latest.id).then((r) => r.data.data || [])
+    } catch (error) {
+      failed.push('Laporan usulan terakhir')
+      console.error('[dashboard] gagal memuat Laporan usulan terakhir', error)
+    }
+  }
 
   // ── Perlu perhatian ───────────────────────────────────────────────────────
   const attention = []
@@ -120,6 +140,32 @@ export async function load({ withReviewerDigest }) {
     failed,
     model: {
       summary: `${fact} ${attentionTail(sortedAttention.length)}`,
+
+      // Blok khusus tampilan dosen (DosenScreen). Nilai `null` = data gagal
+      // dimuat; bagian yang belum punya endpoint ditandai di tampilan dan
+      // dicatat di docs/waitingApi-list.md.
+      dosen: {
+        cards: {
+          diterima: n(counts.disetujui),
+          ditolak: n(counts.ditolak),
+          diproses: n(inProcess),
+          revisi: n(counts.revisi),
+          total: n(total),
+        },
+        latest: latest
+          ? {
+              id: latest.id,
+              judul: latest.judul,
+              jenis: JENIS_LABEL[latest.jenis] || latest.jenis || null,
+              periode: latest.periode?.nama || null,
+              status: statusMeta(latest.status),
+              stage: stageOf(latest.status, latestLaporan),
+            }
+          : null,
+        latestUnavailable: !data.proposals,
+        penelitian: data.penelitian ?? null,
+        pengabdian: data.pengabdian ?? null,
+      },
 
       kpis: [
         {
@@ -227,4 +273,24 @@ export async function load({ withReviewerDigest }) {
       ],
     },
   }
+}
+
+// Jumlah proposal milik dosen yang disetujui untuk satu jenis kegiatan
+// (dibaca dari meta.total, cukup ambil satu baris).
+function countDisetujui(jenis) {
+  return proposalDosenApi
+    .getAll({ jenis, status: 'disetujui', limit: 1 })
+    .then((r) => Number(r.data.meta?.total) || 0)
+}
+
+// Tahapan pada desain: 0 Seleksi/Usulan, 1 Pelaksanaan Kegiatan,
+// 2 Seleksi/Lanjutan, 3 Pasca pelaksanaan. Belum ada field/endpoint tahapan,
+// jadi diturunkan: belum disetujui → 0; disetujui → 1; ada laporan kemajuan
+// → 2; ada laporan akhir → 3.
+function stageOf(status, laporan) {
+  if (normalizeStatus(status) !== 'disetujui') return 0
+  const jenis = (laporan || []).map((l) => l.jenis)
+  if (jenis.includes('akhir')) return 3
+  if (jenis.includes('kemajuan')) return 2
+  return 1
 }
