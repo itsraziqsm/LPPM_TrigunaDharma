@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import LaporanTugasan from './laporan/LaporanTugasan'
 import { reviewerApi } from '../api/reviewer'
 import { proposalApi } from '../api/proposal'
 import { Check, FileText, X } from 'lucide-react'
@@ -458,6 +460,9 @@ function TugasanCard({ tugasan: t, onBuka }) {
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 
 export default function ReviewTugasanPage() {
+  // ?tab=laporan → tugasan review laporan (GET /laporan/tugasan)
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'laporan' ? 'laporan' : 'proposal'
   const [tugasan, setTugasan] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -489,7 +494,7 @@ export default function ReviewTugasanPage() {
       {/* Header halaman */}
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <h1 className="page-title">Penugasan Review Proposal</h1>
+          <h1 className="page-title">Penugasan Review</h1>
           <p className="page-desc">
             Proposal yang ditugaskan kepada Anda untuk ditinjau, dinilai, dan diselesaikan proses review-nya.
             Pilih salah satu untuk melihat detail dan melanjutkan penilaian.
@@ -497,7 +502,7 @@ export default function ReviewTugasanPage() {
         </div>
 
         {/* Ringkasan */}
-        {!loading && tugasan.length > 0 && (
+        {tab === 'proposal' && !loading && tugasan.length > 0 && (
           <dl className="grid shrink-0 grid-cols-3 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-10">
             <div>
               <dt className="text-sm text-slate-500">Total Penugasan</dt>
@@ -515,6 +520,30 @@ export default function ReviewTugasanPage() {
         )}
       </header>
 
+      <div role="tablist" aria-label="Jenis tugasan" className="flex gap-7 border-b border-slate-200">
+        {[
+          ['proposal', 'Proposal'],
+          ['laporan', 'Laporan'],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setParams(key === 'laporan' ? { tab: 'laporan' } : {})}
+            className={`-mb-px border-b-2 px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
+              tab === key ? 'border-navy-800 text-navy-950' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-navy-900'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'laporan' ? (
+        <LaporanTugasan />
+      ) : (
+        <>
       {/* Daftar penugasan */}
       {loading ? (
         <div className="space-y-3">
@@ -583,6 +612,8 @@ export default function ReviewTugasanPage() {
           onClose={() => setSelectedTugasan(null)}
           onUpdated={fetchTugasan}
         />
+      )}
+        </>
       )}
     </div>
   )

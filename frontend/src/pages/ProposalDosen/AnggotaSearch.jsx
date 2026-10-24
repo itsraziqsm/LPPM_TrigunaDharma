@@ -4,9 +4,10 @@ import api from '../../api/axios'
 import { Search, X } from 'lucide-react'
 
 // ── Komponen Pencarian Anggota ─────────────────────────────────────────────────
-export function AnggotaSearch({ onAdd, addedIds }) {
+// fixedRole: 'dosen' | 'mahasiswa' → pencarian dikunci ke satu peran (filter peran disembunyikan).
+export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggota tim', desc, placeholder }) {
     const [query, setQuery] = useState('')
-    const [role, setRole] = useState('')
+    const [role, setRole] = useState(fixedRole || '')
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
     const [open, setOpen] = useState(false)
@@ -19,9 +20,12 @@ export function AnggotaSearch({ onAdd, addedIds }) {
     const updateDropdownPos = useCallback(() => {
         if (!inputRef.current) return
         const rect = inputRef.current.getBoundingClientRect()
+        // Buka ke atas bila ruang di bawah kolom tidak cukup untuk daftar hasil.
+        const spaceBelow = window.innerHeight - rect.bottom
+        const openUp = spaceBelow < 360 && rect.top > spaceBelow
         setDropdownStyle({
             position: 'fixed',
-            top: rect.bottom + 8,
+            ...(openUp ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }),
             left: rect.left,
             width: rect.width,
             zIndex: 9999,
@@ -165,12 +169,12 @@ export function AnggotaSearch({ onAdd, addedIds }) {
     return (
         <section ref={wrapRef} className="space-y-3">
             <header>
-                <h3 className="text-base font-semibold text-navy-950">Cari anggota tim</h3>
-                <p className="mt-1 text-sm leading-relaxed text-slate-500">Cari berdasarkan nama, email, NIDN, atau NIM, lalu tambahkan ke daftar anggota.</p>
+                <h3 className="text-base font-semibold text-navy-950">{title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-500">{desc || 'Cari berdasarkan nama, email, NIDN, atau NIM, lalu tambahkan ke daftar anggota.'}</p>
             </header>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[180px_minmax(0,1fr)]">
-                <select
+            <div className={`grid grid-cols-1 gap-3 ${fixedRole ? '' : 'md:grid-cols-[180px_minmax(0,1fr)]'}`}>
+                {fixedRole ? null : <select
                     aria-label="Filter peran anggota"
                     value={role}
                     onChange={handleRoleChange}
@@ -179,20 +183,20 @@ export function AnggotaSearch({ onAdd, addedIds }) {
                     <option value="">Semua peran</option>
                     <option value="dosen">Dosen</option>
                     <option value="mahasiswa">Mahasiswa</option>
-                </select>
+                </select>}
 
                 <div className="relative">
                     <input
                         ref={inputRef}
                         type="text"
-                        aria-label="Cari anggota tim"
+                        aria-label={title}
                         value={query}
                         onChange={handleQueryChange}
                         onFocus={() => {
                             updateDropdownPos()
                             if (searched) setOpen(true)
                         }}
-                        placeholder="Cari nama, email, NIDN, atau NIM..."
+                        placeholder={placeholder || 'Cari nama, email, NIDN, atau NIM...'}
                         className="input pr-11"
                     />
 

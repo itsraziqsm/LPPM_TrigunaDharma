@@ -1,9 +1,11 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
-import { BadgeDollarSign, BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
+import UserAvatar from './UserAvatar'
+import { BadgeDollarSign, BookOpen, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -30,6 +32,11 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/users', label: 'User', icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/laporan-masuk', label: 'Laporan Masuk', icon: (
+      <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   // ← BARU: Menu Export Laporan
@@ -165,6 +172,49 @@ function writeCollapsed(value) {
 
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
 
+// Konfirmasi sebelum keluar. Dirender lewat portal ke <body> karena <aside>
+// memakai transform (posisi fixed di dalamnya tidak mengacu ke layar).
+function LogoutDialog({ onCancel, onConfirm, busy }) {
+  const cancelRef = useRef(null)
+  useEffect(() => {
+    cancelRef.current?.focus()
+    const onKey = (e) => e.key === 'Escape' && onCancel()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
+  return createPortal(
+    <div className="overlay z-[60]" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+      <section
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="logout-title"
+        aria-describedby="logout-desc"
+        className="dialog max-w-sm px-6 py-6 text-center"
+      >
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-red-50 text-red-600 ring-8 ring-red-50/60">
+          <LogOut className="size-6" strokeWidth={1.8} aria-hidden="true" />
+        </span>
+        <h2 id="logout-title" className="mt-4 text-lg font-semibold text-navy-950">
+          Keluar dari sistem?
+        </h2>
+        <p id="logout-desc" className="mt-1.5 text-sm leading-relaxed text-slate-500">
+          Sesi Anda akan diakhiri. Perubahan yang belum disimpan di halaman ini akan hilang.
+        </p>
+        <div className="mt-6 grid grid-cols-2 gap-2.5">
+          <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy} className="btn btn-secondary">
+            Batal
+          </button>
+          <button type="button" onClick={onConfirm} disabled={busy} className="btn bg-red-600 text-white hover:bg-red-700">
+            {busy ? 'Keluar…' : 'Ya, keluar'}
+          </button>
+        </div>
+      </section>
+    </div>,
+    document.body,
+  )
+}
+
 // Tombol ikon di rail ciut: label lewat aria-label + tooltip (title).
 const railItemClass = ({ isActive }) =>
   `relative grid size-10 place-items-center rounded-lg transition-colors ${
@@ -248,7 +298,16 @@ export default function Sidebar() {
     return () => window.removeEventListener('invitation-badge-refresh', fetchCount)
   }, [isDosenOrMahasiswa])
 
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const askLogout = () => {
+    setMobileOpen(false)
+    setConfirmLogout(true)
+  }
+
   const handleLogout = async () => {
+    setLoggingOut(true)
     await logout()
     navigate('/login')
   }
@@ -385,18 +444,18 @@ export default function Sidebar() {
                   </NavLink>
                 ))}
             </nav>
-            <section className="hidden shrink-0 flex-col items-center gap-1 border-t border-white/10 py-3 lg:flex">
+            <section aria-label="Akun" className="hidden shrink-0 flex-col items-center border-t border-white/10 py-3 lg:flex">
               <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railItemClass}>
-                <span className="grid size-8 place-items-center rounded-full bg-white/10 text-sm font-semibold text-white">
-                  {(user?.name || '?').charAt(0).toUpperCase()}
-                </span>
+                <UserAvatar user={user} className="size-8 text-sm" />
               </NavLink>
+            </section>
+            <section aria-label="Aksi" className="hidden shrink-0 flex-col items-center gap-1 bg-navy-800 py-3 lg:flex">
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={askLogout}
                 aria-label="Keluar dari Sistem"
                 title="Keluar dari Sistem"
-                className="grid size-10 place-items-center rounded-lg text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white"
+                className="grid size-10 place-items-center rounded-lg text-white/70 transition-colors hover:bg-red-500/20 hover:text-red-300"
               >
                 <LogOut className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
               </button>
@@ -404,18 +463,8 @@ export default function Sidebar() {
           </>
         ) : null}
 
-        <section className={`shrink-0 border-t border-white/10 p-3 ${hideWhenCollapsed}`}>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-expanded={true}
-            className="mb-1 hidden h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white lg:flex"
-          >
-            <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="flex-1 truncate text-left">Sembunyikan menu</span>
-            <kbd className="shrink-0 whitespace-nowrap rounded border border-white/15 px-1.5 py-0.5 font-sans text-[0.6875rem] text-white/45">Ctrl B</kbd>
-          </button>
-
+        {/* Bagian akun (latar rail) */}
+        <section aria-label="Akun" className={`shrink-0 border-t border-white/10 p-3 ${hideWhenCollapsed}`}>
           <NavLink
             to="/profil"
             onClick={() => setMobileOpen(false)}
@@ -423,9 +472,7 @@ export default function Sidebar() {
               `flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
             }
           >
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-semibold text-white">
-              {(user?.name || '?').charAt(0).toUpperCase()}
-            </span>
+            <UserAvatar user={user} className="size-9 text-sm" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[0.8125rem] font-semibold text-white">
                 {user?.name || '—'}
@@ -435,16 +482,37 @@ export default function Sidebar() {
               </span>
             </span>
           </NavLink>
+        </section>
+
+        {/* Bagian aksi (biru lebih cerah): sembunyikan menu + keluar */}
+        <section aria-label="Aksi" className={`flex shrink-0 gap-2 bg-navy-800 px-3 py-3 ${hideWhenCollapsed}`}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={true}
+            title="Sembunyikan menu (Ctrl/⌘ + B)"
+            aria-keyshortcuts="Control+B"
+            className="hidden h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg bg-white/[0.06] px-3 text-[0.8125rem] font-medium text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.12] hover:text-white lg:flex"
+          >
+            <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            <span className="flex-1 truncate text-left">Sembunyikan menu</span>
+          </button>
 
           <button
-            onClick={handleLogout}
-            className="mt-1 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white"
+            type="button"
+            onClick={askLogout}
+            title="Keluar dari Sistem"
+            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-white/[0.06] px-3 text-[0.8125rem] font-medium text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-red-600 hover:text-white hover:ring-red-500 lg:flex-none"
           >
             <LogOut className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span>Keluar dari Sistem</span>
+            <span className="lg:sr-only">Keluar dari Sistem</span>
           </button>
         </section>
       </aside>
+
+      {confirmLogout ? (
+        <LogoutDialog busy={loggingOut} onCancel={() => setConfirmLogout(false)} onConfirm={handleLogout} />
+      ) : null}
     </>
   )
 }

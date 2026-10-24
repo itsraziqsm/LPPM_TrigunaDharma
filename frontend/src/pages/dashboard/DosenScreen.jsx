@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
+import { API_BASE_URL } from '../../api/axios'
 import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
 import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
@@ -279,8 +280,8 @@ function LatestProposal({ latest, unavailable }) {
           </ol>
         </div>
         <p className="mt-5 text-xs text-slate-500">
-          Tahapan diturunkan dari status proposal dan laporan yang diunggah.{' '}
-          <ApiPending className="align-middle" />
+          Tahap saat ini: <span className="font-semibold text-navy-800">{latest.stageLabel || STAGES[stage]}</span>
+          {rejected ? ' · proposal ditolak' : ''}
         </p>
       </>
     )
@@ -310,14 +311,21 @@ function MetricCard({ label, value, icon: IconCmp, pending, hint }) {
   )
 }
 
-function ProfileMetrics({ penelitian, pengabdian }) {
+function ProfileMetrics({ user, penelitian, pengabdian }) {
+  const hasSinta = user && Object.prototype.hasOwnProperty.call(user, 'sintaScore')
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
       <SectionTitle id="profil-capaian">Profil</SectionTitle>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
         <MetricCard label="Jurnal" icon={ICONS.jurnal} pending />
-        <MetricCard label="Nilai Sinta" icon={ICONS.sinta} pending />
+        <MetricCard
+          label="Nilai Sinta"
+          icon={ICONS.sinta}
+          value={hasSinta ? (user.sintaScore ?? 'Belum diisi') : null}
+          pending={!hasSinta}
+          hint={hasSinta ? (user.sintaId ? `SINTA ID ${user.sintaId}` : 'Isi di Pengaturan') : null}
+        />
         <MetricCard label="Penelitian" value={penelitian} icon={ICONS.penelitian} hint="Proposal disetujui" />
         <MetricCard label="Sertifikasi" icon={ICONS.sertifikasi} pending />
         <MetricCard label="Nilai Kepercayaan" icon={ICONS.kepercayaan} pending />
@@ -327,9 +335,8 @@ function ProfileMetrics({ penelitian, pengabdian }) {
 }
 
 // ── Statistik dosen ─────────────────────────────────────────────────────────
-// /auth/me saat ini hanya mengirim id, name, fullName, email, status, roles.
-// Field profil dibaca bila suatu saat ikut dikirim; selama key-nya tidak ada,
-// tampil sebagai placeholder "API belum ada".
+// /auth/me kini mengirim field profil (Grup A/B). Bila suatu key tidak ada
+// (backend lama), tampil placeholder "API belum ada".
 function profileValue(user, keys, format = (v) => v) {
   const present = keys.filter((k) => user && Object.prototype.hasOwnProperty.call(user, k))
   if (present.length === 0) return { pending: true }
@@ -379,6 +386,7 @@ function DosenStats({ user, penelitian, pengabdian }) {
     .join('')
 
   const phone = profileValue(user, ['noHp', 'kontak'])
+  const jabatan = profileValue(user, ['jabatanFungsional'], (v) => v)
   const tempat = profileValue(user, ['tempatLahir'])
   const tanggal = profileValue(user, ['tanggalLahir'], (v) => formatDay(v))
   const ttl =
@@ -392,16 +400,23 @@ function DosenStats({ user, penelitian, pengabdian }) {
       <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <article className="rounded-xl bg-white p-4 sm:p-5">
           <div className="flex flex-col gap-5 sm:flex-row">
-            <div className="relative grid size-28 shrink-0 place-items-center rounded-xl bg-navy-100 font-serif text-4xl text-navy-800">
-              {initials || '?'}
-              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-                <ApiPending className="whitespace-nowrap" />
-              </span>
-            </div>
+            {user?.fotoUrl ? (
+              <img src={`${API_BASE_URL}${user.fotoUrl}`} alt={`Foto ${name}`} className="size-28 shrink-0 rounded-xl object-cover" />
+            ) : (
+              <div className="grid size-28 shrink-0 place-items-center rounded-xl bg-navy-100 font-serif text-4xl text-navy-800" aria-hidden="true">
+                {initials || '?'}
+              </div>
+            )}
             <div className="min-w-0 space-y-1.5">
               <h3 className="break-words text-xl font-semibold text-navy-700">{name}</h3>
-              <p className="flex items-center gap-2 text-base text-slate-900">
-                Jabatan fungsional <ApiPending />
+              <p className="text-base text-slate-900">
+                {jabatan.pending ? (
+                  <span className="inline-flex items-center gap-2">
+                    Jabatan fungsional <ApiPending />
+                  </span>
+                ) : (
+                  jabatan.value
+                )}
               </p>
               <p className="text-base text-slate-900">
                 {phone.pending ? (
@@ -453,7 +468,7 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
       <>
         <DocCards cards={dosen.cards} />
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
-        <ProfileMetrics penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} />
+        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} />
         <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} />
         <DashboardBody model={model} hideKpis />
       </>

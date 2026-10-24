@@ -1,7 +1,9 @@
 import api from './axios'
 
 export const proposalDosenApi = {
-    getStats: () => api.get('/dosen/proposals/stats'),
+    getStats: (params = {}) => api.get('/dosen/proposals/stats', { params }), // { jenis }
+    // Proposal milik orang lain tempat user menjadi anggota (undangan diterima)
+    getAsMember: (params = {}) => api.get('/dosen/proposals/as-member', { params }),
     getAll: (params = {}) => api.get('/dosen/proposals', { params }),
     getById: (id) => api.get(`/dosen/proposals/${id}`),
     create: (data) => api.post('/dosen/proposals', data),

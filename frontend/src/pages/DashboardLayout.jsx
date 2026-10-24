@@ -16,6 +16,8 @@ import ExportPage from './ExportPage' // ← BARU
 import KegiatanPage from './KegiatanPage'
 import UsulanPage from './UsulanPage'
 import LuaranPage from './LuaranPage'
+import LaporanPage from './LaporanPage'
+import LaporanMasukPage from './LaporanMasukPage'
 import NotifikasiPage from './NotifikasiPage'
 
 const ROLE_LABEL = {
@@ -90,10 +92,13 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'proposals') return <ProposalPage />
       if (page === 'users') return <UserManagementPage />
       if (page === 'export') return <ExportPage /> // ← BARU
+      if (page === 'laporan-masuk') return <LaporanMasukPage />
       return <DashboardHome role={primaryRole} isReviewer={isReviewer} />
     }
 
     if (isMahasiswa) {
+      // Mahasiswa pengusul juga bisa membuka laporannya (mis. dari notifikasi).
+      if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       if (page === 'laporan-harian') return <LaporanHarianPage />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
@@ -105,6 +110,7 @@ export default function DashboardLayout({ page, jenis }) {
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'luaran') return <LuaranPage />
+      if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       // Dosen yang punya tugasan bisa akses halaman penugasan

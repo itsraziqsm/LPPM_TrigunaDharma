@@ -1,5 +1,4 @@
 import { proposalDosenApi } from '../../../api/Proposaldosen'
-import { proposalApi } from '../../../api/proposal'
 import { periodeApi } from '../../../api/periode'
 import { notificationApi } from '../../../api/notification'
 import {
@@ -79,17 +78,8 @@ export async function load({ withReviewerDigest }) {
   const periods = mapPeriods(data.periods)
   const digest = data.tugasan ? digestTugasan(data.tugasan) : null
 
-  // Usulan terakhir: tahapan diturunkan dari status + laporan (lihat stageOf).
+  // Usulan terakhir: tahapan resmi dari field `tahapan` {kode, label, urutan 1–4}.
   const latest = proposals[0] || null
-  let latestLaporan = null
-  if (latest && normalizeStatus(latest.status) === 'disetujui') {
-    try {
-      latestLaporan = await proposalApi.getLaporan(latest.id).then((r) => r.data.data || [])
-    } catch (error) {
-      failed.push('Laporan usulan terakhir')
-      console.error('[dashboard] gagal memuat Laporan usulan terakhir', error)
-    }
-  }
 
   // ── Perlu perhatian ───────────────────────────────────────────────────────
   const attention = []
@@ -159,7 +149,8 @@ export async function load({ withReviewerDigest }) {
               jenis: JENIS_LABEL[latest.jenis] || latest.jenis || null,
               periode: latest.periode?.nama || null,
               status: statusMeta(latest.status),
-              stage: stageOf(latest.status, latestLaporan),
+              stage: Math.min(3, Math.max(0, (Number(latest.tahapan?.urutan) || 1) - 1)),
+              stageLabel: latest.tahapan?.label || null,
             }
           : null,
         latestUnavailable: !data.proposals,
@@ -281,16 +272,4 @@ function countDisetujui(jenis) {
   return proposalDosenApi
     .getAll({ jenis, status: 'disetujui', limit: 1 })
     .then((r) => Number(r.data.meta?.total) || 0)
-}
-
-// Tahapan pada desain: 0 Seleksi/Usulan, 1 Pelaksanaan Kegiatan,
-// 2 Seleksi/Lanjutan, 3 Pasca pelaksanaan. Belum ada field/endpoint tahapan,
-// jadi diturunkan: belum disetujui → 0; disetujui → 1; ada laporan kemajuan
-// → 2; ada laporan akhir → 3.
-function stageOf(status, laporan) {
-  if (normalizeStatus(status) !== 'disetujui') return 0
-  const jenis = (laporan || []).map((l) => l.jenis)
-  if (jenis.includes('akhir')) return 3
-  if (jenis.includes('kemajuan')) return 2
-  return 1
 }

@@ -1,15 +1,17 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Camera, Download, KeyRound, TriangleAlert, UserRound } from 'lucide-react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import ApiPending from '../components/ApiPending'
+import UserAvatar from '../components/UserAvatar'
+import { programStudiApi } from '../api/programStudi'
 
 // ---------------------------------------------------------------------------
 // Halaman Pengaturan (/profil). Kiri: kartu ringkasan profil yang tetap di
 // tempat (sticky) saat sisi kanan digulir. Kanan: Foto Profil, Informasi
 // Profil, Ganti Password, dan Zona Berbahaya (gaya GitHub).
-// Bagian tanpa endpoint memakai ApiPending — lihat docs/waitingApi-list.md.
+// Bagian tanpa endpoint (verifikasi email) memakai ApiPending — lihat docs/waitingApi-list.md.
 // ---------------------------------------------------------------------------
 
 const ROLE_LABEL = {
@@ -40,6 +42,9 @@ const PROFILE_KEYS = [
   'prodi',
   'tempatLahir',
   'tanggalLahir',
+  'jabatanFungsional',
+  'sintaId',
+  'sintaScore',
 ]
 
 function getRoleNames(roles) {
@@ -48,14 +53,14 @@ function getRoleNames(roles) {
   return roles.map((r) => r.role?.name || r.name || '')
 }
 
-// /auth/me saat ini tidak mengirim field profil (lihat W-08), jadi nilai awal
-// bisa kosong. Karena itu yang dikirim saat simpan hanya field yang diubah,
-// supaya data di server tidak tertimpa string kosong.
+// Nilai awal dari /auth/me (kini membawa field profil). Saat simpan hanya field
+// yang diubah yang dikirim, supaya data di server tidak tertimpa string kosong
+// bila suatu field tidak ikut termuat. Semua nilai disimpan sebagai string.
 function profileFrom(source) {
   const out = {}
   PROFILE_KEYS.forEach((key) => {
     const value = source?.[key]
-    out[key] = key === 'tanggalLahir' ? (value ? String(value).slice(0, 10) : '') : (value ?? '')
+    out[key] = key === 'tanggalLahir' ? (value ? String(value).slice(0, 10) : '') : value == null ? '' : String(value)
   })
   return out
 }
@@ -114,7 +119,112 @@ export default function ProfilePage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [pwMsg, setPwMsg] = useState(null)
 
-  const [photoName, setPhotoName] = useState('')
+  const navigate = useNavigate()
+  const logout = useAuthStore((s) => s.logout)
+
+  const [photo, setPhoto] = useState(null) // File terpilih (belum diunggah)
+  const [photoPreview, setPhotoPreview] = useState(null)
+
+  // URL pratinjau dibuat sekali per file dan dilepas saat diganti/unmount.
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreview(null)
+      return undefined
+    }
+    const url = URL.createObjectURL(photo)
+    setPhotoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photo])
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoMsg, setPhotoMsg] = useState(null)
+
+  const [prodiOptions, setProdiOptions] = useState(null) // null = gagal/memuat → input teks
+  const [exporting, setExporting] = useState(false)
+  const [dangerMsg, setDangerMsg] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  // Master program studi (GET /program-studi, publik).
+  useEffect(() => {
+    programStudiApi
+      .list()
+      .then((r) => setProdiOptions((r.data.data || []).map((p) => p.nama)))
+      .catch(() => setProdiOptions(null))
+  }, [])
+
+  // Perbarui sebagian objek user di store tanpa fetchMe() (fetchMe memicu layar memuat global).
+  const patchUser = (patch) => useAuthStore.setState((st) => ({ user: st.user ? { ...st.user, ...patch } : st.user }))
+
+  const handlePhotoUpload = async () => {
+    if (!photo) return
+    setPhotoMsg(null)
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)) {
+      setPhotoMsg({ type: 'error', text: 'Foto harus berformat JPG, PNG, atau WebP.' })
+      return
+    }
+    if (photo.size > 2 * 1024 * 1024) {
+      setPhotoMsg({ type: 'error', text: 'Ukuran foto maksimal 2 MB.' })
+      return
+    }
+    setPhotoBusy(true)
+    try {
+      const { data } = await usersApi.uploadFoto(photo)
+      patchUser({ fotoUrl: data?.data?.fotoUrl || null })
+      setPhoto(null)
+      setPhotoMsg({ type: 'success', text: 'Foto profil diperbarui.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'error', text: err.response?.data?.message || 'Gagal mengunggah foto.' })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  const handlePhotoDelete = async () => {
+    if (!confirm('Hapus foto profil?')) return
+    setPhotoBusy(true)
+    setPhotoMsg(null)
+    try {
+      await usersApi.deleteFoto()
+      patchUser({ fotoUrl: null })
+      setPhotoMsg({ type: 'success', text: 'Foto profil dihapus.' })
+    } catch (err) {
+      setPhotoMsg({ type: 'error', text: err.response?.data?.message || 'Gagal menghapus foto.' })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  const handleExport = async () => {
+    setExporting(true)
+    setDangerMsg(null)
+    try {
+      const res = await usersApi.exportAccount()
+      const url = URL.createObjectURL(res.data)
+      const a = Object.assign(document.createElement('a'), { href: url, download: `data-akun-${user.id}.json` })
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setDangerMsg({ type: 'error', text: 'Gagal mengunduh data akun.' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault()
+    setDangerMsg(null)
+    setDeleting(true)
+    try {
+      await usersApi.deleteAccount(deletePassword)
+      // Access token masih berlaku sampai kedaluwarsa: wajib keluar sekarang.
+      await logout()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setDangerMsg({ type: 'error', text: err.response?.data?.errors?.password?.[0] || err.response?.data?.message || 'Gagal menghapus akun.' })
+      setDeleting(false)
+    }
+  }
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   const changed = PROFILE_KEYS.filter((key) => form[key] !== saved[key])
@@ -174,7 +284,6 @@ export default function ProfilePage() {
 
   if (!user) return null
 
-  const initials = (user.name || '?').charAt(0).toUpperCase()
 
   return (
     <div className="page space-y-6">
@@ -201,12 +310,7 @@ export default function ProfilePage() {
         <aside className="space-y-4 lg:sticky lg:top-6">
           <section className="card overflow-hidden">
             <header className="px-6 py-6">
-              <div
-                className="grid size-14 place-items-center rounded-full bg-navy-800 font-serif text-2xl text-white"
-                aria-hidden="true"
-              >
-                {initials}
-              </div>
+              <UserAvatar user={user} className="size-14 text-2xl" fallbackClassName="bg-navy-800 font-serif font-normal text-white" />
 
               <h2 className="mt-4 break-words font-serif text-xl font-medium leading-snug text-navy-950">
                 {user.fullName || user.name || '—'}
@@ -273,8 +377,12 @@ export default function ProfilePage() {
           {/* Foto profil */}
           <SettingsCard id="foto-profil" title="Foto Profil" desc="Tambahkan atau perbarui foto profil Anda.">
             <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
-              <div className="relative grid size-24 shrink-0 place-items-center rounded-full bg-navy-100 font-serif text-4xl text-navy-800">
-                {initials}
+              <div className="relative shrink-0">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Pratinjau foto baru" className="size-24 rounded-full object-cover" />
+                ) : (
+                  <UserAvatar user={user} className="size-24 text-4xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${user.name}`} />
+                )}
                 <span className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full bg-white text-navy-700 ring-1 ring-slate-200">
                   <Camera className="size-4" aria-hidden="true" />
                 </span>
@@ -289,19 +397,32 @@ export default function ProfilePage() {
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     className="sr-only"
-                    onChange={(e) => setPhotoName(e.target.files?.[0]?.name || '')}
+                    onChange={(e) => {
+                      setPhoto(e.target.files?.[0] || null)
+                      setPhotoMsg(null)
+                      e.target.value = ''
+                    }}
                   />
                   <span className="max-w-[16rem] truncate text-sm text-slate-500">
-                    {photoName || 'Belum ada file dipilih'}
+                    {photo ? photo.name : 'Belum ada file dipilih'}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  <button type="button" className="btn btn-primary btn-sm" disabled>
-                    Perbarui Foto
+                  <button type="button" className="btn btn-primary btn-sm" disabled={!photo || photoBusy} onClick={handlePhotoUpload}>
+                    {photoBusy && photo ? 'Mengunggah…' : 'Perbarui Foto'}
                   </button>
-                  <ApiPending />
+                  {photo ? (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPhoto(null)} disabled={photoBusy}>
+                      Batal
+                    </button>
+                  ) : user.fotoUrl ? (
+                    <button type="button" className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50" onClick={handlePhotoDelete} disabled={photoBusy}>
+                      Hapus foto
+                    </button>
+                  ) : null}
                 </div>
-                <p className="text-xs text-slate-500">PNG, JPG, atau WEBP. Sementara foto ditampilkan sebagai inisial nama.</p>
+                <p className="text-xs text-slate-500">JPG, PNG, atau WebP, maksimal 2 MB.</p>
+                <Message msg={photoMsg} />
               </div>
             </div>
           </SettingsCard>
@@ -339,6 +460,26 @@ export default function ProfilePage() {
                     <input id="pf-nidn" className="input" value={form.nidn} onChange={set('nidn')} placeholder="Nomor induk dosen" />
                   </Field>
                 )}
+                {!isMahasiswa ? (
+                  <>
+                    <Field id="pf-jabatan" label="Jabatan Fungsional">
+                      <input id="pf-jabatan" className="input" list="pf-jabatan-list" value={form.jabatanFungsional} onChange={set('jabatanFungsional')} placeholder="mis. Asisten Ahli" />
+                      <datalist id="pf-jabatan-list">
+                        <option value="Tenaga Pengajar" />
+                        <option value="Asisten Ahli" />
+                        <option value="Lektor" />
+                        <option value="Lektor Kepala" />
+                        <option value="Guru Besar" />
+                      </datalist>
+                    </Field>
+                    <Field id="pf-sintaId" label="SINTA ID">
+                      <input id="pf-sintaId" className="input" value={form.sintaId} onChange={set('sintaId')} placeholder="ID author SINTA" />
+                    </Field>
+                    <Field id="pf-sintaScore" label="Skor SINTA" hint="Bilangan bulat 0 atau lebih.">
+                      <input id="pf-sintaScore" type="number" min={0} step={1} className="input" value={form.sintaScore} onChange={set('sintaScore')} placeholder="mis. 245" />
+                    </Field>
+                  </>
+                ) : null}
                 <Field id="pf-tempatLahir" label="Tempat Lahir">
                   <input id="pf-tempatLahir" className="input" value={form.tempatLahir} onChange={set('tempatLahir')} placeholder="Kota lahir" />
                 </Field>
@@ -356,11 +497,37 @@ export default function ProfilePage() {
                 </Field>
                 {isMahasiswa ? (
                   <Field id="pf-prodi" label="Program Studi">
-                    <input id="pf-prodi" className="input" value={form.prodi} onChange={set('prodi')} placeholder="Program studi" />
+                    {prodiOptions ? (
+                      <select id="pf-prodi" className="input" value={form.prodi} onChange={set('prodi')}>
+                        <option value="">-- Pilih program studi --</option>
+                        {form.prodi && !prodiOptions.includes(form.prodi) ? <option value={form.prodi}>{form.prodi}</option> : null}
+                        {prodiOptions.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input id="pf-prodi" className="input" value={form.prodi} onChange={set('prodi')} placeholder="Program studi" />
+                    )}
                   </Field>
                 ) : (
-                  <Field id="pf-programStudi" label="Program Studi" hint={<>Daftar pilihan program studi: <ApiPending /></>}>
-                    <input id="pf-programStudi" className="input" value={form.programStudi} onChange={set('programStudi')} placeholder="Program studi" />
+                  <Field id="pf-programStudi" label="Program Studi">
+                    {prodiOptions ? (
+                      <select id="pf-programStudi" className="input" value={form.programStudi} onChange={set('programStudi')}>
+                        <option value="">-- Pilih program studi --</option>
+                        {form.programStudi && !prodiOptions.includes(form.programStudi) ? (
+                          <option value={form.programStudi}>{form.programStudi}</option>
+                        ) : null}
+                        {prodiOptions.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input id="pf-programStudi" className="input" value={form.programStudi} onChange={set('programStudi')} placeholder="Program studi" />
+                    )}
                   </Field>
                 )}
                 <Field id="pf-alamat" label="Alamat" wide>
@@ -454,10 +621,9 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <ApiPending />
-                  <button type="button" className="btn btn-secondary btn-sm" disabled>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport} disabled={exporting}>
                     <Download className="size-4" aria-hidden="true" />
-                    Unduh data
+                    {exporting ? 'Menyiapkan…' : 'Unduh data'}
                   </button>
                 </div>
               </li>
@@ -465,17 +631,50 @@ export default function ProfilePage() {
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">Hapus akun ini</h3>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Setelah dihapus, seluruh data dan penyimpanan akun Anda dihapus permanen dan tidak dapat
-                    dikembalikan.
+                    Akun dinonaktifkan dan data pribadi dikosongkan; Anda tidak bisa masuk lagi. Proposal, laporan,
+                    dan review tetap tersimpan sebagai arsip LPPM atas nama &ldquo;Pengguna Dihapus&rdquo;.
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <ApiPending />
-                  <button type="button" className="btn btn-danger btn-sm" disabled>
+                  <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmDelete((v) => !v)} aria-expanded={confirmDelete}>
                     Hapus akun
                   </button>
                 </div>
               </li>
+              {confirmDelete ? (
+                <li className="bg-red-50/60 px-6 py-5">
+                  <form onSubmit={handleDeleteAccount} className="max-w-md space-y-3">
+                    <p className="text-sm font-semibold text-red-800">Tindakan ini tidak dapat dibatalkan.</p>
+                    <div>
+                      <label htmlFor="hapus-password" className="label">
+                        Masukkan password untuk konfirmasi
+                      </label>
+                      <input
+                        id="hapus-password"
+                        type="password"
+                        autoComplete="current-password"
+                        className="input"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="submit" className="btn btn-danger" disabled={deleting || !deletePassword}>
+                        {deleting ? 'Menghapus…' : 'Saya mengerti, hapus akun saya'}
+                      </button>
+                      <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                        Batal
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              ) : null}
+              {dangerMsg ? (
+                <li className="px-6 py-4">
+                  <Message msg={dangerMsg} />
+                </li>
+              ) : null}
             </ul>
           </section>
         </div>

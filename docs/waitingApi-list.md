@@ -11,31 +11,32 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 ## API sudah tersedia — tinggal disambungkan di frontend
 
 Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 10 untuk Grup A, bagian 11 untuk Grup B, bagian 12 untuk Grup C). Setelah UI-nya disambungkan dan penanda `ApiPending` dihapus, hapus barisnya dari
-tabel ini.
+bagian 12 untuk Grup C) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
+dan penanda `ApiPending` dihapus, pindahkan barisnya ke tabel "Sudah disambungkan".
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-08 | Dashboard dosen: No. HP, NIDN/NIDK, Institusi, TTL, Program Studi · Pengaturan: nilai awal form Informasi Profil & Ringkasan | `GET /auth/me` kini mengirim `nidn`, `nim`, `prodi`, `programStudi`, `institusi`, `kontak`, `noHp`, `alamat`, `tempatLahir`, `tanggalLahir`, `jabatanFungsional`; juga `GET /users/profile/me` | `authStore.user` otomatis berisi field ini setelah `fetchMe()`; cukup hapus penanda `ApiPending`. |
-| W-09 | Statistik Dosen: Jabatan fungsional | Field `jabatanFungsional` di `/auth/me`; ubah lewat `PATCH /users/profile/me` | Form Pengaturan bisa menambah input jabatan fungsional. |
-| W-11 | Kartu Dokumen Diproses (akurasi) | Key `review` di `GET /dosen/proposals/stats` | Hitungan selisih di frontend bisa diganti `diajukan + review`. |
-| W-17 | Kegiatan: ringkasan per status | `GET /dosen/proposals/stats?jenis=…` (+ key `review`) | Mengganti 6 permintaan menjadi 1. |
-| W-16 | Kegiatan: bagian sebagai anggota tim | `GET /dosen/proposals/as-member?jenis=…&status=…&search=…&page=…` | Detail untuk anggota pakai `GET /proposals/:id`, bukan `/dosen/proposals/:id`. |
-| W-14 | Kegiatan: kolom Skema (penelitian) | Field `skema` di respons & body create/update proposal | Hanya untuk penelitian; form proposal perlu input baru. |
-| W-15 | Kegiatan: kolom Mitra (pengabdian) | Field `mitra` di respons & body create/update proposal | Hanya untuk pengabdian; form proposal perlu input baru. |
-| W-03 | Dashboard dosen: Tahapan pada Usulan Terakhir | Field `tahapan` `{kode, label, urutan}` di semua respons proposal (dihitung dari status proposal + laporan baru) | Ganti perkiraan dari laporan kemajuan/akhir; tidak perlu panggilan tambahan. |
-| W-13 | Kegiatan: kolom Tahapan | Field `tahapan` di `GET /dosen/proposals` (dan `as-member`) | Sudah ada per baris, tanpa permintaan tambahan. |
-| W-04 | Profil: Nilai SINTA | Field `sintaId`, `sintaScore` di `/auth/me` & profil; diisi dosen lewat `PATCH /users/profile/me` | Form Pengaturan perlu input SINTA ID & skor. |
-| W-07 | Statistik Dosen & Pengaturan: Foto profil | `POST /users/profile/foto` (multipart `file`, JPG/PNG/WebP maks 2 MB), `DELETE /users/profile/foto`, field `fotoUrl` | `<img src={API_BASE_URL + user.fotoUrl}>`; panggil `fetchMe()` setelah upload/hapus. |
-| W-10 | Header aplikasi: foto di kanan atas | Sama dengan W-07 (`fotoUrl` di `/auth/me`) | |
-| W-20 | Pengaturan: Unduh data akun | `GET /users/profile/export` → file JSON (tanpa isi dokumen) | Unduh dengan `responseType: 'blob'`. |
-| W-21 | Pengaturan: Hapus akun ini | `DELETE /users/profile/me` body `{ password }` | Akun dinonaktifkan + dianonimkan; setelah 200 frontend wajib logout. |
 | W-01 | Dashboard dosen: Luaran Dapat Diklaim | `GET /luaran/stats` → `dapatDiklaim` (tercapai + laporan disetujui) | Luaran = output kegiatan yang dijanjikan di proposal (bukan menu `/luaran` pencairan dana). |
 | W-02 | Profil: Jurnal · Statistik Dosen: Jurnal Diterbitkan | `GET /luaran/stats` → `jurnal` | |
 | W-12 | Kegiatan: Luaran tercatat & daftar luaran per kegiatan | `GET /luaran/stats` → `total`; item per proposal `GET /luaran/proposal/:proposalId` (+ CRUD target, capaian, bukti) | Target diisi di wizard Usulan (setelah draft tersimpan), capaian di halaman laporan. |
 | W-06 | Profil: Nilai Kepercayaan | `GET /dosen/kepercayaan` → `{ nilai, skala: 5, komponen[] }` | `nilai` bisa `null` untuk dosen tanpa riwayat; rumus di new-api.md 12.2. |
 | W-18 | Pengaturan: Status verifikasi email + kirim ulang | `emailVerifiedAt` di `/auth/me`; `POST /auth/verify-email/resend`; `POST /auth/verify-email` | Perlu halaman publik `/verify-email?token=` yang memanggil verify. |
-| W-19 | Pengaturan: Program Studi sebagai dropdown | `GET /program-studi` (publik) + CRUD admin | Kirim `nama` terpilih ke `programStudi`/`prodi`; bisa juga dipakai di form registrasi. |
+
+### Sudah disambungkan
+
+Grup A (`new-api.md` bagian 10) dan Grup B (bagian 11):
+
+| ID | Disambungkan di |
+|---|---|
+| W-03 / W-13 | Field `tahapan` → Usulan Terakhir (dashboard) dan kolom Tahapan (Status Kegiatan) |
+| W-04 | SINTA ID & skor → input Pengaturan, kartu Nilai Sinta (dashboard) |
+| W-07 / W-10 | Foto profil → unggah/hapus di Pengaturan; tampil di dashboard, kartu Pengaturan, sidebar (`UserAvatar`) |
+| W-08 / W-09 | Field profil + jabatan fungsional dari `/auth/me` → dashboard & form Pengaturan |
+| W-11 / W-17 | `GET /dosen/proposals/stats?jenis=` (+ `review`) → dashboard & Status Kegiatan (1 permintaan) |
+| W-14 / W-15 | `skema` (input di Identitas, penelitian) / `mitra` (langkah Mitra, pengabdian) + kolom di Riwayat |
+| W-16 | Bagian "sebagai anggota tim" di Status Kegiatan (`as-member`), detail via `GET /proposals/:id` |
+| W-19 | Dropdown Program Studi di Pengaturan (`GET /program-studi`) |
+| W-20 / W-21 | Unduh data akun & Hapus akun (konfirmasi password, lalu logout) di Zona Berbahaya |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -43,15 +44,11 @@ Data yang **sudah** tersambung ke API yang ada:
 
 | Elemen | Sumber |
 |---|---|
-| Dokumen Diterima / Ditolak / Diproses | `GET /dosen/proposals/stats` (`disetujui`, `ditolak`, `diajukan` + review*) |
+| Dokumen Diterima / Ditolak / Diproses | `GET /dosen/proposals/stats` (`disetujui`, `ditolak`, `diajukan` + `review`) |
 | Usulan Terakhir (judul, status, jenis, periode) | `GET /dosen/proposals?limit=6` (baris pertama) |
-| Tahapan usulan (diturunkan) | status proposal + `GET /proposals/:id/laporan` (sementara; backend kini mengirim `tahapan`, lihat W-03 di "API sudah tersedia") |
+| Tahapan usulan | field `tahapan` {label, urutan} di proposal |
 | Profil: Pengabdian, Penelitian | `GET /dosen/proposals?jenis=…&status=disetujui&limit=1` → `meta.total` |
-| Nama & email | `GET /auth/me` |
-
-\* Frontend saat ini menghitung `review` sebagai
-`total − (draft + diajukan + revisi + disetujui + ditolak)`. Backend kini sudah mengirim key
-`review` (lihat W-11 di bagian "API sudah tersedia").
+| Nama, email, foto, jabatan fungsional, No. HP, NIDN, institusi, TTL, prodi, SINTA | `GET /auth/me` |
 
 Data yang **menunggu API**:
 
@@ -68,10 +65,12 @@ Data yang **sudah** tersambung ke API yang ada:
 
 | Elemen | Sumber |
 |---|---|
-| Kartu **Proposal Aktif** (draft+diajukan+review+revisi), **Proposal Diterima**, jumlah per chip status | `GET /dosen/proposals?jenis=…&status=…&limit=1` → `meta.total` (6 permintaan, satu per status) |
+| Kartu **Proposal Aktif** (draft+diajukan+review+revisi), **Proposal Diterima**, jumlah per chip status | `GET /dosen/proposals/stats?jenis=…` |
 | Kartu **Laporan Diterima** | `GET /laporan/my?jenis=…&status=disetujui&limit=1` → `meta.total` |
 | Riwayat tab **Proposal** (tanggal upload/update, judul, status, target `luaran`), cari, filter, paginasi | `GET /dosen/proposals?jenis=…&status=…&search=…&page=…&limit=10` |
-| Riwayat tab **Laporan** (status, `luaranTercapai`) — juga dibuka tombol "Laporan Penelitian/Pengabdian" | `GET /laporan/my?jenis=…&status=…&search=…&page=…&limit=10` |
+| Riwayat tab **Proposal**: Skema/Mitra, Tahapan | field `skema`/`mitra`, `tahapan` |
+| Riwayat tab **Laporan** (status, `luaranTercapai`), tombol Lengkapi/Detail → halaman laporan | `GET /laporan/my?jenis=…&status=…&search=…&page=…&limit=10` |
+| Bagian **sebagai anggota tim** | `GET /dosen/proposals/as-member` |
 | Tombol Detail / Edit proposal | `GET /dosen/proposals/:id` (modal detail) / halaman Usulan |
 
 Data yang **menunggu API**:
@@ -82,7 +81,8 @@ Data yang **menunggu API**:
 ## Usulan Penelitian / Pengabdian (`frontend/src/pages/UsulanPage.jsx`)
 
 Route `/kegiatan/:jenis/usulan` (buat) dan `/kegiatan/:jenis/usulan/:id` (ubah, hanya draft/revisi).
-Menggantikan modal Buat/Edit Proposal. Wizard: Identitas → Anggota → Dokumen → Preview.
+Menggantikan modal Buat/Edit Proposal. Penelitian: Identitas → Anggota → Dokumen → Preview.
+Pengabdian (desain terpisah): Identitas → Anggota (dosen & mahasiswa dipisah) → **Mitra** → Dokumen → Preview.
 
 Data yang **sudah** tersambung ke API yang ada:
 
@@ -90,6 +90,7 @@ Data yang **sudah** tersambung ke API yang ada:
 |---|---|
 | Judul, jenis, periode (+ Tahun Pelaksanaan dari `periode.tahun`), anggaran, abstrak, anggota + peran | `POST /dosen/proposals` / `PATCH /dosen/proposals/:id` (`anggotaIds`), `GET /periode?isAktif=true` |
 | Luaran Tambahan | field `luaran` (string) di create/update — API baru |
+| Skema Penelitian (Identitas, penelitian) · Nama Mitra (langkah Mitra, pengabdian, wajib) | field `skema` / `mitra` |
 | Upload Proposal (wajib di wizard) | `POST /proposals/:id/dokumen-utama` setelah proposal tersimpan |
 | Cari anggota | `GET /users/search` |
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
@@ -101,7 +102,20 @@ Data yang **menunggu API**:
 | W-22 | **Rumpun Ilmu** dan **Bidang Penelitian/Pengabdian** (langkah Identitas & Preview) | Rumpun ilmu & bidang per proposal + daftar pilihannya | Kolom `rumpunIlmu`, `bidang` di Penelitian/Pengabdian (ikut create/update/respons) + `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=…` | Input nonaktif. |
 | W-23 | Kolom **Alamat** dan **Kontak** di tabel Anggota | Alamat & kontak user hasil pencarian | Tambahkan `alamat`, `kontak`/`noHp` ke respons `GET /users/search` (dan `anggota.user` di detail proposal) | Pertimbangkan privasi: mungkin cukup kontak saja. |
 | W-24 | **Kata Kunci** (langkah Dokumen & Preview) | Kata kunci proposal | Kolom `kataKunci` (teks/JSON array) di Penelitian/Pengabdian, ikut create/update/respons | Input nonaktif. |
+| W-26 | Langkah **Mitra** (pengabdian): **Jenis Mitra**, **Alamat Mitra**, **Kontak Mitra**, **Pernyataan Kebutuhan** | Detail mitra selain nama | Kolom `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` di Pengabdian (ikut create/update/respons, disalin ke laporan) atau tabel `Mitra` + master jenis mitra | Saat ini hanya nama mitra yang tersimpan (field `mitra`). Input lain nonaktif. |
 | W-25 | Daftar pilihan **Luaran Tambahan** | Master jenis luaran | `GET /master/luaran?jenis=…` | Sementara daftar statis di frontend; nilai dikirim sebagai teks ke field `luaran`. |
+
+## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
+
+Semua sudah tersambung, tidak ada placeholder:
+
+| Halaman | Route | API |
+|---|---|---|
+| Buat laporan (pilih proposal disetujui) | `/kegiatan/:jenis/laporan/baru` (`LaporanPage.jsx`) | `GET /laporan/eligible`, `POST /laporan` |
+| Isi/ajukan/hapus/detail laporan (pengusul; anggota baca saja) | `/kegiatan/:jenis/laporan/:id` | `GET/PATCH/DELETE /laporan/:id`, `POST /laporan/:id/dokumen`, `POST /laporan/:id/submit`, `GET /laporan/:id/dokumen` |
+| Laporan Masuk (Ketua LPPM/Admin): tugaskan reviewer, keputusan | `/laporan-masuk[?id=]` (`LaporanMasukPage.jsx`) | `GET /laporan`, `POST/DELETE /laporan/:id/reviewers`, `PATCH /laporan/:id/status` |
+| Tab Laporan di Penugasan Review (reviewer) | `/penugasan?tab=laporan` | `GET /laporan/tugasan`, `POST /laporan/:id/reviews[/finalize]` |
+| Tautan notifikasi `refType: laporan` | `/notifikasi` | — |
 
 ## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)
 
@@ -111,17 +125,17 @@ Data yang **sudah** tersambung ke API yang ada:
 |---|---|
 | Simpan Informasi Profil | `PATCH /users/profile/me` — hanya field yang diubah yang dikirim; respons (profil lengkap) dipakai mengisi ulang form & ringkasan |
 | Ganti Password | `PATCH /users/profile/password` (validasi frontend: minimal 8 karakter, konfirmasi cocok) |
-| Nama, email, peran, status | `GET /auth/me` |
+| Nama, email, peran, status, nilai awal semua field profil, jabatan fungsional, SINTA | `GET /auth/me` |
+| Foto profil (unggah/hapus) | `POST/DELETE /users/profile/foto`, `fotoUrl` |
+| Program studi (dropdown) | `GET /program-studi` |
+| Unduh data akun · Hapus akun | `GET /users/profile/export` · `DELETE /users/profile/me` |
 
-Data yang **menunggu API**: tidak ada lagi. Semua item Pengaturan (W-07, W-08, W-18, W-19, W-20,
-W-21) sudah tersedia, lihat bagian "API sudah tersedia" di atas.
+Data yang **menunggu API**: tidak ada lagi. Verifikasi email (W-18) sudah tersedia di backend
+tetapi belum disambungkan, lihat bagian "API sudah tersedia" di atas.
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
-- **Halaman laporan** (buat/isi/detail laporan, `POST/PATCH /laporan…`) belum dibuat di frontend
-  walaupun API-nya sudah ada (`backend_go/new-api.md`). Tombol "Laporan Penelitian/Pengabdian"
-  sementara membuka tab Laporan di Riwayat; notifikasi laporan belum punya tautan.
 - Menu **Luaran** (`/luaran`, dosen) sudah ada tetapi menampilkan **501 Not Implemented**:
   fitur menunggu kelanjutan perkembangan dari Pihak Kampus (berkaitan dengan W-01).
 - Menu **Panduan** dari desain belum ada halamannya.

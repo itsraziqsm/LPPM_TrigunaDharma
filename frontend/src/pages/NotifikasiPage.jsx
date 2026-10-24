@@ -58,7 +58,13 @@ function targetFor(n, roles, hasTugasan) {
   const primary = roles[0]
   const pengelola = primary === 'admin' || primary === 'ketua_lppm'
   if (n.refType === 'periode' || n.type?.startsWith('deletion_')) return pengelola ? { to: '/periode', label: 'Buka periode' } : null
-  if (n.refType === 'laporan') return null // halaman laporan belum ada di frontend
+  if (n.refType === 'laporan') {
+    if (n.type === 'reviewer_ditugaskan') return { to: '/penugasan?tab=laporan', label: 'Buka penugasan' }
+    if (pengelola) return { to: `/laporan-masuk?id=${n.refId}`, label: 'Kelola laporan' }
+    // Pengusul: jenis menyesuaikan otomatis setelah laporan dimuat.
+    if (primary === 'dosen' || primary === 'mahasiswa') return { to: `/kegiatan/penelitian/laporan/${n.refId}`, label: 'Buka laporan' }
+    return null
+  }
   if (n.type === 'reviewer_ditugaskan' && (roles.includes('reviewer') || hasTugasan)) {
     return { to: '/penugasan', label: 'Buka penugasan' }
   }

@@ -9,6 +9,7 @@ import {
   Eye,
   FileText,
   Info,
+  Building2,
   Save,
   Trash2,
   Users,
@@ -27,7 +28,9 @@ import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
 //   /kegiatan/:jenis/usulan/:id   ubah proposal (hanya draft/revisi)
 // Data: POST/PATCH /dosen/proposals (+ luaran), POST /proposals/:id/dokumen-utama,
 // GET /periode, GET /users/search. Field tanpa endpoint memakai ApiPending dan
-// dicatat di docs/waitingApi-list.md (W-22..W-25).
+// dicatat di docs/waitingApi-list.md (W-22..W-26).
+// Pengabdian (desain terpisah): 5 langkah dengan langkah Mitra, anggota dosen &
+// mahasiswa dipisah.
 // ---------------------------------------------------------------------------
 
 const STEPS = [
@@ -36,6 +39,17 @@ const STEPS = [
   { key: 'dokumen', label: 'Dokumen', icon: FileText },
   { key: 'preview', label: 'Preview', icon: Eye },
 ]
+
+// Desain pengabdian: langkah Mitra di antara Anggota dan Dokumen.
+const STEPS_PENGABDIAN = [
+  STEPS[0],
+  STEPS[1],
+  { key: 'mitra', label: 'Mitra', icon: Building2 },
+  STEPS[2],
+  STEPS[3],
+]
+
+const stepsFor = (jenis) => (jenis === 'pengabdian' ? STEPS_PENGABDIAN : STEPS)
 
 // Pilihan target luaran. Disimpan sebagai teks di field `luaran` proposal;
 // daftar baku dari server belum ada (W-25).
@@ -68,6 +82,7 @@ function validate(form, file, existingDoc) {
   if (!abstrak) e.abstrak = 'Abstrak wajib diisi.'
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
+  if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
     else if (!ALLOWED_MIME.includes(file.type)) e.dokumen = 'Format file harus PDF atau DOCX.'
@@ -77,7 +92,7 @@ function validate(form, file, existingDoc) {
   return e
 }
 
-const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], dokumen: ['abstrak', 'dokumen'] }
+const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['abstrak', 'dokumen'] }
 
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
@@ -99,15 +114,15 @@ function FieldError({ message }) {
   )
 }
 
-function Stepper({ step, maxReached, onGo }) {
-  const pct = (step / (STEPS.length - 1)) * 100
+function Stepper({ steps, step, maxReached, onGo }) {
+  const pct = (step / (steps.length - 1)) * 100
   return (
     <nav aria-label="Langkah pengisian" className="space-y-5">
       <div className="h-2 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
         <div className="h-full rounded-full bg-navy-700 transition-all duration-300" style={{ width: `${Math.max(pct, 6)}%` }} />
       </div>
-      <ol className="grid grid-cols-4 gap-2">
-        {STEPS.map((s, i) => {
+      <ol className="grid gap-2" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
+        {steps.map((s, i) => {
           const Icon = s.icon
           const done = i <= step
           const reachable = i <= maxReached
@@ -127,13 +142,91 @@ function Stepper({ step, maxReached, onGo }) {
                 >
                   {i < step ? <Check className="size-5" aria-hidden="true" /> : <Icon className="size-5" aria-hidden="true" />}
                 </span>
-                <span className={`text-sm sm:text-base ${done ? 'font-semibold text-navy-700' : 'text-slate-600'}`}>{s.label}</span>
+                <span className={`text-xs sm:text-base ${done ? 'font-semibold text-navy-700' : 'text-slate-600'}`}>{s.label}</span>
               </button>
             </li>
           )
         })}
       </ol>
     </nav>
+  )
+}
+
+// Dosen atau mahasiswa: dari roles hasil pencarian, atau NIM pada data anggota.
+function kindOf(u) {
+  const roles = (u?.roles || []).map((r) => r.role?.name || r.name || r)
+  if (roles.includes('mahasiswa') || u?.nim) return 'mahasiswa'
+  return 'dosen'
+}
+
+function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
+  return (
+    <section className="table-wrap" aria-label="Daftar anggota">
+      <table className="table">
+        <thead>
+          <tr>
+            <th scope="col">Nama</th>
+            <th scope="col">{idLabel}</th>
+            <th scope="col">Alamat</th>
+            <th scope="col">Kontak</th>
+            <th scope="col">Peran</th>
+            <th scope="col">
+              <span className="sr-only">Aksi</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="py-8 text-center text-slate-500">
+                {emptyText}
+              </td>
+            </tr>
+          ) : (
+            rows.map((a) => (
+              <tr key={a.id}>
+                <td className="min-w-[14rem]">
+                  <p className="font-semibold text-slate-900">{a.fullName || a.name}</p>
+                  <p className="text-xs text-slate-500">{a.email}</p>
+                </td>
+                <td className="whitespace-nowrap tabular-nums">{a.nidn || a.nim || '—'}</td>
+                <td>
+                  <ApiPending className="whitespace-nowrap" />
+                </td>
+                <td>
+                  <ApiPending className="whitespace-nowrap" />
+                </td>
+                <td>
+                  <select
+                    aria-label={`Peran ${a.fullName || a.name}`}
+                    value={a.peran}
+                    onChange={(e) => onPeran(a.id, e.target.value)}
+                    className="input min-h-9 w-40 py-1.5 text-sm"
+                  >
+                    {PERAN_OPTIONS.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(a.id)}
+                    aria-label={`Hapus ${a.fullName || a.name}`}
+                    title="Hapus anggota"
+                    className="icon-btn text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </section>
   )
 }
 
@@ -175,6 +268,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     anggaran: '',
     abstrak: '',
     luaran: '',
+    skema: '',
+    mitra: '',
   })
   const [anggota, setAnggota] = useState([])
   const [file, setFile] = useState(null)
@@ -185,7 +280,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const [loadMsg, setLoadMsg] = useState('')
 
   const [step, setStep] = useState(0)
-  const [maxReached, setMaxReached] = useState(isEdit ? STEPS.length - 1 : 0)
+  const [maxReached, setMaxReached] = useState(isEdit ? 99 : 0)
   const [showErrors, setShowErrors] = useState({})
   const [agree, setAgree] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -233,6 +328,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           anggaran: p.anggaran ? String(Number(p.anggaran)) : '',
           abstrak: p.abstrak || '',
           luaran: p.luaran || '',
+          skema: p.skema || '',
+          mitra: p.mitra || '',
         })
         setAnggota(
           (p.anggota || []).map((a) => ({
@@ -243,6 +340,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             nidn: a.user?.nidn,
             nim: a.user?.nim,
             peran: a.peran || 'anggota',
+            kind: kindOf(a.user),
           })),
         )
         if (p.dokumenNama) setExistingDoc({ nama: p.dokumenNama, ukuran: p.dokumenUkuran })
@@ -265,10 +363,15 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const backTo = `/kegiatan/${jenisRoute || form.jenis}`
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-  const err = (key) => (showErrors[STEPS[step].key] ? errors[key] : null)
+  const addAnggota = (kind) => (u) => setAnggota((prev) => [...prev, { ...u, peran: 'anggota', kind: kind || kindOf(u) }])
+  const setPeran = (id, peran) => setAnggota((prev) => prev.map((x) => (x.id === id ? { ...x, peran } : x)))
+  const removeAnggota = (id) => setAnggota((prev) => prev.filter((x) => x.id !== id))
+  const steps = stepsFor(form.jenis)
+  const current = steps[Math.min(step, steps.length - 1)].key
+  const err = (key) => (showErrors[current] ? errors[key] : null)
 
   const goNext = () => {
-    const key = STEPS[step].key
+    const key = current
     const invalid = (STEP_FIELDS[key] || []).some((f) => errors[f])
     if (invalid) {
       setShowErrors((s) => ({ ...s, [key]: true }))
@@ -282,7 +385,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const goTo = (i) => {
     // Lompat maju hanya bila langkah-langkah sebelumnya valid.
     for (let s = 0; s < i; s += 1) {
-      const key = STEPS[s].key
+      const key = steps[s].key
       if ((STEP_FIELDS[key] || []).some((f) => errors[f])) {
         setStep(s)
         setShowErrors((x) => ({ ...x, [key]: true }))
@@ -301,7 +404,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const save = async () => {
     setSaveError('')
     if (Object.keys(errors).length > 0) {
-      goTo(STEPS.length - 1) // berhenti di langkah pertama yang belum valid
+      goTo(steps.length - 1) // berhenti di langkah pertama yang belum valid
       setSaveError('Masih ada data yang belum lengkap.')
       return
     }
@@ -318,6 +421,9 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         periodeId: Number(form.periodeId),
         ...(form.anggaran ? { anggaran: Number(form.anggaran) } : {}),
         ...(form.luaran ? { luaran: form.luaran } : {}),
+        // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
+        ...(form.jenis === 'penelitian' && (form.skema.trim() || isEdit) ? { skema: form.skema.trim() } : {}),
+        ...(form.jenis === 'pengabdian' && (form.mitra.trim() || isEdit) ? { mitra: form.mitra.trim() } : {}),
         anggotaIds: anggota.map((a) => ({ userId: a.id, peran: a.peran })),
       }
       let savedId = id
@@ -414,11 +520,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     <div className="page space-y-8">
       {header}
       <div ref={topRef} className="scroll-mt-6">
-        <Stepper step={step} maxReached={maxReached} onGo={goTo} />
+        <Stepper steps={steps} step={step} maxReached={Math.min(maxReached, steps.length - 1)} onGo={goTo} />
       </div>
 
       {/* ── A. Identitas ─────────────────────────────────────────────── */}
-      {step === 0 && (
+      {current === 'identitas' && (
         <StepCard title="A. Identitas Proposal" desc="Data utama usulan.">
           <div className="grid gap-5 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -486,6 +592,22 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               {err('anggaran') ? <FieldError message={err('anggaran')} /> : <p className="mt-1.5 text-xs text-slate-500">Opsional. {form.anggaran ? rupiah(form.anggaran) : ''}</p>}
             </div>
 
+            {form.jenis === 'penelitian' ? (
+              <div>
+                <label htmlFor="u-skema" className="label">
+                  Skema Penelitian
+                </label>
+                <input id="u-skema" className="input" value={form.skema} onChange={set('skema')} list="u-skema-list" placeholder="mis. Penelitian Dosen Pemula" />
+                <datalist id="u-skema-list">
+                  <option value="Penelitian Dosen Pemula" />
+                  <option value="Penelitian Dasar" />
+                  <option value="Penelitian Terapan" />
+                  <option value="Penelitian Kerja Sama" />
+                </datalist>
+                <p className="mt-1.5 text-xs text-slate-500">Opsional.</p>
+              </div>
+            ) : null}
+
             <div>
               <label htmlFor="u-rumpun" className="label">
                 Rumpun Ilmu
@@ -516,84 +638,113 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       )}
 
       {/* ── B. Anggota ───────────────────────────────────────────────── */}
-      {step === 1 && (
-        <>
-          <StepCard title="B. Anggota Tim" desc="Cari dan pilih dosen atau mahasiswa. Mereka menerima undangan untuk menyetujui keterlibatan.">
-            <AnggotaSearch onAdd={(u) => setAnggota((prev) => [...prev, { ...u, peran: 'anggota' }])} addedIds={anggota.map((a) => a.id)} />
-          </StepCard>
+      {current === 'anggota' &&
+        (form.jenis === 'pengabdian' ? (
+          <>
+            <StepCard title="B. Anggota Dosen" desc="Cari dan pilih dosen. Mereka menerima undangan untuk menyetujui keterlibatan.">
+              <AnggotaSearch
+                fixedRole="dosen"
+                title="Cari dosen"
+                placeholder="Ketik nama dosen"
+                onAdd={addAnggota('dosen')}
+                addedIds={anggota.map((a) => a.id)}
+              />
+            </StepCard>
+            <AnggotaTable
+              rows={anggota.filter((a) => a.kind !== 'mahasiswa')}
+              idLabel="NIDN"
+              emptyText="Belum ada anggota dosen."
+              onPeran={setPeran}
+              onRemove={removeAnggota}
+            />
+            <StepCard title="Anggota Mahasiswa" desc="Cari dan pilih mahasiswa yang terlibat.">
+              <AnggotaSearch
+                fixedRole="mahasiswa"
+                title="Cari mahasiswa"
+                placeholder="Ketik nama mahasiswa"
+                onAdd={addAnggota('mahasiswa')}
+                addedIds={anggota.map((a) => a.id)}
+              />
+            </StepCard>
+            <AnggotaTable
+              rows={anggota.filter((a) => a.kind === 'mahasiswa')}
+              idLabel="NIM"
+              emptyText="Belum ada anggota mahasiswa."
+              onPeran={setPeran}
+              onRemove={removeAnggota}
+            />
+          </>
+        ) : (
+          <>
+            <StepCard title="B. Anggota Tim" desc="Cari dan pilih dosen atau mahasiswa. Mereka menerima undangan untuk menyetujui keterlibatan.">
+              <AnggotaSearch onAdd={addAnggota(null)} addedIds={anggota.map((a) => a.id)} />
+            </StepCard>
+            <AnggotaTable
+              rows={anggota}
+              idLabel="NIDN / NIM"
+              emptyText="Belum ada anggota. Proposal tetap bisa disimpan tanpa anggota."
+              onPeran={setPeran}
+              onRemove={removeAnggota}
+            />
+          </>
+        ))}
 
-          <section className="table-wrap" aria-label="Daftar anggota">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Nama</th>
-                  <th scope="col">NIDN / NIM</th>
-                  <th scope="col">Alamat</th>
-                  <th scope="col">Kontak</th>
-                  <th scope="col">Peran</th>
-                  <th scope="col">
-                    <span className="sr-only">Aksi</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {anggota.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
-                      Belum ada anggota. Proposal tetap bisa disimpan tanpa anggota.
-                    </td>
-                  </tr>
-                ) : (
-                  anggota.map((a) => (
-                    <tr key={a.id}>
-                      <td className="min-w-[14rem]">
-                        <p className="font-semibold text-slate-900">{a.fullName || a.name}</p>
-                        <p className="text-xs text-slate-500">{a.email}</p>
-                      </td>
-                      <td className="whitespace-nowrap tabular-nums">{a.nidn || a.nim || '—'}</td>
-                      <td>
-                        <ApiPending className="whitespace-nowrap" />
-                      </td>
-                      <td>
-                        <ApiPending className="whitespace-nowrap" />
-                      </td>
-                      <td>
-                        <select
-                          aria-label={`Peran ${a.fullName || a.name}`}
-                          value={a.peran}
-                          onChange={(e) => setAnggota((prev) => prev.map((x) => (x.id === a.id ? { ...x, peran: e.target.value } : x)))}
-                          className="input min-h-9 w-40 py-1.5 text-sm"
-                        >
-                          {PERAN_OPTIONS.map((p) => (
-                            <option key={p} value={p}>
-                              {p}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="text-right">
-                        <button
-                          type="button"
-                          onClick={() => setAnggota((prev) => prev.filter((x) => x.id !== a.id))}
-                          aria-label={`Hapus ${a.fullName || a.name}`}
-                          title="Hapus anggota"
-                          className="icon-btn text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </section>
-        </>
+      {/* ── Mitra (khusus pengabdian) ────────────────────────────────── */}
+      {current === 'mitra' && (
+        <StepCard title="C. Informasi Mitra" desc="Mitra sasaran kegiatan pengabdian.">
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label htmlFor="u-mitra" className="label">
+                Nama Mitra
+                <Required />
+              </label>
+              <input
+                id="u-mitra"
+                className="input"
+                value={form.mitra}
+                onChange={set('mitra')}
+                placeholder="mis. Kelompok Tani Desa Sukamaju"
+                aria-invalid={Boolean(err('mitra'))}
+              />
+              <FieldError message={err('mitra')} />
+            </div>
+            <div>
+              <label htmlFor="u-jenis-mitra" className="label">
+                Jenis Mitra
+              </label>
+              <select id="u-jenis-mitra" className="input" disabled>
+                <option>Pilih jenis mitra</option>
+              </select>
+              <ApiPending className="mt-1.5" />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="u-alamat-mitra" className="label">
+                Alamat Mitra
+              </label>
+              <input id="u-alamat-mitra" className="input" disabled placeholder="Alamat lengkap mitra" />
+              <ApiPending className="mt-1.5" />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="u-kontak-mitra" className="label">
+                Kontak Mitra
+              </label>
+              <input id="u-kontak-mitra" className="input" disabled placeholder="Nomor telepon / email mitra" />
+              <ApiPending className="mt-1.5" />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="u-kebutuhan" className="label">
+                Pernyataan Kebutuhan Mitra
+              </label>
+              <textarea id="u-kebutuhan" rows={4} className="input resize-y" disabled placeholder="Permasalahan dan kebutuhan mitra" />
+              <ApiPending className="mt-1.5" />
+            </div>
+          </div>
+        </StepCard>
       )}
 
       {/* ── C. Dokumen ───────────────────────────────────────────────── */}
-      {step === 2 && (
-        <StepCard title={`C. Dokumen ${jenisLabel}`} desc="Abstrak, file proposal, dan target luaran.">
+      {current === 'dokumen' && (
+        <StepCard title={`${form.jenis === 'pengabdian' ? 'D' : 'C'}. Dokumen ${jenisLabel}`} desc="Abstrak, file proposal, dan target luaran.">
           <div className="space-y-5">
             <div>
               <label htmlFor="u-katakunci" className="label">
@@ -708,7 +859,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       )}
 
       {/* ── D. Preview ───────────────────────────────────────────────── */}
-      {step === 3 && (
+      {current === 'preview' && (
         <StepCard title={`Preview Proposal ${jenisLabel}`} desc="Periksa kembali sebelum menyimpan.">
           <div className="space-y-7">
             <section className="space-y-3">
@@ -721,6 +872,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                   ['Tahun Pelaksanaan', periode?.tahun ?? '—'],
                   ['Anggaran', rupiah(form.anggaran)],
                   ['Ketua Pengusul', ketua],
+                  ...(form.jenis === 'penelitian' ? [['Skema Penelitian', form.skema || '—']] : []),
                   ['Rumpun Ilmu', <ApiPending key="r" />],
                   [`Bidang ${jenisLabel}`, <ApiPending key="b" />],
                 ]}
@@ -732,19 +884,49 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               {anggota.length === 0 ? (
                 <p className="text-sm text-slate-500">Tanpa anggota.</p>
               ) : (
-                <ul className="grid gap-3 sm:grid-cols-2">
-                  {anggota.map((a) => (
-                    <li key={a.id} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-                      <p className="font-semibold text-slate-900">{a.fullName || a.name}</p>
-                      <p className="text-sm text-slate-600">
-                        {a.nidn ? `NIDN: ${a.nidn}` : a.nim ? `NIM: ${a.nim}` : a.email}
-                      </p>
-                      <p className="mt-1 text-xs capitalize text-slate-500">{a.peran}</p>
-                    </li>
+                <div className={`grid gap-5 ${form.jenis === 'pengabdian' ? 'sm:grid-cols-2' : ''}`}>
+                  {(form.jenis === 'pengabdian'
+                    ? [
+                        ['Dosen', anggota.filter((a) => a.kind !== 'mahasiswa')],
+                        ['Mahasiswa', anggota.filter((a) => a.kind === 'mahasiswa')],
+                      ]
+                    : [['', anggota]]
+                  ).map(([groupLabel, list]) => (
+                    <div key={groupLabel || 'semua'} className="space-y-2">
+                      {groupLabel ? <p className="text-sm font-medium text-slate-600">{groupLabel}</p> : null}
+                      {list.length === 0 ? (
+                        <p className="text-sm text-slate-500">—</p>
+                      ) : (
+                        <ul className={`grid gap-3 ${form.jenis === 'pengabdian' ? '' : 'sm:grid-cols-2'}`}>
+                          {list.map((a) => (
+                            <li key={a.id} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+                              <p className="font-semibold text-slate-900">{a.fullName || a.name}</p>
+                              <p className="text-sm text-slate-600">{a.nidn ? `NIDN: ${a.nidn}` : a.nim ? `NIM: ${a.nim}` : a.email}</p>
+                              <p className="mt-1 text-xs capitalize text-slate-500">{a.peran}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </section>
+
+            {form.jenis === 'pengabdian' ? (
+              <section className="space-y-3">
+                <h3 className="text-base font-semibold text-navy-950">Mitra</h3>
+                <PreviewTable
+                  rows={[
+                    ['Nama Mitra', form.mitra || '—'],
+                    ['Alamat', <ApiPending key="ma" />],
+                    ['Kontak', <ApiPending key="mk" />],
+                    ['Jenis Mitra', <ApiPending key="mj" />],
+                    ['Pernyataan Kebutuhan', <ApiPending key="mp" />],
+                  ]}
+                />
+              </section>
+            ) : null}
 
             <section className="space-y-3">
               <h3 className="text-base font-semibold text-navy-950">Dokumen</h3>
@@ -801,7 +983,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           </button>
         )}
 
-        {step < STEPS.length - 1 ? (
+        {step < steps.length - 1 ? (
           <button type="button" onClick={goNext} className="btn btn-primary min-w-36">
             Berikutnya
             <ArrowRight className="size-4" aria-hidden="true" />

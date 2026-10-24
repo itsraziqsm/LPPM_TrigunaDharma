@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CircleCheck, CirclePlus, FileCheck, FileText, ListChecks } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
-import ApiPending from '../components/ApiPending'
+import useAuthStore from '../store/authStore'
 import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
@@ -11,7 +11,7 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
 // tombol Usulan (→ halaman UsulanPage) & Laporan, dan Riwayat berisi proposal
 // (GET /dosen/proposals) atau laporan (GET /laporan/my) untuk satu jenis.
-// Bagian tanpa endpoint memakai ApiPending dan dicatat di docs/waitingApi-list.md.
+// Bagian "sebagai anggota tim" dari GET /dosen/proposals/as-member.
 // ---------------------------------------------------------------------------
 
 const LIMIT = 10
@@ -33,14 +33,145 @@ const COPY = {
 const rupiah = (value) =>
   value === null || value === undefined || value === '' ? '—' : `Rp ${Number(value).toLocaleString('id-ID')}`
 
-// Jumlah per status dibaca dari meta.total (satu baris per permintaan).
+// Jumlah per status untuk satu jenis: GET /dosen/proposals/stats?jenis=… (+ key review).
 async function loadCounts(jenis) {
-  const totals = await Promise.all(
-    STATUSES.map((status) =>
-      proposalDosenApi.getAll({ jenis, status, limit: 1 }).then((r) => Number(r.data.meta?.total) || 0),
-    ),
+  const r = await proposalDosenApi.getStats({ jenis })
+  const d = r.data.data || {}
+  return Object.fromEntries(STATUSES.map((s) => [s, Number(d[s]) || 0]))
+}
+
+function TahapanBadge({ tahapan }) {
+  if (!tahapan) return <span className="text-slate-400">—</span>
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-700" title={`Tahap ${tahapan.urutan} dari 4`}>
+      <span className="grid size-5 place-items-center rounded-full bg-navy-100 text-[0.6875rem] font-bold text-navy-800">{tahapan.urutan}</span>
+      {tahapan.label}
+    </span>
   )
-  return Object.fromEntries(STATUSES.map((s, i) => [s, totals[i]]))
+}
+
+// Proposal milik dosen lain tempat user menjadi anggota (undangan diterima):
+// GET /dosen/proposals/as-member. Detail lewat GET /proposals/:id (readOnly).
+function MemberSection({ jenis, label, userId, onDetail }) {
+  const [rows, setRows] = useState([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [state, setState] = useState('loading')
+
+  useEffect(() => {
+    let alive = true
+    setState('loading')
+    proposalDosenApi
+      .getAsMember({ jenis, page, limit: 5 })
+      .then((r) => {
+        if (!alive) return
+        setRows(r.data.data || [])
+        setTotal(Number(r.data.meta?.total) || 0)
+        setState('ready')
+      })
+      .catch(() => alive && setState('error'))
+    return () => {
+      alive = false
+    }
+  }, [jenis, page])
+
+  const pages = Math.max(1, Math.ceil(total / 5))
+
+  return (
+    <section aria-labelledby="kegiatan-anggota" className="space-y-3">
+      <div>
+        <h2 id="kegiatan-anggota" className="text-xl font-semibold text-navy-950">
+          {label} sebagai anggota tim
+        </h2>
+        <p className="mt-0.5 text-sm text-slate-500">
+          {label} milik dosen lain yang undangannya sudah Anda terima. Undangan yang menunggu respons ada di{' '}
+          <Link to="/undangan" className="font-semibold text-navy-700 hover:text-navy-900">
+            Undangan Tim
+          </Link>
+          .
+        </p>
+      </div>
+      <div className="table-wrap">
+        <table className="table table-tight">
+          <thead>
+            <tr>
+              <th scope="col">Judul</th>
+              <th scope="col">Ketua pengusul</th>
+              <th scope="col">Peran saya</th>
+              <th scope="col">Status</th>
+              <th scope="col">Tahapan</th>
+              <th scope="col">
+                <span className="sr-only">Aksi</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {state === 'loading' ? (
+              <tr aria-hidden="true">
+                <td colSpan={6}>
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
+                </td>
+              </tr>
+            ) : state === 'error' ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-slate-600">
+                  Daftar keanggotaan gagal dimuat.
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-slate-500">
+                  Anda belum menjadi anggota {label.toLowerCase()} lain.
+                </td>
+              </tr>
+            ) : (
+              rows.map((p) => {
+                const saya = (p.anggota || []).find((a) => a.user?.id === userId)
+                return (
+                  <tr key={p.id}>
+                    <td className="min-w-[16rem] max-w-md">
+                      <p className="line-clamp-2 font-semibold text-slate-900" title={p.judul}>
+                        {p.judul}
+                      </p>
+                      <p className="text-xs text-slate-500">{p.periode?.nama || 'Belum ada periode'}</p>
+                    </td>
+                    <td>{p.pengusul?.fullName || p.pengusul?.name || '—'}</td>
+                    <td className="capitalize">{saya?.peran || 'anggota'}</td>
+                    <td>
+                      <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                    </td>
+                    <td>
+                      <TahapanBadge tahapan={p.tahapan} />
+                    </td>
+                    <td className="text-right">
+                      <button type="button" onClick={() => onDetail(p.id)} className="btn btn-ghost btn-sm">
+                        Detail
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+      {total > 5 ? (
+        <nav aria-label="Halaman keanggotaan" className="flex items-center justify-between gap-3 text-sm text-slate-600">
+          <span className="tabular-nums">
+            Halaman {page} dari {pages} · {total} {label.toLowerCase()}
+          </span>
+          <span className="flex gap-2">
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              Sebelumnya
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+              Berikutnya
+            </button>
+          </span>
+        </nav>
+      ) : null}
+    </section>
+  )
 }
 
 const dateTime = (v) =>
@@ -102,7 +233,6 @@ export default function KegiatanPage({ jenis }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [flash] = useState(() => location.state?.flash || null)
-  const riwayatRef = useRef(null)
 
   const [counts, setCounts] = useState(null)
   const [countsFailed, setCountsFailed] = useState(false)
@@ -117,6 +247,8 @@ export default function KegiatanPage({ jenis }) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState(null)
+  const [memberDetailId, setMemberDetailId] = useState(null)
+  const user = useAuthStore((s) => s.user)
   const [tick, setTick] = useState(0)
 
   // Bersihkan pesan kilat dari riwayat navigasi agar tidak muncul lagi saat dimuat ulang.
@@ -173,11 +305,6 @@ export default function KegiatanPage({ jenis }) {
     setTipe(next)
     setStatus('')
     setPage(1)
-  }
-
-  const showLaporan = () => {
-    switchTipe('laporan')
-    riwayatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   const aktif = counts ? counts.draft + counts.diajukan + counts.review + counts.revisi : null
@@ -238,13 +365,13 @@ export default function KegiatanPage({ jenis }) {
           <CirclePlus className="size-5" aria-hidden="true" />
           Usulan {label}
         </Link>
-        <button type="button" onClick={showLaporan} className="btn btn-primary h-14 text-base">
+        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-primary h-14 text-base">
           <FileText className="size-5" aria-hidden="true" />
           Laporan {label}
-        </button>
+        </Link>
       </div>
 
-      <section ref={riwayatRef} aria-labelledby="riwayat-kegiatan" className="scroll-mt-6 space-y-4">
+      <section aria-labelledby="riwayat-kegiatan" className="scroll-mt-6 space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 id="riwayat-kegiatan" className="text-xl font-semibold text-navy-950">
@@ -373,17 +500,17 @@ export default function KegiatanPage({ jenis }) {
                     ) : (
                       <>
                         <td className="max-w-xs">{p.luaran || '—'}</td>
+                        <td className="max-w-xs">{(jenis === 'pengabdian' ? p.mitra : p.skema) || '—'}</td>
                         <td>
-                          <ApiPending className="whitespace-nowrap" />
-                        </td>
-                        <td>
-                          <ApiPending className="whitespace-nowrap" />
+                          <TahapanBadge tahapan={p.tahapan} />
                         </td>
                       </>
                     )}
                     <td className="whitespace-nowrap text-right">
                       {isLaporan ? (
-                        <span className="text-xs text-slate-500" title="Halaman detail laporan belum dibuat di frontend">—</span>
+                        <Link to={`/kegiatan/${p.jenis || jenis}/laporan/${p.id}`} className="btn btn-ghost btn-sm">
+                          {p.status === 'draft' || p.status === 'revisi' ? 'Lengkapi' : 'Detail'}
+                        </Link>
                       ) : (
                         <>
                           {p.status === 'draft' || p.status === 'revisi' ? (
@@ -421,25 +548,13 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
       </section>
 
-      <section aria-labelledby="kegiatan-anggota" className="card px-5 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 id="kegiatan-anggota" className="text-lg font-semibold text-navy-950">
-            {label} sebagai anggota tim
-          </h2>
-          <ApiPending />
-        </div>
-        <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-          Daftar {label.toLowerCase()} milik dosen lain yang Anda ikuti sebagai anggota belum tersedia.
-          Undangan tim yang menunggu respons dapat dilihat di menu{' '}
-          <Link to="/undangan" className="font-semibold text-navy-700 hover:text-navy-900">
-            Undangan Tim
-          </Link>
-          .
-        </p>
-      </section>
+      <MemberSection jenis={jenis} label={label} userId={user?.id} onDetail={(pid) => setMemberDetailId(pid)} />
 
       {selectedId ? (
         <ProposalDetailModal proposalId={selectedId} onClose={() => setSelectedId(null)} onRefresh={refresh} />
+      ) : null}
+      {memberDetailId ? (
+        <ProposalDetailModal proposalId={memberDetailId} readOnly onClose={() => setMemberDetailId(null)} />
       ) : null}
     </div>
   )

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { proposalDosenApi } from '../../api/Proposaldosen'
+import { proposalApi } from '../../api/proposal'
 import { Modal, Badge, InfoRow, SectionBox } from './components'
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR, UNDANGAN_COLOR } from './constants'
 import { LaporanTab } from './LaporanTab'
@@ -7,7 +8,9 @@ import { DokumenTab } from './DokumenTab'
 import { FileText } from 'lucide-react'
 
 // ── Modal Detail Proposal ─────────────────────────────────────────────────────
-export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
+// readOnly: dibuka oleh anggota tim (bukan pengusul) → data dari GET /proposals/:id,
+// tanpa aksi ajukan dan tanpa tab yang hanya untuk pengusul.
+export function ProposalDetailModal({ proposalId, onClose, onRefresh, readOnly = false }) {
     const [detail, setDetail] = useState(null)
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('info')
@@ -15,11 +18,12 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
     const [msg, setMsg] = useState('')
 
     useEffect(() => {
-        proposalDosenApi.getById(proposalId)
+        const request = readOnly ? proposalApi.getById(proposalId) : proposalDosenApi.getById(proposalId)
+        request
             .then(res => setDetail(res.data.data))
             .catch(() => setDetail(null))
             .finally(() => setLoading(false))
-    }, [proposalId])
+    }, [proposalId, readOnly])
 
     const anggotaPending = (detail?.anggota || []).filter(a => a.statusUndangan === 'pending')
     const anggotaDitolak = (detail?.anggota || []).filter(a => a.statusUndangan === 'ditolak')
@@ -50,7 +54,7 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
         { key: 'review', label: 'Hasil Review' },
         { key: 'laporan', label: 'Laporan' },
         { key: 'dokumen', label: 'Dokumen' },
-    ]
+    ].filter(t => !readOnly || t.key === 'info' || t.key === 'anggota')
 
     return (
         <Modal title="Detail Proposal" onClose={onClose} wide>
@@ -81,7 +85,7 @@ export function ProposalDetailModal({ proposalId, onClose, onRefresh }) {
                                 </div>
                             </div>
 
-                            {(detail.status === 'draft' || detail.status === 'revisi') && (
+                            {!readOnly && (detail.status === 'draft' || detail.status === 'revisi') && (
                                 <aside className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 lg:max-w-sm">
                                     <p className="text-base font-semibold text-navy-950">Aksi proposal</p>
                                     <p className="mt-1 text-sm leading-relaxed text-slate-500">
