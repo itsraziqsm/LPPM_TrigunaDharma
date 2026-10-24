@@ -135,6 +135,24 @@ Data yang **sudah** tersambung ke API yang ada:
 
 Data yang **menunggu API**: tidak ada lagi.
 
+## Manajemen User → Penugasan Review (`frontend/src/pages/UserManagementPage.jsx`)
+
+Menu **Penugasan Review** untuk dosen hanya tampil bila dosen punya peran `reviewer`
+(`canReview` di `frontend/src/utils/roles.js`). Admin/Ketua mengaturnya dari panel detail user
+(bagian "Penugasan Review", hanya untuk user berperan dosen).
+
+Data yang **sudah** tersambung:
+
+| Elemen | Sumber |
+|---|---|
+| Jadikan / cabut peran reviewer (Admin) | `PATCH /users/:id/roles` (peran lain dipertahankan, `reviewer` ditambah/dihapus) |
+
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-30 | Tombol **Jadikan reviewer / Cabut peran reviewer** untuk **Ketua LPPM** | Ketua boleh menambah/menghapus peran `reviewer` pada dosen | Izinkan `ketua_lppm` di `PATCH /users/:id/roles` khusus untuk menambah/menghapus `reviewer`, atau endpoint baru `PATCH /users/:id/reviewer` `{ "isReviewer": true }` (admin, ketua) | Saat ini route roles hanya admin; tombol nonaktif untuk Ketua. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

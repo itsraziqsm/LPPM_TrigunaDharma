@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
-import { X } from 'lucide-react'
+import { ClipboardCheck, X } from 'lucide-react'
+import ApiPending from '../components/ApiPending'
+import { confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
 
 
@@ -255,9 +257,87 @@ function Modal({ title, onClose, children }) {
 }
 
 
+// ─── Akses Penugasan Review (dosen ↔ reviewer) ───────────────────────────────
+// Dosen hanya melihat menu "Penugasan Review" bila punya peran `reviewer`
+// (utils/roles.js → canReview). Admin mengubahnya lewat PATCH /users/:id/roles
+// (peran lain dipertahankan). Ketua LPPM belum punya endpoint (route roles khusus
+// admin) → tombol nonaktif + ApiPending (docs/waitingApi-list.md W-30).
+function ReviewerAccess({ user, roleNames, canEdit, onRoleChange }) {
+  const aktif = roleNames.includes('reviewer')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const name = user.fullName || user.name
+
+  const toggle = async () => {
+    const ok = await confirmDialog(
+      aktif
+        ? {
+            tone: 'danger',
+            icon: ClipboardCheck,
+            title: 'Cabut peran reviewer?',
+            message: `${name} tidak lagi melihat menu Penugasan Review dan tidak muncul di daftar reviewer.`,
+            confirmText: 'Ya, cabut',
+          }
+        : {
+            icon: ClipboardCheck,
+            title: 'Jadikan reviewer?',
+            message: `${name} akan melihat menu Penugasan Review dan bisa ditugaskan menilai proposal/laporan.`,
+            confirmText: 'Ya, jadikan reviewer',
+          },
+    )
+    if (!ok) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await onRoleChange(user.id, aktif ? roleNames.filter((r) => r !== 'reviewer') : [...roleNames, 'reviewer'])
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Gagal mengubah peran reviewer.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Section title="Penugasan Review">
+      <div className="mt-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-slate-900">Dosen sebagai reviewer</p>
+            <p className="text-sm text-slate-500">
+              {aktif ? 'Aktif — menu Penugasan Review tampil untuk dosen ini.' : 'Tidak aktif — menu Penugasan Review disembunyikan.'}
+            </p>
+          </div>
+          <span className={`badge ${aktif ? 'badge-success' : 'badge-neutral'}`}>{aktif ? 'Reviewer' : 'Bukan reviewer'}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggle}
+            disabled={!canEdit || busy}
+            className={`btn btn-sm ${aktif ? 'btn-secondary text-red-700' : 'btn-primary'}`}
+          >
+            <ClipboardCheck className="size-4" aria-hidden="true" />
+            {busy ? 'Menyimpan…' : aktif ? 'Cabut peran reviewer' : 'Jadikan reviewer'}
+          </button>
+          {!canEdit ? (
+            <span className="inline-flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              Ketua LPPM mengubah peran reviewer: <ApiPending />
+            </span>
+          ) : null}
+        </div>
+        {err ? (
+          <p role="alert" className="mt-2 text-sm text-red-700">
+            {err}
+          </p>
+        ) : null}
+      </div>
+    </Section>
+  )
+}
+
 // ─── Detail Panel ────────────────────────────────────────────────────────────
 
-function UserDetail({ user, isAdmin, onClose, onStatusChange, onRoleChange, onDelete }) {
+function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleChange, onDelete }) {
   const roleNames = getRoleNames(user.roles)
   const primaryRole = getPrimaryRole(roleNames)
 
@@ -344,6 +424,10 @@ function UserDetail({ user, isAdmin, onClose, onStatusChange, onRoleChange, onDe
             <InfoRow label="ID User" value={`#${user.id}`} accent />
             <InfoRow label="Tanggal Bergabung" value={formatDate(user.createdAt) || '—'} />
           </Section>
+
+          {(isAdmin || isKetua) && roleNames.includes('dosen') && (
+            <ReviewerAccess user={user} roleNames={roleNames} canEdit={isAdmin} onRoleChange={onRoleChange} />
+          )}
 
           {isAdmin && (
             <Section title="Tindakan Admin">
@@ -516,6 +600,7 @@ export default function UserManagementPage() {
   const { user: me } = useAuthStore()
   const myRoles = getRoleNames(me?.roles)
   const isAdmin = myRoles.includes('admin')
+  const isKetua = myRoles.includes('ketua_lppm')
   // Smooth scroll di area daftar (halaman ini tidak memakai gulir wadah luar).
   const listScrollRef = useRef(null)
   const listContentRef = useRef(null)
@@ -847,6 +932,7 @@ export default function UserManagementPage() {
             <UserDetail
               user={detailUser}
               isAdmin={isAdmin}
+              isKetua={isKetua}
               onClose={closeDetail}
               onStatusChange={handleStatusChange}
               onRoleChange={handleRoleChange}

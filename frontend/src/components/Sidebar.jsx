@@ -7,6 +7,7 @@ import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
 import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
+import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -243,7 +244,7 @@ export default function Sidebar() {
   const isMahasiswa = primaryRole === 'mahasiswa'
   const isDosen = primaryRole === 'dosen'
   const isDosenOrMahasiswa = isDosen || isMahasiswa
-  const isReviewer = roleNames.includes('reviewer') || user?.hasTugasan === true
+  const isReviewer = canReview(user)
 
   useEffect(() => {
     if (!isDosenOrMahasiswa) return

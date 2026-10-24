@@ -224,7 +224,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
-  (`roles[0]`) + `isReviewer` (`roles` berisi reviewer atau `hasTugasan`). `Sidebar.jsx`
+  (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (peran `reviewer`;
+  dosen **wajib** punya peran reviewer — `hasTugasan` saja tidak cukup; peran lain tetap lewat
+  `hasTugasan`). Admin/Ketua mengatur dosen ↔ reviewer di panel detail Manajemen User
+  (`ReviewerAccess`: admin via `PATCH /users/:id/roles`; Ketua = ApiPending W-30). `Sidebar.jsx`
   memakai logika yang sama; ubah keduanya bersamaan.
 - `src/store/authStore.js` (Zustand) — token di `localStorage` (`accessToken`,
   `refreshToken`); `fetchMe()` mengisi `user`.

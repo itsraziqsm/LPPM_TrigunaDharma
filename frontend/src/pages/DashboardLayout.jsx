@@ -20,6 +20,7 @@ import LaporanPage from './LaporanPage'
 import LaporanIsiPage from './LaporanIsiPage'
 import LaporanMasukPage from './LaporanMasukPage'
 import NotifikasiPage from './NotifikasiPage'
+import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -44,8 +45,8 @@ export default function DashboardLayout({ page, jenis }) {
   const isAdminOrKetua = primaryRole === 'admin' || primaryRole === 'ketua_lppm'
   const isMahasiswa = primaryRole === 'mahasiswa'
   const isDosen = primaryRole === 'dosen'
-  // Dosen/mahasiswa yang punya tugasan review juga dianggap reviewer di sisi UI
-  const isReviewer = roleNames.includes('reviewer') || user?.hasTugasan === true
+  // Dosen hanya bila diberi peran reviewer (Admin/Ketua); lihat utils/roles.js
+  const isReviewer = canReview(user)
 
   const location = useLocation()
   const scrollRef = useRef(null)
