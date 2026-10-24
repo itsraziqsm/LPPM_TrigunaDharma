@@ -360,7 +360,7 @@ export default function Sidebar() {
       {/* ── Rail ───────────────────────────────────────────────────────── */}
       <aside
         aria-label="Navigasi"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-navy-100 bg-navy-50 text-navy-950 transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)] transition-[transform,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
       >
         {/* Merek — saat diciutkan, logo menjadi tombol untuk membuka rail */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
@@ -443,17 +443,15 @@ export default function Sidebar() {
                   >
                     {item.icon}
                     {item.badge && pendingCount > 0 && (
-                      <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-navy-50" aria-hidden="true" />
+                      <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-rail-soft" aria-hidden="true" />
                     )}
                   </NavLink>
                 ))}
             </nav>
-            <section aria-label="Akun" className="hidden shrink-0 flex-col items-center bg-rail py-3 text-white lg:flex">
+            <section aria-label="Akun" className="hidden shrink-0 flex-col items-center gap-1 bg-rail py-3 text-white lg:flex">
               <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railProfileClass}>
                 <UserAvatar user={user} className="size-8 text-sm" />
               </NavLink>
-            </section>
-            <section aria-label="Aksi" className="hidden shrink-0 flex-col items-center gap-1 bg-navy-800 py-3 lg:flex">
               <button
                 type="button"
                 onClick={askLogout}
@@ -467,13 +465,28 @@ export default function Sidebar() {
           </>
         ) : null}
 
-        {/* Bagian akun & aksi berlatar gelap; menu di atasnya berlatar terang */}
-        <section aria-label="Akun" className={`shrink-0 bg-rail p-3 text-white ${hideWhenCollapsed}`}>
+        {/* Tombol sembunyikan menu: di bagian terang, tepat di atas profil (desktop) */}
+        <div className={`hidden shrink-0 px-3 pb-3 pt-2 lg:block ${hideWhenCollapsed}`}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={true}
+            title="Sembunyikan menu (Ctrl/⌘ + B)"
+            aria-keyshortcuts="Control+B"
+            className="flex h-10 w-full items-center gap-2.5 rounded-lg bg-white/60 px-3 text-[0.8125rem] font-medium text-slate-600 ring-1 ring-inset ring-navy-200/70 transition-colors hover:bg-white hover:text-navy-950"
+          >
+            <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            <span className="flex-1 truncate text-left">Sembunyikan menu</span>
+          </button>
+        </div>
+
+        {/* Bagian bawah gelap (#0D1C3F): profil + keluar */}
+        <section aria-label="Akun" className={`flex shrink-0 items-center gap-2 bg-rail p-3 text-white ${hideWhenCollapsed}`}>
           <NavLink
             to="/profil"
             onClick={() => setMobileOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
+              `flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
             }
           >
             <UserAvatar user={user} className="size-9 text-sm" />
@@ -486,30 +499,14 @@ export default function Sidebar() {
               </span>
             </span>
           </NavLink>
-        </section>
-
-        {/* Bagian aksi (biru lebih cerah): sembunyikan menu + keluar */}
-        <section aria-label="Aksi" className={`flex shrink-0 gap-2 bg-navy-800 px-3 py-3 ${hideWhenCollapsed}`}>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-expanded={true}
-            title="Sembunyikan menu (Ctrl/⌘ + B)"
-            aria-keyshortcuts="Control+B"
-            className="hidden h-10 min-w-0 flex-1 items-center gap-2.5 rounded-lg bg-white/[0.06] px-3 text-[0.8125rem] font-medium text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.12] hover:text-white lg:flex"
-          >
-            <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="flex-1 truncate text-left">Sembunyikan menu</span>
-          </button>
-
           <button
             type="button"
             onClick={askLogout}
+            aria-label="Keluar dari Sistem"
             title="Keluar dari Sistem"
-            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-white/[0.06] px-3 text-[0.8125rem] font-medium text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-red-600 hover:text-white hover:ring-red-500 lg:flex-none"
+            className="grid size-10 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-red-600 hover:text-white hover:ring-red-500"
           >
-            <LogOut className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="lg:sr-only">Keluar dari Sistem</span>
+            <LogOut className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
           </button>
         </section>
       </aside>

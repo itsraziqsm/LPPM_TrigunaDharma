@@ -265,13 +265,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
   menu"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
-  dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Kaki sidebar terdiri
-  dari bagian **akun** (kartu profil, latar `bg-rail` gelap) dan bagian **aksi** (latar
-  `bg-navy-800`); area merek + menu di atasnya berlatar terang `bg-navy-50` (teks gelap, item
-  aktif kartu putih + garis brass). Lonceng memakai warna gelap di `lg:` (di atas latar terang)
-  dan putih di bilah atas ponsel. Aksi:
-  tombol Sembunyikan menu + Keluar (merah saat hover). Keluar selalu lewat `LogoutDialog`
-  (konfirmasi, portal ke body). Status disimpan di
+  dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Sidebar dua bagian:
+  **atas** terang `bg-rail-soft` (#E5EDFF: merek, menu, lalu tombol "Sembunyikan menu" tepat di
+  atas profil; item aktif kartu putih + garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F:
+  kartu profil + tombol Keluar ikon, merah saat hover). Sisi kanan sidebar diberi bayangan
+  pemisah dari konten. Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel.
+  Keluar selalu lewat `LogoutDialog` (konfirmasi, portal ke body). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
   kanan Foto Profil (unggah/hapus), Informasi Profil (+ jabatan fungsional, SINTA, dropdown

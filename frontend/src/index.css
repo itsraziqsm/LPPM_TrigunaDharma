@@ -78,6 +78,7 @@
   /* Permukaan khusus */
   --color-canvas: #f4f6fa;
   --color-rail: #0d1c3f;
+  --color-rail-soft: #e5edff; /* bagian menu sidebar (atas) */
 
   /* ── Pemetaan ulang palet bawaan Tailwind ───────────────────────────── */
   --color-black: #0b1733;
