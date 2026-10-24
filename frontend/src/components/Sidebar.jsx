@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
-import { BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, House, LogOut, Menu, Users, X } from 'lucide-react'
+import { BookOpen, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, House, LogOut, Menu, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -136,13 +136,37 @@ function NavGroup({ item, onNavigate }) {
   )
 }
 
+// ── Sidebar yang bisa diciutkan (desktop) ──────────────────────────────────
+// Ctrl/⌘ + B atau tombol "Sembunyikan navigasi". Saat diciutkan hanya logo
+// yang tampil; klik logo untuk membuka lagi. Pilihan diingat per peramban.
+const COLLAPSE_KEY = 'sidebarCollapsed'
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeCollapsed(value) {
+  try {
+    localStorage.setItem(COLLAPSE_KEY, value ? '1' : '0')
+  } catch {
+    /* penyimpanan tidak tersedia: abaikan */
+  }
+}
+
+const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
+
 // Dipanggil dari UndanganPage setelah user respond, agar badge langsung update
 export function refreshInvitationBadge() {
   window.dispatchEvent(new CustomEvent('invitation-badge-refresh'))
 }
 
 // ─── Rail navigasi ───────────────────────────────────────────────────────────
-// Desktop : rail navy tetap di kiri (lebar 16rem).
+// Desktop : rail navy tetap di kiri (lebar 16rem), bisa diciutkan menjadi
+//           strip logo (4.5rem) lewat Ctrl/⌘ + B atau tombol.
 // Mobile  : bilah atas + drawer yang digeser dari kiri.
 // Lonceng notifikasi hanya dirender SEKALI (posisi fixed) agar tidak ada
 // request ganda: di bilah atas pada mobile, di header rail pada desktop.
@@ -154,6 +178,35 @@ export default function Sidebar() {
   const logout = useAuthStore((s) => s.logout)
   const [pendingCount, setPendingCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+
+  const toggleCollapsed = () =>
+    setCollapsed((value) => {
+      writeCollapsed(!value)
+      return !value
+    })
+
+  // Pintasan Ctrl/⌘ + B: ciutkan/buka rail di desktop, buka/tutup laci di ponsel.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'b') return
+      e.preventDefault()
+      if (e.repeat) return
+      if (isDesktop()) {
+        setCollapsed((value) => {
+          writeCollapsed(!value)
+          return !value
+        })
+      } else {
+        setMobileOpen((value) => !value)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // Kelas untuk bagian yang disembunyikan saat rail diciutkan (desktop saja).
+  const hideWhenCollapsed = collapsed ? 'lg:hidden' : ''
 
   const roleNames = getRoleNames(user?.roles)
   const primaryRole = roleNames[0] || 'user'
@@ -210,7 +263,7 @@ export default function Sidebar() {
       </div>
 
       {/* ── Lonceng notifikasi (satu instance) ─────────────────────────── */}
-      <div className="fixed right-2 top-2 z-40 lg:left-[12.5rem] lg:right-auto lg:top-[1.0625rem]">
+      <div className={`fixed right-2 top-2 z-40 lg:left-[12.5rem] lg:right-auto lg:top-[1.0625rem] ${hideWhenCollapsed}`}>
         <NotificationBell />
       </div>
 
@@ -225,14 +278,27 @@ export default function Sidebar() {
 
       {/* ── Rail ───────────────────────────────────────────────────────── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        aria-label="Navigasi"
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail text-white transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
       >
-        {/* Merek */}
-        <header className="flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14">
-          <div className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/10">
+        {/* Merek — saat diciutkan, logo menjadi tombol untuk membuka rail */}
+        <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label="Tampilkan navigasi (Ctrl+B)"
+              aria-expanded={false}
+              title="Tampilkan navigasi (Ctrl+B)"
+              className="hidden size-9 shrink-0 place-items-center rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.14] lg:grid"
+            >
+              <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          ) : null}
+          <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/10 ${hideWhenCollapsed}`}>
             <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
           </div>
-          <div className="min-w-0">
+          <div className={`min-w-0 ${hideWhenCollapsed}`}>
             <p className="font-serif text-xl font-medium leading-none tracking-wide text-white">LPPM</p>
             <p className="mt-1.5 truncate text-[0.6875rem] leading-none text-white/50">Pengelolaan Proposal</p>
           </div>
@@ -249,7 +315,7 @@ export default function Sidebar() {
         </button>
 
         {/* Navigasi utama */}
-        <nav aria-label="Navigasi utama" className="min-h-0 flex-1 overflow-y-auto px-3 pt-2">
+        <nav aria-label="Navigasi utama" className={`min-h-0 flex-1 overflow-y-auto px-3 pt-2 ${hideWhenCollapsed}`}>
           <div className="flex flex-col gap-0.5">
             {allNavItems.map((item) => item.children ? (
               <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} />
@@ -279,7 +345,21 @@ export default function Sidebar() {
         </nav>
 
         {/* Akun & keluar */}
-        <section className="shrink-0 border-t border-white/10 p-3">
+        {/* Strip kosong saat diciutkan agar logo tetap di atas */}
+        {collapsed ? <div className="hidden flex-1 lg:block" /> : null}
+
+        <section className={`shrink-0 border-t border-white/10 p-3 ${hideWhenCollapsed}`}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-expanded={true}
+            className="mb-1 hidden h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white lg:flex"
+          >
+            <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            <span className="flex-1 text-left">Sembunyikan navigasi</span>
+            <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[0.6875rem] text-white/45">Ctrl B</kbd>
+          </button>
+
           <NavLink
             to="/profil"
             onClick={() => setMobileOpen(false)}
