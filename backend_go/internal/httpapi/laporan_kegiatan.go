@@ -25,7 +25,7 @@ import (
 // sama, dengan proposalId = id laporan (id unik global dari `Kegiatan`).
 
 var (
-	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
+	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
 		"catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 
 	laporanListQuerySchema = zObj(
@@ -415,12 +415,12 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 		return httpError(http.StatusConflict, "Proposal ini sudah memiliki laporan")
 	}
 
-	// Data proposal disalin sebagai isi awal laporan.
+	// Data proposal disalin sebagai isi awal laporan (termasuk skema/mitra).
 	var abstrak string
-	var anggaran, luaran sql.NullString
+	var anggaran, luaran, skema, mitra sql.NullString
 	var periodeID sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
-		Scan(&abstrak, &anggaran, &luaran, &periodeID); err != nil {
+	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`skema`,`mitra`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
+		Scan(&abstrak, &anggaran, &luaran, &skema, &mitra, &periodeID); err != nil {
 		return err
 	}
 	var periode any
@@ -437,6 +437,12 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 		"pengusulId", "periodeId", "dokumenUrl", "createdAt", "updatedAt"}
 	insertArgs := []any{proposalID, values["judul"], values["abstrak"], "draft", nullableString(anggaran), nullableString(luaran),
 		values["luaranTercapai"], values["ringkasanHasil"], values["realisasiAnggaran"], p.PengusulID, periode, values["dokumenUrl"], now, now}
+	// skema/mitra hanya ada di tabel jenisnya masing-masing.
+	if p.Jenis == "penelitian" {
+		insertCols, insertArgs = append(insertCols, "skema"), append(insertArgs, nullableString(skema))
+	} else {
+		insertCols, insertArgs = append(insertCols, "mitra"), append(insertArgs, nullableString(mitra))
+	}
 	var id int64
 	err = s.withTx(ctx, func(tx *sql.Tx) error {
 		var err error

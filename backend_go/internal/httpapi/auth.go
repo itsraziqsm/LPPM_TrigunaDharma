@@ -410,6 +410,8 @@ func (s *Server) resetPassword(c *Ctx) error {
 	return c.ok("Password reset successfully", noData)
 }
 
+const meProfileColumns = "`nidn`,`nim`,`prodi`,`programStudi`,`institusi`,`kontak`,`noHp`,`alamat`,`tempatLahir`,`tanggalLahir`,`jabatanFungsional`"
+
 func (s *Server) me(c *Ctx) error {
 	ctx := c.r.Context()
 	user, err := s.findUserWithRoles(ctx, "`id` = ?", c.user.UserID)
@@ -427,10 +429,17 @@ func (s *Server) me(c *Ctx) error {
 	if user.FullName.Valid {
 		fullName = user.FullName.String
 	}
-	return c.ok("Current user", O{
+	data := O{
 		{"id", user.ID}, {"name", user.Name}, {"fullName", fullName}, {"email", user.Email},
 		{"status", user.Status}, {"roles", user.Roles}, {"hasTugasan", count > 0},
-	})
+	}
+	// W-08 (Go saja): field profil ikut dikirim agar frontend bisa langsung menampilkannya.
+	profile, err := queryObj(ctx, s.db, "SELECT "+meProfileColumns+" FROM `User` WHERE `id` = ?", c.user.UserID)
+	if err != nil {
+		return err
+	}
+	data = append(data, profile...)
+	return c.ok("Current user", data)
 }
 
 func (s *Server) sendPasswordResetEmail(to, name, token string) error {

@@ -25,6 +25,8 @@ var (
 		required("jenis", zEnumOf(jenisKegiatan...)),
 		optional("anggaran", zNum().Positive()),
 		optional("luaran", zStr()),
+		optional("skema", zStr()),
+		optional("mitra", zStr()),
 		optional("periodeId", zNum().Int().Positive()),
 		optional("dokumenUrl", zStr().URL("URL dokumen tidak valid")),
 		optional("anggotaIds", &zArray{elem: anggotaProposalSchem}),
@@ -120,6 +122,7 @@ type proposalFilters struct {
 	status       string
 	periodeID    float64
 	pengusulID   int64
+	anggotaID    int64 // anggota dengan undangan diterima (GET /dosen/proposals/as-member)
 	programStudi string
 	tahun        float64
 	search       string
@@ -147,6 +150,10 @@ func buildProposalWhere(f proposalFilters) (string, []any, error) {
 	if f.pengusulID != 0 {
 		clauses = append(clauses, "p.`pengusulId` = ?")
 		args = append(args, f.pengusulID)
+	}
+	if f.anggotaID != 0 {
+		clauses = append(clauses, "p.`pengusulId` <> ? AND p.`id` IN (SELECT `proposalId` FROM `ProposalAnggota` WHERE `userId` = ? AND `statusUndangan` = 'diterima')")
+		args = append(args, f.anggotaID, f.anggotaID)
 	}
 	if f.programStudi != "" {
 		clauses = append(clauses, "p.`pengusulId` IN (SELECT `id` FROM `User` WHERE `programStudi` = ?)")
@@ -295,6 +302,9 @@ func (s *Server) insertProposal(ctx context.Context, body map[string]any, pengus
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
 			return err
 		}
+		if err := checkJenisFields(body, jenis); err != nil {
+			return err
+		}
 		var err error
 		id, err = s.insertKegiatan(ctx, tx, jenis, tipeProposal, cols, args)
 		if err != nil {
@@ -319,15 +329,20 @@ func (s *Server) applyProposalUpdate(ctx context.Context, id int64, body map[str
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
 			return err
 		}
-		if jenis, ok := getString(body, "jenis"); ok {
-			k, err := s.kegiatanByID(ctx, tx, id)
-			if err != nil {
+		k, err := s.kegiatanByID(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if k != nil {
+			jenis, ok := getString(body, "jenis")
+			if !ok {
+				jenis = k.Jenis
+			}
+			if err := checkJenisFields(body, jenis); err != nil {
 				return err
 			}
-			if k != nil {
-				if err := s.moveKegiatanJenis(ctx, tx, k, jenis); err != nil {
-					return err
-				}
+			if err := s.moveKegiatanJenis(ctx, tx, k, jenis); err != nil {
+				return err
 			}
 		}
 		if err := s.updateKegiatan(ctx, tx, id, strings.Join(sets, ", "), args...); err != nil {

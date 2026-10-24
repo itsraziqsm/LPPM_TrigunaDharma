@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, field `tipe`/`luaran`) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A waiting API) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -31,7 +31,8 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    `dokumenBlob` sebagai objek `{"0":37,...}`), termasuk keanehan Node (mis. error bisnis
    `throw new Error()` → **HTTP 500** lewat `plainError`). Komentar `// Node: ...` di tiap
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
-   Pengecualian yang disengaja: respons proposal kini punya field `tipe` dan `luaran`.
+   Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
+   `mitra`; `/auth/me` ikut mengirim field profil; `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
    (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
 2. **Backend Go satu-satunya backend.** Sejak migrasi
@@ -51,7 +52,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 301 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 335 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -91,14 +92,15 @@ dan diperlakukan sebagai reviewer di UI.
 ### Endpoint (`/api/v1`, semua butuh Bearer token kecuali auth publik & `/health`)
 | Grup | Endpoint utama | Akses |
 |---|---|---|
-| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me | publik / login |
-| `/users` | search, profile/me (PATCH, field profil saja), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/roles/delete admin |
+| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil & `jabatanFungsional`) | publik / login |
+| `/users` | search, profile/me (GET; PATCH field profil saja + `jabatanFungsional`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/roles/delete admin |
 | `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
-| `/dosen/proposals` | stats, members/search, invitations (+ PATCH respon), CRUD + submit | dosen, mahasiswa |
+| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ PATCH respon), CRUD + submit | dosen, mahasiswa |
+| `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
 | `/reviewer/my-tugasan` | tugasan review **proposal** milik user | reviewer, dosen, mahasiswa |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
@@ -113,6 +115,8 @@ dan diperlakukan sebagai reviewer di UI.
   - Submit lewat `/dosen/proposals/:id/submit` mewajibkan **semua anggota sudah menerima
     undangan** (`ProposalAnggota.statusUndangan`: `pending|diterima|ditolak`).
   - Menugaskan reviewer hanya untuk status `diajukan`/`review`, dan otomatis set `review`.
+  - `skema` hanya untuk penelitian, `mitra` hanya untuk pengabdian (400 jika salah jenis);
+    pindah jenis menghapus nilai milik jenis lama.
   - Ketua/admin mengubah status (`review|revisi|disetujui|ditolak`, opsional `catatanRevisi`);
     `disetujui` mengisi `approvedAt`; pengusul mendapat notifikasi.
 - Review: nilai (`nilaiRelevansi/Metodologi/Anggaran/Luaran`) bertipe **TEXT**,
@@ -140,11 +144,13 @@ dan diperlakukan sebagai reviewer di UI.
 - Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`).
 
 ### Database (MySQL/MariaDB)
-Tabel: `Role`, `User`, `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
+Tabel: `Role`, `User` (+ `jabatanFungsional`), `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
 (`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
 `Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
 ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
-`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`), `ProposalAnggota`,
+`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`; plus `skema` hanya di Penelitian dan
+`mitra` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
+`User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
 `Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `_prisma_migrations`.
 VIEW (baca saja): `Proposal`, `Laporan`. Kolom `proposalId` di tabel relasi ber-FK ke
@@ -155,7 +161,9 @@ jangan ubah migrasi yang sudah diterapkan (checksum dicatat).
 ### Perbedaan sengaja dengan Node (lihat README)
 `PATCH /users/profile/me` hanya menerima field profil; download dokumen laporan harian
 mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
-(Penelitian/Pengabdian) + field `tipe`/`luaran` di proposal; endpoint `/laporan` baru.
+(Penelitian/Pengabdian) + field `tipe`/`luaran`/`skema`/`mitra` di proposal; endpoint
+`/laporan`, `/program-studi`, `/users/profile/me` (GET), `/dosen/proposals/as-member` baru;
+`/auth/me` + field profil; stats + `review` & `?jenis=`.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,

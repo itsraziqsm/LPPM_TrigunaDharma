@@ -25,7 +25,7 @@ type proposalShape struct {
 var (
 	// proposal.service.ts → proposalSelect
 	proposalListShape = proposalShape{
-		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols: []string{"id", "name", "fullName", "email", "programStudi", "nidn"},
 		periodeCols:  []string{"id", "nama", "tahun"},
 		tugasanRevID: true,
@@ -40,7 +40,7 @@ var (
 	}
 	// Proposaldosen.service.ts → proposalDosenSelect
 	proposalDosenShape = proposalShape{
-		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols:  []string{"id", "name", "fullName", "email", "nidn", "programStudi"},
 		periodeCols:   []string{"id", "nama", "tahun", "jenis"},
 		anggotaStatus: true,
@@ -277,7 +277,7 @@ func proposalWriteFields(body map[string]any) ([]string, []any) {
 	cols := []string{}
 	args := []any{}
 	// jenis bukan kolom fisik: menentukan tabel Penelitian/Pengabdian.
-	for _, field := range []string{"judul", "abstrak", "anggaran", "luaran", "periodeId", "dokumenUrl"} {
+	for _, field := range []string{"judul", "abstrak", "anggaran", "luaran", "skema", "mitra", "periodeId", "dokumenUrl"} {
 		v, ok := body[field]
 		if !ok {
 			continue
@@ -289,6 +289,18 @@ func proposalWriteFields(body map[string]any) ([]string, []any) {
 		args = append(args, v)
 	}
 	return cols, args
+}
+
+// checkJenisFields: `skema` hanya ada di tabel Penelitian (W-14) dan `mitra`
+// hanya di tabel Pengabdian (W-15).
+func checkJenisFields(body map[string]any, jenis string) error {
+	if _, ok := body["skema"]; ok && jenis != "penelitian" {
+		return httpError(http.StatusBadRequest, "Skema hanya untuk proposal penelitian")
+	}
+	if _, ok := body["mitra"]; ok && jenis != "pengabdian" {
+		return httpError(http.StatusBadRequest, "Mitra hanya untuk proposal pengabdian")
+	}
+	return nil
 }
 
 func (s *Server) ensurePeriodeFK(ctx context.Context, q dbtx, body map[string]any) error {

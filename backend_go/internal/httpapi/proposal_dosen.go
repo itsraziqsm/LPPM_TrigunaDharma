@@ -24,6 +24,7 @@ var (
 func (s *Server) registerProposalDosenRoutes() {
 	g := s.group("/api/v1/dosen/proposals", s.authenticate, authorize("dosen", "mahasiswa"))
 	g.get("/stats", s.dosenStats)
+	g.get("/as-member", s.dosenProposalsAsMember) // baru (W-16), tidak ada di Node
 	g.get("/members/search", s.dosenSearchMembers)
 	g.get("/invitations", s.dosenInvitations)
 	g.patch("/invitations/:id", s.dosenRespondInvitation)
@@ -52,21 +53,58 @@ func (s *Server) dosenProposals(c *Ctx) error {
 	return s.findProposals(c, proposalDosenShape, f, "Proposals fetched")
 }
 
+// dosenProposalsAsMember (W-16) lists proposals of other users in which the
+// current user is an anggota with an accepted invitation. Same query params
+// and item shape as GET /dosen/proposals.
+func (s *Server) dosenProposalsAsMember(c *Ctx) error {
+	out, issues := safeParse(dosenListQuerySchema, queryAsAny(c.query))
+	if issues != nil {
+		c.s.validationFailed(c.w, c.r, fieldErrors(issues))
+		return errStop
+	}
+	f := proposalFilters{
+		page:      out["page"].(float64),
+		limit:     out["limit"].(float64),
+		anggotaID: c.user.UserID,
+	}
+	f.jenis, _ = out["jenis"].(string)
+	f.status, _ = out["status"].(string)
+	search, _ := out["search"].(string)
+	f.search = strings.TrimSpace(search)
+	return s.findProposals(c, proposalDosenShape, f, "Proposals as member fetched")
+}
+
+var dosenStatsQuerySchema = zObj(
+	zField{name: "jenis", schema: zEnumOf(jenisKegiatan...), optional: true, emptyIsUndef: true},
+)
+
+// dosenStats mirrors the Node stats (total + 5 statuses). Go additions:
+// key `review` (W-11) and the optional ?jenis= filter (W-17, 422 if invalid).
 func (s *Server) dosenStats(c *Ctx) error {
-	ctx := c.r.Context()
-	uid := c.user.UserID
-	counts := O{}
-	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `Proposal` WHERE `pengusulId` = ?", uid)
+	out, issues := safeParse(dosenStatsQuerySchema, queryAsAny(c.query))
+	if issues != nil {
+		c.s.validationFailed(c.w, c.r, fieldErrors(issues))
+		return errStop
+	}
+	where := "`pengusulId` = ?"
+	args := []any{c.user.UserID}
+	if jenis, ok := out["jenis"].(string); ok {
+		where += " AND `jenis` = ?"
+		args = append(args, jenis)
+	}
+	rows, err := queryObjs(c.r.Context(), s.db, "SELECT `status`, COUNT(*) AS `n` FROM `Proposal` WHERE "+where+" GROUP BY `status`", args...)
 	if err != nil {
 		return err
 	}
-	counts = append(counts, KV{"total", total})
-	for _, status := range []string{"draft", "diajukan", "disetujui", "revisi", "ditolak"} {
-		n, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `Proposal` WHERE `pengusulId` = ? AND `status` = ?", uid, status)
-		if err != nil {
-			return err
-		}
-		counts = append(counts, KV{status, n})
+	byStatus := map[string]int64{}
+	var total int64
+	for _, row := range rows {
+		byStatus[row.Str("status")] = row.Int64("n")
+		total += row.Int64("n")
+	}
+	counts := O{{"total", total}}
+	for _, status := range []string{"draft", "diajukan", "disetujui", "revisi", "ditolak", "review"} {
+		counts = append(counts, KV{status, byStatus[status]})
 	}
 	return c.ok("Stats fetched", counts)
 }

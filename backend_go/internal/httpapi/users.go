@@ -17,6 +17,8 @@ var (
 	roleNames   = []string{"admin", "ketua_lppm", "dosen", "reviewer", "mahasiswa"}
 	userStatus  = []string{"pending", "approved", "rejected"}
 	userColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`createdAt`"
+	// profileColumns: profil milik sendiri (GET/PATCH /users/profile/me), = userColumns + jabatanFungsional.
+	profileColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`jabatanFungsional`,u.`createdAt`"
 
 	paginationSchema = zObj(
 		withDefault("page", zNum().Coerce().Int().Min(1), float64(1)),
@@ -32,6 +34,7 @@ var (
 func (s *Server) registerUserRoutes() {
 	g := s.group("/api/v1/users", s.authenticate)
 	g.get("/search", s.searchUsers)
+	g.get("/profile/me", s.getProfile) // baru (W-08), tidak ada di Node
 	g.patch("/profile/me", s.updateProfile)
 	g.patch("/profile/password", s.changePassword)
 	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
@@ -89,6 +92,29 @@ func (s *Server) selectUsers(ctx context.Context, q dbtx, tail string, args ...a
 		return nil, err
 	}
 	return users, nil
+}
+
+// profileByID returns the user's own profile (profileColumns + roles).
+func (s *Server) profileByID(ctx context.Context, id int64) (O, error) {
+	users, err := queryObjs(ctx, s.db, "SELECT "+profileColumns+" FROM `User` u WHERE u.`id` = ?", id)
+	if err != nil || len(users) == 0 {
+		return nil, err
+	}
+	if err := attachUserRoles(ctx, s.db, users, "id"); err != nil {
+		return nil, err
+	}
+	return users[0], nil
+}
+
+func (s *Server) getProfile(c *Ctx) error {
+	user, err := s.profileByID(c.r.Context(), c.user.UserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return httpError(http.StatusNotFound, "User not found")
+	}
+	return c.ok("Profile fetched", user)
 }
 
 func (s *Server) userByID(ctx context.Context, q dbtx, id int64) (O, error) {
@@ -240,7 +266,7 @@ func (s *Server) assignRoles(c *Ctx) error {
 // The Node service passes req.body straight to prisma.user.update(); only
 // the profile fields of the User model are accepted here (password, status,
 // email... are ignored instead of being written blindly).
-var profileFields = []string{"name", "fullName", "alamat", "kontak", "noHp", "institusi", "programStudi", "prodi", "tempatLahir", "tanggalLahir", "nidn", "nim"}
+var profileFields = []string{"name", "fullName", "alamat", "kontak", "noHp", "institusi", "programStudi", "prodi", "tempatLahir", "tanggalLahir", "nidn", "nim", "jabatanFungsional"}
 
 func (s *Server) updateProfile(c *Ctx) error {
 	id := c.user.UserID
@@ -290,7 +316,7 @@ func (s *Server) updateProfile(c *Ctx) error {
 	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
 		return err
 	}
-	user, err := s.userByID(ctx, s.db, id)
+	user, err := s.profileByID(ctx, id)
 	if err != nil {
 		return err
 	}

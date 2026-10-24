@@ -83,7 +83,8 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   reviewer.go, laporan.go (laporan + dokumen lampiran), laporan_harian.go,
   misc.go (notifikasi, dashboard, activity log, export),
   kegiatan.go (helper tulis ke tabel Penelitian/Pengabdian via registri Kegiatan),
-  laporan_kegiatan.go (fitur laporan baru, /api/v1/laporan)
+  laporan_kegiatan.go (fitur laporan baru, /api/v1/laporan),
+  program_studi.go (master program studi, /api/v1/program-studi)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -91,7 +92,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 301 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 335 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -114,7 +115,13 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
    Respons proposal mendapat field `tipe` (selalu `"proposal"`) dan `luaran`;
    create/update proposal menerima `luaran` opsional. `GET /reviewer/my-tugasan` hanya
    memuat tugasan proposal (tugasan laporan ada di `GET /laporan/tugasan`).
-5. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+5. Tambahan Grup A waiting API (lihat `new-api.md` bagian 10): `GET /auth/me` ikut
+   mengirim field profil + `jabatanFungsional`; `GET /users/profile/me` baru;
+   `PATCH /users/profile/me` menerima `jabatanFungsional`; `GET /dosen/proposals/stats`
+   punya key `review` dan filter `?jenis=`; `GET /dosen/proposals/as-member` baru; field
+   `skema` (penelitian) dan `mitra` (pengabdian) di proposal; `/api/v1/program-studi`
+   baru (GET publik).
+6. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

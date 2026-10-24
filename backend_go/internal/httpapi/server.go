@@ -83,6 +83,7 @@ func (s *Server) registerRoutes() {
 	s.registerLaporanHarianRoutes()
 	s.registerReviewerRoutes()
 	s.registerLaporanKegiatanRoutes() // baru, tidak ada di Node
+	s.registerProgramStudiRoutes()    // baru, tidak ada di Node
 	s.registerNotificationRoutes()
 	s.registerDashboardRoutes()
 	s.registerActivityLogRoutes()

@@ -1,12 +1,18 @@
-# API Baru — Laporan & Pemecahan Tabel Proposal
+# API Baru (backend Go)
 
 Dokumen ini untuk **developer frontend**. Isinya perubahan backend yang terlihat dari sisi
-API: field baru di endpoint proposal lama, dan endpoint baru `/api/v1/laporan`.
+API, dikelompokkan per rilis:
+
+- **Bagian 1–9** — pemecahan tabel Proposal + fitur **laporan** (`/api/v1/laporan`).
+- **Bagian 10** — Grup A dari `docs/waitingApi-list.md`: profil sendiri (W-08), jabatan
+  fungsional (W-09), statistik dosen (W-11, W-17), proposal sebagai anggota (W-16), skema
+  penelitian (W-14), mitra pengabdian (W-15), master program studi (W-19).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
 - Format respons sama seperti endpoint lain: `{ success, message, data[, meta] }`
-- Migrasi DB: `migrations/20261024000000_split_proposal_penelitian_pengabdian`
+- Migrasi DB: `migrations/20261024000000_split_proposal_penelitian_pengabdian`,
+  `migrations/20261025000000_profil_skema_mitra_program_studi`
 
 ---
 
@@ -43,6 +49,8 @@ Berlaku untuk semua respons proposal (`/proposals`, `/proposals/my`, `/proposals
   "status": "disetujui",
   "anggaran": "15000000.5",
   "luaran": "1 artikel jurnal SINTA 3", // BARU — target luaran, boleh null
+  "skema": "Penelitian Dosen Pemula",   // BARU (bagian 10) — hanya penelitian, pengabdian selalu null
+  "mitra": null,                        // BARU (bagian 10) — hanya pengabdian, penelitian selalu null
   "catatanRevisi": null,
   // ... field lain tetap sama
 }
@@ -135,6 +143,8 @@ Dikembalikan oleh list, create, update, submit, status, dan assign reviewer:
   "status": "disetujui",
   "anggaran": "15000000.5",
   "luaran": null,
+  "skema": null,
+  "mitra": null,
   "luaranTercapai": "1 artikel jurnal SINTA 3",
   "ringkasanHasil": "Ringkas",
   "realisasiAnggaran": "14000000",
@@ -165,7 +175,7 @@ Dikembalikan oleh list, create, update, submit, status, dan assign reviewer:
 |---|---|
 | `id` | Id laporan. **Unik bersama id proposal**, jadi id laporan tidak pernah sama dengan id proposal mana pun. |
 | `proposalId` | Id proposal asal. |
-| `judul`, `abstrak`, `anggaran`, `luaran`, `periode`, `jenis` | Disalin dari proposal saat laporan dibuat. `judul`/`abstrak` bisa diubah. |
+| `judul`, `abstrak`, `anggaran`, `luaran`, `skema`/`mitra`, `periode`, `jenis` | Disalin dari proposal saat laporan dibuat. `judul`/`abstrak` bisa diubah. |
 | `luaranTercapai` | Luaran yang benar-benar dicapai. **Wajib diisi sebelum submit.** |
 | `ringkasanHasil` | Ringkasan hasil kegiatan (opsional). |
 | `realisasiAnggaran` | Realisasi anggaran. String desimal seperti `anggaran` (contoh `"14000000"`), boleh null. |
@@ -509,3 +519,193 @@ export const laporanApi = {
   `DokumenLampiran`, `LaporanHarian`, `ActivityLog`) tetap memakai `proposalId`, kini ber-FK ke
   `Kegiatan.id`.
 - Data proposal lama dipindah apa adanya (id sama) dengan `tipe = 'proposal'`.
+
+---
+
+## 10. Grup A waiting API
+
+Semua endpoint di bagian ini butuh Bearer token, **kecuali** `GET /program-studi` (publik).
+Validasi query/body yang salah → 422 `{"success":false,"message":"Validation error","errors":{...}}`.
+
+| ID | Elemen UI | API |
+|---|---|---|
+| W-08 | Field profil (NIDN, NIM, prodi, institusi, kontak, no. HP, alamat, TTL) | **`GET /auth/me`** kini ikut mengirim field profil. Ada juga `GET /users/profile/me` |
+| W-09 | Jabatan fungsional | Field `jabatanFungsional` di `/auth/me` & profil; diubah lewat `PATCH /users/profile/me` |
+| W-11 | Jumlah status `review` | Key `review` di `GET /dosen/proposals/stats` |
+| W-17 | Statistik per jenis | `GET /dosen/proposals/stats?jenis=penelitian\|pengabdian` |
+| W-16 | Kegiatan sebagai anggota tim | `GET /dosen/proposals/as-member` |
+| W-14 | Skema penelitian | Field `skema` di proposal (khusus penelitian) |
+| W-15 | Mitra pengabdian | Field `mitra` di proposal (khusus pengabdian) |
+| W-19 | Dropdown program studi | `GET /program-studi` (+ CRUD admin) |
+
+### 10.1 Profil milik sendiri (W-08, W-09)
+
+**`GET /auth/me`**: field lama tetap di tempatnya. Field profil ditambahkan **setelah**
+`hasTugasan`, jadi `authStore.user` langsung berisi data profil tanpa perlu memanggil
+endpoint lain.
+
+```json
+{
+  "success": true,
+  "message": "Current user",
+  "data": {
+    "id": 9, "name": "Dr. Dosen 1, M.T", "fullName": "Dr. Dosen 1, M.T", "email": "dosen1@lppm.dev",
+    "status": "approved", "roles": ["dosen", "reviewer"], "hasTugasan": false,
+    "nidn": "0100000001", "nim": null, "prodi": null, "programStudi": "Teknik Informatika",
+    "institusi": "Universitas LPPM", "kontak": "081200000001", "noHp": null,
+    "alamat": "Jl. Akademik No. 3, Medan", "tempatLahir": null, "tanggalLahir": null,
+    "jabatanFungsional": "Lektor"
+  }
+}
+```
+
+> Respons **login** (`POST /auth/login` → `data.user`) tidak berubah. Field profil baru ada
+> setelah `fetchMe()`.
+
+**`GET /users/profile/me`** (login, semua role): bentuknya sama dengan respons
+`PATCH /users/profile/me`. Pakai ini kalau butuh `createdAt`/`roles` gaya Prisma.
+
+```json
+{
+  "success": true,
+  "message": "Profile fetched",
+  "data": {
+    "id": 9, "email": "dosen1@lppm.dev", "name": "Dr. Dosen 1, M.T", "fullName": "Dr. Dosen 1, M.T",
+    "status": "approved", "nidn": "0100000001", "nim": null, "prodi": null, "programStudi": "Teknik Informatika",
+    "institusi": "Universitas LPPM", "kontak": "081200000001", "noHp": null, "alamat": "Jl. Akademik No. 3, Medan",
+    "tempatLahir": null, "tanggalLahir": null, "jabatanFungsional": "Lektor",
+    "createdAt": "2026-10-24T14:33:43.234Z",
+    "roles": [{ "role": { "name": "dosen" } }, { "role": { "name": "reviewer" } }]
+  }
+}
+```
+
+**`PATCH /users/profile/me`** sekarang juga menerima `jabatanFungsional` (string, mis.
+`"Asisten Ahli"`, `"Lektor"`, `"Lektor Kepala"`, `"Guru Besar"`; teks bebas). Responsnya
+mendapat key `jabatanFungsional` (sebelum `createdAt`).
+
+`tanggalLahir` dikirim sebagai string ISO (`"1990-05-17T00:00:00.000Z"`) atau `null`.
+
+### 10.2 Statistik proposal dosen (W-11, W-17)
+
+**`GET /dosen/proposals/stats[?jenis=penelitian|pengabdian]`** (dosen, mahasiswa)
+
+```json
+{ "success": true, "message": "Stats fetched",
+  "data": { "total": 11, "draft": 0, "diajukan": 0, "disetujui": 11, "revisi": 0, "ditolak": 0, "review": 0 } }
+```
+
+- Key **`review`** baru, ditaruh di akhir. Sekarang `total` = jumlah semua key status, jadi
+  frontend tidak perlu lagi menghitung selisih.
+- `jenis` opsional. Tanpa `jenis`, semua proposal dihitung. Nilai lain → 422.
+- Yang dihitung hanya proposal milik user (sebagai pengusul), bukan laporan.
+- Satu panggilan ini bisa menggantikan 6 panggilan `GET /dosen/proposals?jenis=…&status=…&limit=1`
+  di halaman Kegiatan.
+
+### 10.3 Proposal sebagai anggota tim (W-16)
+
+**`GET /dosen/proposals/as-member`** (dosen, mahasiswa)
+
+Daftar proposal milik **user lain** di mana user ini anggota dengan undangan `diterima`.
+Query dan bentuk item **sama persis** dengan `GET /dosen/proposals`:
+
+| Param | Default | Keterangan |
+|---|---|---|
+| `page` | 1 | int > 0 |
+| `limit` | 10 | int > 0 |
+| `jenis` | | `penelitian` \| `pengabdian` |
+| `status` | | status proposal |
+| `search` | | cari di judul/abstrak |
+
+```json
+{
+  "success": true,
+  "message": "Proposals as member fetched",
+  "data": [
+    {
+      "id": 48, "tipe": "proposal", "judul": "Sistem Uji Coba Golang", "abstrak": "...", "jenis": "penelitian",
+      "status": "disetujui", "anggaran": "15000000.5", "luaran": null, "skema": null, "mitra": null,
+      "catatanRevisi": null, "dokumenUrl": null, "submittedAt": "...", "approvedAt": "...", "createdAt": "...", "updatedAt": "...",
+      "pengusul": { "id": 9, "name": "Dr. Dosen 1, M.T", "fullName": "Dr. Dosen 1, M.T", "email": "dosen1@lppm.dev", "nidn": "0100000001", "programStudi": "Teknik Informatika" },
+      "periode": { "id": 5, "nama": "Penelitian Semester Ganjil 2025", "tahun": 2025, "jenis": "penelitian" },
+      "anggota": [ { "id": 56, "peran": "anggota", "statusUndangan": "diterima", "user": { "id": 21, "name": "Mahasiswa 1", "fullName": "Mahasiswa 1", "email": "mahasiswa1@lppm.dev" } } ],
+      "reviewerTugasan": [ { "id": 29, "reviewer": { "id": 4, "name": "Dr. Reviewer 1, M.T", "fullName": "Dr. Reviewer 1, M.T" }, "createdAt": "..." } ]
+    }
+  ],
+  "meta": { "page": 1, "limit": 10, "total": 1 }
+}
+```
+
+> **Detail untuk anggota:** `GET /dosen/proposals/:id` hanya untuk pengusul (anggota akan
+> mendapat `500 "Anda tidak memiliki akses ke proposal ini"`). Untuk tombol Detail di daftar
+> "sebagai anggota", pakai **`GET /proposals/:id`**, yang mengizinkan anggota berundangan
+> `diterima`.
+
+### 10.4 Skema penelitian (W-14) & mitra pengabdian (W-15)
+
+Field opsional baru (string) di `POST/PATCH /proposals` dan `POST/PATCH /dosen/proposals`:
+
+| Field | Untuk jenis | Contoh |
+|---|---|---|
+| `skema` | **penelitian** saja | `"Penelitian Dosen Pemula"`, `"Penelitian Dasar"` |
+| `mitra` | **pengabdian** saja | `"Kelompok Tani Desa Sukamaju"` |
+
+- Mengirim field ke jenis yang salah → `400 "Skema hanya untuk proposal penelitian"` /
+  `400 "Mitra hanya untuk proposal pengabdian"`. Saat PATCH mengubah `jenis`, yang dicek
+  adalah jenis **baru**.
+- Respons proposal selalu punya kedua key. Key yang bukan milik jenisnya bernilai `null`.
+- Jika `jenis` proposal diubah, nilai `skema`/`mitra` milik jenis lama **dihapus**.
+- Laporan menyalin `skema`/`mitra` dari proposal asal.
+
+### 10.5 Master program studi (W-19)
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| GET | `/program-studi` | **publik** (tanpa token) | Program studi aktif, urut nama. `?semua=true` → termasuk nonaktif |
+| POST | `/program-studi` | admin | Tambah |
+| PATCH | `/program-studi/:id` | admin | Ubah (semua field opsional) |
+| DELETE | `/program-studi/:id` | admin | Hapus |
+
+```json
+{ "success": true, "message": "Program studi fetched",
+  "data": [ { "id": 5, "nama": "Teknik Informatika", "jenjang": null, "isAktif": true,
+              "createdAt": "2026-10-24T15:14:25.096Z", "updatedAt": "2026-10-24T15:14:25.096Z" } ] }
+```
+
+Body POST/PATCH:
+
+| Field | Tipe | Aturan |
+|---|---|---|
+| `nama` | string | wajib saat POST, di-trim, min 2 karakter, **unik** |
+| `jenjang` | string | opsional, mis. `"S1"`, `"D3"`. `""` → `null` |
+| `isAktif` | boolean | opsional, default `true` |
+
+Respons: POST `201 "Program studi berhasil dibuat"`, PATCH `200 "Program studi berhasil diperbarui"`,
+DELETE `200 "Program studi berhasil dihapus"`. Error: nama duplikat `409 "Resource already exists"`,
+id tidak ada `404 "Program studi tidak ditemukan"`, id bukan angka `400 "Parameter id tidak valid."`,
+bukan admin `403`.
+
+Catatan:
+- `programStudi` (dosen) dan `prodi` (mahasiswa) di profil **tetap teks bebas**. Backend tidak
+  memaksa nilainya ada di master. Frontend cukup mengisi dropdown dengan `nama`, lalu
+  mengirim `nama` itu ke `PATCH /users/profile/me` atau ke form registrasi.
+- Isi awal tabel diambil dari nilai program studi user yang sudah ada (dan dari `cmd/seed`).
+
+### 10.6 Contoh pemanggilan (axios)
+
+```js
+// tambahan di src/api/users.js
+getProfile: () => api.get('/users/profile/me'),
+
+// src/api/Proposaldosen.js: getStats yang sudah ada cukup diberi params
+getStats: (params = {}) => api.get('/dosen/proposals/stats', { params }),      // { jenis }
+getAsMember: (params = {}) => api.get('/dosen/proposals/as-member', { params }),
+
+// src/api/programStudi.js (baru)
+export const programStudiApi = {
+  list:   (params = {}) => api.get('/program-studi', { params }),   // { semua: true } untuk admin
+  create: (data) => api.post('/program-studi', data),
+  update: (id, data) => api.patch(`/program-studi/${id}`, data),
+  remove: (id) => api.delete(`/program-studi/${id}`),
+};
+```

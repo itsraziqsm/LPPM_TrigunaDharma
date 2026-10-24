@@ -108,7 +108,7 @@ b = expect("login missing fields", req("POST", "/api/v1/auth/login", body={}), 4
 check("login missing → Required", b["errors"] == {"email": ["Required"], "password": ["Required"]}, b)
 expect("bad json", req("POST", "/api/v1/auth/login", raw=b'{"x":', ctype="application/json"), 400)
 b = expect("me", req("GET", "/api/v1/auth/me", dosen1), 200, "Current user")
-check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan"] and b["data"]["hasTugasan"] is False, b)
+check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional"] and b["data"]["hasTugasan"] is False, b)
 expect("me bad token", req("GET", "/api/v1/auth/me", "xxx"), 401, "Token invalid or expired")
 expect("refresh blank", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "   "}), 400, "Refresh token required")
 expect("refresh unknown", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "nope"}), 500, "Refresh token invalid or expired")
@@ -199,7 +199,7 @@ expect("create proposal forbidden", req("POST", "/api/v1/proposals", admin, {}),
 b = expect("create proposal", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggaran": 15000000.5, "dokumenUrl": "https://drive.google.com/x", "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": dosen2User["id"], "peran": "co-peneliti"}]}), 201, "Proposal created")
 P = b["data"]
 pid = P["id"]
-check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
+check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
 check("proposal values", P["status"] == "draft" and P["anggaran"] == "15000000.5" and P["periode"]["id"] == periodePen and list(P["periode"].keys()) == ["id", "nama", "tahun"] and list(P["pengusul"].keys()) == ["id", "name", "fullName", "email", "programStudi", "nidn"], P)
 check("proposal anggota", [a["user"]["id"] for a in P["anggota"]] == [mhs1User["id"], dosen2User["id"]] and P["anggota"][0]["peran"] == "anggota" and list(P["anggota"][0].keys()) == ["id", "peran", "user"], P["anggota"])
 expect("create dup anggota", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": mhs1User["id"]}]}), 409, "Resource already exists")
@@ -232,10 +232,10 @@ expect("detail accepted member", req("GET", f"/api/v1/proposals/{pid}", mhs1), 2
 
 # dosen module
 b = expect("dosen list", req("GET", "/api/v1/dosen/proposals?status=draft", dosen1), 200, "Proposals fetched")
-check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
+check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
 expect("dosen list bad status", req("GET", "/api/v1/dosen/proposals?status=x", dosen1), 500)
 b = expect("dosen stats", req("GET", "/api/v1/dosen/proposals/stats", dosen1), 200, "Stats fetched")
-check("stats shape", list(b["data"].keys()) == ["total", "draft", "diajukan", "disetujui", "revisi", "ditolak"], b)
+check("stats shape", list(b["data"].keys()) == ["total", "draft", "diajukan", "disetujui", "revisi", "ditolak", "review"] and b["data"]["total"] == sum(v for k, v in b["data"].items() if k != "total"), b)
 expect("members search short", req("GET", "/api/v1/dosen/proposals/members/search?q=a", dosen1), 400, "Ketik minimal 2 karakter untuk mencari pengguna")
 b = expect("members search", req("GET", "/api/v1/dosen/proposals/members/search?q=mahasiswa", dosen1), 200, "Users fetched")
 check("members shape", len(b["data"]) <= 10 and list(b["data"][0].keys()) == ["id", "name", "fullName", "email", "nidn", "nim", "programStudi", "prodi", "roles"], b["data"][:1])
@@ -369,7 +369,7 @@ expect("lh delete missing", req("DELETE", "/api/v1/mahasiswa/laporan-harian/9999
 expect("lh delete", req("DELETE", f"/api/v1/mahasiswa/laporan-harian/{lhid}", mhs1), 200, "Laporan harian berhasil dihapus")
 
 # ── laporan (tipe 'laporan', endpoint baru /api/v1/laporan) ──
-LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
+LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
 b = expect("laporan eligible", req("GET", "/api/v1/laporan/eligible", dosen1), 200, "Proposal siap dilaporkan fetched")
 check("laporan eligible has pid", any(x["id"] == pid for x in b["data"]) and list(b["data"][0].keys()) == ["id", "judul", "jenis", "status", "anggaran", "luaran", "approvedAt", "periode"], b["data"][:1])
 expect("laporan create invalid", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 0}), 422)
@@ -445,9 +445,52 @@ b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal pindah je
 expect("create for jenis move", b, 201)
 mv = b[1]["data"]["id"]
 check("luaran saved", b[1]["data"]["luaran"] == "Modul pelatihan", b[1]["data"])
-b = expect("move jenis", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"jenis": "pengabdian", "judul": "Proposal pindah jenis 2"}), 200)
+expect("mitra on penelitian", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"mitra": "Desa X"}), 400, "Mitra hanya untuk proposal pengabdian")
+b = expect("skema on penelitian", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"skema": "Penelitian Dosen Pemula"}), 200)
+check("skema saved", b["data"]["skema"] == "Penelitian Dosen Pemula" and b["data"]["mitra"] is None, b["data"])
+expect("skema on pengabdian move", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"jenis": "pengabdian", "skema": "x"}), 400, "Skema hanya untuk proposal penelitian")
+b = expect("move jenis", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"jenis": "pengabdian", "judul": "Proposal pindah jenis 2", "mitra": "Desa Sukamaju"}), 200)
+check("move drops skema, sets mitra", b["data"]["skema"] is None and b["data"]["mitra"] == "Desa Sukamaju", b["data"])
 check("moved jenis", b["data"]["id"] == mv and b["data"]["jenis"] == "pengabdian" and b["data"]["judul"] == "Proposal pindah jenis 2" and b["data"]["luaran"] == "Modul pelatihan", b["data"])
 expect("delete moved", req("DELETE", f"/api/v1/dosen/proposals/{mv}", dosen5), 200)
+
+# ── grup A waiting API (W-08, W-09, W-11, W-16, W-17, W-19) ──
+PROFILE_KEYS = ["id", "email", "name", "fullName", "status", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "createdAt", "roles"]
+b = expect("profile me", req("GET", "/api/v1/users/profile/me", dosen1), 200, "Profile fetched")
+check("profile me shape", list(b["data"].keys()) == PROFILE_KEYS and b["data"]["id"] == dosen1User["id"], list(b["data"].keys()))
+b = expect("profile jabatan", req("PATCH", "/api/v1/users/profile/me", dosen1, {"jabatanFungsional": "Lektor"}), 200, "Profile updated")
+check("profile patch shape", list(b["data"].keys()) == PROFILE_KEYS and b["data"]["jabatanFungsional"] == "Lektor", b["data"])
+b = req("GET", "/api/v1/auth/me", dosen1)[1]
+check("me has profile", b["data"]["jabatanFungsional"] == "Lektor" and b["data"]["nidn"] == "0100000001", b["data"])
+expect("profile me no token", req("GET", "/api/v1/users/profile/me"), 401)
+b = expect("stats jenis", req("GET", "/api/v1/dosen/proposals/stats?jenis=pengabdian", dosen1), 200, "Stats fetched")
+b2 = req("GET", "/api/v1/dosen/proposals?jenis=pengabdian&limit=1", dosen1)[1]
+check("stats jenis total", b["data"]["total"] == b2["meta"]["total"], (b["data"], b2["meta"]))
+expect("stats bad jenis", req("GET", "/api/v1/dosen/proposals/stats?jenis=x", dosen1), 422)
+b = expect("as-member", req("GET", "/api/v1/dosen/proposals/as-member?jenis=penelitian", mhs1), 200, "Proposals as member fetched")
+check("as-member has pid", any(x["id"] == pid for x in b["data"]) and all(x["pengusul"]["id"] != mhs1User["id"] for x in b["data"]) and "meta" in b, b["data"][:1])
+b = expect("as-member owner", req("GET", "/api/v1/dosen/proposals/as-member", dosen1), 200)
+check("as-member excludes own", all(x["pengusul"]["id"] != dosen1User["id"] for x in b["data"]), b["data"][:1])
+expect("as-member bad status", req("GET", "/api/v1/dosen/proposals/as-member?status=x", mhs1), 422)
+expect("as-member forbidden", req("GET", "/api/v1/dosen/proposals/as-member", admin), 403)
+b = expect("prodi public list", req("GET", "/api/v1/program-studi"), 200, "Program studi fetched")
+check("prodi shape", len(b["data"]) > 0 and list(b["data"][0].keys()) == ["id", "nama", "jenjang", "isAktif", "createdAt", "updatedAt"], b["data"][:1])
+psName = "Prodi Uji " + uuid.uuid4().hex[:6]
+expect("prodi create invalid", req("POST", "/api/v1/program-studi", admin, {"nama": " "}), 422)
+expect("prodi create forbidden", req("POST", "/api/v1/program-studi", dosen1, {"nama": psName}), 403)
+expect("prodi create no token", req("POST", "/api/v1/program-studi", body={"nama": psName}), 401)
+b = expect("prodi create", req("POST", "/api/v1/program-studi", admin, {"nama": " " + psName + " ", "jenjang": "S1"}), 201, "Program studi berhasil dibuat")
+ps = b["data"]
+check("prodi created", ps["nama"] == psName and ps["jenjang"] == "S1" and ps["isAktif"] is True, ps)
+expect("prodi duplicate", req("POST", "/api/v1/program-studi", admin, {"nama": psName}), 409, "Resource already exists")
+b = expect("prodi deactivate", req("PATCH", f"/api/v1/program-studi/{ps['id']}", admin, {"isAktif": False, "jenjang": ""}), 200, "Program studi berhasil diperbarui")
+check("prodi deactivated", b["data"]["isAktif"] is False and b["data"]["jenjang"] is None, b["data"])
+b = req("GET", "/api/v1/program-studi")[1]
+check("prodi hidden when inactive", all(x["id"] != ps["id"] for x in b["data"]))
+b = req("GET", "/api/v1/program-studi?semua=true")[1]
+check("prodi semua", any(x["id"] == ps["id"] for x in b["data"]))
+expect("prodi delete", req("DELETE", f"/api/v1/program-studi/{ps['id']}", admin), 200, "Program studi berhasil dihapus")
+expect("prodi delete missing", req("DELETE", f"/api/v1/program-studi/{ps['id']}", admin), 404, "Program studi tidak ditemukan")
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

@@ -149,6 +149,14 @@ func main() {
 		fmt.Printf("  ✔ %s (%s, %s)\n", a.email, strings.Join(a.roles, "+"), a.status)
 	}
 
+	// Master program studi (W-19): nilai yang dipakai akun seed; yang sudah ada dilewati.
+	fmt.Println("Membuat program studi...")
+	for _, nama := range []string{"Manajemen Informatika", "Sistem Informasi", "Sistem Komputer", "Teknik Elektro", "Teknik Informatika"} {
+		if _, err := db.Exec("INSERT IGNORE INTO `ProgramStudi` (`nama`,`jenjang`,`isAktif`,`createdAt`,`updatedAt`) VALUES (?,NULL,true,?,?)", nama, now, now); err != nil {
+			log.Fatalf("program studi %s: %v", nama, err)
+		}
+	}
+
 	var periodeCount int64
 	if err := db.QueryRow("SELECT COUNT(*) FROM `Periode`").Scan(&periodeCount); err != nil {
 		log.Fatal(err)
