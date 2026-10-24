@@ -23,7 +23,6 @@ const router = createBrowserRouter([
       { path: '/periode', element: <DashboardLayout page="periode" /> },
       { path: '/proposals', element: <DashboardLayout page="proposals" /> },
       { path: '/users', element: <DashboardLayout page="users" /> },
-      { path: '/proposal-saya', element: <DashboardLayout page="proposal-saya" /> },
       { path: '/undangan', element: <DashboardLayout page="undangan" /> },
       { path: '/penugasan', element: <DashboardLayout page="penugasan" /> },
       { path: '/laporan-harian', element: <DashboardLayout page="laporan-harian" /> },
@@ -48,6 +47,8 @@ const router = createBrowserRouter([
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <ErrorPage routeError /> },
   // Halaman galat: /error/401, /error/403, /error/408, /error/500, /error/503, dst.
   { path: '/error/:code', element: <ErrorPage /> },
+  // Halaman Proposal Saya dilebur ke menu Kegiatan; tautan/bookmark lama tetap jalan.
+  { path: '/proposal-saya', element: <Navigate to="/kegiatan/penelitian" replace /> },
   { path: '/', element: <Navigate to="/dashboard" replace /> },
   { path: '*', element: <ErrorPage code={404} /> },
 ])

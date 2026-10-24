@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, X } from 'lucide-react'
+import { ArrowRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, Trash2, X } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
+import { alertDialog, confirmDialog } from '../utils/dialog'
 import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
@@ -11,7 +12,10 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
 // Riwayat (disorot, tepat di bawah ringkasan) berisi proposal (GET /dosen/proposals)
 // atau laporan (GET /laporan/my) untuk satu jenis — baris draft/revisi punya tombol
-// "Lanjutkan" — lalu tombol sekunder Usulkan Proposal Baru & Kirim Laporan Baru.
+// "Lanjutkan" (draft juga "Hapus") — lalu tombol sekunder Usulkan Proposal Baru &
+// Kirim Laporan Baru. Menggantikan halaman Proposal Saya (dihapus): tautan lama
+// diarahkan ke sini, `?status=` membuka dengan filter status, `?detail=<id>`
+// langsung membuka detail proposal (dipakai notifikasi & dashboard).
 // Bagian "sebagai anggota tim" dari GET /dosen/proposals/as-member.
 // ---------------------------------------------------------------------------
 
@@ -226,11 +230,15 @@ export default function KegiatanPage({ jenis }) {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(() => {
+    const st = new URLSearchParams(location.search).get('status')
+    return STATUSES.includes(st) ? st : ''
+  })
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, setSelectedId] = useState(() => Number(new URLSearchParams(location.search).get('detail')) || null)
+  const [deleting, setDeleting] = useState(null)
   const [memberDetailId, setMemberDetailId] = useState(null)
   const user = useAuthStore((s) => s.user)
   const [tick, setTick] = useState(0)
@@ -284,6 +292,26 @@ export default function KegiatanPage({ jenis }) {
   }, [jenis, tipe, page, status, query, tick])
 
   const refresh = useCallback(() => setTick((t) => t + 1), [])
+
+  // Hapus proposal draft (DELETE /dosen/proposals/:id), dari halaman Proposal Saya lama.
+  const hapus = async (p) => {
+    const ok = await confirmDialog({
+      tone: 'danger',
+      title: 'Hapus proposal draft?',
+      message: `“${p.judul}” beserta anggota dan target luarannya akan dihapus permanen.`,
+      confirmText: 'Ya, hapus',
+    })
+    if (!ok) return
+    setDeleting(p.id)
+    try {
+      await proposalDosenApi.delete(p.id)
+      refresh()
+    } catch (e) {
+      alertDialog({ title: 'Gagal menghapus proposal', message: e.response?.data?.message || 'Silakan coba lagi.' })
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const switchTipe = (next) => {
     setTipe(next)
@@ -554,6 +582,17 @@ export default function KegiatanPage({ jenis }) {
                           <button type="button" onClick={() => setSelectedId(p.id)} className="btn btn-ghost btn-sm">
                             Detail
                           </button>
+                          {p.status === 'draft' ? (
+                            <button
+                              type="button"
+                              onClick={() => hapus(p)}
+                              disabled={deleting === p.id}
+                              className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              {deleting === p.id ? 'Menghapus…' : 'Hapus'}
+                            </button>
+                          ) : null}
                         </>
                       )}
                     </td>

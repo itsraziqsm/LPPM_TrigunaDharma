@@ -190,7 +190,7 @@ function DocCards({ cards, luaran }) {
           value={cards.diterima}
           hint={cards.total !== null ? `dari ${cards.total} proposal` : null}
           icon={ICONS.check}
-          to="/proposal-saya"
+          to="/kegiatan/penelitian?status=disetujui"
         />
         <DocCard
           tone="red"
@@ -198,7 +198,7 @@ function DocCards({ cards, luaran }) {
           value={cards.ditolak}
           hint="Tidak lolos seleksi"
           icon={ICONS.cross}
-          to="/proposal-saya"
+          to="/kegiatan/penelitian?status=ditolak"
         />
         <DocCard
           tone="yellow"
@@ -206,7 +206,7 @@ function DocCards({ cards, luaran }) {
           value={cards.diproses}
           hint={cards.revisi ? `${cards.revisi} perlu revisi` : 'Diajukan & direview'}
           icon={ICONS.timer}
-          to="/proposal-saya"
+          to="/kegiatan/penelitian"
         />
         <DocCard
           tone="blue"

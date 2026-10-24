@@ -211,7 +211,7 @@ export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi emai
 npm install
 npm run dev       # Vite, http://localhost:5173 (cocokkan CORS_ORIGIN backend)
 npm run build
-npm run lint      # baseline: 0 error, 4 peringatan lama
+npm run lint      # baseline: 0 error, 2 peringatan lama
 ```
 Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/api/axios.js`).
 
@@ -219,10 +219,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` publik
   (`VerifyEmailPage.jsx`, tanpa guard) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
-  `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya`, `/kegiatan/penelitian`,
+  `/proposals`, `/users`, `/export` (admin/ketua), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
+  `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (peran `reviewer`;
   dosen **wajib** punya peran reviewer — `hasTugasan` saja tidak cukup; peran lain tetap lewat
@@ -249,7 +250,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; satu baris cari ·
   filter status (select) · Cari · "Hapus filter" hanya saat ada filter) tab Proposal
   (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`), lalu tombol sekunder
-  **Usulkan Proposal Baru** & **Kirim Laporan Baru**.
+  **Usulkan Proposal Baru** & **Kirim Laporan Baru**. Draft bisa **Hapus** dari Riwayat. Query
+  `?status=<status>` membuka dengan filter, `?detail=<id>` langsung membuka detail proposal
+  (dipakai dashboard & notifikasi). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
+  dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →

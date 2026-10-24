@@ -98,7 +98,7 @@ export async function load({ withReviewerDigest }) {
       detail: first
         ? `${sentence(`“${first.judul}”`)} Catatan revisi ada di detail proposal.`
         : 'Catatan revisi ada di detail proposal.',
-      to: '/proposal-saya',
+      to: `/kegiatan/${first?.jenis || 'penelitian'}?status=revisi`,
       cta: 'Buka proposal',
     })
   }
@@ -106,17 +106,18 @@ export async function load({ withReviewerDigest }) {
   if (digest) attention.push(...tugasanAttention(digest))
 
   if (counts.draft > 0) {
+    const firstDraft = proposals.find((p) => normalizeStatus(p.status) === 'draft')
     attention.push({
       key: 'draft',
       tone: 'info',
       title: `${counts.draft} proposal masih draft`,
       detail: 'Belum diajukan ke LPPM.',
-      to: '/proposal-saya',
+      to: `/kegiatan/${firstDraft?.jenis || 'penelitian'}?status=draft`,
       cta: 'Lanjutkan',
     })
   }
 
-  attention.push(...periodAttention(periods, { to: '/proposal-saya', cta: 'Lihat proposal' }))
+  attention.push(...periodAttention(periods, { to: '/kegiatan/penelitian', cta: 'Lihat proposal' }))
 
   const sortedAttention = sortAttention(attention)
 
@@ -218,8 +219,8 @@ export async function load({ withReviewerDigest }) {
           status: statusMeta(p.status),
           note: p.createdAt ? formatDate(p.createdAt) : null,
         })),
-        to: '/proposal-saya',
-        toLabel: 'Lihat semua proposal',
+        to: '/kegiatan/penelitian',
+        toLabel: 'Lihat riwayat proposal',
         emptyTitle: 'Belum ada proposal',
         emptyDesc: 'Buat proposal pertama Anda untuk periode yang sedang berjalan.',
         emptyAction: { to: '/kegiatan/penelitian/usulan', label: 'Buat proposal' },
@@ -251,9 +252,14 @@ export async function load({ withReviewerDigest }) {
 
       shortcuts: [
         {
-          to: '/proposal-saya',
-          label: 'Proposal saya',
-          desc: hasStats ? `${total} proposal, ${counts.draft} draft.` : 'Kelola seluruh proposal Anda.',
+          to: '/kegiatan/penelitian',
+          label: 'Status penelitian',
+          desc: hasStats ? `${total} proposal, ${counts.draft} draft (semua jenis).` : 'Riwayat proposal & laporan penelitian.',
+        },
+        {
+          to: '/kegiatan/pengabdian',
+          label: 'Status pengabdian',
+          desc: 'Riwayat proposal & laporan pengabdian.',
         },
         {
           to: '/undangan',

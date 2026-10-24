@@ -555,7 +555,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 type: 'success',
                 text: isEdit
                   ? 'Perubahan proposal disimpan.'
-                  : `Proposal ${jenisLabel.toLowerCase()} tersimpan sebagai draft. Ajukan dari Proposal Saya setelah semua anggota menerima undangan.`,
+                  : `Proposal ${jenisLabel.toLowerCase()} tersimpan sebagai draft. Ajukan lewat Detail di Riwayat ${jenisLabel} setelah semua anggota menerima undangan.`,
               },
         },
       })
@@ -1148,7 +1148,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
 
             <div className="flex items-start gap-3 rounded-lg border border-navy-200 bg-navy-50 px-4 py-3 text-sm text-navy-800">
               <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              Pastikan semua data sudah terisi dengan benar. Proposal disimpan sebagai draft; ajukan dari Proposal Saya setelah semua anggota menerima undangan.
+              Pastikan semua data sudah terisi dengan benar. Proposal disimpan sebagai draft; ajukan lewat Detail di Riwayat {jenisLabel} setelah semua anggota menerima undangan.
             </div>
 
             <label className="flex items-start gap-3 text-sm text-slate-800">

@@ -68,11 +68,6 @@ const DOSEN_NAV_ITEMS = [
     )
   },
   {
-    path: '/proposal-saya', label: 'Proposal Saya', icon: (
-      <FileText className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
     path: '/undangan', label: 'Undangan Tim', badge: true, icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),

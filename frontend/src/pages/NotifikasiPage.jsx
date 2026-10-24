@@ -70,7 +70,8 @@ function targetFor(n, roles, hasTugasan) {
   }
   if (n.refType === 'proposal') {
     if (pengelola) return { to: '/proposals', label: 'Buka proposal' }
-    if (primary === 'dosen') return { to: '/proposal-saya', label: 'Buka proposal' }
+    // Detail dibuka langsung; jenis tidak ada di notifikasi (modal memuat per id).
+    if (primary === 'dosen') return { to: `/kegiatan/penelitian?detail=${n.refId}`, label: 'Buka proposal' }
     if (primary === 'reviewer') return { to: '/penugasan', label: 'Buka penugasan' }
   }
   return null

@@ -7,7 +7,6 @@ import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
 import ProposalPage from './ProposalPage'
-import ProposalDosenPage from './ProposalDosenPage'
 import UndanganPage from './UndanganPage'
 import ReviewTugasanPage from './ReviewTugasanPage'
 import LaporanHarianPage from './LaporanHarianPage'
@@ -109,7 +108,6 @@ export default function DashboardLayout({ page, jenis }) {
     }
 
     if (isDosen) {
-      if (page === 'proposal-saya') return <ProposalDosenPage />
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'luaran') return <LuaranPage />
