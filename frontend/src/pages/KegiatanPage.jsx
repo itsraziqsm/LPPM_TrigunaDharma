@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { CircleCheck, CirclePlus, FileCheck, FileText, ListChecks } from 'lucide-react'
+import { ArrowRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, X } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
@@ -9,8 +9,9 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 
 // ---------------------------------------------------------------------------
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
-// tombol Usulan (→ halaman UsulanPage) & Laporan, dan Riwayat berisi proposal
-// (GET /dosen/proposals) atau laporan (GET /laporan/my) untuk satu jenis.
+// Riwayat (disorot, tepat di bawah ringkasan) berisi proposal (GET /dosen/proposals)
+// atau laporan (GET /laporan/my) untuk satu jenis — baris draft/revisi punya tombol
+// "Lanjutkan" — lalu tombol sekunder Usulkan Proposal Baru & Kirim Laporan Baru.
 // Bagian "sebagai anggota tim" dari GET /dosen/proposals/as-member.
 // ---------------------------------------------------------------------------
 
@@ -181,16 +182,16 @@ const dateTime = (v) =>
 function StatusCard({ icon: Icon, tone, value, label, to }) {
   const body = (
     <>
-      <span className={`grid size-16 place-items-center rounded-xl ${tone.tile}`}>
-        <Icon className="size-8" strokeWidth={1.8} aria-hidden="true" />
+      <span className={`grid size-10 place-items-center rounded-lg sm:size-16 sm:rounded-xl ${tone.tile}`}>
+        <Icon className="size-5 sm:size-8" strokeWidth={1.8} aria-hidden="true" />
       </span>
-      <span className={`mt-3 font-serif text-[2rem] font-medium leading-none tabular-nums lining-nums ${tone.text}`}>
+      <span className={`mt-2 font-serif text-2xl font-medium leading-none tabular-nums lining-nums sm:mt-3 sm:text-[2rem] ${tone.text}`}>
         {value === null || value === undefined ? '—' : value}
       </span>
-      <span className="mt-1.5 text-sm text-slate-500">{label}</span>
+      <span className="mt-1.5 text-xs leading-tight text-slate-500 sm:text-sm">{label}</span>
     </>
   )
-  const cls = 'card flex flex-col items-center px-5 py-6 text-center'
+  const cls = 'card flex flex-col items-center px-2 py-3 text-center sm:px-5 sm:py-6'
   return <li>{to ? <Link to={to} className={`${cls} transition-shadow hover:shadow-md`}>{body}</Link> : <div className={cls}>{body}</div>}</li>
 }
 
@@ -201,25 +202,8 @@ function TipeTab({ active, onClick, children }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`-mb-px border-b-2 px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
-        active ? 'border-navy-800 text-navy-950' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-navy-900'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function FilterChip({ active, children, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
-        active
-          ? 'border-navy-800 bg-navy-800 text-white'
-          : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50 hover:text-navy-900'
+      className={`border-b-[3px] px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
+        active ? 'border-brass-400 text-white' : 'border-transparent text-white/60 hover:border-white/30 hover:text-white'
       }`}
     >
       {children}
@@ -308,6 +292,18 @@ export default function KegiatanPage({ jenis }) {
   }
 
   const aktif = counts ? counts.draft + counts.diajukan + counts.review + counts.revisi : null
+  // Proposal yang menunggu tindakan pengusul (draft/revisi) — pintasan ke filternya.
+  const perluLanjut =
+    counts && tipe !== 'laporan' && counts.draft + counts.revisi > 0
+      ? { total: counts.draft + counts.revisi, status: counts.revisi > 0 ? 'revisi' : 'draft' }
+      : null
+  const filterAktif = Boolean(status || query || search.trim())
+  const clearFilter = () => {
+    setStatus('')
+    setSearch('')
+    setQuery('')
+    setPage(1)
+  }
   const pages = Math.max(1, Math.ceil(total / LIMIT))
   const usulanTo = `/kegiatan/${jenis}/usulan`
   const isLaporan = tipe === 'laporan'
@@ -345,7 +341,7 @@ export default function KegiatanPage({ jenis }) {
       ) : null}
 
       <section aria-label={`Ringkasan ${label.toLowerCase()}`}>
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <ul className="grid grid-cols-3 gap-2 sm:gap-4">
           <StatusCard icon={ListChecks} tone={{ tile: 'bg-navy-50 text-navy-700', text: 'text-navy-700' }} value={aktif} label="Proposal Aktif" />
           <StatusCard icon={CircleCheck} tone={{ tile: 'bg-green-50 text-green-700', text: 'text-green-700' }} value={counts?.disetujui} label="Proposal Diterima" />
           <StatusCard icon={FileCheck} tone={{ tile: 'bg-green-50 text-green-700', text: 'text-green-700' }} value={laporanDiterima} label="Laporan Diterima" />
@@ -360,32 +356,46 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link to={usulanTo} className="btn btn-secondary h-14 text-base">
-          <CirclePlus className="size-5" aria-hidden="true" />
-          Usulan {label}
-        </Link>
-        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-primary h-14 text-base">
-          <FileText className="size-5" aria-hidden="true" />
-          Laporan {label}
-        </Link>
-      </div>
-
-      <section aria-labelledby="riwayat-kegiatan" className="scroll-mt-6 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 id="riwayat-kegiatan" className="text-xl font-semibold text-navy-950">
-              Riwayat {label}
-            </h2>
-            <div role="tablist" aria-label="Jenis dokumen" className="mt-3 flex gap-6 border-b border-slate-200">
-              <TipeTab active={!isLaporan} onClick={() => switchTipe('proposal')}>
-                Proposal
-              </TipeTab>
-              <TipeTab active={isLaporan} onClick={() => switchTipe('laporan')}>
-                Laporan
-              </TipeTab>
+      <section
+        aria-labelledby="riwayat-kegiatan"
+        className="scroll-mt-6 overflow-hidden rounded-2xl border-2 border-navy-800 bg-white shadow-md"
+      >
+        <header className="bg-navy-800 px-5 pb-0 pt-5 text-white sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="riwayat-kegiatan" className="font-serif text-2xl font-medium text-white">
+                Riwayat {label}
+              </h2>
+              <p className="mt-1 text-sm text-white/75">
+                Lanjutkan proposal atau laporan yang sedang berjalan dari daftar ini sebelum membuat yang baru.
+              </p>
             </div>
+            {perluLanjut ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus(perluLanjut.status)
+                  setPage(1)
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-brass-400 px-3.5 py-1.5 text-sm font-semibold text-rail transition-colors hover:bg-brass-500"
+              >
+                {perluLanjut.total} proposal perlu dilanjutkan
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
+          <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-6">
+            <TipeTab active={!isLaporan} onClick={() => switchTipe('proposal')}>
+              Proposal
+            </TipeTab>
+            <TipeTab active={isLaporan} onClick={() => switchTipe('laporan')}>
+              Laporan
+            </TipeTab>
+          </div>
+        </header>
+
+        <div className="space-y-4 p-4 sm:p-5">
+          {/* Satu baris: kata kunci · filter status · Cari · Hapus filter (hanya bila ada filter) */}
           <form
             role="search"
             onSubmit={(e) => {
@@ -393,36 +403,53 @@ export default function KegiatanPage({ jenis }) {
               setPage(1)
               setQuery(search.trim())
             }}
-            className="flex w-full gap-2 lg:w-80"
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
           >
-            <label htmlFor="cari-kegiatan" className="sr-only">
-              Cari judul atau abstrak
+            <div className="relative min-w-0 flex-1">
+              <label htmlFor="cari-kegiatan" className="sr-only">
+                Cari judul atau abstrak
+              </label>
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <input
+                id="cari-kegiatan"
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
+                className="input pl-9"
+              />
+            </div>
+            <label htmlFor="filter-status" className="sr-only">
+              Filter status
             </label>
-            <input
-              id="cari-kegiatan"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari judul atau abstrak"
-              className="input"
-            />
-            <button type="submit" className="btn btn-secondary shrink-0">
+            <select
+              id="filter-status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(1)
+              }}
+              className="input sm:w-56"
+            >
+              <option value="">Semua status</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
+                  {counts && !isLaporan ? ` (${counts[s]})` : ''}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="btn btn-primary shrink-0">
+              <Search className="size-4" aria-hidden="true" />
               Cari
             </button>
+            {filterAktif ? (
+              <button type="button" onClick={clearFilter} className="btn btn-ghost shrink-0 text-slate-600">
+                <X className="size-4" aria-hidden="true" />
+                Hapus filter
+              </button>
+            ) : null}
           </form>
-        </div>
-
-        <div className="flex flex-wrap gap-2" aria-label="Filter status">
-          <FilterChip active={status === ''} onClick={() => { setStatus(''); setPage(1) }}>
-            Semua
-          </FilterChip>
-          {STATUSES.map((s) => (
-            <FilterChip key={s} active={status === s} onClick={() => { setStatus(s); setPage(1) }}>
-              {STATUS_LABEL[s]}
-              {counts && !isLaporan ? <span className="ml-1.5 tabular-nums opacity-70">{counts[s]}</span> : null}
-            </FilterChip>
-          ))}
-        </div>
 
         <div className="table-wrap">
           <table className="table table-tight">
@@ -476,8 +503,10 @@ export default function KegiatanPage({ jenis }) {
                   </td>
                 </tr>
               ) : (
-                rows.map((p) => (
-                  <tr key={`${tipe}-${p.id}`}>
+                rows.map((p) => {
+                  const lanjut = p.status === 'draft' || p.status === 'revisi'
+                  return (
+                  <tr key={`${tipe}-${p.id}`} className={lanjut ? 'bg-amber-50/60' : undefined}>
                     <td className="whitespace-nowrap tabular-nums">{dateTime(p.createdAt)}</td>
                     <td className="min-w-[16rem] max-w-md">
                       <p className="line-clamp-2 font-semibold text-slate-900" title={p.judul}>
@@ -487,6 +516,15 @@ export default function KegiatanPage({ jenis }) {
                         {p.periode?.nama || 'Belum ada periode'}
                         {p.anggaran ? ` · ${rupiah(p.anggaran)}` : ''}
                       </p>
+                      {lanjut ? (
+                        <Link
+                          to={isLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi` : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`}
+                          className="btn btn-primary btn-sm mt-2"
+                        >
+                          Lanjutkan {p.status === 'revisi' ? 'revisi' : 'draf'}
+                          <ArrowRight className="size-4" aria-hidden="true" />
+                        </Link>
+                      ) : null}
                     </td>
                     <td>
                       <span className={`badge ${isLaporan ? 'badge-success' : 'badge-info'}`}>{isLaporan ? 'Laporan' : 'Proposal'}</span>
@@ -509,15 +547,10 @@ export default function KegiatanPage({ jenis }) {
                     <td className="whitespace-nowrap text-right">
                       {isLaporan ? (
                         <Link to={`/kegiatan/${p.jenis || jenis}/laporan/${p.id}`} className="btn btn-ghost btn-sm">
-                          {p.status === 'draft' || p.status === 'revisi' ? 'Lengkapi' : 'Detail'}
+                          Detail
                         </Link>
                       ) : (
                         <>
-                          {p.status === 'draft' || p.status === 'revisi' ? (
-                            <Link to={`/kegiatan/${p.jenis || jenis}/usulan/${p.id}`} className="btn btn-ghost btn-sm">
-                              Edit
-                            </Link>
-                          ) : null}
                           <button type="button" onClick={() => setSelectedId(p.id)} className="btn btn-ghost btn-sm">
                             Detail
                           </button>
@@ -525,7 +558,8 @@ export default function KegiatanPage({ jenis }) {
                       )}
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
@@ -546,7 +580,19 @@ export default function KegiatanPage({ jenis }) {
             </span>
           </nav>
         ) : null}
+        </div>
       </section>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link to={usulanTo} className="btn btn-secondary h-12">
+          <CirclePlus className="size-5" aria-hidden="true" />
+          Usulkan Proposal Baru
+        </Link>
+        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-secondary h-12">
+          <FileText className="size-5" aria-hidden="true" />
+          Kirim Laporan Baru
+        </Link>
+      </div>
 
       <MemberSection jenis={jenis} label={label} userId={user?.id} onDetail={(pid) => setMemberDetailId(pid)} />
 

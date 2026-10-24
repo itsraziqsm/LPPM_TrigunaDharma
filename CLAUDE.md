@@ -241,8 +241,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,
   dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
   `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis) = halaman **Status
-  Penelitian/Pengabdian**: kartu Proposal Aktif/Diterima & Laporan Diterima, tombol Usulan &
-  Laporan, Riwayat tab Proposal (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`).
+  Penelitian/Pengabdian**: kartu Proposal Aktif/Diterima & Laporan Diterima (ringkas di ponsel),
+  lalu **Riwayat** yang disorot (kartu berbingkai navy, header gelap, pintasan "N proposal perlu
+  dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; satu baris cari ·
+  filter status (select) · Cari · "Hapus filter" hanya saat ada filter) tab Proposal
+  (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`), lalu tombol sekunder
+  **Usulkan Proposal Baru** & **Kirim Laporan Baru**.
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
