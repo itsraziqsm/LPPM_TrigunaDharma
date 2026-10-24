@@ -85,7 +85,9 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   kegiatan.go (helper tulis ke tabel Penelitian/Pengabdian via registri Kegiatan),
   laporan_kegiatan.go (fitur laporan baru, /api/v1/laporan),
   program_studi.go (master program studi, /api/v1/program-studi),
-  profil_akun.go (SINTA, foto profil, unduh data akun, hapus akun sendiri)
+  profil_akun.go (SINTA, foto profil, unduh data akun, hapus akun sendiri),
+  luaran.go (item luaran kegiatan, /api/v1/luaran), kepercayaan.go (nilai kepercayaan),
+  verifikasi_email.go (verifikasi email opsional)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -93,7 +95,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 371 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 423 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -126,7 +128,11 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
    proposal; `sintaId`/`sintaScore`/`fotoUrl` di `/auth/me` dan profil; foto profil
    (`POST/DELETE /users/profile/foto`, `GET /users/:id/foto` publik); `GET
    /users/profile/export`; `DELETE /users/profile/me` (nonaktif + anonimkan).
-7. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+7. Tambahan Grup C (lihat `new-api.md` bagian 12): `/api/v1/luaran` (item luaran
+   kegiatan + statistik), `GET /dosen/kepercayaan`, verifikasi email
+   (`emailVerifiedAt` di `/auth/me` & profil, `POST /auth/verify-email[/resend]`). Tanpa
+   `SMTP_HOST` di luar production, link verifikasi hanya dicetak ke log.
+8. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

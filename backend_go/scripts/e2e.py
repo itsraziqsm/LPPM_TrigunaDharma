@@ -108,7 +108,7 @@ b = expect("login missing fields", req("POST", "/api/v1/auth/login", body={}), 4
 check("login missing → Required", b["errors"] == {"email": ["Required"], "password": ["Required"]}, b)
 expect("bad json", req("POST", "/api/v1/auth/login", raw=b'{"x":', ctype="application/json"), 400)
 b = expect("me", req("GET", "/api/v1/auth/me", dosen1), 200, "Current user")
-check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl"] and b["data"]["hasTugasan"] is False, b)
+check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt"] and b["data"]["hasTugasan"] is False, b)
 expect("me bad token", req("GET", "/api/v1/auth/me", "xxx"), 401, "Token invalid or expired")
 expect("refresh blank", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "   "}), 400, "Refresh token required")
 expect("refresh unknown", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "nope"}), 500, "Refresh token invalid or expired")
@@ -460,7 +460,7 @@ check("moved jenis", b["data"]["id"] == mv and b["data"]["jenis"] == "pengabdian
 expect("delete moved", req("DELETE", f"/api/v1/dosen/proposals/{mv}", dosen5), 200)
 
 # ── grup A waiting API (W-08, W-09, W-11, W-16, W-17, W-19) ──
-PROFILE_KEYS = ["id", "email", "name", "fullName", "status", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "createdAt", "roles"]
+PROFILE_KEYS = ["id", "email", "name", "fullName", "status", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt", "createdAt", "roles"]
 b = expect("profile me", req("GET", "/api/v1/users/profile/me", dosen1), 200, "Profile fetched")
 check("profile me shape", list(b["data"].keys()) == PROFILE_KEYS and b["data"]["id"] == dosen1User["id"], list(b["data"].keys()))
 b = expect("profile jabatan", req("PATCH", "/api/v1/users/profile/me", dosen1, {"jabatanFungsional": "Lektor"}), 200, "Profile updated")
@@ -546,6 +546,77 @@ check("deleted anonymised", b["name"] == "Pengguna Dihapus" and b["email"] == f"
 admins = req("GET", "/api/v1/users?role=admin&status=approved", admin)[1]["meta"]["total"]
 if admins == 1:
     expect("delete last admin", req("DELETE", "/api/v1/users/profile/me", admin, {"password": "admin123456"}), 400, "Akun admin terakhir tidak dapat dihapus")
+
+# ── grup C waiting API (W-01/W-02/W-12 luaran, W-06 kepercayaan, W-18 verifikasi email) ──
+LUARAN_KEYS = ["id", "proposalId", "jenis", "target", "targetTanggal", "status", "judulCapaian", "keterangan", "tercapaiAt", "buktiUrl", "buktiNama", "buktiMime", "buktiUkuran", "createdAt", "updatedAt", "tepatWaktu"]
+statsBefore = req("GET", "/api/v1/luaran/stats", dosen5)[1]["data"]
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal dengan luaran", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
+expect("luaran proposal", b, 201)
+lp = b[1]["data"]["id"]
+expect("luaran create invalid", req("POST", "/api/v1/luaran", dosen5, {"proposalId": lp, "jenis": "x", "target": "a"}), 422)
+expect("luaran create other user", req("POST", "/api/v1/luaran", dosen1, {"proposalId": lp, "jenis": "jurnal", "target": "Jurnal SINTA 3"}), 403, "Hanya pengusul proposal yang dapat mengubah luaran")
+b = expect("luaran create", req("POST", "/api/v1/luaran", dosen5, {"proposalId": lp, "jenis": "jurnal", "target": "Jurnal SINTA 3", "targetTanggal": "2099-12-31"}), 201, "Luaran berhasil ditambahkan")
+lj = b["data"]
+check("luaran shape", list(lj.keys()) == LUARAN_KEYS and lj["status"] == "belum" and lj["targetTanggal"] == "2099-12-31T00:00:00.000Z" and lj["tepatWaktu"] is None, lj)
+b = expect("luaran create 2", req("POST", "/api/v1/luaran", dosen5, {"proposalId": lp, "jenis": "hki", "target": "Hak cipta aplikasi"}), 201)
+lh = b["data"]["id"]
+b = expect("luaran update target", req("PATCH", f"/api/v1/luaran/{lh}", dosen5, {"target": "Hak cipta program komputer", "targetTanggal": None}), 200, "Luaran berhasil diperbarui")
+check("luaran updated", b["data"]["target"] == "Hak cipta program komputer" and b["data"]["targetTanggal"] is None, b["data"])
+expect("luaran capaian before approved", req("PATCH", f"/api/v1/luaran/{lj['id']}/capaian", dosen5, {"status": "tercapai"}), 400, "Capaian luaran hanya bisa diisi setelah proposal disetujui")
+b = expect("luaran list", req("GET", f"/api/v1/luaran/proposal/{lp}", dosen5), 200, "Luaran fetched")
+check("luaran list items", [x["id"] for x in b["data"]] == [lj["id"], lh], b["data"])
+expect("luaran list stranger", req("GET", f"/api/v1/luaran/proposal/{lp}", mhs2), 403)
+expect("luaran list missing", req("GET", "/api/v1/luaran/proposal/999999", admin), 404, "Proposal tidak ditemukan")
+expect("luaran delete", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 200, "Luaran berhasil dihapus")
+expect("luaran delete missing", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 404, "Luaran tidak ditemukan")
+expect("luaran submit proposal", req("POST", f"/api/v1/dosen/proposals/{lp}/submit", dosen5), 200)
+expect("luaran target locked", req("PATCH", f"/api/v1/luaran/{lj['id']}", dosen5, {"target": "Jurnal SINTA 2"}), 400, "Target luaran hanya bisa diubah saat proposal berstatus draft atau revisi")
+expect("luaran approve proposal", req("PATCH", f"/api/v1/proposals/{lp}/status", ketua, {"status": "disetujui"}), 200)
+expect("luaran capaian bad url", req("PATCH", f"/api/v1/luaran/{lj['id']}/capaian", dosen5, {"buktiUrl": "bukan-url"}), 422)
+b = expect("luaran capaian", req("PATCH", f"/api/v1/luaran/{lj['id']}/capaian", dosen5, {"status": "tercapai", "judulCapaian": "Artikel di Jurnal X", "buktiUrl": "https://jurnal.example/artikel/1"}), 200, "Capaian luaran berhasil disimpan")
+check("luaran tercapai", b["data"]["status"] == "tercapai" and b["data"]["tercapaiAt"] is not None and b["data"]["tepatWaktu"] is True, b["data"])
+body, ct = multipart({}, ("file", "bukti.pdf", "application/pdf", PDF))
+b = expect("luaran bukti upload", req("POST", f"/api/v1/luaran/{lj['id']}/bukti", dosen5, raw=body, ctype=ct), 200, "Bukti luaran berhasil diunggah")
+check("luaran bukti meta", b["data"]["buktiNama"] == "bukti.pdf" and b["data"]["buktiMime"] == "application/pdf", b["data"])
+body, ct = multipart({}, ("file", "x.png", "image/png", FAKE))
+expect("luaran bukti fake", req("POST", f"/api/v1/luaran/{lj['id']}/bukti", dosen5, raw=body, ctype=ct), 400, "Isi file bukti bukan PDF, DOCX, JPG, PNG, atau WebP yang valid.")
+st, _, hdrs, content = req("GET", f"/api/v1/luaran/{lj['id']}/bukti", ketua)
+check("luaran bukti download", st == 200 and content == PDF, st)
+b = expect("luaran stats", req("GET", "/api/v1/luaran/stats", dosen5), 200, "Statistik luaran fetched")
+check("luaran stats shape", list(b["data"].keys()) == ["total", "tercapai", "dapatDiklaim", "jurnal", "perJenis"] and list(b["data"]["perJenis"].keys()) == ["jurnal", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"], b["data"])
+check("luaran not yet claimable", b["data"]["tercapai"] == statsBefore["tercapai"] + 1 and b["data"]["dapatDiklaim"] == statsBefore["dapatDiklaim"], (statsBefore, b["data"]))
+# laporan → disetujui → luaran dapat diklaim
+b = expect("luaran laporan", req("POST", "/api/v1/laporan", dosen5, {"proposalId": lp, "luaranTercapai": "1 artikel jurnal", "dokumenUrl": "https://drive.example/lap"}), 201)
+llap = b["data"]["id"]
+expect("luaran laporan submit", req("POST", f"/api/v1/laporan/{llap}/submit", dosen5), 200)
+expect("luaran capaian locked", req("PATCH", f"/api/v1/luaran/{lj['id']}/capaian", dosen5, {"keterangan": "x"}), 400, "Capaian luaran tidak bisa diubah karena laporan sudah diajukan")
+expect("luaran laporan assign", req("POST", f"/api/v1/laporan/{llap}/reviewers", ketua, {"reviewerIds": [rev1User["id"]]}), 200)
+expect("luaran laporan review", req("POST", f"/api/v1/laporan/{llap}/reviews", rev1, {"rekomendasi": "revisi"}), 200)
+expect("luaran laporan finalize", req("POST", f"/api/v1/laporan/{llap}/reviews/finalize", rev1), 200)
+expect("luaran laporan approve", req("PATCH", f"/api/v1/laporan/{llap}/status", ketua, {"status": "disetujui"}), 200)
+b = req("GET", "/api/v1/luaran/stats", dosen5)[1]["data"]
+check("luaran claimable", b["dapatDiklaim"] == statsBefore["dapatDiklaim"] + 1 and b["jurnal"] == statsBefore["jurnal"] + 1, (statsBefore, b))
+# nilai kepercayaan
+b = expect("kepercayaan", req("GET", "/api/v1/dosen/kepercayaan", dosen5), 200, "Nilai kepercayaan fetched")
+k = b["data"]
+check("kepercayaan shape", list(k.keys()) == ["userId", "nilai", "skala", "komponen", "dihitungPada"] and k["skala"] == 5 and [x["kode"] for x in k["komponen"]] == ["persetujuan_proposal", "persetujuan_laporan", "rekomendasi_reviewer", "ketepatan_waktu"] and list(k["komponen"][0].keys()) == ["kode", "label", "bobot", "nilai", "pembilang", "penyebut", "keterangan"], k)
+check("kepercayaan values", 0 <= k["nilai"] <= 5 and all(x["nilai"] is not None for x in k["komponen"]) and k["komponen"][3]["pembilang"] >= 1, k)
+b = expect("kepercayaan admin other", req("GET", f"/api/v1/dosen/kepercayaan?userId={dosen5User['id']}", admin), 200)
+check("kepercayaan admin same", b["data"]["nilai"] == k["nilai"] and b["data"]["userId"] == dosen5User["id"], b["data"])
+expect("kepercayaan dosen other", req("GET", f"/api/v1/dosen/kepercayaan?userId={dosen5User['id']}", dosen1), 403)
+expect("kepercayaan reviewer only", req("GET", "/api/v1/dosen/kepercayaan", rev1), 403, "Forbidden: insufficient permissions")
+# verifikasi email
+check("seed user verified", req("GET", "/api/v1/auth/me", dosen1)[1]["data"]["emailVerifiedAt"] is not None)
+expect("resend already verified", req("POST", "/api/v1/auth/verify-email/resend", dosen1), 400, "Email sudah terverifikasi")
+veEmail = f"verif{uuid.uuid4().hex[:6]}@lppm.dev"
+b = expect("register for verify", req("POST", "/api/v1/auth/register/mahasiswa", body={"email": veEmail, "name": "Perlu Verifikasi", "password": "password123", "nim": "98" + uuid.uuid4().hex[:8]}), 201)
+expect("approve for verify", req("PATCH", f"/api/v1/users/{b['data']['id']}/status", admin, {"status": "approved"}), 200)
+veTok = req("POST", "/api/v1/auth/login", body={"email": veEmail, "password": "password123"})[1]["data"]["accessToken"]
+check("new user unverified", req("GET", "/api/v1/auth/me", veTok)[1]["data"]["emailVerifiedAt"] is None)
+expect("resend verification", req("POST", "/api/v1/auth/verify-email/resend", veTok), 200, "Email verifikasi telah dikirim ke " + veEmail)
+expect("resend no token", req("POST", "/api/v1/auth/verify-email/resend"), 401)
+expect("verify empty", req("POST", "/api/v1/auth/verify-email", body={}), 422)
+expect("verify bad token", req("POST", "/api/v1/auth/verify-email", body={"token": "salah"}), 400, "Token verifikasi tidak valid atau kedaluwarsa")
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

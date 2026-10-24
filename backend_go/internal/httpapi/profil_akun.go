@@ -232,7 +232,7 @@ func (s *Server) deleteOwnAccount(c *Ctx) error {
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE `User` SET `name` = ?, `fullName` = NULL, `email` = ?, `password` = ?, `status` = 'rejected',"+
 				" `nidn` = NULL, `nim` = NULL, `prodi` = NULL, `programStudi` = NULL, `institusi` = NULL, `kontak` = NULL, `noHp` = NULL,"+
-				" `alamat` = NULL, `tempatLahir` = NULL, `tanggalLahir` = NULL, `jabatanFungsional` = NULL, `sintaId` = NULL, `sintaScore` = NULL,"+
+				" `alamat` = NULL, `tempatLahir` = NULL, `tanggalLahir` = NULL, `jabatanFungsional` = NULL, `sintaId` = NULL, `sintaScore` = NULL, `emailVerifiedAt` = NULL,"+
 				" `deletedAt` = ?, `updatedAt` = ? WHERE `id` = ?",
 			deletedUserName, fmt.Sprintf("deleted-%d@deleted.invalid", uid), newHash, now, now, uid); err != nil {
 			return err
@@ -240,6 +240,7 @@ func (s *Server) deleteOwnAccount(c *Ctx) error {
 		for _, q := range []string{
 			"DELETE FROM `UserFoto` WHERE `userId` = ?",
 			"DELETE FROM `PasswordResetToken` WHERE `userId` = ?",
+			"DELETE FROM `EmailVerificationToken` WHERE `userId` = ?",
 			"UPDATE `RefreshToken` SET `revoked` = true WHERE `userId` = ?",
 			// Undangan yang belum dijawab dianggap ditolak agar pengusul tidak terhambat saat submit.
 			"UPDATE `ProposalAnggota` SET `statusUndangan` = 'ditolak' WHERE `userId` = ? AND `statusUndangan` = 'pending'",

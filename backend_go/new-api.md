@@ -9,13 +9,16 @@ API, dikelompokkan per rilis:
   penelitian (W-14), mitra pengabdian (W-15), master program studi (W-19).
 - **Bagian 11** — Grup B: tahapan kegiatan (W-03/W-13), nilai SINTA (W-04), foto profil
   (W-07/W-10), unduh data akun (W-20), hapus akun sendiri (W-21).
+- **Bagian 12** — Grup C: luaran kegiatan terstruktur (W-01, W-02, W-12), nilai kepercayaan
+  (W-06), verifikasi email (W-18). Sertifikasi (W-05) ditunda.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
 - Format respons sama seperti endpoint lain: `{ success, message, data[, meta] }`
 - Migrasi DB: `migrations/20261024000000_split_proposal_penelitian_pengabdian`,
   `migrations/20261025000000_profil_skema_mitra_program_studi`,
-  `migrations/20261026000000_sinta_foto_hapus_akun`
+  `migrations/20261026000000_sinta_foto_hapus_akun`,
+  `migrations/20261027000000_luaran_verifikasi_email`
 
 ---
 
@@ -880,4 +883,207 @@ uploadFoto: (file) => {
 deleteFoto: () => api.delete('/users/profile/foto'),
 exportAccount: () => api.get('/users/profile/export', { responseType: 'blob' }),
 deleteAccount: (password) => api.delete('/users/profile/me', { data: { password } }),
+```
+
+---
+
+## 12. Grup C waiting API
+
+| ID | Elemen UI | API |
+|---|---|---|
+| W-01 | Kartu Luaran Dapat Diklaim | `GET /luaran/stats` → `dapatDiklaim` |
+| W-02 | Jurnal / Jurnal Diterbitkan | `GET /luaran/stats` → `jurnal` |
+| W-12 | Luaran tercatat & daftar luaran per kegiatan | `GET /luaran/stats` → `total`; `GET /luaran/proposal/:proposalId` |
+| W-06 | Nilai Kepercayaan | `GET /dosen/kepercayaan` |
+| W-18 | Status & kirim ulang verifikasi email | `emailVerifiedAt` di `/auth/me`; `POST /auth/verify-email/resend`; `POST /auth/verify-email` |
+
+> **Bukan** halaman menu `/luaran` (pencairan dana). Halaman itu tetap 501 sampai ada keputusan
+> kampus. "Luaran" di sini = **output kegiatan yang dijanjikan di proposal**.
+
+### 12.1 Luaran kegiatan (W-01, W-02, W-12)
+
+Satu proposal punya **banyak item luaran**. Siklus hidupnya:
+
+1. **Target**: pengusul menambah, mengubah, atau menghapus item saat proposal `draft`/`revisi`
+   (bisa dimasukkan ke wizard Usulan setelah proposal tersimpan sebagai draft).
+2. **Capaian**: setelah proposal `disetujui`, pengusul mengisi capaian tiap item (tercapai/belum,
+   judul, keterangan, link/file bukti). Ini dilakukan **selama laporan belum diajukan** (laporan
+   belum ada, `draft`, atau `revisi`), cocok diletakkan di halaman penyusunan laporan.
+3. **Klaim**: item `tercapai` yang laporannya sudah `disetujui` ketua dihitung sebagai
+   **dapat diklaim**.
+
+Item luaran selalu dikaitkan ke **id proposal**, bukan id laporan. Field teks lama `luaran` dan
+`luaranTercapai` tetap ada sebagai catatan bebas.
+
+**Objek Luaran**
+
+```json
+{
+  "id": 7, "proposalId": 52, "jenis": "jurnal", "target": "Jurnal SINTA 3",
+  "targetTanggal": "2099-12-31T00:00:00.000Z",
+  "status": "tercapai", "judulCapaian": "Artikel di Jurnal X", "keterangan": null,
+  "tercapaiAt": "2026-10-24T15:47:20.120Z",
+  "buktiUrl": "https://jurnal.example/artikel/1", "buktiNama": "bukti.pdf", "buktiMime": "application/pdf", "buktiUkuran": 125,
+  "createdAt": "...", "updatedAt": "...",
+  "tepatWaktu": true
+}
+```
+
+| Field | Keterangan |
+|---|---|
+| `jenis` | `jurnal` \| `prosiding` \| `hki` \| `buku` \| `produk` \| `media_massa` \| `lainnya` |
+| `target` | Deskripsi target, min 3 karakter (mis. "Jurnal SINTA 3", "HKI hak cipta") |
+| `targetTanggal` | Tanggal target (opsional). Dipakai untuk ketepatan waktu |
+| `status` | `belum` (default) \| `tercapai` |
+| `tercapaiAt` | Tanggal tercapai. Otomatis diisi hari ini saat ditandai `tercapai` kalau tidak dikirim, dan dikosongkan saat kembali ke `belum` |
+| `tepatWaktu` | `true`/`false` jika tercapai dan punya `targetTanggal` (tercapai ≤ akhir hari target); `null` jika belum bisa dinilai |
+| `bukti*` | File bukti (unduh lewat `GET /luaran/:id/bukti`) dan/atau `buktiUrl` |
+
+**Endpoint**
+
+| Method | Path | Akses | Kapan boleh |
+|---|---|---|---|
+| GET | `/luaran/proposal/:proposalId` | yang boleh membaca proposal (pengusul, anggota diterima, reviewer, admin, ketua) | kapan saja |
+| POST | `/luaran` | pengusul (dosen/mahasiswa) | proposal `draft`/`revisi` |
+| PATCH | `/luaran/:id` | pengusul | proposal `draft`/`revisi` |
+| DELETE | `/luaran/:id` | pengusul | proposal `draft`/`revisi` |
+| PATCH | `/luaran/:id/capaian` | pengusul | proposal `disetujui` dan laporan belum diajukan |
+| POST | `/luaran/:id/bukti` | pengusul | sama dengan capaian |
+| GET | `/luaran/:id/bukti` | yang boleh membaca proposal | kapan saja |
+| GET | `/luaran/stats` | dosen, mahasiswa | ringkasan luaran milik sendiri |
+
+Body:
+
+```jsonc
+// POST /luaran → 201 "Luaran berhasil ditambahkan"
+{ "proposalId": 52, "jenis": "jurnal", "target": "Jurnal SINTA 3", "targetTanggal": "2027-06-30" }
+
+// PATCH /luaran/:id → 200 "Luaran berhasil diperbarui" (semua opsional; targetTanggal: null = kosongkan)
+{ "target": "Jurnal SINTA 2", "targetTanggal": null }
+
+// PATCH /luaran/:id/capaian → 200 "Capaian luaran berhasil disimpan" (semua opsional, null = kosongkan)
+{ "status": "tercapai", "judulCapaian": "Artikel di Jurnal X", "keterangan": "Vol 3 No 2",
+  "tercapaiAt": "2027-05-10", "buktiUrl": "https://jurnal.example/artikel/1" }
+```
+
+Tanggal boleh `"YYYY-MM-DD"` atau ISO lengkap. `POST /luaran/:id/bukti` memakai multipart field
+**`file`**: PDF, DOCX, JPG, PNG, atau WebP, maks 10 MB. Responsnya objek Luaran.
+
+Error umum: `403 "Hanya pengusul proposal yang dapat mengubah luaran"` ·
+`404 "Luaran tidak ditemukan"` / `"Proposal tidak ditemukan"` ·
+`400 "Target luaran hanya bisa diubah saat proposal berstatus draft atau revisi"` ·
+`400 "Capaian luaran hanya bisa diisi setelah proposal disetujui"` ·
+`400 "Capaian luaran tidak bisa diubah karena laporan sudah diajukan"` ·
+`400 "Bukti harus berupa PDF, DOCX, JPG, PNG, atau WebP."` / `"Isi file bukti bukan ..."` ·
+422 validasi (mis. `jenis` tidak dikenal, `buktiUrl` bukan URL).
+
+**`GET /luaran/stats`**: hanya proposal di mana user menjadi pengusul.
+
+```json
+{ "success": true, "message": "Statistik luaran fetched",
+  "data": { "total": 3, "tercapai": 3, "dapatDiklaim": 3, "jurnal": 3,
+            "perJenis": { "jurnal": 3, "prosiding": 0, "hki": 0, "buku": 0, "produk": 0, "media_massa": 0, "lainnya": 0 } } }
+```
+
+| Key | Arti |
+|---|---|
+| `total` | semua item luaran (W-12 "Luaran tercatat") |
+| `tercapai` | item berstatus tercapai |
+| `dapatDiklaim` | tercapai **dan** laporan proposalnya sudah disetujui (W-01) |
+| `jurnal` | `dapatDiklaim` yang jenisnya jurnal (W-02 "Jurnal Diterbitkan") |
+| `perJenis` | jumlah semua item per jenis |
+
+### 12.2 Nilai kepercayaan (W-06)
+
+**`GET /dosen/kepercayaan`**: dosen/mahasiswa melihat nilainya sendiri. Admin/ketua boleh
+`?userId=<id>` untuk melihat user lain (selain itu `403`). User yang hanya berperan reviewer
+mendapat `403`.
+
+```json
+{
+  "success": true, "message": "Nilai kepercayaan fetched",
+  "data": {
+    "userId": 13, "nilai": 4.4, "skala": 5,
+    "komponen": [
+      { "kode": "persetujuan_proposal", "label": "Persetujuan proposal", "bobot": 0.25, "nilai": 1, "pembilang": 3, "penyebut": 3, "keterangan": "..." },
+      { "kode": "persetujuan_laporan", "label": "Persetujuan laporan", "bobot": 0.25, "nilai": 1, "pembilang": 3, "penyebut": 3, "keterangan": "..." },
+      { "kode": "rekomendasi_reviewer", "label": "Rekomendasi reviewer", "bobot": 0.25, "nilai": 0.5, "pembilang": 1.5, "penyebut": 3, "keterangan": "..." },
+      { "kode": "ketepatan_waktu", "label": "Ketepatan waktu luaran", "bobot": 0.25, "nilai": 1, "pembilang": 3, "penyebut": 3, "keterangan": "..." }
+    ],
+    "dihitungPada": "2026-10-24T15:48:24.680Z"
+  }
+}
+```
+
+Rumus (semua komponen bernilai 0–1, bobot sama):
+
+| Komponen | Rumus |
+|---|---|
+| Persetujuan proposal | proposal `disetujui` ÷ proposal yang sudah diputuskan (`disetujui` + `ditolak`) |
+| Persetujuan laporan | laporan `disetujui` ÷ proposal `disetujui` yang **periodenya sudah selesai** atau laporannya sudah diputuskan (proposal yang masih berjalan tidak menurunkan nilai) |
+| Rekomendasi reviewer | rata-rata review final atas proposal & laporan milik user: `disetujui` = 1, `revisi` = 0,5, `ditolak` = 0 |
+| Ketepatan waktu luaran | luaran tercapai ≤ tanggal target ÷ luaran bertanggal target yang sudah tercapai **atau** targetnya sudah lewat |
+
+**`nilai` = 5 × rata-rata komponen yang punya data**, dibulatkan 1 desimal. Komponen dengan
+`penyebut = 0` bernilai `null` dan tidak ikut dihitung. Kalau semua komponen `null` (dosen baru),
+`nilai` juga `null`, dan frontend sebaiknya menampilkan "—" atau "Belum ada data". Tampilan
+yang disarankan: `${nilai.toFixed(1)}/${skala}.0`.
+
+### 12.3 Verifikasi email (W-18)
+
+Verifikasi email ini **opsional**: login tetap bisa walau email belum terverifikasi.
+
+- `emailVerifiedAt` (tanggal atau `null`) ada di **`GET /auth/me`** (key terakhir) dan
+  `GET/PATCH /users/profile/me` (sebelum `createdAt`). Banner "Akun email anda belum
+  diverifikasi" ditampilkan jika nilainya `null`.
+- User lama dan akun seed dianggap sudah terverifikasi. User yang mendaftar setelah migrasi
+  mulai dengan `null`.
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| POST | `/auth/verify-email/resend` | login | Kirim (ulang) email berisi link verifikasi |
+| POST | `/auth/verify-email` | **publik** | Konfirmasi token dari link |
+
+```jsonc
+// POST /auth/verify-email/resend (tanpa body)
+// 200 { "success": true, "message": "Email verifikasi telah dikirim ke user@contoh.ac.id" }
+// 400 "Email sudah terverifikasi" · 502 "Gagal mengirim email verifikasi. Coba lagi nanti." · 429 rate limit (10/15 menit)
+
+// POST /auth/verify-email
+{ "token": "<token dari link>" }
+// 200 "Email berhasil diverifikasi" · 400 "Token verifikasi tidak valid atau kedaluwarsa" · 422 token kosong
+```
+
+- Link di email berbentuk **`${FRONTEND_URL}/verify-email?token=...`** dan berlaku **24 jam**.
+  Meminta ulang membatalkan link sebelumnya. Frontend perlu halaman `/verify-email` yang
+  membaca `token` dari query lalu memanggil `POST /auth/verify-email`. Halaman ini sebaiknya
+  bisa dibuka tanpa login, lalu memanggil `fetchMe()` kalau user sedang login.
+- Pengembangan lokal: kalau `SMTP_HOST` kosong dan `NODE_ENV` bukan production, email tidak
+  dikirim. Link-nya dicetak di log server (`[dev] SMTP_HOST kosong ...`).
+
+### 12.4 Contoh pemanggilan (axios)
+
+```js
+// src/api/luaran.js (baru)
+export const luaranApi = {
+  byProposal: (proposalId) => api.get(`/luaran/proposal/${proposalId}`),
+  create: (data) => api.post('/luaran', data),
+  update: (id, data) => api.patch(`/luaran/${id}`, data),
+  remove: (id) => api.delete(`/luaran/${id}`),
+  saveCapaian: (id, data) => api.patch(`/luaran/${id}/capaian`, data),
+  uploadBukti: (id, file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post(`/luaran/${id}/bukti`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  downloadBukti: (id) => api.get(`/luaran/${id}/bukti`, { responseType: 'blob' }),
+  stats: () => api.get('/luaran/stats'),
+};
+
+// tambahan di modul dosen/user
+getKepercayaan: (params = {}) => api.get('/dosen/kepercayaan', { params }),   // { userId } untuk admin/ketua
+
+// tambahan di src/api/auth.js
+resendVerification: () => api.post('/auth/verify-email/resend'),
+verifyEmail: (token) => api.post('/auth/verify-email', { token }),
 ```

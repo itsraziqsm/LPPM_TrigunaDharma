@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A & B waiting API) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B & C waiting API) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -32,7 +32,7 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    `throw new Error()` → **HTTP 500** lewat `plainError`). Komentar `// Node: ...` di tiap
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
    Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
-   `mitra`, `tahapan`; `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`);
+   `mitra`, `tahapan`; `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`);
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
    (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
@@ -53,7 +53,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 371 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 423 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -93,7 +93,7 @@ dan diperlakukan sebagai reviewer di UI.
 ### Endpoint (`/api/v1`, semua butuh Bearer token kecuali auth publik & `/health`)
 | Grup | Endpoint utama | Akses |
 |---|---|---|
-| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil & `jabatanFungsional`) | publik / login |
+| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
 | `/users` | search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/roles/delete admin |
 | `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
@@ -105,6 +105,8 @@ dan diperlakukan sebagai reviewer di UI.
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
 | `/reviewer/my-tugasan` | tugasan review **proposal** milik user | reviewer, dosen, mahasiswa |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
+| `/luaran` | `/stats`, `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan) | pengusul tulis; baca = akses proposal |
+| `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua) | |
@@ -142,6 +144,17 @@ dan diperlakukan sebagai reviewer di UI.
   foto dihapus, undangan pending → ditolak, `deletedAt` diisi; admin terakhir tidak boleh.
 - Foto profil: JPG/PNG/WebP maks 2 MB (`multerImage`, magic bytes), blob di tabel `UserFoto`;
   `fotoUrl` relatif ke base URL API (`/users/:id/foto?v=<ms>`).
+- **Luaran kegiatan** (`LuaranKegiatan`, milik id proposal): target (jenis, target,
+  targetTanggal) diubah saat proposal draft/revisi; capaian (status tercapai/belum, judul,
+  keterangan, tercapaiAt, bukti URL/file) saat proposal disetujui dan laporan belum diajukan.
+  Dapat diklaim = tercapai + laporan disetujui; jurnal = dapat diklaim berjenis jurnal.
+  (Menu `/luaran` di frontend = pencairan dana, hal lain, menunggu kampus.)
+- **Nilai kepercayaan** = 5 × rata-rata komponen yang ada datanya (persetujuan proposal,
+  persetujuan laporan dari proposal disetujui yang periodenya selesai/laporannya diputuskan,
+  rekomendasi reviewer final 1/0,5/0, ketepatan waktu luaran ≤ targetTanggal).
+- **Verifikasi email** opsional (login tetap bisa): token 24 jam di `EmailVerificationToken`,
+  link `FRONTEND_URL/verify-email?token=`; user lama & seed dianggap terverifikasi; tanpa
+  `SMTP_HOST` di luar production link hanya di-log.
 - Hapus periode: admin/ketua membuat permintaan (berlaku 1 hari), harus disetujui pihak
   **lain** dengan password — admin ↔ ketua (peminta dan penyetuju tidak boleh sama-sama
   admin atau sama-sama non-admin). Notifikasi `deletion_request|approved|cancelled`.
@@ -153,7 +166,8 @@ dan diperlakukan sebagai reviewer di UI.
 - Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`).
 
 ### Database (MySQL/MariaDB)
-Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`), `UserFoto`
+Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
+`EmailVerificationToken`, `LuaranKegiatan` (item luaran per proposal, bukti blob), `UserFoto`
 (foto profil: `userId` PK, blob, mime, ukuran), `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
 (`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
 `Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
@@ -174,7 +188,7 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 (Penelitian/Pengabdian) + field `tipe`/`luaran`/`skema`/`mitra` di proposal; endpoint
 `/laporan`, `/program-studi`, `/users/profile/me` (GET), `/dosen/proposals/as-member` baru;
 `/auth/me` + field profil; stats + `review` & `?jenis=`; field `tahapan`; foto profil,
-export & hapus akun sendiri.
+export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,

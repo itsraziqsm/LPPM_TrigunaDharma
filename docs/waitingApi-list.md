@@ -11,7 +11,7 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 ## API sudah tersedia — tinggal disambungkan di frontend
 
 Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 10 untuk Grup A, bagian 11 untuk Grup B). Setelah UI-nya disambungkan dan penanda `ApiPending` dihapus, hapus barisnya dari
+bagian 10 untuk Grup A, bagian 11 untuk Grup B, bagian 12 untuk Grup C). Setelah UI-nya disambungkan dan penanda `ApiPending` dihapus, hapus barisnya dari
 tabel ini.
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
@@ -30,6 +30,11 @@ tabel ini.
 | W-10 | Header aplikasi: foto di kanan atas | Sama dengan W-07 (`fotoUrl` di `/auth/me`) | |
 | W-20 | Pengaturan: Unduh data akun | `GET /users/profile/export` → file JSON (tanpa isi dokumen) | Unduh dengan `responseType: 'blob'`. |
 | W-21 | Pengaturan: Hapus akun ini | `DELETE /users/profile/me` body `{ password }` | Akun dinonaktifkan + dianonimkan; setelah 200 frontend wajib logout. |
+| W-01 | Dashboard dosen: Luaran Dapat Diklaim | `GET /luaran/stats` → `dapatDiklaim` (tercapai + laporan disetujui) | Luaran = output kegiatan yang dijanjikan di proposal (bukan menu `/luaran` pencairan dana). |
+| W-02 | Profil: Jurnal · Statistik Dosen: Jurnal Diterbitkan | `GET /luaran/stats` → `jurnal` | |
+| W-12 | Kegiatan: Luaran tercatat & daftar luaran per kegiatan | `GET /luaran/stats` → `total`; item per proposal `GET /luaran/proposal/:proposalId` (+ CRUD target, capaian, bukti) | Target diisi di wizard Usulan (setelah draft tersimpan), capaian di halaman laporan. |
+| W-06 | Profil: Nilai Kepercayaan | `GET /dosen/kepercayaan` → `{ nilai, skala: 5, komponen[] }` | `nilai` bisa `null` untuk dosen tanpa riwayat; rumus di new-api.md 12.2. |
+| W-18 | Pengaturan: Status verifikasi email + kirim ulang | `emailVerifiedAt` di `/auth/me`; `POST /auth/verify-email/resend`; `POST /auth/verify-email` | Perlu halaman publik `/verify-email?token=` yang memanggil verify. |
 | W-19 | Pengaturan: Program Studi sebagai dropdown | `GET /program-studi` (publik) + CRUD admin | Kirim `nama` terpilih ke `programStudi`/`prodi`; bisa juga dipakai di form registrasi. |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
@@ -52,10 +57,7 @@ Data yang **menunggu API**:
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
-| W-01 | Kartu **Luaran Dapat Diklaim** | Jumlah luaran (output kegiatan) yang bisa diklaim dosen | `GET /dosen/luaran/stats` → `{ dapatDiklaim: number }` | Belum ada tabel/model "Luaran" sama sekali; perlu desain skema + migrasi. Menu "Luaran" di desain juga belum ada. |
-| W-02 | Profil: **Jurnal** dan Statistik Dosen: **Jurnal Diterbitkan** | Jumlah jurnal/publikasi dosen | `GET /dosen/publikasi/stats` → `{ jurnal: number }` | Belum ada tabel publikasi/jurnal. |
-| W-05 | Profil: **Sertifikasi** | Jumlah sertifikasi dosen | `GET /dosen/sertifikasi/stats` → `{ total: number }` | Belum ada tabel sertifikasi. |
-| W-06 | Profil: **Nilai Kepercayaan** | Skor kepercayaan, mis. `4.7/5.0` | `GET /dosen/kepercayaan` → `{ nilai: number, skala: 5 }` | Definisi/rumus skor belum ada. Perlu keputusan bisnis. |
+| W-05 | Profil: **Sertifikasi** | Jumlah sertifikasi dosen | `GET /dosen/sertifikasi/stats` → `{ total: number }` | **Ditunda** (keputusan pemilik proyek). Belum ada tabel sertifikasi. |
 
 ## Menu Kegiatan → Status Penelitian / Pengabdian (`frontend/src/pages/KegiatanPage.jsx`)
 
@@ -76,7 +78,6 @@ Data yang **menunggu API**:
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
-| W-12 | ~~Kartu Luaran tercatat & kolom Luaran~~ | — | — | **Selesai sebagian**: kolom Luaran kini memakai field `luaran` (target) dan `luaranTercapai` (laporan) dari API baru; kartu diganti "Laporan Diterima" sesuai desain. Rekap luaran yang dapat diklaim tetap menunggu W-01. |
 
 ## Usulan Penelitian / Pengabdian (`frontend/src/pages/UsulanPage.jsx`)
 
@@ -112,11 +113,8 @@ Data yang **sudah** tersambung ke API yang ada:
 | Ganti Password | `PATCH /users/profile/password` (validasi frontend: minimal 8 karakter, konfirmasi cocok) |
 | Nama, email, peran, status | `GET /auth/me` |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-18 | **Status verifikasi email** ("Akun email anda belum diverifikasi. Klik disini") | Status verifikasi + kirim ulang email verifikasi | Field `emailVerifiedAt` di `GET /auth/me` + `POST /auth/verify-email/resend` + `POST /auth/verify-email` | Belum ada kolom/alur verifikasi. Email juga belum bisa diubah oleh user (tidak termasuk field `PATCH /users/profile/me`). |
+Data yang **menunggu API**: tidak ada lagi. Semua item Pengaturan (W-07, W-08, W-18, W-19, W-20,
+W-21) sudah tersedia, lihat bagian "API sudah tersedia" di atas.
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

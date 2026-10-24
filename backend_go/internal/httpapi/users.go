@@ -20,7 +20,7 @@ var (
 	// profileColumns: profil milik sendiri (GET/PATCH /users/profile/me) = userColumns +
 	// jabatanFungsional, sintaId, sintaScore; fotoUrl dihitung dari UserFoto (__foto).
 	profileColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`," +
-		"u.`jabatanFungsional`,u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`,u.`createdAt`"
+		"u.`jabatanFungsional`,u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`,u.`emailVerifiedAt`,u.`createdAt`"
 
 	paginationSchema = zObj(
 		withDefault("page", zNum().Coerce().Int().Min(1), float64(1)),

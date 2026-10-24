@@ -117,8 +117,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		cols := []string{"email", "name", "fullName", "password", "status", "createdAt", "updatedAt"}
-		args := []any{a.email, a.name, a.name, string(hash), a.status, now, now}
+		// emailVerifiedAt: akun demo dianggap sudah verifikasi email (W-18).
+		cols := []string{"email", "name", "fullName", "password", "status", "emailVerifiedAt", "createdAt", "updatedAt"}
+		args := []any{a.email, a.name, a.name, string(hash), a.status, now, now, now}
 		for k, v := range a.extra {
 			cols = append(cols, k)
 			args = append(args, v)

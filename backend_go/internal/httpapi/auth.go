@@ -71,6 +71,8 @@ func (s *Server) registerAuthRoutes() {
 	g.post("/forgot-password", s.authLimiter, validateBody(forgotPasswordSchema), s.forgotPassword)
 	g.post("/reset-password", s.authLimiter, validateBody(resetPasswordSchema), s.resetPassword)
 	g.get("/me", s.authenticate, s.me)
+	g.post("/verify-email/resend", s.authenticate, s.authLimiter, s.resendVerificationEmail) // baru (W-18)
+	g.post("/verify-email", s.authLimiter, validateBody(verifyEmailSchema), s.verifyEmail)   // baru (W-18)
 }
 
 type userWithRoles struct {
@@ -411,7 +413,7 @@ func (s *Server) resetPassword(c *Ctx) error {
 }
 
 const meProfileColumns = "u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`jabatanFungsional`," +
-	"u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`"
+	"u.`sintaId`,u.`sintaScore`,(SELECT f.`updatedAt` FROM `UserFoto` f WHERE f.`userId` = u.`id`) AS `__foto`,u.`emailVerifiedAt`"
 
 func (s *Server) me(c *Ctx) error {
 	ctx := c.r.Context()

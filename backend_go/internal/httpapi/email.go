@@ -15,6 +15,25 @@ import (
 // HTML body. SMTP_SECURE=true uses implicit TLS, otherwise STARTTLS is used
 // when the server offers it.
 func sendSMTP(cfg config.Config, to, name, resetURL string) error {
+	html := `
+    <h2>Halo, ` + name + `</h2>
+    <p>Klik link berikut untuk reset password Anda (berlaku 1 jam):</p>
+    <a href="` + resetURL + `" style="
+      display:inline-block;
+      padding:12px 24px;
+      background:#4F46E5;
+      color:#fff;
+      text-decoration:none;
+      border-radius:6px;
+    ">Reset Password</a>
+    <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
+    <p style="color:#888;font-size:12px;">Link kadaluarsa dalam 1 jam.</p>
+  `
+	return sendMail(cfg, to, "Reset Password", html)
+}
+
+// sendMail sends one HTML email through the configured SMTP server.
+func sendMail(cfg config.Config, to, subject, html string) error {
 	address := net.JoinHostPort(cfg.SMTPHost, cfg.SMTPPort)
 	dialer := &net.Dialer{Timeout: 15 * time.Second}
 	conn, err := dialer.Dial("tcp", address)
@@ -63,24 +82,10 @@ func sendSMTP(cfg config.Config, to, name, resetURL string) error {
 	if appName == "" {
 		appName = "LPPM App"
 	}
-	html := `
-    <h2>Halo, ` + name + `</h2>
-    <p>Klik link berikut untuk reset password Anda (berlaku 1 jam):</p>
-    <a href="` + resetURL + `" style="
-      display:inline-block;
-      padding:12px 24px;
-      background:#4F46E5;
-      color:#fff;
-      text-decoration:none;
-      border-radius:6px;
-    ">Reset Password</a>
-    <p>Jika Anda tidak meminta reset password, abaikan email ini.</p>
-    <p style="color:#888;font-size:12px;">Link kadaluarsa dalam 1 jam.</p>
-  `
 	message := strings.Join([]string{
 		fmt.Sprintf("From: \"%s\" <%s>", appName, cfg.SMTPUser),
 		"To: " + to,
-		"Subject: Reset Password",
+		"Subject: " + subject,
 		"MIME-Version: 1.0",
 		"Content-Type: text/html; charset=UTF-8",
 		"Date: " + time.Now().Format(time.RFC1123Z),
