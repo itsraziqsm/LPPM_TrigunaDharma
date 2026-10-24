@@ -4,6 +4,7 @@ import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import DashboardLayout from '../pages/DashboardLayout'
 import ErrorPage from '../pages/ErrorPage'
+import VerifyEmailPage from '../pages/VerifyEmailPage'
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,8 @@ const router = createBrowserRouter([
       { path: '/kegiatan/pengabdian/usulan/:id', element: <DashboardLayout page="usulan" jenis="pengabdian" /> },
     ],
   },
+  // Publik (login atau tidak): konfirmasi link verifikasi email.
+  { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <ErrorPage routeError /> },
   // Halaman galat: /error/401, /error/403, /error/408, /error/500, /error/503, dst.
   { path: '/error/:code', element: <ErrorPage /> },
   { path: '/', element: <Navigate to="/dashboard" replace /> },

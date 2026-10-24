@@ -180,7 +180,7 @@ function DocCard({ tone, label, value, hint, icon: IconCmp, pending, to }) {
   )
 }
 
-function DocCards({ cards }) {
+function DocCards({ cards, luaran }) {
   return (
     <section aria-label="Ringkasan dokumen">
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -208,7 +208,14 @@ function DocCards({ cards }) {
           icon={ICONS.timer}
           to="/proposal-saya"
         />
-        <DocCard tone="blue" label="Luaran Dapat Diklaim" value={null} icon={ICONS.dollar} pending />
+        <DocCard
+          tone="blue"
+          label="Luaran Dapat Diklaim"
+          value={luaran ? luaran.dapatDiklaim : null}
+          hint={luaran ? `${luaran.tercapai} tercapai dari ${luaran.total} target` : 'Data belum termuat'}
+          icon={ICONS.dollar}
+          to="/kegiatan/penelitian"
+        />
       </ul>
     </section>
   )
@@ -311,14 +318,16 @@ function MetricCard({ label, value, icon: IconCmp, pending, hint }) {
   )
 }
 
-function ProfileMetrics({ user, penelitian, pengabdian }) {
+function ProfileMetrics({ user, penelitian, pengabdian, luaran, kepercayaan }) {
+  const nilai = kepercayaan?.nilai
+  const skala = kepercayaan?.skala || 5
   const hasSinta = user && Object.prototype.hasOwnProperty.call(user, 'sintaScore')
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
       <SectionTitle id="profil-capaian">Profil</SectionTitle>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
-        <MetricCard label="Jurnal" icon={ICONS.jurnal} pending />
+        <MetricCard label="Jurnal" icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} hint="Luaran jurnal yang dapat diklaim" />
         <MetricCard
           label="Nilai Sinta"
           icon={ICONS.sinta}
@@ -328,7 +337,16 @@ function ProfileMetrics({ user, penelitian, pengabdian }) {
         />
         <MetricCard label="Penelitian" value={penelitian} icon={ICONS.penelitian} hint="Proposal disetujui" />
         <MetricCard label="Sertifikasi" icon={ICONS.sertifikasi} pending />
-        <MetricCard label="Nilai Kepercayaan" icon={ICONS.kepercayaan} pending />
+        <MetricCard
+          label="Nilai Kepercayaan"
+          icon={ICONS.kepercayaan}
+          value={kepercayaan ? (nilai == null ? 'Belum ada data' : `${Number(nilai).toFixed(1)}/${skala}.0`) : null}
+          hint={
+            kepercayaan?.komponen
+              ? `${kepercayaan.komponen.filter((k) => k.nilai != null).length} dari ${kepercayaan.komponen.length} komponen terhitung`
+              : null
+          }
+        />
       </ul>
     </section>
   )
@@ -376,7 +394,7 @@ function StatChip({ icon: IconCmp, value, label, pending }) {
   )
 }
 
-function DosenStats({ user, penelitian, pengabdian }) {
+function DosenStats({ user, penelitian, pengabdian, luaran }) {
   const name = user?.fullName || user?.name || '—'
   const initials = String(user?.name || name)
     .split(/\s+/)
@@ -434,7 +452,7 @@ function DosenStats({ user, penelitian, pengabdian }) {
           <ul className="mt-5 grid grid-cols-1 gap-4 rounded-xl bg-slate-100 px-5 py-4 sm:flex sm:flex-wrap sm:justify-around sm:gap-x-6">
             <StatChip icon={ICONS.pengabdian} value={pengabdian} label="Pengabdian" />
             <StatChip icon={ICONS.penelitian} value={penelitian} label="Penelitian" />
-            <StatChip icon={ICONS.jurnal} value={null} label="Jurnal Diterbitkan" pending />
+            <StatChip icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} label="Jurnal Diterbitkan" />
           </ul>
         </article>
 
@@ -466,10 +484,10 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
   else
     body = (
       <>
-        <DocCards cards={dosen.cards} />
+        <DocCards cards={dosen.cards} luaran={dosen.luaran} />
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
-        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} />
-        <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} />
+        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
+        <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
         <DashboardBody model={model} hideKpis />
       </>
     )

@@ -15,4 +15,11 @@ export const authApi = {
 
   me: () =>
     api.get('/auth/me'),
+
+  // Verifikasi email (opsional): kirim ulang link (login) & konfirmasi token (publik)
+  resendVerification: () =>
+    api.post('/auth/verify-email/resend'),
+
+  verifyEmail: (token) =>
+    api.post('/auth/verify-email', { token }),
 }

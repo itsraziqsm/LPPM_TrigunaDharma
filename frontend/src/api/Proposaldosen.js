@@ -4,6 +4,8 @@ export const proposalDosenApi = {
     getStats: (params = {}) => api.get('/dosen/proposals/stats', { params }), // { jenis }
     // Proposal milik orang lain tempat user menjadi anggota (undangan diterima)
     getAsMember: (params = {}) => api.get('/dosen/proposals/as-member', { params }),
+    // Nilai kepercayaan { nilai (0–5 | null), skala, komponen[] }; admin/ketua boleh { userId }
+    getKepercayaan: (params = {}) => api.get('/dosen/kepercayaan', { params }),
     getAll: (params = {}) => api.get('/dosen/proposals', { params }),
     getById: (id) => api.get(`/dosen/proposals/${id}`),
     create: (data) => api.post('/dosen/proposals', data),

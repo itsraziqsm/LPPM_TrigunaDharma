@@ -5,6 +5,7 @@ import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
 import { JENIS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
+import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
 
 // ---------------------------------------------------------------------------
@@ -326,122 +327,138 @@ function LaporanDetail({ id, jenis }) {
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <section className="card">
-          <header className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-lg font-semibold text-navy-950">{editable ? 'Isi laporan' : 'Isi laporan'}</h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {editable
-                ? 'Simpan kapan saja sebagai draft. Luaran tercapai dan dokumen wajib sebelum diajukan.'
-                : isOwner
-                  ? 'Laporan sedang diproses LPPM dan tidak dapat diubah.'
-                  : 'Anda melihat laporan ini sebagai anggota tim.'}
-            </p>
-          </header>
-          <div className="px-6 py-6">
-            {editable ? (
-              <div className="space-y-5">
-                <div>
-                  <label htmlFor="l-judul" className="label">
-                    Judul <span className="text-red-600">*</span>
-                  </label>
-                  <input id="l-judul" className="input" value={form.judul} onChange={set('judul')} />
-                </div>
-                <div>
-                  <label htmlFor="l-abstrak" className="label">
-                    Abstrak <span className="text-red-600">*</span>
-                  </label>
-                  <textarea id="l-abstrak" rows={5} className="input resize-y leading-relaxed" value={form.abstrak} onChange={set('abstrak')} />
-                </div>
-                <div>
-                  <label htmlFor="l-luaran" className="label">
-                    Luaran tercapai <span className="text-red-600">*</span>
-                  </label>
-                  <textarea
-                    id="l-luaran"
-                    rows={3}
-                    className="input resize-y"
-                    value={form.luaranTercapai}
-                    onChange={set('luaranTercapai')}
-                    placeholder={laporan.luaran ? `Target: ${laporan.luaran}` : 'mis. 1 artikel jurnal SINTA 3'}
-                  />
-                  <p className="mt-1.5 text-xs text-slate-500">Target luaran proposal: {laporan.luaran || '—'}</p>
-                </div>
-                <div>
-                  <label htmlFor="l-ringkasan" className="label">
-                    Ringkasan hasil
-                  </label>
-                  <textarea id="l-ringkasan" rows={4} className="input resize-y leading-relaxed" value={form.ringkasanHasil} onChange={set('ringkasanHasil')} />
-                </div>
-                <div className="grid gap-5 sm:grid-cols-2">
+        <div className="space-y-6">
+          <section className="card">
+            <header className="border-b border-slate-200 px-6 py-5">
+              <h2 className="text-lg font-semibold text-navy-950">Isi laporan</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {editable
+                  ? 'Simpan kapan saja sebagai draft. Luaran tercapai dan dokumen wajib sebelum diajukan.'
+                  : isOwner
+                    ? 'Laporan sedang diproses LPPM dan tidak dapat diubah.'
+                    : 'Anda melihat laporan ini sebagai anggota tim.'}
+              </p>
+            </header>
+            <div className="px-6 py-6">
+              {editable ? (
+                <div className="space-y-5">
                   <div>
-                    <label htmlFor="l-realisasi" className="label">
-                      Realisasi anggaran (Rp)
+                    <label htmlFor="l-judul" className="label">
+                      Judul <span className="text-red-600">*</span>
                     </label>
-                    <input id="l-realisasi" type="number" min={0} className="input" value={form.realisasiAnggaran} onChange={set('realisasiAnggaran')} />
-                    <p className="mt-1.5 text-xs text-slate-500">Anggaran disetujui: {rupiah(laporan.anggaran)}</p>
+                    <input id="l-judul" className="input" value={form.judul} onChange={set('judul')} />
                   </div>
                   <div>
-                    <label htmlFor="l-url" className="label">
-                      URL dokumen (opsional)
+                    <label htmlFor="l-abstrak" className="label">
+                      Abstrak <span className="text-red-600">*</span>
                     </label>
-                    <input id="l-url" type="url" className="input" value={form.dokumenUrl} onChange={set('dokumenUrl')} placeholder="https://drive.google.com/…" />
-                    <p className="mt-1.5 text-xs text-slate-500">Alternatif bila tidak mengunggah file.</p>
+                    <textarea id="l-abstrak" rows={5} className="input resize-y leading-relaxed" value={form.abstrak} onChange={set('abstrak')} />
                   </div>
-                </div>
-                <div>
-                  <span className="label">File laporan (PDF/DOCX, maks 10 MB)</span>
-                  <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3">
-                    <CloudUpload className="size-5 text-navy-700" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
-                      {file ? file.name : laporan.dokumenNama ? `Saat ini: ${laporan.dokumenNama}` : 'Belum ada file'}
-                    </span>
-                    <label className="btn btn-secondary btn-sm cursor-pointer">
-                      {laporan.dokumenNama || file ? 'Ganti file' : 'Pilih file'}
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        className="sr-only"
-                        onChange={(e) => {
-                          setFile(e.target.files?.[0] || null)
-                          e.target.value = ''
-                        }}
-                      />
+                  <div>
+                    <label htmlFor="l-luaran" className="label">
+                      Luaran tercapai <span className="text-red-600">*</span>
                     </label>
+                    <textarea
+                      id="l-luaran"
+                      rows={3}
+                      className="input resize-y"
+                      value={form.luaranTercapai}
+                      onChange={set('luaranTercapai')}
+                      placeholder={laporan.luaran ? `Target: ${laporan.luaran}` : 'mis. 1 artikel jurnal SINTA 3'}
+                    />
+                    <p className="mt-1.5 text-xs text-slate-500">Target luaran proposal: {laporan.luaran || '—'}</p>
                   </div>
-                  <p className="mt-1.5 text-xs text-slate-500">Mengunggah file akan mengosongkan URL dokumen.</p>
-                </div>
+                  <div>
+                    <label htmlFor="l-ringkasan" className="label">
+                      Ringkasan hasil
+                    </label>
+                    <textarea id="l-ringkasan" rows={4} className="input resize-y leading-relaxed" value={form.ringkasanHasil} onChange={set('ringkasanHasil')} />
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="l-realisasi" className="label">
+                        Realisasi anggaran (Rp)
+                      </label>
+                      <input id="l-realisasi" type="number" min={0} className="input" value={form.realisasiAnggaran} onChange={set('realisasiAnggaran')} />
+                      <p className="mt-1.5 text-xs text-slate-500">Anggaran disetujui: {rupiah(laporan.anggaran)}</p>
+                    </div>
+                    <div>
+                      <label htmlFor="l-url" className="label">
+                        URL dokumen (opsional)
+                      </label>
+                      <input id="l-url" type="url" className="input" value={form.dokumenUrl} onChange={set('dokumenUrl')} placeholder="https://drive.google.com/…" />
+                      <p className="mt-1.5 text-xs text-slate-500">Alternatif bila tidak mengunggah file.</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="label">File laporan (PDF/DOCX, maks 10 MB)</span>
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3">
+                      <CloudUpload className="size-5 text-navy-700" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
+                        {file ? file.name : laporan.dokumenNama ? `Saat ini: ${laporan.dokumenNama}` : 'Belum ada file'}
+                      </span>
+                      <label className="btn btn-secondary btn-sm cursor-pointer">
+                        {laporan.dokumenNama || file ? 'Ganti file' : 'Pilih file'}
+                        <input
+                          type="file"
+                          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          className="sr-only"
+                          onChange={(e) => {
+                            setFile(e.target.files?.[0] || null)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-500">Mengunggah file akan mengosongkan URL dokumen.</p>
+                  </div>
 
-                <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-5">
-                  <button type="button" onClick={submit} disabled={Boolean(busy)} className="btn btn-primary">
-                    <Send className="size-4" aria-hidden="true" />
-                    {busy === 'submit' ? 'Mengajukan…' : 'Simpan & ajukan'}
-                  </button>
-                  <button type="button" onClick={save} disabled={Boolean(busy)} className="btn btn-secondary">
-                    {busy === 'save' ? 'Menyimpan…' : 'Simpan draft'}
-                  </button>
-                  {laporan.status === 'draft' ? (
-                    <button type="button" onClick={remove} disabled={Boolean(busy)} className="btn btn-ghost ml-auto text-red-700 hover:bg-red-50">
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      Hapus
+                  <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-5">
+                    <button type="button" onClick={submit} disabled={Boolean(busy)} className="btn btn-primary">
+                      <Send className="size-4" aria-hidden="true" />
+                      {busy === 'submit' ? 'Mengajukan…' : 'Simpan & ajukan'}
                     </button>
-                  ) : null}
+                    <button type="button" onClick={save} disabled={Boolean(busy)} className="btn btn-secondary">
+                      {busy === 'save' ? 'Menyimpan…' : 'Simpan draft'}
+                    </button>
+                    {laporan.status === 'draft' ? (
+                      <button type="button" onClick={remove} disabled={Boolean(busy)} className="btn btn-ghost ml-auto text-red-700 hover:bg-red-50">
+                        <Trash2 className="size-4" aria-hidden="true" />
+                        Hapus
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <InfoTable
-                rows={[
-                  ['Abstrak', laporan.abstrak],
-                  ['Target luaran', laporan.luaran || '—'],
-                  ['Luaran tercapai', laporan.luaranTercapai || '—'],
-                  ['Ringkasan hasil', laporan.ringkasanHasil || '—'],
-                  ['Anggaran disetujui', rupiah(laporan.anggaran)],
-                  ['Realisasi anggaran', rupiah(laporan.realisasiAnggaran)],
-                  ['Dokumen', <DokumenLaporan key="d" laporan={laporan} />],
-                ]}
-              />
-            )}
-          </div>
-        </section>
+              ) : (
+                <InfoTable
+                  rows={[
+                    ['Abstrak', laporan.abstrak],
+                    ['Target luaran', laporan.luaran || '—'],
+                    ['Luaran tercapai', laporan.luaranTercapai || '—'],
+                    ['Ringkasan hasil', laporan.ringkasanHasil || '—'],
+                    ['Anggaran disetujui', rupiah(laporan.anggaran)],
+                    ['Realisasi anggaran', rupiah(laporan.realisasiAnggaran)],
+                    ['Dokumen', <DokumenLaporan key="d" laporan={laporan} />],
+                  ]}
+                />
+              )}
+            </div>
+          </section>
+
+          <section className="card">
+            <header className="border-b border-slate-200 px-6 py-5">
+              <h2 className="text-lg font-semibold text-navy-950">Capaian luaran</h2>
+              <p className="mt-0.5 text-sm text-slate-500">
+                {editable
+                  ? 'Isi capaian tiap target luaran beserta buktinya sebelum laporan diajukan.'
+                  : 'Capaian tiap target luaran proposal.'}
+              </p>
+            </header>
+            <div className="px-6 py-6">
+              <LuaranCapaian proposalId={laporan.proposalId} editable={editable} />
+            </div>
+          </section>
+        </div>
 
         <aside className="space-y-6">
           <section className="card px-6 py-5">

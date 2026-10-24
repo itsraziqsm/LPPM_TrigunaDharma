@@ -10,12 +10,14 @@ import {
   FileText,
   Info,
   Building2,
+  Plus,
   Save,
   Trash2,
   Users,
 } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { periodeApi } from '../api/periode'
+import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import useAuthStore from '../store/authStore'
 import ApiPending from '../components/ApiPending'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
@@ -26,7 +28,8 @@ import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
 // Proposal. Wizard 4 langkah: Identitas → Anggota → Dokumen → Preview.
 //   /kegiatan/:jenis/usulan       buat proposal baru (draft)
 //   /kegiatan/:jenis/usulan/:id   ubah proposal (hanya draft/revisi)
-// Data: POST/PATCH /dosen/proposals (+ luaran), POST /proposals/:id/dokumen-utama,
+// Data: POST/PATCH /dosen/proposals, POST/PATCH/DELETE /luaran (item target luaran,
+// disinkronkan setelah proposal tersimpan), POST /proposals/:id/dokumen-utama,
 // GET /periode, GET /users/search. Field tanpa endpoint memakai ApiPending dan
 // dicatat di docs/waitingApi-list.md (W-22..W-26).
 // Pengabdian (desain terpisah): 5 langkah dengan langkah Mitra, anggota dosen &
@@ -51,22 +54,32 @@ const STEPS_PENGABDIAN = [
 
 const stepsFor = (jenis) => (jenis === 'pengabdian' ? STEPS_PENGABDIAN : STEPS)
 
-// Pilihan target luaran. Disimpan sebagai teks di field `luaran` proposal;
-// daftar baku dari server belum ada (W-25).
-const LUARAN_OPTIONS = [
-  'Artikel jurnal nasional terakreditasi (SINTA)',
-  'Artikel jurnal internasional bereputasi',
-  'Artikel prosiding seminar',
-  'Buku ajar',
-  'Hak Kekayaan Intelektual (HKI)',
-  'Teknologi tepat guna',
-  'Video kegiatan / publikasi media massa',
-]
+// Target luaran = item /luaran (jenis baku LUARAN_JENIS). Field teks `luaran`
+// proposal tetap diisi ringkasan item supaya tampilan lama & laporan ikut membaca.
+let luaranKey = 0
+const newLuaran = () => ({ key: `n${(luaranKey += 1)}`, id: null, jenis: 'jurnal', target: '', targetTanggal: '' })
+const luaranRingkas = (items) => items.map((i) => `${LUARAN_JENIS[i.jenis] || i.jenis}: ${i.target.trim()}`).join('; ')
 
 const MAX_FILE = 10 * 1024 * 1024
 const ALLOWED_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
-function validate(form, file, existingDoc) {
+// Samakan item luaran di server dengan isi formulir: hapus yang dibuang,
+// ubah yang berubah, tambah yang baru.
+async function syncLuaran(proposalId, orig, items) {
+  const keep = new Set(items.filter((i) => i.id).map((i) => i.id))
+  for (const o of orig) if (!keep.has(o.id)) await luaranApi.remove(o.id)
+  for (const i of items) {
+    const data = { jenis: i.jenis, target: i.target.trim(), targetTanggal: i.targetTanggal || null }
+    if (!i.id) {
+      await luaranApi.create({ proposalId: Number(proposalId), ...data, ...(i.targetTanggal ? {} : { targetTanggal: undefined }) })
+      continue
+    }
+    const o = orig.find((x) => x.id === i.id)
+    if (o && (o.jenis !== i.jenis || o.target !== i.target || o.targetTanggal !== i.targetTanggal)) await luaranApi.update(i.id, data)
+  }
+}
+
+function validate(form, file, existingDoc, luaranItems) {
   const e = {}
   const judul = form.judul.trim()
   if (!judul) e.judul = 'Judul proposal wajib diisi.'
@@ -83,6 +96,7 @@ function validate(form, file, existingDoc) {
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
   if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
+  if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
     else if (!ALLOWED_MIME.includes(file.type)) e.dokumen = 'Format file harus PDF atau DOCX.'
@@ -92,7 +106,7 @@ function validate(form, file, existingDoc) {
   return e
 }
 
-const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['abstrak', 'dokumen'] }
+const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['abstrak', 'dokumen', 'luaran'] }
 
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
@@ -272,6 +286,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     mitra: '',
   })
   const [anggota, setAnggota] = useState([])
+  const [luaranItems, setLuaranItems] = useState([])
+  const [luaranOrig, setLuaranOrig] = useState([])
   const [file, setFile] = useState(null)
   const [existingDoc, setExistingDoc] = useState(null)
   const [periodes, setPeriodes] = useState([])
@@ -344,7 +360,19 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           })),
         )
         if (p.dokumenNama) setExistingDoc({ nama: p.dokumenNama, ukuran: p.dokumenUkuran })
-        setLoadState('ready')
+        return luaranApi.byProposal(id).then((lr) => {
+          if (!alive) return
+          const items = (lr.data.data || []).map((l) => ({
+            key: `s${l.id}`,
+            id: l.id,
+            jenis: l.jenis,
+            target: l.target || '',
+            targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
+          }))
+          setLuaranItems(items)
+          setLuaranOrig(items)
+          setLoadState('ready')
+        })
       })
       .catch((e) => {
         if (!alive) return
@@ -356,7 +384,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     }
   }, [id, isEdit, jenisRoute])
 
-  const errors = useMemo(() => validate(form, file, existingDoc), [form, file, existingDoc])
+  const errors = useMemo(() => validate(form, file, existingDoc, luaranItems), [form, file, existingDoc, luaranItems])
   const jenisLabel = JENIS_LABEL[form.jenis] || 'Kegiatan'
   const periodeOptions = periodes.filter((p) => p.jenis === form.jenis)
   const periode = periodes.find((p) => String(p.id) === String(form.periodeId))
@@ -366,6 +394,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const addAnggota = (kind) => (u) => setAnggota((prev) => [...prev, { ...u, peran: 'anggota', kind: kind || kindOf(u) }])
   const setPeran = (id, peran) => setAnggota((prev) => prev.map((x) => (x.id === id ? { ...x, peran } : x)))
   const removeAnggota = (id) => setAnggota((prev) => prev.filter((x) => x.id !== id))
+  const setLuaran = (key, field, value) => setLuaranItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
   const steps = stepsFor(form.jenis)
   const current = steps[Math.min(step, steps.length - 1)].key
   const err = (key) => (showErrors[current] ? errors[key] : null)
@@ -420,7 +449,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         jenis: form.jenis,
         periodeId: Number(form.periodeId),
         ...(form.anggaran ? { anggaran: Number(form.anggaran) } : {}),
-        ...(form.luaran ? { luaran: form.luaran } : {}),
+        ...(luaranItems.length ? { luaran: luaranRingkas(luaranItems) } : form.luaran ? { luaran: form.luaran } : {}),
         // skema hanya untuk penelitian, mitra hanya untuk pengabdian (backend menolak jenis lain)
         ...(form.jenis === 'penelitian' && (form.skema.trim() || isEdit) ? { skema: form.skema.trim() } : {}),
         ...(form.jenis === 'pengabdian' && (form.mitra.trim() || isEdit) ? { mitra: form.mitra.trim() } : {}),
@@ -441,10 +470,19 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           uploadFailed = true
         }
       }
+      let luaranFailed = false
+      if (savedId) {
+        try {
+          await syncLuaran(savedId, luaranOrig, luaranItems)
+        } catch {
+          luaranFailed = true
+        }
+      }
+      const warn = [uploadFailed && 'file proposal gagal diunggah', luaranFailed && 'sebagian target luaran gagal disimpan'].filter(Boolean)
       navigate(`/kegiatan/${form.jenis}`, {
         state: {
-          flash: uploadFailed
-            ? { type: 'warning', text: 'Proposal tersimpan, tetapi file proposal gagal diunggah. Unggah ulang dari menu Edit.' }
+          flash: warn.length
+            ? { type: 'warning', text: `Proposal tersimpan, tetapi ${warn.join(' dan ')}. Perbaiki dari menu Edit.` }
             : {
                 type: 'success',
                 text: isEdit
@@ -837,23 +875,72 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               </p>
             </div>
 
-            <div>
-              <label htmlFor="u-luaran" className="label">
-                Luaran Tambahan
-              </label>
-              <select id="u-luaran" className="input" value={form.luaran} onChange={set('luaran')}>
-                <option value="">-- Pilih target luaran (opsional) --</option>
-                {form.luaran && !LUARAN_OPTIONS.includes(form.luaran) ? <option value={form.luaran}>{form.luaran}</option> : null}
-                {LUARAN_OPTIONS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                Disimpan sebagai target luaran dan disalin ke laporan. Daftar pilihan baku dari server: <ApiPending />
+            <fieldset>
+              <legend className="label">Target Luaran</legend>
+              <p className="-mt-0.5 mb-3 text-xs text-slate-500">
+                Opsional. Capaian tiap target diisi saat menyusun laporan dan dihitung sebagai luaran yang dapat diklaim.
               </p>
-            </div>
+              {luaranItems.length > 0 ? (
+                <ul className="space-y-3">
+                  {luaranItems.map((item, i) => (
+                    <li key={item.key} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_10rem_auto] sm:items-end">
+                      <div>
+                        <label htmlFor={`ul-jenis-${item.key}`} className="label">
+                          Jenis
+                        </label>
+                        <select id={`ul-jenis-${item.key}`} className="input" value={item.jenis} onChange={(e) => setLuaran(item.key, 'jenis', e.target.value)}>
+                          {Object.entries(LUARAN_JENIS).map(([v, l]) => (
+                            <option key={v} value={v}>
+                              {l}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor={`ul-target-${item.key}`} className="label">
+                          Target {i + 1}
+                        </label>
+                        <input
+                          id={`ul-target-${item.key}`}
+                          className="input"
+                          value={item.target}
+                          onChange={(e) => setLuaran(item.key, 'target', e.target.value)}
+                          placeholder="mis. Artikel jurnal SINTA 3"
+                          maxLength={255}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor={`ul-tgl-${item.key}`} className="label">
+                          Target tanggal
+                        </label>
+                        <input
+                          id={`ul-tgl-${item.key}`}
+                          type="date"
+                          className="input"
+                          value={item.targetTanggal}
+                          onChange={(e) => setLuaran(item.key, 'targetTanggal', e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="icon-btn text-red-700 hover:bg-red-50"
+                        aria-label={`Hapus target ${i + 1}`}
+                        onClick={() => setLuaranItems((prev) => prev.filter((x) => x.key !== item.key))}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : form.luaran ? (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Catatan luaran lama: {form.luaran}</p>
+              ) : null}
+              <FieldError message={err('luaran')} />
+              <button type="button" className="btn btn-secondary btn-sm mt-3" onClick={() => setLuaranItems((prev) => [...prev, newLuaran()])}>
+                <Plus className="size-4" aria-hidden="true" />
+                Tambah target luaran
+              </button>
+            </fieldset>
           </div>
         </StepCard>
       )}
@@ -934,7 +1021,21 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 rows={[
                   ['Abstrak', form.abstrak || '—'],
                   ['Kata Kunci', <ApiPending key="k" />],
-                  ['Luaran Tambahan', form.luaran || '—'],
+                  [
+                    'Target Luaran',
+                    luaranItems.length ? (
+                      <ul key="l" className="list-disc space-y-0.5 pl-4">
+                        {luaranItems.map((i) => (
+                          <li key={i.key}>
+                            {LUARAN_JENIS[i.jenis]}: {i.target || '—'}
+                            {i.targetTanggal ? ` (target ${i.targetTanggal})` : ''}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      form.luaran || '—'
+                    ),
+                  ],
                   [
                     'File Proposal',
                     file || existingDoc ? (

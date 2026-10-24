@@ -11,24 +11,19 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 ## API sudah tersedia — tinggal disambungkan di frontend
 
 Endpoint di bawah sudah ada di backend (detail & contoh respons: `backend_go/new-api.md`
-bagian 12 untuk Grup C, bagian 13 untuk W-22 sampai W-25) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
+bagian 13) tetapi **belum disambungkan** di frontend. Setelah UI-nya disambungkan
 dan penanda `ApiPending` dihapus, pindahkan barisnya ke tabel "Sudah disambungkan".
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-01 | Dashboard dosen: Luaran Dapat Diklaim | `GET /luaran/stats` → `dapatDiklaim` (tercapai + laporan disetujui) | Luaran = output kegiatan yang dijanjikan di proposal (bukan menu `/luaran` pencairan dana). |
-| W-02 | Profil: Jurnal · Statistik Dosen: Jurnal Diterbitkan | `GET /luaran/stats` → `jurnal` | |
-| W-12 | Kegiatan: Luaran tercatat & daftar luaran per kegiatan | `GET /luaran/stats` → `total`; item per proposal `GET /luaran/proposal/:proposalId` (+ CRUD target, capaian, bukti) | Target diisi di wizard Usulan (setelah draft tersimpan), capaian di halaman laporan. |
-| W-06 | Profil: Nilai Kepercayaan | `GET /dosen/kepercayaan` → `{ nilai, skala: 5, komponen[] }` | `nilai` bisa `null` untuk dosen tanpa riwayat; rumus di new-api.md 12.2. |
 | W-22 | Usulan: Rumpun Ilmu & Bidang | Field `rumpunIlmu`, `bidang` di create/update/respons proposal; pilihan dari `GET /master/rumpun-ilmu`, `GET /master/bidang?jenis=…` | Nilai disimpan sebagai teks (nama dari master). |
 | W-23 | Usulan: Kontak di tabel Anggota | `kontak`, `noHp` di `GET /users/search`, `members/search`, dan `anggota[].user` | **Alamat tidak disediakan** (keputusan privasi). Hapus kolom Alamat dari UI. |
 | W-24 | Usulan: Kata Kunci | Field `kataKunci` (array string, maks 10 × 50 karakter) di create/update/respons proposal | Respons selalu array; `[]` mengosongkan. |
-| W-25 | Usulan: pilihan Luaran Tambahan | `GET /master/luaran?jenis=…` | 7 pilihan pertama sama dengan `LUARAN_OPTIONS`; ganti daftar statis. |
-| W-18 | Pengaturan: Status verifikasi email + kirim ulang | `emailVerifiedAt` di `/auth/me`; `POST /auth/verify-email/resend`; `POST /auth/verify-email` | Perlu halaman publik `/verify-email?token=` yang memanggil verify. |
+| W-25 | Usulan: pilihan Luaran Tambahan | `GET /master/luaran?jenis=…` | Daftar statis `LUARAN_OPTIONS` sudah diganti editor item luaran (`/luaran`, jenis baku); master ini belum dipakai. |
 
 ### Sudah disambungkan
 
-Grup A (`new-api.md` bagian 10) dan Grup B (bagian 11):
+Grup A (`new-api.md` bagian 10), Grup B (bagian 11), dan Grup C (bagian 12):
 
 | ID | Disambungkan di |
 |---|---|
@@ -41,6 +36,9 @@ Grup A (`new-api.md` bagian 10) dan Grup B (bagian 11):
 | W-16 | Bagian "sebagai anggota tim" di Status Kegiatan (`as-member`), detail via `GET /proposals/:id` |
 | W-19 | Dropdown Program Studi di Pengaturan (`GET /program-studi`) |
 | W-20 / W-21 | Unduh data akun & Hapus akun (konfirmasi password, lalu logout) di Zona Berbahaya |
+| W-01 / W-02 / W-12 | `GET /luaran/stats` → kartu Luaran Dapat Diklaim (+ "X tercapai dari Y target"), Jurnal, Jurnal Diterbitkan (dashboard). Item luaran: editor **Target Luaran** di langkah Dokumen wizard Usulan (`POST/PATCH/DELETE /luaran`, disinkronkan setelah proposal tersimpan), **Capaian luaran** di halaman laporan (`PATCH /luaran/:id/capaian`, `POST /luaran/:id/bukti`), baca saja di Laporan Masuk & review laporan (`pages/laporan/LuaranCapaian.jsx`) |
+| W-06 | `GET /dosen/kepercayaan` → Nilai Kepercayaan (`4.4/5.0`, "Belum ada data" bila `null`) |
+| W-18 | `emailVerifiedAt` → badge Terverifikasi / Belum diverifikasi + "Kirim ulang email verifikasi" di Pengaturan; halaman publik `/verify-email?token=` (`VerifyEmailPage.jsx`) |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -52,6 +50,8 @@ Data yang **sudah** tersambung ke API yang ada:
 | Usulan Terakhir (judul, status, jenis, periode) | `GET /dosen/proposals?limit=6` (baris pertama) |
 | Tahapan usulan | field `tahapan` {label, urutan} di proposal |
 | Profil: Pengabdian, Penelitian | `GET /dosen/proposals?jenis=…&status=disetujui&limit=1` → `meta.total` |
+| Luaran Dapat Diklaim, Jurnal, Jurnal Diterbitkan | `GET /luaran/stats` |
+| Nilai Kepercayaan | `GET /dosen/kepercayaan` |
 | Nama, email, foto, jabatan fungsional, No. HP, NIDN, institusi, TTL, prodi, SINTA | `GET /auth/me` |
 
 Data yang **menunggu API**:
@@ -93,7 +93,7 @@ Data yang **sudah** tersambung ke API yang ada:
 | Elemen | Sumber |
 |---|---|
 | Judul, jenis, periode (+ Tahun Pelaksanaan dari `periode.tahun`), anggaran, abstrak, anggota + peran | `POST /dosen/proposals` / `PATCH /dosen/proposals/:id` (`anggotaIds`), `GET /periode?isAktif=true` |
-| Luaran Tambahan | field `luaran` (string) di create/update — API baru |
+| Target Luaran (banyak item: jenis, target, tanggal target) | `GET /luaran/proposal/:id`, `POST/PATCH/DELETE /luaran`; field teks `luaran` diisi ringkasan item |
 | Skema Penelitian (Identitas, penelitian) · Nama Mitra (langkah Mitra, pengabdian, wajib) | field `skema` / `mitra` |
 | Upload Proposal (wajib di wizard) | `POST /proposals/:id/dokumen-utama` setelah proposal tersimpan |
 | Cari anggota | `GET /users/search` |
@@ -116,6 +116,7 @@ Semua sudah tersambung, tidak ada placeholder:
 | Laporan Masuk (Ketua LPPM/Admin): tugaskan reviewer, keputusan | `/laporan-masuk[?id=]` (`LaporanMasukPage.jsx`) | `GET /laporan`, `POST/DELETE /laporan/:id/reviewers`, `PATCH /laporan/:id/status` |
 | Tab Laporan di Penugasan Review (reviewer) | `/penugasan?tab=laporan` | `GET /laporan/tugasan`, `POST /laporan/:id/reviews[/finalize]` |
 | Tautan notifikasi `refType: laporan` | `/notifikasi` | — |
+| Capaian luaran (pengusul isi saat laporan draft/revisi; lainnya baca saja) | halaman laporan, Laporan Masuk, review laporan | `GET /luaran/proposal/:proposalId`, `PATCH /luaran/:id/capaian`, `POST/GET /luaran/:id/bukti` |
 
 ## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)
 
@@ -130,8 +131,9 @@ Data yang **sudah** tersambung ke API yang ada:
 | Program studi (dropdown) | `GET /program-studi` |
 | Unduh data akun · Hapus akun | `GET /users/profile/export` · `DELETE /users/profile/me` |
 
-Data yang **menunggu API**: tidak ada lagi. Verifikasi email (W-18) sudah tersedia di backend
-tetapi belum disambungkan, lihat bagian "API sudah tersedia" di atas.
+| Status verifikasi email + kirim ulang | `emailVerifiedAt` (`/auth/me`), `POST /auth/verify-email/resend`; link email → `/verify-email` (`POST /auth/verify-email`) |
+
+Data yang **menunggu API**: tidak ada lagi.
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

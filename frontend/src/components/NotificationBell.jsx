@@ -171,7 +171,7 @@ export default function NotificationBell() {
             <button
                 ref={bellRef}
                 onClick={() => setOpen((v) => !v)}
-                className="relative flex size-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                className="relative flex size-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white lg:text-slate-500 lg:hover:bg-navy-100 lg:hover:text-navy-900"
                 aria-label="Notifikasi"
             >
                 <Bell className="w-5 h-5" strokeWidth={1.5} aria-hidden="true" />

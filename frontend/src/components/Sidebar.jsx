@@ -107,8 +107,8 @@ function getRoleNames(roles) {
 const navLinkClass = ({ isActive }) =>
   `relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
     isActive
-      ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brass-400'
-      : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+      ? 'bg-white text-navy-950 shadow-sm ring-1 ring-inset ring-navy-100 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brass-400'
+      : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
   }`
 
 function NavGroup({ item, onNavigate }) {
@@ -129,7 +129,7 @@ function NavGroup({ item, onNavigate }) {
         aria-expanded={expanded}
         aria-controls={listId}
         className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
-          childActive ? 'text-white' : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+          childActive ? 'text-navy-950' : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
         }`}
       >
         <span className="shrink-0">{item.icon}</span>
@@ -137,7 +137,7 @@ function NavGroup({ item, onNavigate }) {
         <ChevronRight className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} strokeWidth={1.8} aria-hidden="true" />
       </button>
       {expanded ? (
-        <div id={listId} className="ml-[1.3rem] flex flex-col gap-0.5 border-l border-white/10 py-0.5 pl-2">
+        <div id={listId} className="ml-[1.3rem] flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2">
           {item.children.map((child) => (
             <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
               <span className="flex-1 truncate">{child.label}</span>
@@ -219,9 +219,13 @@ function LogoutDialog({ onCancel, onConfirm, busy }) {
 const railItemClass = ({ isActive }) =>
   `relative grid size-10 place-items-center rounded-lg transition-colors ${
     isActive
-      ? 'bg-white/10 text-white before:absolute before:inset-y-2 before:-left-[0.875rem] before:w-0.5 before:rounded-full before:bg-brass-400'
-      : 'text-white/60 hover:bg-white/[0.05] hover:text-white'
+      ? 'bg-white text-navy-950 shadow-sm ring-1 ring-inset ring-navy-100 before:absolute before:inset-y-2 before:-left-[0.875rem] before:w-0.5 before:rounded-full before:bg-brass-400'
+      : 'text-slate-500 hover:bg-white/70 hover:text-navy-950'
   }`
+
+// Avatar profil di rail ciut (bagian akun berlatar gelap).
+const railProfileClass = ({ isActive }) =>
+  `grid size-10 place-items-center rounded-lg transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
 
 // Dipanggil dari UndanganPage setelah user respond, agar badge langsung update
 export function refreshInvitationBadge() {
@@ -356,7 +360,7 @@ export default function Sidebar() {
       {/* ── Rail ───────────────────────────────────────────────────────── */}
       <aside
         aria-label="Navigasi"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail text-white transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-navy-100 bg-navy-50 text-navy-950 transition-[transform,width] duration-200 ease-out lg:static lg:z-auto lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
       >
         {/* Merek — saat diciutkan, logo menjadi tombol untuk membuka rail */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
@@ -367,17 +371,17 @@ export default function Sidebar() {
               aria-label="Tampilkan navigasi (Ctrl+B)"
               aria-expanded={false}
               title="Tampilkan navigasi (Ctrl+B)"
-              className="hidden size-9 shrink-0 place-items-center rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.14] lg:grid"
+              className="hidden size-9 shrink-0 place-items-center rounded-[10px] bg-rail ring-1 ring-inset ring-navy-900/10 transition-colors hover:bg-navy-800 lg:grid"
             >
               <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
             </button>
           ) : null}
-          <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/10 ${hideWhenCollapsed}`}>
+          <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] bg-rail ring-1 ring-inset ring-navy-900/10 ${hideWhenCollapsed}`}>
             <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
           </div>
           <div className={`min-w-0 ${hideWhenCollapsed}`}>
-            <p className="font-serif text-xl font-medium leading-none tracking-wide text-white">LPPM</p>
-            <p className="mt-1.5 truncate text-[0.6875rem] leading-none text-white/50">Pengelolaan Proposal</p>
+            <p className="font-serif text-xl font-medium leading-none tracking-wide text-navy-950">LPPM</p>
+            <p className="mt-1.5 truncate text-[0.6875rem] leading-none text-slate-500">Pengelolaan Proposal</p>
           </div>
         </header>
 
@@ -386,7 +390,7 @@ export default function Sidebar() {
           type="button"
           onClick={() => setMobileOpen(false)}
           aria-label="Tutup menu navigasi"
-          className="absolute right-3 top-4 grid size-8 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+          className="absolute right-3 top-4 grid size-8 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-navy-100 hover:text-navy-950 lg:hidden"
         >
           <X className="size-4" strokeWidth={1.8} aria-hidden="true" />
         </button>
@@ -439,13 +443,13 @@ export default function Sidebar() {
                   >
                     {item.icon}
                     {item.badge && pendingCount > 0 && (
-                      <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-rail" aria-hidden="true" />
+                      <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-navy-50" aria-hidden="true" />
                     )}
                   </NavLink>
                 ))}
             </nav>
-            <section aria-label="Akun" className="hidden shrink-0 flex-col items-center border-t border-white/10 py-3 lg:flex">
-              <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railItemClass}>
+            <section aria-label="Akun" className="hidden shrink-0 flex-col items-center bg-rail py-3 text-white lg:flex">
+              <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railProfileClass}>
                 <UserAvatar user={user} className="size-8 text-sm" />
               </NavLink>
             </section>
@@ -463,8 +467,8 @@ export default function Sidebar() {
           </>
         ) : null}
 
-        {/* Bagian akun (latar rail) */}
-        <section aria-label="Akun" className={`shrink-0 border-t border-white/10 p-3 ${hideWhenCollapsed}`}>
+        {/* Bagian akun & aksi berlatar gelap; menu di atasnya berlatar terang */}
+        <section aria-label="Akun" className={`shrink-0 bg-rail p-3 text-white ${hideWhenCollapsed}`}>
           <NavLink
             to="/profil"
             onClick={() => setMobileOpen(false)}

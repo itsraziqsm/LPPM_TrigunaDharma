@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Camera, Download, KeyRound, TriangleAlert, UserRound } from 'lucide-react'
 import { usersApi } from '../api/users'
+import { authApi } from '../api/auth'
 import useAuthStore from '../store/authStore'
-import ApiPending from '../components/ApiPending'
 import UserAvatar from '../components/UserAvatar'
 import { programStudiApi } from '../api/programStudi'
 
@@ -11,7 +11,8 @@ import { programStudiApi } from '../api/programStudi'
 // Halaman Pengaturan (/profil). Kiri: kartu ringkasan profil yang tetap di
 // tempat (sticky) saat sisi kanan digulir. Kanan: Foto Profil, Informasi
 // Profil, Ganti Password, dan Zona Berbahaya (gaya GitHub).
-// Bagian tanpa endpoint (verifikasi email) memakai ApiPending — lihat docs/waitingApi-list.md.
+// Status verifikasi email dari `emailVerifiedAt` (/auth/me); kirim ulang lewat
+// POST /auth/verify-email/resend, link email membuka /verify-email.
 // ---------------------------------------------------------------------------
 
 const ROLE_LABEL = {
@@ -101,6 +102,54 @@ function Field({ id, label, hint, children, wide }) {
       </label>
       {children}
       {hint ? <p className="mt-1.5 text-xs text-slate-500">{hint}</p> : null}
+    </div>
+  )
+}
+
+function EmailVerification({ verifiedAt }) {
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState(null)
+
+  const resend = async () => {
+    setBusy(true)
+    setNote(null)
+    try {
+      const r = await authApi.resendVerification()
+      setNote({ ok: true, text: r.data?.message || 'Email verifikasi telah dikirim.' })
+    } catch (e) {
+      const status = e.response?.status
+      setNote({
+        ok: false,
+        text:
+          status === 429
+            ? 'Terlalu banyak permintaan. Coba lagi beberapa menit lagi.'
+            : e.response?.data?.message || 'Gagal mengirim email verifikasi. Coba lagi nanti.',
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 space-y-1.5 text-xs text-slate-500">
+      <p className="flex flex-wrap items-center gap-2">
+        Email tidak dapat diubah dari halaman ini.
+        {verifiedAt ? (
+          <span className="badge badge-success">Terverifikasi</span>
+        ) : (
+          <>
+            <span className="badge badge-warning">Belum diverifikasi</span>
+            <button type="button" onClick={resend} disabled={busy} className="font-semibold text-navy-700 hover:text-navy-900 disabled:opacity-60">
+              {busy ? 'Mengirim…' : 'Kirim ulang email verifikasi'}
+            </button>
+          </>
+        )}
+      </p>
+      {note ? (
+        <p role={note.ok ? 'status' : 'alert'} className={note.ok ? 'text-green-700' : 'text-red-700'}>
+          {note.text}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -446,9 +495,7 @@ export default function ProfilePage() {
                     Email
                   </label>
                   <input id="pf-email" className="input" value={user.email} disabled />
-                  <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    Email tidak dapat diubah dari halaman ini. Status verifikasi email: <ApiPending />
-                  </p>
+                  <EmailVerification verifiedAt={user.emailVerifiedAt} />
                 </div>
 
                 {isMahasiswa ? (

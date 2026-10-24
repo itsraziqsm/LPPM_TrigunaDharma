@@ -214,7 +214,8 @@ npm run lint      # baseline: 0 error, 4 peringatan lama
 Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/api/axios.js`).
 
 ### Arsitektur
-- `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`) dan `PrivateRoute`; semua
+- `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` publik
+  (`VerifyEmailPage.jsx`, tanpa guard) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
   `/proposals`, `/users`, `/export` (admin/ketua), `/proposal-saya`, `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
@@ -244,26 +245,33 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
   Anggota (dosen & mahasiswa dipisah, `AnggotaSearch fixedRole`) → **Mitra** (nama → field
-  `mitra`, wajib) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
+  `mitra`, wajib) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
+  (item `/luaran`: jenis `LUARAN_JENIS`, target, tanggal target) yang disinkronkan
+  (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
+  ringkasan item. Semua tombol buat/edit proposal mengarah ke sini. Simpan = draft, lalu upload file,
   lalu kembali ke halaman Status dengan pesan (`location.state.flash`).
 - **Laporan** (API `/laporan`, `src/api/laporan.js`): pengusul di `LaporanPage.jsx`
   (`/kegiatan/:jenis/laporan/baru` pilih proposal disetujui; `/:id` isi, unggah, ajukan, hapus,
   hasil review; rute menyesuaikan `jenis` laporan), Ketua/Admin di `LaporanMasukPage.jsx`
   (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
-  di `src/pages/laporan/` (`shared.jsx`, `format.js`).
+  di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
+  + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
 - Foto profil: `src/components/UserAvatar.jsx` (`API_BASE_URL + user.fotoUrl`, fallback inisial).
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
   menu"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
   dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Kaki sidebar terdiri
-  dari bagian **akun** (kartu profil, latar rail) dan bagian **aksi** (latar `bg-navy-800`):
+  dari bagian **akun** (kartu profil, latar `bg-rail` gelap) dan bagian **aksi** (latar
+  `bg-navy-800`); area merek + menu di atasnya berlatar terang `bg-navy-50` (teks gelap, item
+  aktif kartu putih + garis brass). Lonceng memakai warna gelap di `lg:` (di atas latar terang)
+  dan putih di bilah atas ponsel. Aksi:
   tombol Sembunyikan menu + Keluar (merah saat hover). Keluar selalu lewat `LogoutDialog`
   (konfirmasi, portal ke body). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
   kanan Foto Profil (unggah/hapus), Informasi Profil (+ jabatan fungsional, SINTA, dropdown
-  program studi), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout). Nilai awal
+  program studi, status verifikasi email `emailVerifiedAt` + kirim ulang), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout). Nilai awal
   dari `/auth/me`; simpan hanya mengirim field yang berubah dan memperbarui store lewat
   `useAuthStore.setState` tanpa `fetchMe()` (fetchMe memicu layar memuat global).
 - Smooth scroll: **Lenis** (paket npm `lenis`, CSS di `main.jsx`) lewat hook

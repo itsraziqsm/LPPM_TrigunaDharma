@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { laporanApi } from '../../api/laporan'
 import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, StatusBadge } from './shared'
+import LuaranCapaian from './LuaranCapaian'
 import { rupiah, tanggal } from './format'
 
 // Tugasan review LAPORAN untuk reviewer (GET /laporan/tugasan) beserta form
@@ -104,6 +105,13 @@ function ReviewLaporanModal({ tugasan, onClose, onUpdated }) {
           ) : (
             <span className="spinner mx-auto block text-navy-600" aria-hidden="true" />
           )}
+
+          {laporan ? (
+            <section className="space-y-3">
+              <h3 className="text-base font-semibold text-navy-950">Capaian luaran</h3>
+              <LuaranCapaian proposalId={laporan.proposalId} />
+            </section>
+          ) : null}
 
           <section className="space-y-4">
             <h3 className="text-base font-semibold text-navy-950">Penilaian</h3>

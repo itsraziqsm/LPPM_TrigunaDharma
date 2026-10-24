@@ -5,6 +5,7 @@ import api from '../api/axios'
 import { laporanApi } from '../api/laporan'
 import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
+import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
 
 // ---------------------------------------------------------------------------
@@ -210,6 +211,11 @@ function DetailPanel({ id, onClose, onChanged }) {
                     </div>
                   </div>
                 ) : null}
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-base font-semibold text-navy-950">Capaian luaran</h3>
+                <LuaranCapaian proposalId={laporan.proposalId} />
               </section>
 
               <section className="space-y-3">

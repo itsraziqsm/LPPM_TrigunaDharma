@@ -1,4 +1,5 @@
 import { proposalDosenApi } from '../../../api/Proposaldosen'
+import { luaranApi } from '../../../api/luaran'
 import { periodeApi } from '../../../api/periode'
 import { notificationApi } from '../../../api/notification'
 import {
@@ -51,6 +52,8 @@ export async function load({ withReviewerDigest }) {
     ),
     penelitian: req('Jumlah penelitian', () => countDisetujui('penelitian')),
     pengabdian: req('Jumlah pengabdian', () => countDisetujui('pengabdian')),
+    luaran: req('Statistik luaran', () => luaranApi.stats().then((r) => r.data.data)),
+    kepercayaan: req('Nilai kepercayaan', () => proposalDosenApi.getKepercayaan().then((r) => r.data.data)),
     ...(withReviewerDigest ? { tugasan: req('Tugasan review', loadTugasan) } : {}),
   })
 
@@ -155,6 +158,8 @@ export async function load({ withReviewerDigest }) {
           : null,
         latestUnavailable: !data.proposals,
         penelitian: data.penelitian ?? null,
+        luaran: data.luaran || null, // { total, tercapai, dapatDiklaim, jurnal, perJenis }
+        kepercayaan: data.kepercayaan || null, // { nilai, skala, komponen }
         pengabdian: data.pengabdian ?? null,
       },
 
