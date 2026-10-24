@@ -199,10 +199,14 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dirender `NavGroup`) berisi `/kegiatan/penelitian` & `/kegiatan/pengabdian` →
   `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis).
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
-  navigasi"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
+  menu"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
   dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
+- `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
+  kanan Foto Profil, Informasi Profil, Ganti Password, Zona Berbahaya. Simpan profil hanya
+  mengirim field yang berubah (nilai awal bisa kosong karena `/auth/me` belum membawa field
+  profil) dan memperbarui nama di store tanpa `fetchMe()`.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
   beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa
@@ -222,7 +226,6 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/public/` adalah salinan lama dari `public/` (favicon berbeda); yang dipakai Vite
   adalah `public/` (termasuk `template-proposal.docx`).
 - Dashboard baru belum diuji terhadap backend asli (lihat CATATAN_REDESIGN.md).
-- Perilaku bawaan: setelah "Simpan Profil", `fetchMe()` memicu layar loading global sesaat.
 
 ## Konvensi kerja
 - Sebelum push perubahan backend: `go vet ./... && go test ./...`; untuk frontend:

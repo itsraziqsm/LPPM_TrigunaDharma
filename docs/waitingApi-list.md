@@ -63,8 +63,29 @@ Data yang **menunggu API**:
 | W-16 | Bagian **{Penelitian/Pengabdian} sebagai anggota tim** | Proposal milik dosen lain di mana user adalah anggota `diterima` | `GET /dosen/proposals?peran=anggota` atau `GET /dosen/proposals/as-member?jenis=…` | `/dosen/proposals` dan `/proposals/my` hanya memfilter `pengusulId` (ketua). Undangan tetap di menu Undangan Tim. |
 | W-17 | Ringkasan per status (efisiensi) | Jumlah per status untuk satu jenis | `GET /dosen/proposals/stats?jenis=…` (+ key `review`, lihat W-11) | Bukan blocker; mengganti 6 permintaan menjadi 1. |
 
+## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)
+
+Data yang **sudah** tersambung ke API yang ada:
+
+| Elemen | Sumber |
+|---|---|
+| Simpan Informasi Profil | `PATCH /users/profile/me` — hanya field yang diubah yang dikirim; respons (profil lengkap) dipakai mengisi ulang form & ringkasan |
+| Ganti Password | `PATCH /users/profile/password` (validasi frontend: minimal 8 karakter, konfirmasi cocok) |
+| Nama, email, peran, status | `GET /auth/me` |
+
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-08 | Nilai awal form **Informasi Profil** & Ringkasan (NIDN/NIM, tempat/tanggal lahir, kontak, no. HP, institusi, program studi, alamat) | Field profil user yang login | Sama dengan W-08 di atas | Tanpa ini form tampil kosong saat dibuka. Karena hanya field yang diubah yang dikirim, data lama di server **tidak** tertimpa kosong. |
+| W-07 | **Foto Profil** (pilih file + Perbarui Foto) | Unggah & ambil foto profil | Sama dengan W-07 di atas (`POST /users/profile/photo`, field `fotoUrl`) | Pemilih file sudah ada, tombol Perbarui Foto nonaktif. Upload saat ini hanya menerima PDF/DOCX, jadi perlu aturan gambar tersendiri. |
+| W-18 | **Status verifikasi email** ("Akun email anda belum diverifikasi. Klik disini") | Status verifikasi + kirim ulang email verifikasi | Field `emailVerifiedAt` di `GET /auth/me` + `POST /auth/verify-email/resend` + `POST /auth/verify-email` | Belum ada kolom/alur verifikasi. Email juga belum bisa diubah oleh user (tidak termasuk field `PATCH /users/profile/me`). |
+| W-19 | **Program Studi** sebagai pilihan (dropdown) | Daftar program studi | `GET /program-studi` (master data) | Sementara input teks bebas. |
+| W-20 | Zona Berbahaya: **Unduh data akun** | Arsip data & dokumen milik user | `GET /users/profile/export` (ZIP/JSON) | Tombol nonaktif. |
+| W-21 | Zona Berbahaya: **Hapus akun ini** | Hapus akun sendiri | `DELETE /users/profile/me` dengan konfirmasi password | `DELETE /users/:id` hanya untuk admin. Perlu aturan bisnis: proposal/review milik user memakai FK `RESTRICT`, jadi kemungkinan cukup nonaktifkan/anonimkan akun, bukan hapus fisik. Tombol nonaktif. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
-- Menu **Luaran**, **Pengaturan**, **Panduan** dari desain belum ada halamannya. "Luaran"
-  bergantung pada W-01; "Pengaturan" saat ini setara halaman Profil (`/profil`).
+- Menu **Luaran** dan **Panduan** dari desain belum ada halamannya. "Luaran" bergantung pada W-01.
+- Halaman **Pengaturan** sudah ada di `/profil` (dibuka dari kartu nama di bawah sidebar).

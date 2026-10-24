@@ -407,8 +407,8 @@ export default function Sidebar() {
             className="mb-1 hidden h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium text-white/55 transition-colors hover:bg-white/[0.05] hover:text-white lg:flex"
           >
             <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="flex-1 text-left">Sembunyikan navigasi</span>
-            <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[0.6875rem] text-white/45">Ctrl B</kbd>
+            <span className="flex-1 truncate text-left">Sembunyikan menu</span>
+            <kbd className="shrink-0 whitespace-nowrap rounded border border-white/15 px-1.5 py-0.5 font-sans text-[0.6875rem] text-white/45">Ctrl B</kbd>
           </button>
 
           <NavLink
