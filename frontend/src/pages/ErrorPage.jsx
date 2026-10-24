@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useParams, useRouteError, isRouteErrorResponse } from 'react-router-dom'
-import { BookOpen } from 'lucide-react'
+import LogoLppm from '../components/LogoLppm'
 import ErrorState from '../components/ErrorState'
 import useLenis from '../hooks/useLenis'
 import { ERROR_CODES } from '../utils/errorCodes'
@@ -38,9 +38,7 @@ export default function ErrorPage({ code: codeProp, routeError = false }) {
     <main ref={scrollRef} className="fixed inset-0 overflow-y-auto bg-canvas">
       <div className="flex min-h-full flex-col px-5 py-6 sm:px-8">
         <header className="flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-[11px] bg-rail">
-            <BookOpen className="text-brass-400" size={20} strokeWidth={1.8} aria-hidden="true" />
-          </span>
+          <LogoLppm className="size-10" />
           <span>
             <span className="block font-serif text-xl font-medium leading-none text-navy-950">LPPM</span>
             <span className="mt-1 block text-xs text-slate-500">Universitas Triguna Dharma</span>

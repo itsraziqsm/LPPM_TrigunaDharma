@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { BookOpen, Check, ChevronLeft, CircleAlert, Eye, EyeOff } from 'lucide-react'
+import { Check, ChevronLeft, CircleAlert, Eye, EyeOff } from 'lucide-react'
+import LogoLppm from '../components/LogoLppm'
 
 const EyeIcon = ({ open }) => open
   ? (
@@ -77,9 +78,7 @@ export default function RegisterPage() {
       {/* Panel kiri: identitas — navy polos, tanpa dekorasi */}
       <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">
-          <div className="grid size-10 place-items-center rounded-[11px] bg-white/[0.07] ring-1 ring-inset ring-white/10">
-            <BookOpen className="text-brass-400" size={22} strokeWidth={1.8} aria-hidden="true" />
-          </div>
+          <LogoLppm className="size-11" />
           <h1 className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
         </header>
 
@@ -116,9 +115,7 @@ export default function RegisterPage() {
         <div className="rise w-full max-w-[26rem]">
           {/* Merek ringkas untuk layar kecil */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <div className="grid size-10 place-items-center rounded-[11px] bg-rail">
-              <BookOpen className="text-brass-400" size={20} strokeWidth={1.8} aria-hidden="true" />
-            </div>
+            <LogoLppm className="size-10" />
             <span className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>
 

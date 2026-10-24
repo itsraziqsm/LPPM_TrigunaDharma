@@ -267,9 +267,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
   dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Sidebar dua bagian:
   **atas** terang `bg-rail-soft` (#E5EDFF: merek, menu, lalu tombol "Sembunyikan menu" tepat di
-  atas profil; item aktif kartu putih + garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F:
-  kartu profil + tombol Keluar ikon, merah saat hover). Sisi kanan sidebar diberi bayangan
-  pemisah dari konten. Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel.
+  atas profil, dengan bantuan pintasan `Ctrl`/`⌘` + `B` (`MOD_KEY`); item aktif kartu putih +
+  garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol
+  "Keluar dari Sistem" selebar kartu profil, merah saat hover). Sisi kanan sidebar diberi
+  bayangan pemisah dari konten (dihapus saat sidebar diciutkan). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel.
   Keluar selalu lewat `LogoutDialog` (konfirmasi, portal ke body). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
@@ -295,6 +296,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
   keputusan Pihak Kampus.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
+- Logo: `src/components/LogoLppm.jsx` (`public/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
+  Dharma, juga favicon) dipakai di sidebar, Login/Register, halaman galat, verifikasi email.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
   beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa
   SVG inline hanya ada di berkas tak terpakai (`App.jsx`, `DashboardDosen.jsx`,

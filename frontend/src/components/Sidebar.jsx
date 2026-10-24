@@ -5,7 +5,8 @@ import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
-import { BadgeDollarSign, BookOpen, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
+import LogoLppm from './LogoLppm'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -169,6 +170,9 @@ function writeCollapsed(value) {
     /* penyimpanan tidak tersedia: abaikan */
   }
 }
+
+// Label tombol pengubah sesuai OS untuk bantuan pintasan (⌘ di Mac, Ctrl lainnya).
+const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl'
 
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
 
@@ -360,7 +364,7 @@ export default function Sidebar() {
       {/* ── Rail ───────────────────────────────────────────────────────── */}
       <aside
         aria-label="Navigasi"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)] transition-[transform,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem]' : ''}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 transition-[transform,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem] lg:shadow-none' : ''} shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)]`}
       >
         {/* Merek — saat diciutkan, logo menjadi tombol untuk membuka rail */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
@@ -370,15 +374,15 @@ export default function Sidebar() {
               onClick={toggleCollapsed}
               aria-label="Tampilkan navigasi (Ctrl+B)"
               aria-expanded={false}
-              title="Tampilkan navigasi (Ctrl+B)"
-              className="hidden size-9 shrink-0 place-items-center rounded-[10px] bg-rail ring-1 ring-inset ring-navy-900/10 transition-colors hover:bg-navy-800 lg:grid"
+              title={`Tampilkan navigasi (${MOD_KEY} + B)`}
+              className="hidden shrink-0 rounded-full transition-transform hover:scale-105 focus-visible:outline-2 lg:block"
             >
-              <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
+              <LogoLppm className="size-10" />
             </button>
           ) : null}
-          <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] bg-rail ring-1 ring-inset ring-navy-900/10 ${hideWhenCollapsed}`}>
-            <BookOpen className="text-brass-400" size={19} strokeWidth={1.8} aria-hidden="true" />
-          </div>
+          <span className={hideWhenCollapsed}>
+            <LogoLppm className="size-10" />
+          </span>
           <div className={`min-w-0 ${hideWhenCollapsed}`}>
             <p className="font-serif text-xl font-medium leading-none tracking-wide text-navy-950">LPPM</p>
             <p className="mt-1.5 truncate text-[0.6875rem] leading-none text-slate-500">Pengelolaan Proposal</p>
@@ -471,22 +475,27 @@ export default function Sidebar() {
             type="button"
             onClick={toggleCollapsed}
             aria-expanded={true}
-            title="Sembunyikan menu (Ctrl/⌘ + B)"
+            title={`Sembunyikan menu (${MOD_KEY} + B)`}
             aria-keyshortcuts="Control+B"
-            className="flex h-10 w-full items-center gap-2.5 rounded-lg bg-white/60 px-3 text-[0.8125rem] font-medium text-slate-600 ring-1 ring-inset ring-navy-200/70 transition-colors hover:bg-white hover:text-navy-950"
+            aria-label="Sembunyikan menu"
+            className="flex h-10 w-full items-center gap-2 rounded-lg bg-white/60 px-2.5 text-[0.8125rem] font-medium text-slate-600 ring-1 ring-inset ring-navy-200/70 transition-colors hover:bg-white hover:text-navy-950"
           >
             <PanelLeftClose className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
             <span className="flex-1 truncate text-left">Sembunyikan menu</span>
+            <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
+              <kbd className="rounded border border-navy-200 bg-white px-1 py-px font-sans text-[0.6875rem] font-semibold leading-4 text-slate-500">{MOD_KEY}</kbd>
+              <kbd className="rounded border border-navy-200 bg-white px-1 py-px font-sans text-[0.6875rem] font-semibold leading-4 text-slate-500">B</kbd>
+            </span>
           </button>
         </div>
 
         {/* Bagian bawah gelap (#0D1C3F): profil + keluar */}
-        <section aria-label="Akun" className={`flex shrink-0 items-center gap-2 bg-rail p-3 text-white ${hideWhenCollapsed}`}>
+        <section aria-label="Akun" className={`flex shrink-0 flex-col gap-1.5 bg-rail p-3 text-white ${hideWhenCollapsed}`}>
           <NavLink
             to="/profil"
             onClick={() => setMobileOpen(false)}
             className={({ isActive }) =>
-              `flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
+              `flex min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${isActive ? 'bg-white/10' : 'hover:bg-white/[0.05]'}`
             }
           >
             <UserAvatar user={user} className="size-9 text-sm" />
@@ -502,11 +511,10 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={askLogout}
-            aria-label="Keluar dari Sistem"
-            title="Keluar dari Sistem"
-            className="grid size-10 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-red-600 hover:text-white hover:ring-red-500"
+            className="flex h-10 w-full items-center gap-3 rounded-lg bg-white/[0.06] px-2.5 text-[0.8125rem] font-medium text-white/80 ring-1 ring-inset ring-white/10 transition-colors hover:bg-red-600 hover:text-white hover:ring-red-500"
           >
-            <LogOut className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+            <LogOut className="size-[18px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            Keluar dari Sistem
           </button>
         </section>
       </aside>
