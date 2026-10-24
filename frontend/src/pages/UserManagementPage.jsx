@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
+import useLenis from '../hooks/useLenis'
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -515,6 +516,10 @@ export default function UserManagementPage() {
   const { user: me } = useAuthStore()
   const myRoles = getRoleNames(me?.roles)
   const isAdmin = myRoles.includes('admin')
+  // Smooth scroll di area daftar (halaman ini tidak memakai gulir wadah luar).
+  const listScrollRef = useRef(null)
+  const listContentRef = useRef(null)
+  useLenis(listScrollRef, { contentRef: listContentRef })
 
   const [users, setUsers] = useState([])
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 15 })
@@ -605,8 +610,8 @@ export default function UserManagementPage() {
   return (
     <div className="flex h-full min-h-0">
       {/* Area utama daftar */}
-      <div className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <div className="page space-y-6">
+      <div ref={listScrollRef} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <div ref={listContentRef} className="page space-y-6">
           {/* Judul halaman */}
           <header className="flex flex-col gap-5 @4xl:flex-row @4xl:items-end @4xl:justify-between">
             <div className="max-w-2xl">

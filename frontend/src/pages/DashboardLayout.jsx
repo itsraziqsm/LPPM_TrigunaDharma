@@ -1,4 +1,6 @@
+import { useRef } from 'react'
 import Sidebar from '../components/Sidebar'
+import useLenis from '../hooks/useLenis'
 import useAuthStore from '../store/authStore'
 import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
@@ -37,6 +39,20 @@ export default function DashboardLayout({ page, jenis }) {
   const isDosen = primaryRole === 'dosen'
   // Dosen/mahasiswa yang punya tugasan review juga dianggap reviewer di sisi UI
   const isReviewer = roleNames.includes('reviewer') || user?.hasTugasan === true
+
+  const scrollRef = useRef(null)
+  const contentRef = useRef(null)
+  const ready = Boolean(user) && !loading
+  // Manajemen User menggulir di area daftarnya sendiri (Lenis dipasang di sana),
+  // jadi wadah luar dibuat setinggi layar tanpa Lenis.
+  const selfScrolling = isAdminOrKetua && page === 'users'
+  // Smooth scroll untuk area konten; dipasang ulang (dan kembali ke atas) saat
+  // pindah halaman atau jenis kegiatan.
+  useLenis(scrollRef, {
+    contentRef,
+    enabled: !selfScrolling,
+    resetKey: ready ? `${page || 'dashboard'}:${jenis || ''}` : 'memuat',
+  })
 
   if (!user || loading) {
     return (
@@ -146,8 +162,10 @@ export default function DashboardLayout({ page, jenis }) {
 
       {/* Area konten: satu penggulir, latar kanvas tenang */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden pt-14 lg:pt-0">
-        <section className="min-h-0 flex-1 overflow-y-auto">
-          {renderContent()}
+        <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div ref={contentRef} className={selfScrolling ? 'h-full' : undefined}>
+            {renderContent()}
+          </div>
         </section>
       </main>
     </div>

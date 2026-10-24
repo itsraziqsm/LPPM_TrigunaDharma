@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import useLenis from '../hooks/useLenis'
 import { BookOpen, Check, ChevronLeft, CircleAlert, Eye, EyeOff } from 'lucide-react'
 
 const EyeIcon = ({ open }) => open
@@ -32,6 +33,9 @@ export default function RegisterPage() {
   const { register, loading, error, clearError } = useAuthStore()
   const [role, setRole] = useState('dosen')
   const [success, setSuccess] = useState(false)
+  const scrollRef = useRef(null)
+  // Dua tampilan (formulir / berhasil) memakai <main> berbeda: pasang ulang Lenis saat berganti.
+  useLenis(scrollRef, { resetKey: success })
   const [showPwd, setShowPwd] = useState(false)
   const [form, setForm] = useState({ email: '', name: '', password: '', nidn: '', nim: '', programStudi: '', prodi: '' })
 
@@ -48,7 +52,7 @@ export default function RegisterPage() {
   }
 
   if (success) return (
-    <main className="fixed inset-0 grid place-items-center overflow-y-auto bg-canvas px-6">
+    <main ref={scrollRef} className="fixed inset-0 grid place-items-center overflow-y-auto bg-canvas px-6">
       <section className="rise w-full max-w-sm text-center" aria-labelledby="success-title">
         <div className="mx-auto grid size-14 place-items-center rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
           <Check size={26} strokeWidth={2.2} aria-hidden="true" />
@@ -69,7 +73,7 @@ export default function RegisterPage() {
   )
 
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
+    <main ref={scrollRef} className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
       {/* Panel kiri: identitas — navy polos, tanpa dekorasi */}
       <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">

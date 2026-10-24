@@ -207,6 +207,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   kanan Foto Profil, Informasi Profil, Ganti Password, Zona Berbahaya. Simpan profil hanya
   mengirim field yang berubah (nilai awal bisa kosong karena `/auth/me` belum membawa field
   profil) dan memperbarui nama di store tanpa `fetchMe()`.
+- Smooth scroll: **Lenis** (paket npm `lenis`, CSS di `main.jsx`) lewat hook
+  `src/hooks/useLenis.js`. Setiap halaman menggulir di elemennya sendiri, bukan window:
+  `DashboardLayout` memasang Lenis di `<section>` konten (reset ke atas saat pindah halaman),
+  Login/Register di `<main>`, Manajemen User di area daftarnya. Halaman baru yang punya wadah
+  gulir sendiri wajib memanggil `useLenis`. Elemen bergulir bersarang tetap jalan
+  (`allowNestedScroll`); pakai `data-lenis-prevent` untuk pengecualian.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
   beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa

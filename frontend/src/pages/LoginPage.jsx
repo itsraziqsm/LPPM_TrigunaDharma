@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
+import useLenis from '../hooks/useLenis'
 import { BookOpen, CircleAlert, Eye, EyeOff } from 'lucide-react'
 
 const EyeIcon = ({ open }) => open
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const { login, loading, error, clearError } = useAuthStore()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPwd, setShowPwd] = useState(false)
+  const scrollRef = useRef(null)
+  useLenis(scrollRef)
 
   const handleChange = (e) => { clearError(); setForm(f => ({ ...f, [e.target.name]: e.target.value })) }
   const handleSubmit = async (e) => {
@@ -36,7 +39,7 @@ export default function LoginPage() {
   }, [])
 
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
+    <main ref={scrollRef} className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
       {/* Panel kiri: identitas — navy polos, tanpa dekorasi */}
       <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">
