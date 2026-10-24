@@ -10,8 +10,12 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Tidak ada. Semua API Grup A, B, C dan W-22 sampai W-25 (`backend_go/new-api.md` bagian 10–13)
-sudah disambungkan.
+Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 14) tetapi **belum
+disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
+
+| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
+|---|---|---|---|
+| W-26 | Usulan pengabdian, langkah Mitra: Jenis, Alamat, Kontak, Pernyataan Kebutuhan | Field `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` di create/update/respons proposal (disalin ke laporan); pilihan jenis dari `GET /master/jenis-mitra?jenis=pengabdian` | Khusus pengabdian; `null` mengosongkan; nilai bukan null untuk penelitian ditolak 400. |
 
 ### Sudah disambungkan
 
@@ -73,10 +77,7 @@ Data yang **sudah** tersambung ke API yang ada:
 | Bagian **sebagai anggota tim** | `GET /dosen/proposals/as-member` |
 | Tombol Detail / Edit proposal | `GET /dosen/proposals/:id` (modal detail) / halaman Usulan |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
+Data yang **menunggu API**: tidak ada lagi.
 
 ## Usulan Penelitian / Pengabdian (`frontend/src/pages/UsulanPage.jsx`)
 
@@ -96,11 +97,7 @@ Data yang **sudah** tersambung ke API yang ada:
 | Rumpun Ilmu, Bidang, Kata Kunci | field `rumpunIlmu`, `bidang`, `kataKunci`; pilihan dari `GET /master/(rumpun-ilmu\|bidang)` |
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-26 | Langkah **Mitra** (pengabdian): **Jenis Mitra**, **Alamat Mitra**, **Kontak Mitra**, **Pernyataan Kebutuhan** | Detail mitra selain nama | Kolom `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` di Pengabdian (ikut create/update/respons, disalin ke laporan) atau tabel `Mitra` + master jenis mitra | Saat ini hanya nama mitra yang tersimpan (field `mitra`). Input lain nonaktif. |
+Data yang **menunggu API**: tidak ada lagi.
 
 ## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
 

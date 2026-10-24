@@ -96,7 +96,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 448 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 462 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -136,7 +136,9 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 8. W-22 sampai W-25 (lihat `new-api.md` bagian 13): field `rumpunIlmu`, `bidang`,
    `kataKunci` (array) di proposal & laporan; `kontak`/`noHp` di pencarian user, pencarian
    anggota, dan `anggota[].user`; `/api/v1/master/{rumpun-ilmu,bidang,luaran}`.
-9. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+9. W-26 (lihat `new-api.md` bagian 14): `mitraJenis`, `mitraAlamat`, `mitraKontak`,
+   `mitraKebutuhan` (khusus pengabdian) di proposal & laporan; master `jenis-mitra`.
+10. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

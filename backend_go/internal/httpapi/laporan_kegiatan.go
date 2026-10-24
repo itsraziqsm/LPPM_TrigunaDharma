@@ -25,7 +25,7 @@ import (
 // sama, dengan proposalId = id laporan (id unik global dari `Kegiatan`).
 
 var (
-	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
+	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
 		"catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 
 	laporanListQuerySchema = zObj(
@@ -416,12 +416,13 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 		return httpError(http.StatusConflict, "Proposal ini sudah memiliki laporan")
 	}
 
-	// Data proposal disalin sebagai isi awal laporan (termasuk skema/mitra).
+	// Data proposal disalin sebagai isi awal laporan (termasuk skema/mitra + detail mitra).
 	var abstrak string
 	var anggaran, luaran, skema, mitra, rumpunIlmu, bidang, kataKunci sql.NullString
+	var mitraJenis, mitraAlamat, mitraKontak, mitraKebutuhan sql.NullString
 	var periodeID sql.NullInt64
-	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`skema`,`mitra`,`rumpunIlmu`,`bidang`,`kataKunci`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
-		Scan(&abstrak, &anggaran, &luaran, &skema, &mitra, &rumpunIlmu, &bidang, &kataKunci, &periodeID); err != nil {
+	if err := s.db.QueryRowContext(ctx, "SELECT `abstrak`,`anggaran`,`luaran`,`skema`,`mitra`,`mitraJenis`,`mitraAlamat`,`mitraKontak`,`mitraKebutuhan`,`rumpunIlmu`,`bidang`,`kataKunci`,`periodeId` FROM `Proposal` WHERE `id` = ?", proposalID).
+		Scan(&abstrak, &anggaran, &luaran, &skema, &mitra, &mitraJenis, &mitraAlamat, &mitraKontak, &mitraKebutuhan, &rumpunIlmu, &bidang, &kataKunci, &periodeID); err != nil {
 		return err
 	}
 	var periode any
@@ -444,7 +445,8 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 	if p.Jenis == "penelitian" {
 		insertCols, insertArgs = append(insertCols, "skema"), append(insertArgs, nullableString(skema))
 	} else {
-		insertCols, insertArgs = append(insertCols, "mitra"), append(insertArgs, nullableString(mitra))
+		insertCols = append(insertCols, "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan")
+		insertArgs = append(insertArgs, nullableString(mitra), nullableString(mitraJenis), nullableString(mitraAlamat), nullableString(mitraKontak), nullableString(mitraKebutuhan))
 	}
 	var id int64
 	err = s.withTx(ctx, func(tx *sql.Tx) error {

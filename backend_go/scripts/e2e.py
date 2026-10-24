@@ -199,7 +199,7 @@ expect("create proposal forbidden", req("POST", "/api/v1/proposals", admin, {}),
 b = expect("create proposal", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggaran": 15000000.5, "dokumenUrl": "https://drive.google.com/x", "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": dosen2User["id"], "peran": "co-peneliti"}]}), 201, "Proposal created")
 P = b["data"]
 pid = P["id"]
-check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
+check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
 check("tahapan draft", P["tahapan"] == {"kode": "seleksi_usulan", "label": "Seleksi/Usulan", "urutan": 1}, P["tahapan"])
 check("proposal values", P["status"] == "draft" and P["anggaran"] == "15000000.5" and P["periode"]["id"] == periodePen and list(P["periode"].keys()) == ["id", "nama", "tahun"] and list(P["pengusul"].keys()) == ["id", "name", "fullName", "email", "programStudi", "nidn"], P)
 check("proposal anggota", [a["user"]["id"] for a in P["anggota"]] == [mhs1User["id"], dosen2User["id"]] and P["anggota"][0]["peran"] == "anggota" and list(P["anggota"][0].keys()) == ["id", "peran", "user"], P["anggota"])
@@ -233,7 +233,7 @@ expect("detail accepted member", req("GET", f"/api/v1/proposals/{pid}", mhs1), 2
 
 # dosen module
 b = expect("dosen list", req("GET", "/api/v1/dosen/proposals?status=draft", dosen1), 200, "Proposals fetched")
-check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
+check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "tahapan", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
 expect("dosen list bad status", req("GET", "/api/v1/dosen/proposals?status=x", dosen1), 500)
 b = expect("dosen stats", req("GET", "/api/v1/dosen/proposals/stats", dosen1), 200, "Stats fetched")
 check("stats shape", list(b["data"].keys()) == ["total", "draft", "diajukan", "disetujui", "revisi", "ditolak", "review"] and b["data"]["total"] == sum(v for k, v in b["data"].items() if k != "total"), b)
@@ -370,7 +370,7 @@ expect("lh delete missing", req("DELETE", "/api/v1/mahasiswa/laporan-harian/9999
 expect("lh delete", req("DELETE", f"/api/v1/mahasiswa/laporan-harian/{lhid}", mhs1), 200, "Laporan harian berhasil dihapus")
 
 # ── laporan (tipe 'laporan', endpoint baru /api/v1/laporan) ──
-LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
+LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
 b = expect("laporan eligible", req("GET", "/api/v1/laporan/eligible", dosen1), 200, "Proposal siap dilaporkan fetched")
 check("laporan eligible has pid", any(x["id"] == pid for x in b["data"]) and list(b["data"][0].keys()) == ["id", "judul", "jenis", "status", "anggaran", "luaran", "approvedAt", "periode"], b["data"][:1])
 expect("laporan create invalid", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 0}), 422)
@@ -651,6 +651,27 @@ check("kata kunci empty array", b["data"]["kataKunci"] == [] and b["data"]["rump
 b = req("GET", f"/api/v1/proposals/{pid}", dosen1)[1]["data"]
 check("anggota user kontak", list(b["anggota"][0]["user"].keys()) == ["id", "name", "fullName", "email", "kontak", "noHp"] and "alamat" not in b["anggota"][0]["user"], b["anggota"][0])
 expect("delete kata kunci proposal", req("DELETE", f"/api/v1/dosen/proposals/{kp['id']}", dosen5), 200)
+
+# ── W-26 detail mitra pengabdian ──
+b = expect("master jenis mitra", req("GET", "/api/v1/master/jenis-mitra?jenis=pengabdian", dosen1), 200, "Master data fetched")
+check("master jenis mitra isi", len(b["data"]) >= 9 and b["data"][0]["nama"] == "Kelompok masyarakat", b["data"][:2])
+MITRA = {"mitra": "Kelompok Tani Sukamaju", "mitraJenis": "Kelompok masyarakat", "mitraAlamat": "Desa Sukamaju, Deli Serdang", "mitraKontak": "0812-0000-1111", "mitraKebutuhan": "Pendampingan pemasaran hasil panen secara daring"}
+b = req("POST", "/api/v1/dosen/proposals", dosen5, dict({"judul": "Pengabdian dengan detail mitra", "abstrak": abstrak, "jenis": "pengabdian"}, **MITRA))
+expect("create pengabdian mitra", b, 201)
+mp = b[1]["data"]
+check("mitra detail saved", all(mp[k] == v for k, v in MITRA.items()) and mp["skema"] is None, mp)
+b = expect("mitra detail clear", req("PATCH", f"/api/v1/dosen/proposals/{mp['id']}", dosen5, {"mitraKontak": None}), 200)
+check("mitra kontak cleared", b["data"]["mitraKontak"] is None and b["data"]["mitraJenis"] == "Kelompok masyarakat", b["data"])
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Penelitian tanpa mitra", "abstrak": abstrak, "jenis": "penelitian", "mitraJenis": None})
+expect("penelitian mitra null ignored", b, 201)
+pn = b[1]["data"]
+check("penelitian mitra null", pn["mitraJenis"] is None, pn)
+expect("penelitian mitra detail rejected", req("PATCH", f"/api/v1/dosen/proposals/{pn['id']}", dosen5, {"mitraAlamat": "x"}), 400, "Detail mitra hanya untuk proposal pengabdian")
+expect("delete penelitian tanpa mitra", req("DELETE", f"/api/v1/dosen/proposals/{pn['id']}", dosen5), 200)
+expect("approve pengabdian mitra", req("PATCH", f"/api/v1/proposals/{mp['id']}/status", ketua, {"status": "disetujui"}), 200)
+b = expect("laporan copies mitra", req("POST", "/api/v1/laporan", dosen5, {"proposalId": mp["id"]}), 201)
+check("laporan mitra detail", b["data"]["mitraJenis"] == "Kelompok masyarakat" and b["data"]["mitraAlamat"] == MITRA["mitraAlamat"] and b["data"]["mitraKebutuhan"] == MITRA["mitraKebutuhan"], b["data"])
+expect("delete laporan mitra", req("DELETE", f"/api/v1/laporan/{b['data']['id']}", dosen5), 200)
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

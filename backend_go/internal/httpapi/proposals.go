@@ -27,6 +27,10 @@ var (
 		optional("luaran", zStr()),
 		optional("skema", zStr()),
 		optional("mitra", zStr()),
+		optional("mitraJenis", zNullable{zStr()}),
+		optional("mitraAlamat", zNullable{zStr()}),
+		optional("mitraKontak", zNullable{zStr()}),
+		optional("mitraKebutuhan", zNullable{zStr()}),
 		optional("rumpunIlmu", zStr()),
 		optional("bidang", zStr()),
 		optional("kataKunci", zKataKunci{}),
@@ -295,17 +299,17 @@ func (s *Server) createProposal(c *Ctx) error {
 
 // insertProposal creates a draft proposal with its anggota atomically.
 func (s *Server) insertProposal(ctx context.Context, body map[string]any, pengusulID int64) (int64, error) {
-	cols, args := proposalWriteFields(body)
 	jenis, _ := getString(body, "jenis")
+	if err := checkJenisFields(body, jenis); err != nil {
+		return 0, err
+	}
+	cols, args := proposalWriteFields(body)
 	now := s.nowMs()
 	cols = append(cols, "status", "pengusulId", "createdAt", "updatedAt")
 	args = append(args, "draft", pengusulID, now, now)
 	var id int64
 	err := s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
-			return err
-		}
-		if err := checkJenisFields(body, jenis); err != nil {
 			return err
 		}
 		var err error
@@ -321,13 +325,6 @@ func (s *Server) insertProposal(ctx context.Context, body map[string]any, pengus
 
 // applyProposalUpdate mirrors prisma.proposal.update with buildProposalUpdateData.
 func (s *Server) applyProposalUpdate(ctx context.Context, id int64, body map[string]any) error {
-	cols, args := proposalWriteFields(body)
-	sets := make([]string, 0, len(cols)+1)
-	for _, col := range cols {
-		sets = append(sets, "`"+col+"` = ?")
-	}
-	sets = append(sets, "`updatedAt` = ?")
-	args = append(args, s.nowMs())
 	return s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
 			return err
@@ -348,6 +345,14 @@ func (s *Server) applyProposalUpdate(ctx context.Context, id int64, body map[str
 				return err
 			}
 		}
+		// Kolom disusun setelah checkJenisFields (yang bisa membuang detail mitra null).
+		cols, args := proposalWriteFields(body)
+		sets := make([]string, 0, len(cols)+1)
+		for _, col := range cols {
+			sets = append(sets, "`"+col+"` = ?")
+		}
+		sets = append(sets, "`updatedAt` = ?")
+		args = append(args, s.nowMs())
 		if err := s.updateKegiatan(ctx, tx, id, strings.Join(sets, ", "), args...); err != nil {
 			return err
 		}

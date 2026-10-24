@@ -13,6 +13,8 @@ API, dikelompokkan per rilis:
   (W-06), verifikasi email (W-18). Sertifikasi (W-05) ditunda.
 - **Bagian 13** — W-22 sampai W-25: rumpun ilmu & bidang, kontak anggota di pencarian, kata
   kunci, master jenis luaran.
+- **Bagian 14** — W-26: detail mitra pengabdian (jenis, alamat, kontak, pernyataan kebutuhan) +
+  master jenis mitra.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -21,7 +23,8 @@ API, dikelompokkan per rilis:
   `migrations/20261025000000_profil_skema_mitra_program_studi`,
   `migrations/20261026000000_sinta_foto_hapus_akun`,
   `migrations/20261027000000_luaran_verifikasi_email`,
-  `migrations/20261028000000_rumpun_bidang_kata_kunci_master`
+  `migrations/20261028000000_rumpun_bidang_kata_kunci_master`,
+  `migrations/20261029000000_detail_mitra_pengabdian`
 
 ---
 
@@ -1203,3 +1206,46 @@ const [rumpun, bidang, luaran] = await Promise.all([
   masterApi.list('luaran', { jenis }),
 ]);
 ```
+
+---
+
+## 14. W-26 Detail mitra pengabdian
+
+Satu mitra per proposal pengabdian. Field `mitra` (nama, bagian 10.4) kini dilengkapi empat
+field berikut (semua opsional), di `POST/PATCH /proposals` dan `POST/PATCH /dosen/proposals`:
+
+| Field | Tipe | Isi form (langkah Mitra) |
+|---|---|---|
+| `mitraJenis` | string \| null | Jenis Mitra. Disarankan `nama` dari `GET /master/jenis-mitra?jenis=pengabdian` |
+| `mitraAlamat` | string \| null | Alamat Mitra |
+| `mitraKontak` | string \| null | Kontak Mitra (telepon/email) |
+| `mitraKebutuhan` | string \| null | Pernyataan Kebutuhan Mitra (teks panjang) |
+
+```json
+{ "mitra": "Kelompok Tani Sukamaju", "mitraJenis": "Kelompok masyarakat",
+  "mitraAlamat": "Desa Sukamaju, Deli Serdang", "mitraKontak": "0812-0000-1111",
+  "mitraKebutuhan": "Pendampingan pemasaran hasil panen secara daring" }
+```
+
+- **Respons proposal** (semua endpoint, setelah `mitra`) dan **objek laporan** selalu memuat
+  keempat key. Untuk penelitian nilainya `null`. Laporan menyalin nilai ini dari proposal saat
+  dibuat.
+- `null` mengosongkan field.
+- Mengirim nilai **bukan null** untuk proposal penelitian →
+  `400 "Detail mitra hanya untuk proposal pengabdian"`. Nilai `null` untuk penelitian diabaikan,
+  jadi form boleh mengirim objek yang sama untuk kedua jenis.
+- Jika `jenis` proposal diubah dari pengabdian ke penelitian, nama dan detail mitra **dihapus**
+  (sama seperti `mitra`/`skema` di bagian 10.4).
+- Seperti field master lain, `mitraJenis` adalah teks bebas. Backend tidak mewajibkan nilainya
+  ada di master.
+
+**Master jenis mitra**: kategori baru **`jenis-mitra`** di endpoint master (bagian 13.3),
+dengan aturan dan CRUD admin yang sama:
+
+```js
+masterApi.list('jenis-mitra', { jenis: 'pengabdian' })
+```
+
+Isi awal (bisa diubah admin): Kelompok masyarakat, UMKM, Koperasi, Sekolah / lembaga
+pendidikan, Pemerintah desa / kelurahan, Instansi pemerintah, Organisasi kemasyarakatan / LSM,
+Dunia usaha / industri, Lainnya.

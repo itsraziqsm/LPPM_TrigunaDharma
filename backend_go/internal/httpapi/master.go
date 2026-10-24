@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// Master data pilihan formulir (W-22 rumpun ilmu & bidang, W-25 jenis luaran).
+// Master data pilihan formulir (W-22 rumpun ilmu & bidang, W-25 jenis luaran,
+// W-26 jenis mitra).
 // Tidak ada padanannya di Node; dokumentasi untuk frontend di new-api.md
 // bagian 13. GET untuk semua user login, tulis hanya admin. Nilai yang
 // dipilih disimpan sebagai teks di proposal (tidak ber-FK ke master).
@@ -17,6 +18,7 @@ var masterKategori = map[string]string{
 	"rumpun-ilmu": "rumpun_ilmu",
 	"bidang":      "bidang",
 	"luaran":      "luaran",
+	"jenis-mitra": "jenis_mitra",
 }
 
 var (
@@ -41,7 +43,7 @@ func (s *Server) registerMasterRoutes() {
 func masterKategoriParam(c *Ctx) (string, error) {
 	k, ok := masterKategori[strings.ToLower(c.param("kategori"))]
 	if !ok {
-		return "", httpError(http.StatusNotFound, "Master data tidak dikenal. Pilihan: rumpun-ilmu, bidang, luaran")
+		return "", httpError(http.StatusNotFound, "Master data tidak dikenal. Pilihan: rumpun-ilmu, bidang, luaran, jenis-mitra")
 	}
 	return k, nil
 }

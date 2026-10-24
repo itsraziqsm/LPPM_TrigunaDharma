@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-25) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-26) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -32,7 +32,7 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    `throw new Error()` → **HTTP 500** lewat `plainError`). Komentar `// Node: ...` di tiap
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
    Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
-   `mitra`, `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp` di `anggota[].user`
+   `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp` di `anggota[].user`
    dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`);
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
@@ -54,7 +54,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 448 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 462 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -103,7 +103,7 @@ dan diperlakukan sebagai reviewer di UI.
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
 | `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ PATCH respon), CRUD + submit | dosen, mahasiswa |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
-| `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
+| `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
 | `/reviewer/my-tugasan` | tugasan review **proposal** milik user | reviewer, dosen, mahasiswa |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
@@ -125,7 +125,9 @@ dan diperlakukan sebagai reviewer di UI.
     diajukan/review/revisi/ditolak → seleksi_lanjutan(3); laporan disetujui → pasca_pelaksanaan(4).
   - `rumpunIlmu`, `bidang` (teks bebas, pilihan dari `MasterData`), `kataKunci` (array maks
     10 × 50 karakter, disimpan JSON di TEXT, respons selalu array).
-  - `skema` hanya untuk penelitian, `mitra` hanya untuk pengabdian (400 jika salah jenis);
+  - `skema` hanya untuk penelitian, `mitra` + detail mitra (`mitraJenis`, `mitraAlamat`,
+    `mitraKontak`, `mitraKebutuhan`) hanya untuk pengabdian (400 jika salah jenis; detail mitra
+    `null` untuk penelitian diabaikan);
     pindah jenis menghapus nilai milik jenis lama.
   - Ketua/admin mengubah status (`review|revisi|disetujui|ditolak`, opsional `catatanRevisi`);
     `disetujui` mengisi `approvedAt`; pengusul mendapat notifikasi.
@@ -172,14 +174,14 @@ dan diperlakukan sebagai reviewer di UI.
 ### Database (MySQL/MariaDB)
 Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
 `EmailVerificationToken`, `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
-(`kategori` rumpun_ilmu|bidang|luaran, `nama` unik per kategori, `jenisKegiatan` NULL = keduanya,
+(`kategori` rumpun_ilmu|bidang|luaran|jenis_mitra, `nama` unik per kategori, `jenisKegiatan` NULL = keduanya,
 `jenisLuaran`, `urutan`, `isAktif`), `UserFoto`
 (foto profil: `userId` PK, blob, mime, ukuran), `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
 (`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
 `Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
 ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
 `luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `rumpunIlmu`, `bidang`, `kataKunci`; plus `skema` hanya di Penelitian dan
-`mitra` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
+`mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
 `Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `_prisma_migrations`.
@@ -194,7 +196,7 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 (Penelitian/Pengabdian) + field `tipe`/`luaran`/`skema`/`mitra` di proposal; endpoint
 `/laporan`, `/program-studi`, `/users/profile/me` (GET), `/dosen/proposals/as-member` baru;
 `/auth/me` + field profil; stats + `review` & `?jenis=`; field `tahapan`; foto profil,
-export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data.
+export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,
