@@ -19,18 +19,26 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
+- `backend_go/new-api.md` — API baru (fitur laporan, field `tipe`/`luaran`) untuk developer FE;
+  perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
 ## Prinsip utama (jangan dilanggar tanpa alasan kuat)
 
-1. **Kompatibilitas penuh dengan backend Node.** Backend Go meniru API Node/Express
+1. **Kompatibilitas penuh dengan backend Node (untuk endpoint lama).** Backend Go meniru API Node/Express
    byte-per-byte: urutan route, role, pesan, status code, bentuk JSON (urutan field gaya
    Prisma, tanggal `2026-05-16T04:53:59.000Z`, `anggaran` Decimal sebagai string,
    `dokumenBlob` sebagai objek `{"0":37,...}`), termasuk keanehan Node (mis. error bisnis
    `throw new Error()` → **HTTP 500** lewat `plainError`). Komentar `// Node: ...` di tiap
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
-2. **Satu database bersama.** Skema = skema Prisma; tabel `_prisma_migrations` dipakai
-   bersama sehingga Prisma dan `cmd/migrate` bisa saling ganti. Tanggal disimpan UTC.
+   Pengecualian yang disengaja: respons proposal kini punya field `tipe` dan `luaran`.
+   Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
+   (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
+2. **Backend Go satu-satunya backend.** Sejak migrasi
+   `20261024000000_split_proposal_penelitian_pengabdian` tabel `Proposal` dipecah menjadi
+   `Penelitian` + `Pengabdian`, jadi skema tidak lagi sama dengan Prisma dan backend Node
+   tidak boleh dipakai pada database ini. Format `_prisma_migrations` tetap dipakai oleh
+   `cmd/migrate`. Tanggal disimpan UTC.
 3. **Redesign frontend hanya tampilan.** `src/api/*`, `src/store/*`, `src/router/*`,
    `src/utils/*` sengaja tidak diubah oleh redesign; logika & hak akses tetap.
 
@@ -43,7 +51,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 236 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 301 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -66,6 +74,12 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
   sebagai **LONGBLOB** di DB (bukan filesystem).
 - Mendaftarkan route baru: tambahkan di `registerXxxRoutes()` file domainnya; urutan route
   penting (route statis seperti `/my`, `/stats` harus sebelum `/:id`).
+- **Proposal & laporan (tabel terpecah):** BACA lewat VIEW `Proposal` (tipe proposal) /
+  VIEW `Laporan` (tipe laporan) — query baca lama (`FROM Proposal`) tetap jalan. TULIS jangan
+  ke VIEW: pakai helper di `kegiatan.go` — `insertKegiatan` (registri `Kegiatan` + tabel
+  fisik sesuai `jenis`), `updateKegiatan`, `deleteKegiatan` (hapus `Kegiatan` → CASCADE ke
+  tabel fisik & semua relasi), `moveKegiatanJenis` (PATCH `jenis`), `kegiatanFile` (blob,
+  tidak ada di VIEW).
 
 ### Peran (`Role.name`)
 `admin`, `ketua_lppm` (dulu `ketua_prpm`, sudah dimigrasi), `dosen`, `reviewer`, `mahasiswa`.
@@ -86,7 +100,8 @@ dan diperlakukan sebagai reviewer di UI.
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
 | `/dosen/proposals` | stats, members/search, invitations (+ PATCH respon), CRUD + submit | dosen, mahasiswa |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
-| `/reviewer/my-tugasan` | tugasan review milik user | reviewer, dosen, mahasiswa |
+| `/reviewer/my-tugasan` | tugasan review **proposal** milik user | reviewer, dosen, mahasiswa |
+| `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua) | |
@@ -103,26 +118,44 @@ dan diperlakukan sebagai reviewer di UI.
 - Review: nilai (`nilaiRelevansi/Metodologi/Anggaran/Luaran`) bertipe **TEXT**,
   `rekomendasi` ∈ `disetujui|revisi|ditolak`; simpan ulang mereset `isDone=false`;
   finalisasi set `isDone=true` dan memberi notifikasi `review_selesai` ke pengusul.
-- Laporan kemajuan/akhir hanya untuk proposal `disetujui`; wajib file atau `dokumenUrl`.
+- Laporan kemajuan/akhir (`LaporanProposal`, fitur lama tanpa review) hanya untuk proposal
+  `disetujui`; wajib file atau `dokumenUrl`.
+- **Laporan** (baris `tipe='laporan'` di Penelitian/Pengabdian, endpoint `/laporan`): dibuat
+  pengusul dari proposal `disetujui`, maks 1 per proposal (`proposalId` unik), data proposal
+  (judul, abstrak, anggaran, `luaran`, periode) disalin. Kolom khusus: `luaranTercapai`,
+  `ringkasanHasil`, `realisasiAnggaran`. Status sama dengan proposal. Edit/upload saat
+  `draft`/`revisi`; submit wajib `luaranTercapai` + dokumen (file/URL) dan menotifikasi semua
+  ketua; ketua/admin menugaskan reviewer (hanya `diajukan`/`review`, bukan pengusul) → `review`;
+  reviewer simpan/finalisasi (hanya saat `review`); ketua/admin set status. Tugasan & review
+  laporan memakai `ReviewerTugasan`/`ProposalReview` dengan `proposalId` = id laporan;
+  `/reviewer/my-tugasan` menyaring hanya tipe proposal.
 - Hapus periode: admin/ketua membuat permintaan (berlaku 1 hari), harus disetujui pihak
   **lain** dengan password — admin ↔ ketua (peminta dan penyetuju tidak boleh sama-sama
   admin atau sama-sama non-admin). Notifikasi `deletion_request|approved|cancelled`.
 - Notifikasi (`NotifType`): `proposal_diajukan`, `proposal_disetujui`, `proposal_ditolak`,
   `proposal_revisi`, `reviewer_ditugaskan`, `review_selesai`, `laporan_diunggah`,
-  `deletion_request`, `deletion_approved`, `deletion_cancelled`.
+  `deletion_request`, `deletion_approved`, `deletion_cancelled`, `laporan_diajukan`,
+  `laporan_disetujui`, `laporan_ditolak`, `laporan_revisi` (notifikasi laporan memakai
+  `refType: "laporan"`).
 - Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`).
 
 ### Database (MySQL/MariaDB)
 Tabel: `Role`, `User`, `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
-(`jenis`: penelitian|pengabdian, `isAktif`), `Proposal`, `ProposalAnggota`,
+(`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
+`Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
+ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
+`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
 `Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `_prisma_migrations`.
+VIEW (baca saja): `Proposal`, `Laporan`. Kolom `proposalId` di tabel relasi ber-FK ke
+`Kegiatan.id`; id proposal & laporan unik bersama sehingga URL `/proposals/:id` tidak berubah.
 Migrasi baru: buat folder `migrations/<YYYYMMDDHHMMSS>_<nama>/migration.sql` (format Prisma);
 jangan ubah migrasi yang sudah diterapkan (checksum dicatat).
 
 ### Perbedaan sengaja dengan Node (lihat README)
 `PATCH /users/profile/me` hanya menerima field profil; download dokumen laporan harian
-mengirim file asli; teks error internal 500 bisa sedikit beda.
+mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
+(Penelitian/Pengabdian) + field `tipe`/`luaran` di proposal; endpoint `/laporan` baru.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,

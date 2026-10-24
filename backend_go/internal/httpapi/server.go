@@ -72,7 +72,8 @@ func (s *Server) Close() error {
 	return nil
 }
 
-// registerRoutes mirrors registerApiRoutes() in app.ts (same mount order).
+// registerRoutes mirrors registerApiRoutes() in app.ts (same mount order),
+// plus the Go-only laporan routes.
 func (s *Server) registerRoutes() {
 	s.registerAuthRoutes()
 	s.registerUserRoutes()
@@ -81,6 +82,7 @@ func (s *Server) registerRoutes() {
 	s.registerProposalDosenRoutes()
 	s.registerLaporanHarianRoutes()
 	s.registerReviewerRoutes()
+	s.registerLaporanKegiatanRoutes() // baru, tidak ada di Node
 	s.registerNotificationRoutes()
 	s.registerDashboardRoutes()
 	s.registerActivityLogRoutes()

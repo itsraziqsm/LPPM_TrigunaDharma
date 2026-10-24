@@ -52,7 +52,7 @@ func (s *Server) tugaskanReviewer(c *Ctx) error {
 			return err
 		}
 	}
-	if _, err := s.db.ExecContext(ctx, "UPDATE `Proposal` SET `status` = 'review', `updatedAt` = ? WHERE `id` = ?", now, proposalID); err != nil {
+	if err := s.updateKegiatan(ctx, s.db, proposalID, "`status` = 'review', `updatedAt` = ?", now); err != nil {
 		return err
 	}
 	for _, rid := range reviewerIDs {
@@ -135,19 +135,36 @@ func (s *Server) submitReview(c *Ctx) error {
 	proposalID := ids["proposalId"]
 	reviewerID := c.user.UserID
 	ctx := c.r.Context()
-	assigned, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` WHERE `proposalId` = ? AND `reviewerId` = ?", proposalID, reviewerID)
+	assigned, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` t"+proposalTugasanJoin+" WHERE t.`proposalId` = ? AND t.`reviewerId` = ?", proposalID, reviewerID)
 	if err != nil {
 		return err
 	}
 	if assigned == 0 {
 		return plainError("Anda tidak ditugaskan untuk mereview proposal ini")
 	}
+	review, err := s.upsertReview(c, proposalID, reviewerID)
+	if err != nil {
+		return err
+	}
+	if err := s.logActivity(ctx, s.db, c, activityEntry{
+		UserID: reviewerID, Action: "review.submit", EntityType: "proposal", EntityID: proposalID, ProposalID: proposalID,
+		Detail: fmt.Sprintf("Review disimpan untuk proposal #%d", proposalID),
+	}); err != nil {
+		return err
+	}
+	return c.ok("Review disimpan", review)
+}
+
+// upsertReview creates or updates the reviewer's ProposalReview row for a
+// proposal or laporan id (saving again resets isDone) and returns it.
+func (s *Server) upsertReview(c *Ctx, proposalID, reviewerID int64) (O, error) {
+	ctx := c.r.Context()
 	body := c.bodyMap()
 	fields := []string{"nilaiRelevansi", "nilaiMetodologi", "nilaiAnggaran", "nilaiLuaran", "catatan", "rekomendasi"}
 	now := s.nowMs()
 	existing, err := s.reviewByKey(c, proposalID, reviewerID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if existing == nil {
 		cols := []string{"proposalId", "reviewerId"}
@@ -165,7 +182,7 @@ func (s *Server) submitReview(c *Ctx) error {
 			quoted[i] = "`" + col + "`"
 		}
 		if _, err := s.db.ExecContext(ctx, "INSERT INTO `ProposalReview` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(cols))+")", args...); err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		sets := []string{}
@@ -179,20 +196,10 @@ func (s *Server) submitReview(c *Ctx) error {
 		sets = append(sets, "`isDone` = ?", "`updatedAt` = ?")
 		args = append(args, false, now, existing.Int64("id"))
 		if _, err := s.db.ExecContext(ctx, "UPDATE `ProposalReview` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	review, err := s.reviewByKey(c, proposalID, reviewerID)
-	if err != nil {
-		return err
-	}
-	if err := s.logActivity(ctx, s.db, c, activityEntry{
-		UserID: reviewerID, Action: "review.submit", EntityType: "proposal", EntityID: proposalID, ProposalID: proposalID,
-		Detail: fmt.Sprintf("Review disimpan untuk proposal #%d", proposalID),
-	}); err != nil {
-		return err
-	}
-	return c.ok("Review disimpan", review)
+	return s.reviewByKey(c, proposalID, reviewerID)
 }
 
 func (s *Server) finalizeReview(c *Ctx) error {
@@ -236,6 +243,10 @@ func (s *Server) finalizeReview(c *Ctx) error {
 	return c.ok("Review diselesaikan", review)
 }
 
+// proposalTugasanJoin keeps tugasan for laporan (GET /laporan/tugasan) out of
+// the proposal endpoints: both share ReviewerTugasan/ProposalReview.
+const proposalTugasanJoin = " JOIN `Kegiatan` k ON k.`id` = t.`proposalId` AND k.`tipe` = 'proposal'"
+
 var reviewerPaginationSchema = zObj(
 	withDefault("page", zNum().Coerce().Int().Positive(), float64(1)),
 	withDefault("limit", zNum().Coerce().Int().Positive(), float64(10)),
@@ -254,7 +265,7 @@ func (s *Server) myTugasan(c *Ctx) error {
 	reviewerID := c.user.UserID
 	ctx := c.r.Context()
 	tugasan, err := queryObjs(ctx, s.db,
-		"SELECT t.`id`,t.`proposalId`,t.`reviewerId`,t.`createdAt`,t.`proposalId` AS `__pid` FROM `ReviewerTugasan` t WHERE t.`reviewerId` = ? ORDER BY t.`createdAt` DESC LIMIT ? OFFSET ?",
+		"SELECT t.`id`,t.`proposalId`,t.`reviewerId`,t.`createdAt`,t.`proposalId` AS `__pid` FROM `ReviewerTugasan` t"+proposalTugasanJoin+" WHERE t.`reviewerId` = ? ORDER BY t.`createdAt` DESC LIMIT ? OFFSET ?",
 		reviewerID, take, skip)
 	if err != nil {
 		return err
@@ -270,7 +281,7 @@ func (s *Server) myTugasan(c *Ctx) error {
 			tugasan[i].Set("proposal", list[0])
 		}
 	}
-	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` WHERE `reviewerId` = ?", reviewerID)
+	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` t"+proposalTugasanJoin+" WHERE t.`reviewerId` = ?", reviewerID)
 	if err != nil {
 		return err
 	}

@@ -199,7 +199,7 @@ expect("create proposal forbidden", req("POST", "/api/v1/proposals", admin, {}),
 b = expect("create proposal", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggaran": 15000000.5, "dokumenUrl": "https://drive.google.com/x", "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": dosen2User["id"], "peran": "co-peneliti"}]}), 201, "Proposal created")
 P = b["data"]
 pid = P["id"]
-check("proposal shape", list(P.keys()) == ["id", "judul", "abstrak", "jenis", "status", "anggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
+check("proposal shape", list(P.keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"], list(P.keys()))
 check("proposal values", P["status"] == "draft" and P["anggaran"] == "15000000.5" and P["periode"]["id"] == periodePen and list(P["periode"].keys()) == ["id", "nama", "tahun"] and list(P["pengusul"].keys()) == ["id", "name", "fullName", "email", "programStudi", "nidn"], P)
 check("proposal anggota", [a["user"]["id"] for a in P["anggota"]] == [mhs1User["id"], dosen2User["id"]] and P["anggota"][0]["peran"] == "anggota" and list(P["anggota"][0].keys()) == ["id", "peran", "user"], P["anggota"])
 expect("create dup anggota", req("POST", "/api/v1/proposals", dosen1, {"judul": "Sistem Uji Coba Go", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "anggotaIds": [{"userId": mhs1User["id"]}, {"userId": mhs1User["id"]}]}), 409, "Resource already exists")
@@ -232,7 +232,7 @@ expect("detail accepted member", req("GET", f"/api/v1/proposals/{pid}", mhs1), 2
 
 # dosen module
 b = expect("dosen list", req("GET", "/api/v1/dosen/proposals?status=draft", dosen1), 200, "Proposals fetched")
-check("dosen list shape", list(b["data"][0].keys()) == ["id", "judul", "abstrak", "jenis", "status", "anggaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
+check("dosen list shape", list(b["data"][0].keys()) == ["id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "anggota", "reviewerTugasan"] and "statusUndangan" in b["data"][0]["anggota"][0] and list(b["data"][0]["periode"].keys()) == ["id", "nama", "tahun", "jenis"], b["data"][0])
 expect("dosen list bad status", req("GET", "/api/v1/dosen/proposals?status=x", dosen1), 500)
 b = expect("dosen stats", req("GET", "/api/v1/dosen/proposals/stats", dosen1), 200, "Stats fetched")
 check("stats shape", list(b["data"].keys()) == ["total", "draft", "diajukan", "disetujui", "revisi", "ditolak"], b)
@@ -367,6 +367,87 @@ check("lh download", st == 200 and content == PDF, st)
 expect("lh download other", req("GET", f"/api/v1/mahasiswa/laporan-harian/dokumen/{lhid}", mhs2), 403, "Akses ditolak")
 expect("lh delete missing", req("DELETE", "/api/v1/mahasiswa/laporan-harian/999999", mhs1), 404, "Laporan tidak ditemukan")
 expect("lh delete", req("DELETE", f"/api/v1/mahasiswa/laporan-harian/{lhid}", mhs1), 200, "Laporan harian berhasil dihapus")
+
+# ── laporan (tipe 'laporan', endpoint baru /api/v1/laporan) ──
+LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
+b = expect("laporan eligible", req("GET", "/api/v1/laporan/eligible", dosen1), 200, "Proposal siap dilaporkan fetched")
+check("laporan eligible has pid", any(x["id"] == pid for x in b["data"]) and list(b["data"][0].keys()) == ["id", "judul", "jenis", "status", "anggaran", "luaran", "approvedAt", "periode"], b["data"][:1])
+expect("laporan create invalid", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 0}), 422)
+expect("laporan create by non-pengusul", req("POST", "/api/v1/laporan", mhs1, {"proposalId": pid}), 403, "Hanya pengusul proposal yang dapat membuat laporan")
+expect("laporan create missing proposal", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 999999}), 404, "Proposal tidak ditemukan")
+expect("laporan create forbidden role", req("POST", "/api/v1/laporan", admin, {"proposalId": pid}), 403)
+b = expect("laporan create", req("POST", "/api/v1/laporan", dosen1, {"proposalId": pid, "ringkasanHasil": "Ringkas"}), 201, "Laporan berhasil dibuat")
+L = b["data"]
+lapId = L["id"]
+check("laporan shape", list(L.keys()) == LAP_KEYS, list(L.keys()))
+check("laporan values", L["tipe"] == "laporan" and L["proposalId"] == pid and L["status"] == "draft" and L["jenis"] == "penelitian" and L["anggaran"] == "15000000.5" and L["proposal"]["id"] == pid and lapId != pid, L)
+expect("laporan create duplicate", req("POST", "/api/v1/laporan", dosen1, {"proposalId": pid}), 409, "Proposal ini sudah memiliki laporan")
+b = expect("laporan eligible after", req("GET", "/api/v1/laporan/eligible", dosen1), 200)
+check("laporan eligible excludes pid", all(x["id"] != pid for x in b["data"]), b["data"])
+expect("laporan via old proposal endpoint", req("GET", f"/api/v1/proposals/{lapId}", admin), 500, "Proposal tidak ditemukan")
+b = req("GET", "/api/v1/proposals/my?limit=100", dosen1)[1]
+check("old my proposals excludes laporan", all(x["tipe"] == "proposal" and x["id"] != lapId for x in b["data"]), [x["id"] for x in b["data"]])
+expect("laporan submit incomplete", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 400, "Luaran tercapai wajib diisi sebelum laporan diajukan")
+expect("laporan update by anggota", req("PATCH", f"/api/v1/laporan/{lapId}", mhs1, {"luaranTercapai": "x"}), 403, "Anda tidak memiliki akses ke laporan ini")
+b = expect("laporan update", req("PATCH", f"/api/v1/laporan/{lapId}", dosen1, {"luaranTercapai": "1 artikel jurnal SINTA 3", "realisasiAnggaran": 14000000}), 200, "Laporan berhasil diperbarui")
+check("laporan updated", b["data"]["luaranTercapai"] == "1 artikel jurnal SINTA 3" and b["data"]["realisasiAnggaran"] == "14000000", b["data"])
+expect("laporan submit no dokumen", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 400, "Dokumen laporan (file atau URL) wajib diunggah sebelum laporan diajukan")
+body, ct = multipart({}, ("file", "laporan akhir.pdf", "application/pdf", PDF))
+b = expect("laporan upload dokumen", req("POST", f"/api/v1/laporan/{lapId}/dokumen", dosen1, raw=body, ctype=ct), 200, "Dokumen laporan berhasil diunggah")
+check("laporan upload shape", b["data"] == {"id": lapId, "dokumenNama": "laporan akhir.pdf", "dokumenMime": "application/pdf", "dokumenUkuran": len(PDF)}, b["data"])
+st, _, hdrs, content = req("GET", f"/api/v1/laporan/{lapId}/dokumen", mhs1)
+check("laporan download by anggota", st == 200 and content == PDF, st)
+expect("laporan detail stranger", req("GET", f"/api/v1/laporan/{lapId}", dosen5), 403)
+expect("laporan assign before submit", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [rev1User["id"]]}), 400, "Laporan harus berstatus diajukan atau review untuk ditugaskan reviewer")
+b = expect("laporan submit", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 200, "Laporan berhasil diajukan")
+check("laporan diajukan", b["data"]["status"] == "diajukan" and b["data"]["submittedAt"] is not None, b["data"])
+n = req("GET", "/api/v1/notifications?limit=50", ketua)[1]["data"]
+check("ketua laporan notif", any(x["type"] == "laporan_diajukan" and x["refId"] == lapId and x["refType"] == "laporan" for x in n), n[:3])
+expect("laporan edit after submit", req("PATCH", f"/api/v1/laporan/{lapId}", dosen1, {"ringkasanHasil": "x"}), 400, "Laporan hanya bisa diubah saat status draft atau revisi")
+expect("laporan assign pengusul", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [dosen1User["id"]]}), 400, "Pengusul tidak dapat menjadi reviewer laporannya sendiri")
+expect("laporan assign missing user", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [999999]}), 400, "Reviewer tidak ditemukan atau belum disetujui")
+b = expect("laporan assign", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [rev1User["id"]]}), 200, "Reviewer laporan ditugaskan")
+check("laporan review status", b["data"]["status"] == "review" and b["data"]["reviewerTugasan"][0]["reviewer"]["id"] == rev1User["id"], b["data"])
+b = expect("laporan tugasan", req("GET", "/api/v1/laporan/tugasan", rev1), 200, "Tugasan review laporan fetched")
+t = b["data"][0]
+check("laporan tugasan shape", list(t.keys()) == ["id", "laporanId", "reviewerId", "createdAt", "laporan", "myReview"] and t["laporanId"] == lapId and t["myReview"] is None and list(t["laporan"].keys()) == ["id", "proposalId", "judul", "status", "jenis", "pengusul"], t)
+b = req("GET", "/api/v1/reviewer/my-tugasan?limit=100", rev1)[1]
+check("old my-tugasan excludes laporan", all(x["proposalId"] != lapId and x["proposal"] is not None for x in b["data"]), b["data"][:1])
+expect("laporan review not assigned", req("POST", f"/api/v1/laporan/{lapId}/reviews", dosen5, {"catatan": "x"}), 403, "Anda tidak ditugaskan untuk mereview laporan ini")
+expect("laporan review via old endpoint", req("POST", f"/api/v1/proposals/{lapId}/reviews", rev1, {"catatan": "x"}), 500, "Anda tidak ditugaskan untuk mereview proposal ini")
+expect("laporan finalize before save", req("POST", f"/api/v1/laporan/{lapId}/reviews/finalize", rev1), 400, "Simpan review terlebih dahulu sebelum finalisasi")
+b = expect("laporan review save", req("POST", f"/api/v1/laporan/{lapId}/reviews", rev1, {"nilaiLuaran": "85", "catatan": "Luaran sesuai", "rekomendasi": "disetujui"}), 200, "Review laporan disimpan")
+check("laporan review saved", b["data"]["proposalId"] == lapId and b["data"]["isDone"] is False, b["data"])
+b = expect("laporan review finalize", req("POST", f"/api/v1/laporan/{lapId}/reviews/finalize", rev1), 200, "Review laporan diselesaikan")
+check("laporan review done", b["data"]["isDone"] is True, b["data"])
+b = expect("laporan reviews", req("GET", f"/api/v1/laporan/{lapId}/reviews", dosen1), 200, "Review laporan fetched")
+check("laporan reviews shape", len(b["data"]) == 1 and list(b["data"][0]["reviewer"].keys()) == ["id", "name", "fullName"], b["data"])
+b = expect("laporan detail", req("GET", f"/api/v1/laporan/{lapId}", rev1), 200, "Laporan fetched")
+check("laporan detail keys", list(b["data"].keys())[-4:] == ["proposal", "anggota", "reviewerTugasan", "reviews"] and len(b["data"]["reviews"]) == 1, list(b["data"].keys()))
+expect("laporan status by dosen", req("PATCH", f"/api/v1/laporan/{lapId}/status", dosen1, {"status": "disetujui"}), 403)
+b = expect("laporan status disetujui", req("PATCH", f"/api/v1/laporan/{lapId}/status", ketua, {"status": "disetujui"}), 200, "Status laporan diperbarui")
+check("laporan approved", b["data"]["status"] == "disetujui" and b["data"]["approvedAt"] is not None, b["data"])
+n = req("GET", "/api/v1/notifications?limit=50", dosen1)[1]["data"]
+check("pengusul laporan notif", any(x["type"] == "laporan_disetujui" and x["refId"] == lapId for x in n) and any(x["type"] == "review_selesai" and x["refType"] == "laporan" for x in n), n[:3])
+b = expect("laporan list admin", req("GET", "/api/v1/laporan?status=disetujui&jenis=penelitian", admin), 200, "Laporan fetched")
+check("laporan list", any(x["id"] == lapId for x in b["data"]) and b["meta"]["page"] == 1, b["meta"])
+expect("laporan list bad query", req("GET", "/api/v1/laporan?status=x", admin), 422)
+expect("laporan list forbidden", req("GET", "/api/v1/laporan", dosen1), 403)
+b = expect("laporan my", req("GET", "/api/v1/laporan/my", dosen1), 200, "Laporan saya fetched")
+check("laporan my has", b["data"][0]["id"] == lapId and all(x["pengusul"]["id"] == dosen1User["id"] for x in b["data"]), b["data"][:1])
+expect("laporan delete non-draft", req("DELETE", f"/api/v1/laporan/{lapId}", dosen1), 400, "Hanya laporan berstatus draft yang bisa dihapus")
+expect("laporan bad id", req("GET", "/api/v1/laporan/abc", dosen1), 400, "Parameter id tidak valid.")
+expect("laporan missing", req("GET", "/api/v1/laporan/999999", admin), 404, "Laporan tidak ditemukan")
+expect("laporan id is not proposal", req("GET", f"/api/v1/laporan/{pid}", admin), 404, "Laporan tidak ditemukan")
+
+# pindah jenis: penelitian → pengabdian tetap memakai id yang sama
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal pindah jenis", "abstrak": abstrak, "jenis": "penelitian", "luaran": "Modul pelatihan"})
+expect("create for jenis move", b, 201)
+mv = b[1]["data"]["id"]
+check("luaran saved", b[1]["data"]["luaran"] == "Modul pelatihan", b[1]["data"])
+b = expect("move jenis", req("PATCH", f"/api/v1/dosen/proposals/{mv}", dosen5, {"jenis": "pengabdian", "judul": "Proposal pindah jenis 2"}), 200)
+check("moved jenis", b["data"]["id"] == mv and b["data"]["jenis"] == "pengabdian" and b["data"]["judul"] == "Proposal pindah jenis 2" and b["data"]["luaran"] == "Modul pelatihan", b["data"])
+expect("delete moved", req("DELETE", f"/api/v1/dosen/proposals/{mv}", dosen5), 200)
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

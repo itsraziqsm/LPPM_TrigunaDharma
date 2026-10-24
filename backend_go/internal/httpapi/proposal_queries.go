@@ -25,7 +25,7 @@ type proposalShape struct {
 var (
 	// proposal.service.ts → proposalSelect
 	proposalListShape = proposalShape{
-		scalars:      []string{"id", "judul", "abstrak", "jenis", "status", "anggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols: []string{"id", "name", "fullName", "email", "programStudi", "nidn"},
 		periodeCols:  []string{"id", "nama", "tahun"},
 		tugasanRevID: true,
@@ -40,7 +40,7 @@ var (
 	}
 	// Proposaldosen.service.ts → proposalDosenSelect
 	proposalDosenShape = proposalShape{
-		scalars:       []string{"id", "judul", "abstrak", "jenis", "status", "anggaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols:  []string{"id", "name", "fullName", "email", "nidn", "programStudi"},
 		periodeCols:   []string{"id", "nama", "tahun", "jenis"},
 		anggotaStatus: true,
@@ -276,7 +276,8 @@ func (s *Server) insertAnggota(ctx context.Context, tx dbtx, proposalID int64, a
 func proposalWriteFields(body map[string]any) ([]string, []any) {
 	cols := []string{}
 	args := []any{}
-	for _, field := range []string{"judul", "abstrak", "jenis", "anggaran", "periodeId", "dokumenUrl"} {
+	// jenis bukan kolom fisik: menentukan tabel Penelitian/Pengabdian.
+	for _, field := range []string{"judul", "abstrak", "anggaran", "luaran", "periodeId", "dokumenUrl"} {
 		v, ok := body[field]
 		if !ok {
 			continue

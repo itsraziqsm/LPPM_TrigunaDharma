@@ -20,6 +20,13 @@ tidak perlu diubah: cukup arahkan base URL ke server Go.
   "combined" di `logs/access.log` (bisa dibaca GoAccess seperti sebelumnya).
 - Upload PDF/DOCX (maks 10 MB, field `file`) dengan validasi magic-bytes.
 
+> **Sejak migrasi `20261024000000_split_proposal_penelitian_pengabdian`** backend Go adalah
+> satu-satunya backend: tabel `Proposal` dipecah menjadi `Penelitian` dan `Pengabdian`
+> (+ registri id `Kegiatan`, VIEW `Proposal` dan `Laporan`), sehingga backend Node/Prisma
+> lama tidak bisa lagi memakai database ini. Endpoint lama tetap kompatibel (ditambah field
+> `tipe` dan `luaran`), dan ada fitur baru **laporan** di `/api/v1/laporan`.
+> Dokumentasi API baru untuk frontend: [`new-api.md`](new-api.md).
+
 ## Menjalankan
 
 Butuh Go 1.23+ dan MySQL/MariaDB.
@@ -49,6 +56,12 @@ Tidak perlu migrasi ulang. `cmd/migrate` membaca tabel `_prisma_migrations`
 yang sama dengan Prisma, jadi migrasi yang sudah diterapkan oleh Prisma akan
 dilewati. Cek status: `go run ./cmd/migrate -status`.
 
+**Backup dulu** (`mysqldump`) sebelum menerapkan migrasi pemecahan tabel
+`20261024000000_split_proposal_penelitian_pengabdian`: DDL MySQL tidak transaksional,
+jadi jika gagal di tengah, pulihkan dari backup. Data proposal lama dipindah apa adanya
+(id sama, `tipe = 'proposal'`). Setelah migrasi ini, jangan jalankan lagi backend Node
+terhadap database tersebut.
+
 ### Akun dari `cmd/seed`
 
 Sama dengan seeder Node: `admin@lppm.dev / admin123456`,
@@ -68,7 +81,9 @@ internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
 internal/httpapi    router ala Express, middleware, dan semua handler
   auth.go, users.go, periode.go, proposals.go, proposal_dosen.go,
   reviewer.go, laporan.go (laporan + dokumen lampiran), laporan_harian.go,
-  misc.go (notifikasi, dashboard, activity log, export)
+  misc.go (notifikasi, dashboard, activity log, export),
+  kegiatan.go (helper tulis ke tabel Penelitian/Pengabdian via registri Kegiatan),
+  laporan_kegiatan.go (fitur laporan baru, /api/v1/laporan)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -76,7 +91,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 236 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 301 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -95,6 +110,12 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 3. Pesan error internal Prisma (HTTP 500, mis. id bukan angka) teksnya bisa
    sedikit berbeda; status code-nya sama. Di `NODE_ENV=production` keduanya
    sama-sama menjadi `"Internal server error"`.
+4. Skema database berbeda dari Prisma sejak pemecahan tabel `Proposal` (lihat atas).
+   Respons proposal mendapat field `tipe` (selalu `"proposal"`) dan `luaran`;
+   create/update proposal menerima `luaran` opsional. `GET /reviewer/my-tugasan` hanya
+   memuat tugasan proposal (tugasan laporan ada di `GET /laporan/tugasan`).
+5. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+   yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`
 dan `PATCH /proposals/laporan/:id` tetap menyertakan isi file

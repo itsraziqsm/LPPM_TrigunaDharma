@@ -24,6 +24,7 @@ var (
 		required("abstrak", zStr().Min(20, "Abstrak minimal 20 karakter")),
 		required("jenis", zEnumOf(jenisKegiatan...)),
 		optional("anggaran", zNum().Positive()),
+		optional("luaran", zStr()),
 		optional("periodeId", zNum().Int().Positive()),
 		optional("dokumenUrl", zStr().URL("URL dokumen tidak valid")),
 		optional("anggotaIds", &zArray{elem: anggotaProposalSchem}),
@@ -285,23 +286,17 @@ func (s *Server) createProposal(c *Ctx) error {
 // insertProposal creates a draft proposal with its anggota atomically.
 func (s *Server) insertProposal(ctx context.Context, body map[string]any, pengusulID int64) (int64, error) {
 	cols, args := proposalWriteFields(body)
+	jenis, _ := getString(body, "jenis")
 	now := s.nowMs()
 	cols = append(cols, "status", "pengusulId", "createdAt", "updatedAt")
 	args = append(args, "draft", pengusulID, now, now)
-	quoted := make([]string, len(cols))
-	for i, col := range cols {
-		quoted[i] = "`" + col + "`"
-	}
 	var id int64
 	err := s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
 			return err
 		}
-		res, err := tx.ExecContext(ctx, "INSERT INTO `Proposal` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(cols))+")", args...)
-		if err != nil {
-			return err
-		}
-		id, err = res.LastInsertId()
+		var err error
+		id, err = s.insertKegiatan(ctx, tx, jenis, tipeProposal, cols, args)
 		if err != nil {
 			return err
 		}
@@ -319,12 +314,23 @@ func (s *Server) applyProposalUpdate(ctx context.Context, id int64, body map[str
 		sets = append(sets, "`"+col+"` = ?")
 	}
 	sets = append(sets, "`updatedAt` = ?")
-	args = append(args, s.nowMs(), id)
+	args = append(args, s.nowMs())
 	return s.withTx(ctx, func(tx *sql.Tx) error {
 		if err := s.ensurePeriodeFK(ctx, tx, body); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, "UPDATE `Proposal` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+		if jenis, ok := getString(body, "jenis"); ok {
+			k, err := s.kegiatanByID(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if k != nil {
+				if err := s.moveKegiatanJenis(ctx, tx, k, jenis); err != nil {
+					return err
+				}
+			}
+		}
+		if err := s.updateKegiatan(ctx, tx, id, strings.Join(sets, ", "), args...); err != nil {
 			return err
 		}
 		anggota, present := body["anggotaIds"].([]any)
@@ -387,7 +393,7 @@ func (s *Server) submitProposal(c *Ctx) error {
 		return plainError("Hanya proposal berstatus draft atau revisi yang bisa diajukan")
 	}
 	now := s.nowMs()
-	if _, err := s.db.ExecContext(ctx, "UPDATE `Proposal` SET `status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ? WHERE `id` = ?", now, now, id); err != nil {
+	if err := s.updateKegiatan(ctx, s.db, id, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
 		return err
 	}
 	proposal, err := s.loadProposal(ctx, s.db, proposalListShape, id)
@@ -443,8 +449,8 @@ func (s *Server) updateProposalStatus(c *Ctx) error {
 		}
 	}
 	sets = append(sets, "`updatedAt` = ?")
-	args = append(args, now, id)
-	if _, err := s.db.ExecContext(ctx, "UPDATE `Proposal` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	args = append(args, now)
+	if err := s.updateKegiatan(ctx, s.db, id, strings.Join(sets, ", "), args...); err != nil {
 		return err
 	}
 	proposal, err := s.loadProposal(ctx, s.db, proposalListShape, id)
@@ -488,7 +494,7 @@ func (s *Server) deleteProposal(c *Ctx) error {
 	if existing.Status != "draft" {
 		return plainError("Hanya proposal berstatus draft yang bisa dihapus")
 	}
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM `Proposal` WHERE `id` = ?", id); err != nil {
+	if err := s.deleteKegiatan(ctx, s.db, id); err != nil {
 		return err
 	}
 	if err := s.logActivity(ctx, s.db, c, activityEntry{
@@ -539,9 +545,9 @@ func (s *Server) uploadProposalDokumen(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx,
-		"UPDATE `Proposal` SET `dokumenBlob` = ?, `dokumenNama` = ?, `dokumenMime` = ?, `dokumenUkuran` = ?, `dokumenUrl` = NULL, `updatedAt` = ? WHERE `id` = ?",
-		file.data, file.originalname, verified, file.size, s.nowMs(), id); err != nil {
+	if err := s.updateKegiatan(ctx, s.db, id,
+		"`dokumenBlob` = ?, `dokumenNama` = ?, `dokumenMime` = ?, `dokumenUkuran` = ?, `dokumenUrl` = NULL, `updatedAt` = ?",
+		file.data, file.originalname, verified, file.size, s.nowMs()); err != nil {
 		return err
 	}
 	updated, err := queryObj(ctx, s.db, "SELECT `id`,`dokumenNama`,`dokumenMime`,`dokumenUkuran` FROM `Proposal` WHERE `id` = ?", id)
@@ -600,13 +606,18 @@ func (s *Server) downloadProposalDokumen(c *Ctx) error {
 	if err := s.ensureProposalAccess(ctx, id, c.user, accessRead); err != nil {
 		return err
 	}
-	var f storedFile
-	err = s.db.QueryRowContext(ctx, "SELECT `dokumenBlob`,`dokumenMime`,`dokumenNama`,`dokumenUkuran` FROM `Proposal` WHERE `id` = ?", id).
-		Scan(&f.blob, &f.mime, &f.name, &f.size)
-	if err != nil && err != sql.ErrNoRows {
+	// Proposal view only: a laporan id is not a proposal.
+	if p, err := s.proposalByID(ctx, s.db, id); err != nil || p == nil {
+		if err != nil {
+			return err
+		}
+		return httpError(http.StatusNotFound, "Dokumen tidak ditemukan.")
+	}
+	f, found, err := s.kegiatanFile(ctx, id)
+	if err != nil {
 		return err
 	}
-	if err == sql.ErrNoRows || f.blob == nil {
+	if !found || f.blob == nil {
 		return httpError(http.StatusNotFound, "Dokumen tidak ditemukan.")
 	}
 	name := f.name.String

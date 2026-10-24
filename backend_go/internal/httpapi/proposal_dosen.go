@@ -183,7 +183,7 @@ func (s *Server) dosenSubmitProposal(c *Ctx) error {
 		return plainError("Proposal tidak dapat diajukan: " + strings.Join(parts, ", ") + ". Semua anggota harus menyetujui undangan terlebih dahulu.")
 	}
 	now := s.nowMs()
-	if _, err := s.db.ExecContext(ctx, "UPDATE `Proposal` SET `status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ? WHERE `id` = ?", now, now, id); err != nil {
+	if err := s.updateKegiatan(ctx, s.db, id, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
 		return err
 	}
 	proposal, err := s.loadProposal(ctx, s.db, proposalDosenShape, id)
@@ -212,7 +212,7 @@ func (s *Server) dosenDeleteProposal(c *Ctx) error {
 		return plainError("Hanya proposal berstatus draft yang bisa dihapus")
 	}
 	ctx := c.r.Context()
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM `Proposal` WHERE `id` = ?", id); err != nil {
+	if err := s.deleteKegiatan(ctx, s.db, id); err != nil {
 		return err
 	}
 	if err := s.logActivity(ctx, s.db, c, activityEntry{
