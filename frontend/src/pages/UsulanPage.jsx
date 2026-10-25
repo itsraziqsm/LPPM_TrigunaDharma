@@ -20,6 +20,8 @@ import { periodeApi } from '../api/periode'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import { masterApi } from '../api/master'
 import { kataKunciError, parseKataKunci } from '../utils/kataKunci'
+import { ATURAN_TIM, aturanTeks, hitungTim, pelanggaranTim, timPenuh } from '../utils/aturanTim'
+import { alertDialog } from '../utils/dialog'
 import useAuthStore from '../store/authStore'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
 import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
@@ -85,7 +87,7 @@ async function syncLuaran(proposalId, orig, items) {
   }
 }
 
-function validate(form, file, existingDoc, luaranItems) {
+function validate(form, file, existingDoc, luaranItems, anggota) {
   const e = {}
   const judul = form.judul.trim()
   if (!judul) e.judul = 'Judul proposal wajib diisi.'
@@ -102,8 +104,11 @@ function validate(form, file, existingDoc, luaranItems) {
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
   if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
-  const kkError = kataKunciError(form.kataKunci)
+  // Semua isian Dokumen wajib, kecuali Target Luaran.
+  const kkError = parseKataKunci(form.kataKunci).length === 0 ? 'Isi minimal satu kata kunci.' : kataKunciError(form.kataKunci)
   if (kkError) e.kataKunci = kkError
+  const tim = pelanggaranTim(form.jenis, anggota)
+  if (tim.length) e.anggota = `Komposisi tim belum sesuai: ${tim.join(', ')}.`
   if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
@@ -114,7 +119,7 @@ function validate(form, file, existingDoc, luaranItems) {
   return e
 }
 
-const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: [], mitra: ['mitra'], dokumen: ['kataKunci', 'abstrak', 'dokumen', 'luaran'] }
+const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: ['anggota'], mitra: ['mitra'], dokumen: ['kataKunci', 'abstrak', 'dokumen', 'luaran'] }
 
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
@@ -200,6 +205,43 @@ function AnggotaTable({ rows, idLabel, emptyText, onPeran, onRemove }) {
           )}
         </tbody>
       </table>
+    </section>
+  )
+}
+
+// Ringkasan aturan komposisi tim (utils/aturanTim.js) + jumlah saat ini.
+function KomposisiTim({ jenis, anggota, error }) {
+  const aturan = ATURAN_TIM[jenis]
+  if (!aturan) return null
+  const n = hitungTim(anggota)
+  const ok = pelanggaranTim(jenis, anggota).length === 0
+  const item = (kind, label) => {
+    const r = aturan[kind]
+    const sesuai = n[kind] >= r.min && (r.max == null || n[kind] <= r.max)
+    return (
+      <li className="flex items-center gap-2">
+        {sesuai ? <Check className="size-4 text-green-700" aria-hidden="true" /> : <CircleAlert className="size-4 text-amber-700" aria-hidden="true" />}
+        <span>
+          {label}: <strong className="tabular-nums">{n[kind]}</strong> <span className="text-slate-500">(ketentuan {aturanTeks(r)})</span>
+        </span>
+      </li>
+    )
+  }
+  return (
+    <section
+      aria-label="Ketentuan komposisi tim"
+      className={`rounded-lg border px-4 py-3 text-sm ${ok ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}
+    >
+      <p className="font-semibold">Ketentuan tim {jenis === 'pengabdian' ? 'pengabdian' : 'penelitian'} (selain ketua pengusul)</p>
+      <ul className="mt-1.5 flex flex-wrap gap-x-6 gap-y-1">
+        {item('dosen', 'Anggota dosen')}
+        {item('mahasiswa', 'Anggota mahasiswa')}
+      </ul>
+      {error ? (
+        <p role="alert" className="mt-1.5 text-red-700">
+          {error}
+        </p>
+      ) : null}
     </section>
   )
 }
@@ -361,14 +403,25 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     }
   }, [id, isEdit, jenisRoute])
 
-  const errors = useMemo(() => validate(form, file, existingDoc, luaranItems), [form, file, existingDoc, luaranItems])
+  const errors = useMemo(() => validate(form, file, existingDoc, luaranItems, anggota), [form, file, existingDoc, luaranItems, anggota])
   const jenisLabel = JENIS_LABEL[form.jenis] || 'Kegiatan'
   const periodeOptions = periodes.filter((p) => p.jenis === form.jenis)
   const periode = periodes.find((p) => String(p.id) === String(form.periodeId))
   const backTo = `/kegiatan/${jenisRoute || form.jenis}`
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-  const addAnggota = (kind) => (u) => setAnggota((prev) => [...prev, { ...u, peran: 'anggota', kind: kind || kindOf(u) }])
+  const addAnggota = (kind) => (u) => {
+    const k = kind || kindOf(u)
+    if (timPenuh(form.jenis, anggota, k)) {
+      alertDialog({
+        tone: 'warning',
+        title: 'Anggota sudah penuh',
+        message: `Tim ${jenisLabel.toLowerCase()} hanya boleh ${aturanTeks(ATURAN_TIM[form.jenis][k])} anggota ${k}. Hapus salah satu bila ingin mengganti.`,
+      })
+      return
+    }
+    setAnggota((prev) => [...prev, { ...u, peran: 'anggota', kind: k }])
+  }
   const setPeran = (id, peran) => setAnggota((prev) => prev.map((x) => (x.id === id ? { ...x, peran } : x)))
   const removeAnggota = (id) => setAnggota((prev) => prev.filter((x) => x.id !== id))
   const setLuaran = (key, field, value) => setLuaranItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
@@ -385,6 +438,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     const invalid = (STEP_FIELDS[key] || []).some((f) => errors[f])
     if (invalid) {
       setShowErrors((s) => ({ ...s, [key]: true }))
+      // Pesan komposisi tim ada di atas langkah Anggota.
+      if (key === 'anggota') topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       return
     }
     const next = step + 1
@@ -481,7 +536,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       setDraftMsg({ type: 'error', text: `Untuk menyimpan draf, isi dulu ${missing.join(' dan ')}.` })
       return
     }
-    const blocking = ['anggaran', 'kataKunci'].map((k) => errors[k]).filter(Boolean)
+    // Draf: hanya format yang salah yang menghalangi (isian kosong & aturan tim boleh).
+    const blocking = [errors.anggaran, kataKunciError(form.kataKunci)].filter(Boolean)
     if (blocking.length) {
       setDraftMsg({ type: 'error', text: blocking.join(' ') })
       return
@@ -732,6 +788,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       )}
 
       {/* ── B. Anggota ───────────────────────────────────────────────── */}
+      {current === 'anggota' ? <KomposisiTim jenis={form.jenis} anggota={anggota} error={err('anggota')} /> : null}
       {current === 'anggota' &&
         (form.jenis === 'pengabdian' ? (
           <>
@@ -776,7 +833,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             <AnggotaTable
               rows={anggota}
               idLabel="NIDN / NIM"
-              emptyText="Belum ada anggota. Proposal tetap bisa disimpan tanpa anggota."
+              emptyText="Belum ada anggota. Tambahkan minimal 2 dosen."
               onPeran={setPeran}
               onRemove={removeAnggota}
             />
@@ -847,6 +904,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             <div>
               <label htmlFor="u-katakunci" className="label">
                 Kata Kunci
+                <Required />
               </label>
               <input
                 id="u-katakunci"
@@ -857,7 +915,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 aria-invalid={Boolean(err('kataKunci'))}
               />
               <FieldError message={err('kataKunci')} />
-              <p className="mt-1.5 text-xs text-slate-500">Opsional. Pisahkan dengan koma, maksimal 10 kata kunci.</p>
+              {err('kataKunci') ? null : <p className="mt-1.5 text-xs text-slate-500">Pisahkan dengan koma, maksimal 10 kata kunci.</p>}
             </div>
 
             <div>

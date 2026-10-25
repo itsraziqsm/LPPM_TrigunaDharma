@@ -303,7 +303,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Jenis kegiatan tidak bisa diubah (mengikuti
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
+  pengabdian tepat 2 dosen + tepat 1 mahasiswa, penelitian minimal 2 dosen (mahasiswa bebas) — panel
+  `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
+  terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
+  semua wajib termasuk Realisasi Anggaran (Link Jurnal/Video = bagian luaran, opsional). Jenis kegiatan tidak bisa diubah (mengikuti
   route/menu Kegiatan; mode ubah memakai `jenis` proposal). Tombol **Simpan draf** di tengah
   Sebelumnya/Berikutnya (semua langkah): validasi longgar (backend tetap mensyaratkan judul ≥ 5 &
   abstrak ≥ 20), POST pertama lalu PATCH (`draftId`, URL diganti ke `/usulan/:id` lewat

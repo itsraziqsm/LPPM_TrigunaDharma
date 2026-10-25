@@ -66,7 +66,8 @@ function validate(form, file, laporan, links) {
   if (abstrak.length < 20) e.abstrak = `Abstrak minimal 20 karakter (sekarang ${abstrak.length}).`
   if (!form.ringkasanHasil.trim()) e.ringkasanHasil = 'Ringkasan laporan wajib diisi.'
   if (!form.luaranTercapai.trim()) e.luaranTercapai = 'Luaran tercapai wajib diisi (syarat pengajuan laporan).'
-  if (form.realisasiAnggaran !== '' && (Number.isNaN(Number(form.realisasiAnggaran)) || Number(form.realisasiAnggaran) < 0)) {
+  if (form.realisasiAnggaran === '') e.realisasiAnggaran = 'Realisasi anggaran wajib diisi.'
+  else if (Number.isNaN(Number(form.realisasiAnggaran)) || Number(form.realisasiAnggaran) < 0) {
     e.realisasiAnggaran = 'Realisasi anggaran harus angka 0 atau lebih.'
   }
   const url = form.dokumenUrl.trim()
@@ -533,12 +534,13 @@ export default function LaporanIsiPage({ jenis }) {
             <div className="sm:max-w-sm">
               <label htmlFor="li-realisasi" className="label">
                 Realisasi Anggaran (Rp)
+                <Required />
               </label>
               <input id="li-realisasi" type="number" min={0} className="input" value={form.realisasiAnggaran} onChange={set('realisasiAnggaran')} aria-invalid={Boolean(err('realisasiAnggaran'))} />
               {err('realisasiAnggaran') ? (
                 <FieldError message={err('realisasiAnggaran')} />
               ) : (
-                <p className="mt-1.5 text-xs text-slate-500">Opsional. Anggaran disetujui: {rupiah(laporan.anggaran)}</p>
+                <p className="mt-1.5 text-xs text-slate-500">Anggaran disetujui: {rupiah(laporan.anggaran)}</p>
               )}
             </div>
           </div>
