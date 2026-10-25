@@ -62,17 +62,19 @@ var (
 	).partial()
 )
 
+// Go saja: penulisan proposal, laporan kemajuan/akhir, dan dokumen lampiran hanya
+// untuk dosen (+ admin untuk hapus/ubah); mahasiswa cukup laporan harian.
 func (s *Server) registerProposalRoutes() {
 	g := s.group("/api/v1/proposals", s.authenticate)
 	g.get("/", authorize("admin", "ketua_lppm", "reviewer"), s.listProposals)
 	g.get("/my", s.myProposals)
 	g.get("/:id", s.getProposal)
-	g.post("/", authorize("dosen", "mahasiswa"), validateBody(createProposalSchema), s.createProposal)
-	g.patch("/:id", authorize("dosen", "mahasiswa"), validateBody(updateProposalSchema), s.updateProposal)
-	g.post("/:id/submit", authorize("dosen", "mahasiswa"), s.submitProposal)
+	g.post("/", authorize("dosen"), validateBody(createProposalSchema), s.createProposal)
+	g.patch("/:id", authorize("dosen"), validateBody(updateProposalSchema), s.updateProposal)
+	g.post("/:id/submit", authorize("dosen"), s.submitProposal)
 	g.patch("/:id/status", authorize("ketua_lppm", "admin"), validateBody(updateStatusProposalSchema), s.updateProposalStatus)
-	g.delete("/:id", authorize("dosen", "mahasiswa", "admin"), s.deleteProposal)
-	g.post("/:id/dokumen-utama", authorize("dosen", "mahasiswa"), multerSingle("file"), s.uploadProposalDokumen)
+	g.delete("/:id", authorize("dosen", "admin"), s.deleteProposal)
+	g.post("/:id/dokumen-utama", authorize("dosen"), multerSingle("file"), s.uploadProposalDokumen)
 	g.get("/:id/dokumen-utama", s.downloadProposalDokumen)
 
 	g.post("/:proposalId/reviewers", authorize("ketua_lppm", "admin"), validateBody(tugaskanReviewerSchema), s.tugaskanReviewer)
@@ -82,15 +84,15 @@ func (s *Server) registerProposalRoutes() {
 	g.post("/:proposalId/reviews/finalize", s.requireReviewerRole, s.finalizeReview)
 
 	g.get("/:proposalId/laporan", s.listLaporan)
-	g.post("/:proposalId/laporan", authorize("dosen", "mahasiswa"), multerSingle("file"), s.createLaporan)
+	g.post("/:proposalId/laporan", authorize("dosen"), multerSingle("file"), s.createLaporan)
 	g.get("/laporan/:id/download", s.downloadLaporan)
-	g.patch("/laporan/:id", authorize("dosen", "mahasiswa", "admin"), validateBody(updateLaporanSchema), s.updateLaporan)
-	g.delete("/laporan/:id", authorize("dosen", "mahasiswa", "admin"), s.deleteLaporan)
+	g.patch("/laporan/:id", authorize("dosen", "admin"), validateBody(updateLaporanSchema), s.updateLaporan)
+	g.delete("/laporan/:id", authorize("dosen", "admin"), s.deleteLaporan)
 
 	g.get("/:proposalId/dokumen", s.listDokumen)
-	g.post("/:proposalId/dokumen", authorize("dosen", "mahasiswa"), multerSingle("file"), s.createDokumen)
+	g.post("/:proposalId/dokumen", authorize("dosen"), multerSingle("file"), s.createDokumen)
 	g.get("/dokumen/:id/download", s.downloadDokumen)
-	g.delete("/dokumen/:id", authorize("dosen", "mahasiswa", "admin"), s.deleteDokumen)
+	g.delete("/dokumen/:id", authorize("dosen", "admin"), s.deleteDokumen)
 }
 
 // parseNumberQuery mirrors parseNumber(value, fallback) in the controller.

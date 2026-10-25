@@ -93,6 +93,7 @@ admin, adminRefresh, adminUser = login("admin@lppm.dev", "admin123456")
 ketua, *_ = login("ketua@lppm.dev", "ketua123456")
 wakil, *_ = login("wakil.ketua@lppm.dev", "wakil123456")
 rev1, _, rev1User = login("reviewer1@lppm.dev", "reviewer123")
+rev2, _, rev2User = login("reviewer2@lppm.dev", "reviewer123")
 dosen1, _, dosen1User = login("dosen1@lppm.dev", "dosen123456")
 dosen2, _, dosen2User = login("dosen2@lppm.dev", "dosen123456")
 dosen5, _, dosen5User = login("dosen5@lppm.dev", "dosen123456")
@@ -309,7 +310,9 @@ expect("upload by stranger", req("POST", f"/api/v1/proposals/{pid}/dokumen-utama
 
 # laporan
 body, ct = multipart({"jenis": "kemajuan", "judul": "Laporan Kemajuan", "keterangan": "ok"}, ("file", "lap.pdf", "application/pdf", PDF))
-b = expect("create laporan", req("POST", f"/api/v1/proposals/{pid}/laporan", mhs1, raw=body, ctype=ct), 201, "Laporan diunggah")
+expect("create laporan by mahasiswa forbidden", req("POST", f"/api/v1/proposals/{pid}/laporan", mhs1, raw=body, ctype=ct), 403, "Forbidden: insufficient permissions")
+body, ct = multipart({"jenis": "kemajuan", "judul": "Laporan Kemajuan", "keterangan": "ok"}, ("file", "lap.pdf", "application/pdf", PDF))
+b = expect("create laporan", req("POST", f"/api/v1/proposals/{pid}/laporan", dosen1, raw=body, ctype=ct), 201, "Laporan diunggah")
 lid = b["data"]["id"]
 check("laporan shape", list(b["data"].keys()) == ["id", "proposalId", "jenis", "judul", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "keterangan", "createdAt", "updatedAt"] and b["data"]["dokumenMime"] == "application/pdf", b["data"])
 expect("create laporan no source", req("POST", f"/api/v1/proposals/{pid}/laporan", dosen1, {"jenis": "akhir", "judul": "Akhir"}), 500, "File atau URL dokumen wajib diisi.")
@@ -336,7 +339,8 @@ b = expect("create dokumen url", req("POST", f"/api/v1/proposals/{pid}/dokumen",
 did = b["data"]["id"]
 check("dokumen shape", list(b["data"].keys()) == ["id", "proposalId", "namaFile", "fileUrl", "ukuran", "fileMime", "fileNama", "createdAt"] and b["data"]["ukuran"] == 12, b["data"])
 body, ct = multipart({"namaFile": "Lampiran PDF"}, ("file", "lamp.pdf", "application/pdf", PDF))
-b = expect("create dokumen file", req("POST", f"/api/v1/proposals/{pid}/dokumen", mhs1, raw=body, ctype=ct), 201)
+expect("create dokumen by mahasiswa forbidden", req("POST", f"/api/v1/proposals/{pid}/dokumen", mhs1, raw=body, ctype=ct), 403)
+b = expect("create dokumen file", req("POST", f"/api/v1/proposals/{pid}/dokumen", dosen1, raw=body, ctype=ct), 201)
 did2 = b["data"]["id"]
 check("dokumen file", b["data"]["fileUrl"] is None and b["data"]["fileMime"] == "application/pdf" and b["data"]["ukuran"] == len(PDF), b["data"])
 b = expect("list dokumen", req("GET", f"/api/v1/proposals/{pid}/dokumen", admin), 200, "Dokumen fetched")
@@ -374,7 +378,8 @@ LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "
 b = expect("laporan eligible", req("GET", "/api/v1/laporan/eligible", dosen1), 200, "Proposal siap dilaporkan fetched")
 check("laporan eligible has pid", any(x["id"] == pid for x in b["data"]) and list(b["data"][0].keys()) == ["id", "judul", "jenis", "status", "anggaran", "luaran", "approvedAt", "periode"], b["data"][:1])
 expect("laporan create invalid", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 0}), 422)
-expect("laporan create by non-pengusul", req("POST", "/api/v1/laporan", mhs1, {"proposalId": pid}), 403, "Hanya pengusul proposal yang dapat membuat laporan")
+expect("laporan create by mahasiswa", req("POST", "/api/v1/laporan", mhs1, {"proposalId": pid}), 403, "Forbidden: insufficient permissions")
+expect("laporan create by non-pengusul", req("POST", "/api/v1/laporan", dosen2, {"proposalId": pid}), 403, "Hanya pengusul proposal yang dapat membuat laporan")
 expect("laporan create missing proposal", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 999999}), 404, "Proposal tidak ditemukan")
 expect("laporan create forbidden role", req("POST", "/api/v1/laporan", admin, {"proposalId": pid}), 403)
 b = expect("laporan create", req("POST", "/api/v1/laporan", dosen1, {"proposalId": pid, "ringkasanHasil": "Ringkas"}), 201, "Laporan berhasil dibuat")
@@ -391,7 +396,8 @@ expect("laporan via old proposal endpoint", req("GET", f"/api/v1/proposals/{lapI
 b = req("GET", "/api/v1/proposals/my?limit=100", dosen1)[1]
 check("old my proposals excludes laporan", all(x["tipe"] == "proposal" and x["id"] != lapId for x in b["data"]), [x["id"] for x in b["data"]])
 expect("laporan submit incomplete", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 400, "Luaran tercapai wajib diisi sebelum laporan diajukan")
-expect("laporan update by anggota", req("PATCH", f"/api/v1/laporan/{lapId}", mhs1, {"luaranTercapai": "x"}), 403, "Anda tidak memiliki akses ke laporan ini")
+expect("laporan update by mahasiswa", req("PATCH", f"/api/v1/laporan/{lapId}", mhs1, {"luaranTercapai": "x"}), 403, "Forbidden: insufficient permissions")
+expect("laporan update by anggota", req("PATCH", f"/api/v1/laporan/{lapId}", dosen2, {"luaranTercapai": "x"}), 403, "Anda tidak memiliki akses ke laporan ini")
 b = expect("laporan update", req("PATCH", f"/api/v1/laporan/{lapId}", dosen1, {"luaranTercapai": "1 artikel jurnal SINTA 3", "realisasiAnggaran": 14000000}), 200, "Laporan berhasil diperbarui")
 check("laporan updated", b["data"]["luaranTercapai"] == "1 artikel jurnal SINTA 3" and b["data"]["realisasiAnggaran"] == "14000000", b["data"])
 expect("laporan submit no dokumen", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 400, "Dokumen laporan (file atau URL) wajib diunggah sebelum laporan diajukan")
@@ -418,7 +424,7 @@ check("laporan tugasan shape", list(t.keys()) == ["id", "laporanId", "reviewerId
 b = req("GET", "/api/v1/reviewer/my-tugasan?limit=100", rev1)[1]
 check("old my-tugasan excludes laporan", all(x["proposalId"] != lapId and x["proposal"] is not None for x in b["data"]), b["data"][:1])
 expect("laporan review without reviewer role", req("POST", f"/api/v1/laporan/{lapId}/reviews", dosen5, {"catatan": "x"}), 403, "Anda tidak memiliki peran reviewer")
-expect("laporan review not assigned", req("POST", f"/api/v1/laporan/{lapId}/reviews", login("reviewer2@lppm.dev", "reviewer123")[0], {"catatan": "x"}), 403, "Anda tidak ditugaskan untuk mereview laporan ini")
+expect("laporan review not assigned", req("POST", f"/api/v1/laporan/{lapId}/reviews", rev2, {"catatan": "x"}), 403, "Anda tidak ditugaskan untuk mereview laporan ini")
 expect("laporan review via old endpoint", req("POST", f"/api/v1/proposals/{lapId}/reviews", rev1, {"catatan": "x"}), 500, "Anda tidak ditugaskan untuk mereview proposal ini")
 expect("laporan finalize before save", req("POST", f"/api/v1/laporan/{lapId}/reviews/finalize", rev1), 400, "Simpan review terlebih dahulu sebelum finalisasi")
 b = expect("laporan review save", req("POST", f"/api/v1/laporan/{lapId}/reviews", rev1, {"nilaiLuaran": "85", "catatan": "Luaran sesuai", "rekomendasi": "disetujui"}), 200, "Review laporan disimpan")
@@ -710,7 +716,6 @@ expect("dosen roles forbidden", req("PATCH", f"/api/v1/users/{dosen5User['id']}/
 expect("restore dosen5 roles", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", admin, {"roles": before}), 200)
 
 # ── hak akses reviewer dosen (default tidak, diberi admin/ketua, cabut paksa ketua) ──
-rev2, _, rev2User = login("reviewer2@lppm.dev", "reviewer123")
 d5 = dosen5User["id"]
 d5roles = [r["role"]["name"] for r in req("GET", f"/api/v1/users/{d5}", admin)[1]["data"]["roles"]]
 check("dosen5 default bukan reviewer", "reviewer" not in d5roles, d5roles)
@@ -779,6 +784,25 @@ check("otomatis ke reviewer rekomendasi", [x["reviewer"]["id"] for x in rv] == [
 expect("grant d5 for normal revoke", req("PATCH", f"/api/v1/users/{d5}/reviewer", ketua, {"isReviewer": True}), 200)
 expect("normal revoke without tugasan", req("PATCH", f"/api/v1/users/{d5}/reviewer", admin, {"isReviewer": False}), 200, "Peran reviewer dicabut")
 expect("restore dosen5 roles after reviewer tests", req("PATCH", f"/api/v1/users/{d5}/roles", admin, {"roles": d5roles}), 200)
+
+# ── mahasiswa tidak lagi mengusulkan proposal (tugasnya laporan harian) ──
+FORB = "Forbidden: insufficient permissions"
+expect("mhs create proposal (dosen api)", req("POST", "/api/v1/dosen/proposals", mhs2, {"judul": "Proposal Mahasiswa", "abstrak": abstrak, "jenis": "penelitian"}), 403, FORB)
+expect("mhs create proposal (proposals api)", req("POST", "/api/v1/proposals", mhs2, {"judul": "Proposal Mahasiswa", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen}), 403, FORB)
+expect("mhs list own proposals", req("GET", "/api/v1/dosen/proposals", mhs2), 403, FORB)
+expect("mhs stats", req("GET", "/api/v1/dosen/proposals/stats", mhs2), 403, FORB)
+expect("mhs member search", req("GET", "/api/v1/dosen/proposals/members/search?q=dosen", mhs2), 403, FORB)
+expect("mhs update proposal", req("PATCH", f"/api/v1/proposals/{pid}", mhs1, {"judul": "Diubah mahasiswa"}), 403, FORB)
+expect("mhs submit proposal", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", mhs1), 403, FORB)
+expect("mhs delete proposal", req("DELETE", f"/api/v1/proposals/{pid}", mhs1), 403, FORB)
+expect("mhs laporan my", req("GET", "/api/v1/laporan/my", mhs1), 403, FORB)
+expect("mhs laporan eligible", req("GET", "/api/v1/laporan/eligible", mhs1), 403, FORB)
+expect("mhs luaran create", req("POST", "/api/v1/luaran", mhs1, {"proposalId": pid, "jenis": "jurnal", "target": "Jurnal"}), 403, FORB)
+expect("mhs luaran stats", req("GET", "/api/v1/luaran/stats", mhs1), 403, FORB)
+expect("mhs invitations tetap", req("GET", "/api/v1/dosen/proposals/invitations", mhs1), 200, "Invitations fetched")
+expect("mhs as-member tetap", req("GET", "/api/v1/dosen/proposals/as-member", mhs1), 200)
+expect("mhs laporan harian tetap", req("GET", "/api/v1/mahasiswa/laporan-harian/proposals", mhs1), 200)
+expect("mhs baca proposal anggota tetap", req("GET", f"/api/v1/proposals/{pid}", mhs1), 200)
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

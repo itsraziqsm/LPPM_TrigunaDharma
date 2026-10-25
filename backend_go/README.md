@@ -70,6 +70,22 @@ Sama dengan seeder Node: `admin@lppm.dev / admin123456`,
 `dosen1@lppm.dev / dosen123456`, `mahasiswa1@lppm.dev / mhs1234567`, dst.
 (Seeder Go tidak membuat proposal/review demo acak seperti seeder Node.)
 
+### Hapus proposal yang pengusulnya mahasiswa
+
+Mahasiswa tidak lagi boleh mengusulkan proposal (tugasnya laporan harian). Untuk membersihkan
+data lama:
+
+```bash
+go run ./cmd/hapus-proposal-mahasiswa        # pratinjau: daftar proposal yang akan dihapus
+go run ./cmd/hapus-proposal-mahasiswa -yes   # hapus permanen (BACKUP dulu)
+```
+
+"Pengusul mahasiswa" = user berperan `mahasiswa` dan tidak berperan `dosen`. Per proposal, dalam
+satu transaksi: laporan turunannya (beserta tugasan/review laporan), anggota, tugasan, review,
+laporan kemajuan/akhir, dokumen, laporan harian, item luaran (CASCADE dari `Kegiatan`), dan
+notifikasi yang merujuknya ikut dihapus; log aktivitas tetap (proposalId menjadi NULL).
+Di Docker: `docker compose exec app /app/hapus-proposal-mahasiswa -yes`.
+
 ### Seed tahap 1: laporan atas proposal disetujui
 
 ```bash
@@ -93,6 +109,7 @@ cmd/server      entrypoint HTTP server
 cmd/migrate     runner migrasi (kompatibel _prisma_migrations)
 cmd/seed        seeder role, akun, periode
 cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui
+cmd/hapus-proposal-mahasiswa  hapus proposal yang ketua pengusulnya mahasiswa
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
@@ -115,7 +132,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 541 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 561 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -166,7 +183,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
     `PATCH /users/:id/roles` menolak (409) pencabutan reviewer yang masih punya tugasan terbuka;
     `GET /users/kandidat-reviewer` (urut beban, `prioritas` = belum punya tugasan aktif),
     `rekomendasi` per tugasan dan `otomatis: true` saat cabut paksa.
-12. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+12. Mahasiswa tidak lagi bisa menulis proposal, laporan (kegiatan maupun kemajuan/akhir),
+    dokumen lampiran, dan luaran (`403`); tetap bisa undangan tim, `as-member`, membaca proposal
+    tempat ia anggota, dan laporan harian. Lihat `new-api.md` bagian 17.
+13. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

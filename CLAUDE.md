@@ -53,9 +53,10 @@ cp .env.example .env            # DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_S
 go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status)
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (status campur; -status=, -dry-run; aman diulang)
+go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 541 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 561 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -90,6 +91,10 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
 `admin`, `ketua_lppm` (dulu `ketua_prpm`, sudah dimigrasi), `dosen`, `reviewer`, `mahasiswa`.
 User bisa punya banyak peran. Registrasi publik hanya dosen/mahasiswa dengan status
 `pending`; login ditolak sampai admin mengubah status ke `approved` (`pending|approved|rejected`).
+**Mahasiswa tidak mengusulkan proposal**: tugasnya laporan harian; mahasiswa hanya bisa undangan
+tim, `/dosen/proposals/as-member`, membaca proposal tempat ia anggota, dan `/mahasiswa/laporan-harian`.
+Semua penulisan proposal, laporan (kegiatan & kemajuan/akhir), dokumen lampiran, dan luaran hanya
+`dosen` (+ admin untuk hapus/ubah tertentu); data lama dibersihkan `cmd/hapus-proposal-mahasiswa`.
 **Hak akses reviewer:** dosen default bukan reviewer; Admin/Ketua memberi peran `reviewer`
 (`PATCH /users/:id/reviewer`); cabut biasa hanya bila tidak ada tugasan belum selesai (review belum
 final pada item `diajukan`/`review`), selain itu 409; cabut paksa hanya Ketua
@@ -110,7 +115,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
-| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ PATCH respon), CRUD + submit | dosen, mahasiswa |
+| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |

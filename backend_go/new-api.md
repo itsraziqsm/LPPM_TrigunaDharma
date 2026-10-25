@@ -20,6 +20,7 @@ API, dikelompokkan per rilis:
 - **Bagian 16** — Hak akses reviewer dosen: default bukan reviewer, diberi Admin/Ketua, cabut
   biasa hanya tanpa tugasan terbuka, cabut paksa oleh Ketua dengan pengalihan tugasan; prioritas
   reviewer yang belum punya tugasan (kandidat, rekomendasi, pengalihan otomatis).
+- **Bagian 17** — Mahasiswa tidak lagi bisa mengusulkan proposal (hanya undangan tim & laporan harian).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1483,3 +1484,36 @@ getKandidatReviewer: (params = {}) => api.get('/users/kandidat-reviewer', { para
 //    (atau tombol "Alihkan otomatis" → forceRevokeReviewer(id, [], true))
 // 3. jika 409 dan user = Admin: tampilkan pesan bahwa hanya Ketua yang bisa mencabut paksa
 ```
+
+---
+
+## 17. Mahasiswa tidak lagi mengusulkan proposal
+
+Tugas mahasiswa hanya **laporan harian**. Mulai versi ini, semua penulisan proposal, laporan, dan
+luaran hanya untuk **dosen** (+ admin untuk hapus/ubah tertentu). Mahasiswa mendapat
+`403 "Forbidden: insufficient permissions"`.
+
+| Endpoint | Sebelumnya | Sekarang |
+|---|---|---|
+| `POST/PATCH /proposals`, `POST /proposals/:id/submit`, `POST /proposals/:id/dokumen-utama` | dosen, mahasiswa | **dosen** |
+| `DELETE /proposals/:id` | dosen, mahasiswa, admin | dosen, admin |
+| `GET/POST /dosen/proposals`, `GET/PATCH/DELETE /dosen/proposals/:id`, `POST .../submit`, `GET .../stats`, `GET .../members/search` | dosen, mahasiswa | **dosen** |
+| `POST /proposals/:id/laporan`, `POST /proposals/:id/dokumen` (laporan kemajuan/akhir & lampiran) | dosen, mahasiswa | **dosen** |
+| `PATCH/DELETE /proposals/laporan/:id`, `DELETE /proposals/dokumen/:id` | dosen, mahasiswa, admin | dosen, admin |
+| `/laporan`: `my`, `eligible`, create, update, submit, upload dokumen | dosen, mahasiswa | **dosen** (hapus: dosen, admin) |
+| `/luaran`: `stats`, create, update, capaian, bukti, delete | dosen, mahasiswa | **dosen** |
+
+**Tetap bisa untuk mahasiswa:**
+
+| Fitur | Endpoint |
+|---|---|
+| Undangan tim (lihat, terima/tolak) | `GET /dosen/proposals/invitations`, `PATCH /dosen/proposals/invitations/:id` |
+| Proposal tempat ia menjadi anggota | `GET /dosen/proposals/as-member`, detail `GET /proposals/:id` (anggota diterima) |
+| Laporan harian | semua `/mahasiswa/laporan-harian/...` |
+| Baca luaran & laporan proposal tempat ia anggota | `GET /luaran/proposal/:id`, `GET /laporan/:id`, unduhan dokumen |
+
+Frontend saat ini tidak menampilkan fitur usulan untuk mahasiswa (menu mahasiswa = Undangan Tim
+& Laporan Harian), jadi tidak ada halaman yang perlu diubah.
+
+**Data lama**: proposal yang sudah terlanjur dibuat mahasiswa dihapus dengan command backend
+`go run ./cmd/hapus-proposal-mahasiswa` (lihat `backend_go/README.md`).

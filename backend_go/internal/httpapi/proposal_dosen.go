@@ -23,17 +23,20 @@ var (
 
 func (s *Server) registerProposalDosenRoutes() {
 	g := s.group("/api/v1/dosen/proposals", s.authenticate, authorize("dosen", "mahasiswa"))
-	g.get("/stats", s.dosenStats)
+	// Go saja: mahasiswa tidak lagi mengusulkan proposal (tugasnya laporan harian);
+	// mahasiswa hanya memakai undangan tim dan daftar proposal tempat ia anggota.
+	dosen := authorize("dosen")
+	g.get("/stats", dosen, s.dosenStats)
 	g.get("/as-member", s.dosenProposalsAsMember) // baru (W-16), tidak ada di Node
-	g.get("/members/search", s.dosenSearchMembers)
+	g.get("/members/search", dosen, s.dosenSearchMembers)
 	g.get("/invitations", s.dosenInvitations)
 	g.patch("/invitations/:id", s.dosenRespondInvitation)
-	g.get("/", s.dosenProposals)
-	g.post("/", validateBody(createProposalSchema), s.dosenCreateProposal)
-	g.get("/:id", s.dosenGetProposal)
-	g.patch("/:id", validateBody(updateProposalSchema), s.dosenUpdateProposal)
-	g.post("/:id/submit", s.dosenSubmitProposal)
-	g.delete("/:id", s.dosenDeleteProposal)
+	g.get("/", dosen, s.dosenProposals)
+	g.post("/", dosen, validateBody(createProposalSchema), s.dosenCreateProposal)
+	g.get("/:id", dosen, s.dosenGetProposal)
+	g.patch("/:id", dosen, validateBody(updateProposalSchema), s.dosenUpdateProposal)
+	g.post("/:id/submit", dosen, s.dosenSubmitProposal)
+	g.delete("/:id", dosen, s.dosenDeleteProposal)
 }
 
 func (s *Server) dosenProposals(c *Ctx) error {

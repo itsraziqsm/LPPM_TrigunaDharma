@@ -50,14 +50,14 @@ func (z zNullable) parse(value any, present bool, path []any, issues *[]zIssue) 
 
 func (s *Server) registerLuaranRoutes() {
 	g := s.group("/api/v1/luaran", s.authenticate)
-	g.get("/stats", authorize("dosen", "mahasiswa"), s.luaranStats)
+	g.get("/stats", authorize("dosen"), s.luaranStats)
 	g.get("/proposal/:proposalId", s.listLuaran)
-	g.post("/", authorize("dosen", "mahasiswa"), validateBody(createLuaranSchema), s.createLuaran)
-	g.patch("/:id", authorize("dosen", "mahasiswa"), validateBody(updateLuaranSchema), s.updateLuaran)
-	g.patch("/:id/capaian", authorize("dosen", "mahasiswa"), validateBody(updateCapaianSchema), s.updateLuaranCapaian)
-	g.post("/:id/bukti", authorize("dosen", "mahasiswa"), multerFile("file", luaranBuktiUploadRules), s.uploadLuaranBukti)
+	g.post("/", authorize("dosen"), validateBody(createLuaranSchema), s.createLuaran)
+	g.patch("/:id", authorize("dosen"), validateBody(updateLuaranSchema), s.updateLuaran)
+	g.patch("/:id/capaian", authorize("dosen"), validateBody(updateCapaianSchema), s.updateLuaranCapaian)
+	g.post("/:id/bukti", authorize("dosen"), multerFile("file", luaranBuktiUploadRules), s.uploadLuaranBukti)
 	g.get("/:id/bukti", s.downloadLuaranBukti)
-	g.delete("/:id", authorize("dosen", "mahasiswa"), s.deleteLuaran)
+	g.delete("/:id", authorize("dosen"), s.deleteLuaran)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
