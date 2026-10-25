@@ -33,7 +33,7 @@ const STALE_AFTER_DAYS = 2
 const peranLabel = (peran) => (peran ? peran.charAt(0).toUpperCase() + peran.slice(1) : '—')
 
 export const actions = [
-  { to: '/undangan', label: 'Lihat undangan', variant: 'secondary' },
+  { to: '/undangan', label: 'Undangan ikut serta', variant: 'secondary' },
   { to: '/laporan-harian', label: 'Isi laporan harian', variant: 'primary' },
 ]
 
@@ -107,7 +107,7 @@ export async function load({ withReviewerDigest }) {
             ? `Belum ada laporan harian untuk “${proposal.judul}”`
             : `Laporan harian “${proposal.judul}” terakhir dibuat ${daysAgo} hari lalu`,
         detail: null,
-        to: '/laporan-harian',
+        to: proposal.jenis ? `/project/${proposal.jenis}?id=${proposal.id}` : '/laporan-harian',
         cta: 'Isi laporan',
       })
     })
@@ -235,7 +235,7 @@ export async function load({ withReviewerDigest }) {
         },
         {
           to: '/undangan',
-          label: 'Undangan tim',
+          label: 'Undangan ikut serta',
           desc: first.data.invitations
             ? invitations.length > 0
               ? `${invitations.length} menunggu respons.`

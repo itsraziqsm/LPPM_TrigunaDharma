@@ -42,8 +42,11 @@ const HALAMAN = {
     { to: '/undangan', title: 'Undangan Tim', kata: 'anggota' },
   ],
   mahasiswa: [
-    { to: '/undangan', title: 'Undangan Tim', kata: 'anggota' },
-    { to: '/laporan-harian', title: 'Laporan Harian', kata: 'kegiatan harian' },
+    { to: '/project/penelitian', title: 'Project Penelitian', kata: 'project saya laporan harian' },
+    { to: '/project/pengabdian', title: 'Project Pengabdian', kata: 'project saya laporan harian' },
+    { to: '/periode', title: 'Periode', kata: 'jadwal tahun' },
+    { to: '/undangan', title: 'Undangan Ikut Serta', kata: 'undangan tim anggota' },
+    { to: '/laporan-harian', title: 'Laporan Harian (semua project)', kata: 'kegiatan harian' },
   ],
   admin: [{ to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' }],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
@@ -110,7 +113,7 @@ export async function cariGlobal(q, ctx) {
     data = daftar(res)
       .filter((p) => `${p.judul} ${p.pengusul?.name || ''}`.toLowerCase().includes(k))
       .slice(0, 5)
-      .map((p) => kegiatanItem(p, 'Proposal tim', '/laporan-harian', p.pengusul?.name))
+      .map((p) => kegiatanItem(p, 'Project', `/project/${p.jenis}?id=${p.id}`, p.pengusul?.name))
   }
   return [...pages, ...data]
 }

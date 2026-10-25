@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../api/axios'
+import { useSearchParams } from 'react-router-dom'
 import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -743,7 +744,7 @@ function ProposalDetail({ proposal, onBack }) {
           className="btn btn-ghost btn-sm -ml-3"
         >
           <ChevronLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
-          Kembali ke Daftar Proposal
+          Kembali ke Daftar Project
         </button>
       </div>
 
@@ -852,12 +853,16 @@ function ProposalDetail({ proposal, onBack }) {
 
 // ── Page Utama ─────────────────────────────────────────────────────────────
 
-export default function LaporanHarianPage() {
+// Mahasiswa › Project Saya (/project/:jenis): daftar project (proposal tempat mahasiswa
+// menjadi anggota `diterima`, GET /mahasiswa/laporan-harian/proposals) per jenis → pilih
+// project (?id=) → Laporan Harian. Tanpa `jenis` (/laporan-harian lama) = semua project.
+export default function LaporanHarianPage({ jenis }) {
   const [proposals, setProposals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selected, setSelected] = useState(null)
+  const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  const jenisLabel = JENIS_LABEL[jenis]
 
   const fetchProposals = useCallback(async () => {
     setLoading(true)
@@ -873,11 +878,16 @@ export default function LaporanHarianPage() {
 
   useEffect(() => { fetchProposals() }, [fetchProposals])
 
+  const milikJenis = jenis ? proposals.filter(p => p.jenis === jenis) : proposals
+  const selectedId = Number(params.get('id')) || null
+  const selected = selectedId ? proposals.find(p => p.id === selectedId) : null
+  const setSelected = (p) => setParams(p ? { id: String(p.id) } : {})
+
   if (selected) {
-    return <ProposalDetail proposal={selected} onBack={() => setSelected(null)} />
+    return <ProposalDetail key={selected.id} proposal={selected} onBack={() => setSelected(null)} />
   }
 
-  const filtered = proposals.filter(p =>
+  const filtered = milikJenis.filter(p =>
     p.judul.toLowerCase().includes(search.toLowerCase()) ||
     (p.pengusul?.name || '').toLowerCase().includes(search.toLowerCase())
   )
@@ -886,16 +896,17 @@ export default function LaporanHarianPage() {
     <div className="page space-y-6">
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <h1 className="page-title">Laporan Harian</h1>
+          <p className="text-sm font-medium text-slate-500">Project Saya</p>
+          <h1 className="page-title">{jenisLabel ? `Project ${jenisLabel}` : 'Laporan Harian'}</h1>
           <p className="page-desc">
-            Pilih proposal untuk mengisi, meninjau, dan mengelola laporan harian secara terstruktur.
+            Pilih project {jenisLabel ? jenisLabel.toLowerCase() + ' ' : ''}tempat Anda menjadi anggota tim, lalu isi dan kelola laporan harian.
           </p>
         </div>
 
         <dl className="flex shrink-0 gap-10">
           <div>
-            <dt className="text-sm text-slate-500">Total Proposal</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{proposals.length}</dd>
+            <dt className="text-sm text-slate-500">Total Project</dt>
+            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{milikJenis.length}</dd>
           </div>
           <div>
             <dt className="text-sm text-slate-500">Hasil Pencarian</dt>
@@ -913,7 +924,7 @@ export default function LaporanHarianPage() {
           <input
             id="lh-cari"
             type="text"
-            placeholder="Cari judul proposal atau nama pengusul..."
+            placeholder="Cari judul project atau nama dosen pengusul..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input pl-10"
@@ -931,7 +942,7 @@ export default function LaporanHarianPage() {
         <div className="card flex min-h-[320px] items-center justify-center">
           <div className="flex items-center gap-3 text-base text-slate-500">
             <span className="spinner text-navy-600" aria-hidden="true" />
-            Memuat daftar proposal...
+            Memuat daftar project...
           </div>
         </div>
       ) : filtered.length === 0 ? (
@@ -940,12 +951,12 @@ export default function LaporanHarianPage() {
             <FileText className="size-6" strokeWidth={1.5} aria-hidden="true" />
           </div>
           <h2 className="text-lg font-semibold text-navy-950">
-            {search ? 'Tidak ada proposal ditemukan' : 'Anda belum menjadi anggota proposal'}
+            {search ? 'Tidak ada project ditemukan' : `Anda belum menjadi anggota project${jenisLabel ? ` ${jenisLabel.toLowerCase()}` : ''}`}
           </h2>
           <p className="mt-2 max-w-lg text-base leading-relaxed text-slate-500">
             {search
               ? 'Coba gunakan kata kunci lain yang lebih sesuai dengan judul proposal atau nama pengusul.'
-              : 'Daftar proposal akan muncul di halaman ini setelah Anda menerima undangan tim dari dosen.'
+              : 'Project akan muncul di halaman ini setelah Anda menerima undangan ikut serta dari dosen (menu Undangan Ikut Serta).'
             }
           </p>
         </section>

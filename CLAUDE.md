@@ -251,7 +251,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` (semua peran), `/undangan`
-  (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (hanya peran
@@ -302,6 +302,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   password → `periodeApi.remove` = `DELETE /periode/:id`), permintaan admin yang menunggu → Setujui & Hapus / Tolak; **Dokumen Masuk** lihat &
   hapus saja (`viewOnly`: tanpa Ubah Status/Tugaskan reviewer/Keputusan; `components/HapusDokumen.jsx` = hapus
   langsung bila draft, selain itu "Ajukan hapus (izin Ketua)" nonaktif + `ApiPending` W-34).
+- Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
+  `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
+  disaring per jenis → pilih project (`?id=`) → Laporan Harian), **Periode** (`MahasiswaPeriodePage.jsx`: hanya periode
+  dari project yang diikuti, digabung dengan `GET /periode` untuk tanggal/status; klik project → `/project/:jenis?id=`),
+  **Undangan Ikut Serta** (`/undangan`). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
   jumlah perlu ditangani, klik = saring), filter bawaan "Perlu ditangani" (`diajukan`+`review`), Revisi/Disetujui/

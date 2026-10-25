@@ -24,6 +24,7 @@ import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
+import MahasiswaPeriodePage from './MahasiswaPeriodePage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -110,6 +111,9 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
       if (page === 'laporan-harian') return <LaporanHarianPage />
+      // Project Saya per jenis → pilih project → Laporan Harian
+      if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
+      if (page === 'periode') return <MahasiswaPeriodePage />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="mahasiswa" isReviewer={isReviewer} />
     }

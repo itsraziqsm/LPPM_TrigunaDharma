@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -108,16 +108,27 @@ const DOSEN_NAV_ITEMS = [
   },
 ]
 
+// Mahasiswa: Dashboard, Project Saya (Penelitian/Pengabdian → pilih project → Laporan
+// Harian), Periode (hanya periode yang memuat project-nya), Undangan Ikut Serta.
 const MAHASISWA_NAV_ITEMS = [
   {
-    path: '/undangan', label: 'Undangan Tim', badge: true, icon: (
-      <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/project', label: 'Project Saya', icon: (
+      <FolderKanban className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),
+    children: [
+      { path: '/project/penelitian', label: 'Penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/project/pengabdian', label: 'Pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    ],
   },
   {
-    path: '/laporan-harian', label: 'Laporan Harian', icon: (
-      <ClipboardList className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/periode', label: 'Periode', icon: (
+      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
+  },
+  {
+    path: '/undangan', label: 'Undangan Ikut Serta', badge: true, icon: (
+      <MailPlus className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    ),
   },
 ]
 
