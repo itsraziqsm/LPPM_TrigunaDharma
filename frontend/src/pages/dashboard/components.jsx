@@ -295,9 +295,9 @@ export function ShortcutStrip({ items }) {
               to={item.to}
               className="group flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-navy-300 hover:bg-navy-50/50"
             >
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
-                <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-slate-500">{item.desc}</span>
+              {/* Judul saja (keterangan dihapus); desc tetap jadi tooltip. */}
+              <span className="min-w-0 truncate text-sm font-semibold text-slate-900" title={item.desc || undefined}>
+                {item.label}
               </span>
               <Chevron className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-700" />
             </Link>

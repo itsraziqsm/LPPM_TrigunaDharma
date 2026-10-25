@@ -14,7 +14,6 @@ import {
 } from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
 import { API_BASE_URL } from '../../api/axios'
-import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
 import { HaloHeader, PintasanSection, SectionTitle, ToneCard, ToneCardGrid } from './HaloLayout'
 import { ROLE_LABEL, formatDay } from './format'
@@ -342,8 +341,7 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
 export default function DosenScreen({ role, adapterKey, user, loading, refreshing, model, failed, updatedAt, onReload }) {
   const [openedAt] = useState(() => new Date())
   const now = updatedAt || openedAt
-  const name = user?.name || user?.fullName || ROLE_LABEL[role] || ''
-  const actions = ADAPTERS[adapterKey]?.actions ?? []
+  const name = user?.fullName || user?.name || ROLE_LABEL[role] || ''
   const dosen = model?.dosen
 
   let body
@@ -370,8 +368,6 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
         now={now}
         name={name}
         roleLabel={ROLE_LABEL[role]}
-        summary={model?.summary}
-        actions={actions}
         loading={loading}
         refreshing={refreshing}
         updatedAt={updatedAt}
