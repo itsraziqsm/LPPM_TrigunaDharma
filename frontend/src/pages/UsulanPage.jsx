@@ -945,7 +945,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <FieldError message={err('dokumen') || (file ? errors.dokumen : null)} />
               <p className="mt-1.5 text-xs text-slate-500">
                 Belum punya format?{' '}
-                <a href="/template-proposal.docx" download="Template_Proposal.docx" className="font-semibold text-navy-700 hover:text-navy-900">
+                <a href="/templates/template-proposal.docx" download="Template_Proposal.docx" className="font-semibold text-navy-700 hover:text-navy-900">
                   Unduh template proposal
                 </a>
               </p>

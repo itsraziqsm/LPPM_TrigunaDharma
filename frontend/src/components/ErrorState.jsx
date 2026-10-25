@@ -8,7 +8,8 @@ const TONES = {
   danger: { tile: 'bg-red-50 text-red-700 ring-red-100', code: 'text-red-100' },
 }
 
-// Tampilan galat seragam: angka kode besar sebagai latar, ubin ikon, judul,
+// Tampilan galat seragam: angka kode besar sebagai latar, ilustrasi (atau ubin
+// ikon bila kode tidak punya ilustrasi) di depannya, judul,
 // penjelasan, dan aksi. Dipakai halaman /error/:code, 404, galat router, dan
 // halaman fitur yang belum tersedia (mis. Luaran → 501).
 //   code      : kode HTTP (lihat utils/errorCodes.js)
@@ -35,11 +36,24 @@ export default function ErrorState({ code, title, desc, note, signedIn = true, a
       </p>
 
       <div className="relative pt-16 sm:pt-24">
-        <span className={`mx-auto grid size-16 place-items-center rounded-2xl ring-8 ${tone.tile}`}>
-          <Icon className="size-8" strokeWidth={1.6} aria-hidden="true" />
-        </span>
+        {meta.image ? (
+          // Ilustrasi (latar transparan) di depan angka kode, menggantikan ubin ikon.
+          <img
+            src={meta.image}
+            alt=""
+            width={500}
+            height={500}
+            decoding="async"
+            draggable={false}
+            className="relative mx-auto -mt-10 size-52 select-none object-contain sm:-mt-16 sm:size-64"
+          />
+        ) : (
+          <span className={`mx-auto grid size-16 place-items-center rounded-2xl ring-8 ${tone.tile}`}>
+            <Icon className="size-8" strokeWidth={1.6} aria-hidden="true" />
+          </span>
+        )}
 
-        <p className="mt-6 text-sm font-semibold tabular-nums text-slate-500">
+        <p className={`${meta.image ? 'mt-2' : 'mt-6'} text-sm font-semibold tabular-nums text-slate-500`}>
           Kode {code} · {meta.name}
         </p>
         <Heading id="error-title" className="mt-2 font-serif text-3xl font-medium text-navy-950 sm:text-4xl">

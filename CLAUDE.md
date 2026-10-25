@@ -315,8 +315,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.
   Lonceng & halaman disinkronkan lewat `src/utils/notificationEvents.js`; jumlah belum dibaca
   diambil dari `GET /notifications?onlyUnread=true` → `meta.total`.
-- **Halaman galat**: `src/components/ErrorState.jsx` (tampilan) + `src/utils/errorCodes.js` (teks/ikon
-  per kode 400, 401, 403, 404, 408, 429, 500, 501, 502, 503, 504). `src/pages/ErrorPage.jsx` mandiri
+- **Halaman galat**: `src/components/ErrorState.jsx` (tampilan) + `src/utils/errorCodes.js` (teks/ikon/
+  ilustrasi per kode 400, 401, 403, 404, 408, 429, 500, 501, 502, 503, 504). Ilustrasi WebP latar
+  transparan di `public/images/errors/` (408 & 504 berbagi `408-504.webp`; 501 tanpa ilustrasi →
+  ubin ikon) tampil di depan angka kode besar. `src/pages/ErrorPage.jsx` mandiri
   dipakai untuk `/error/:code`, route tak dikenal (`*` → 404, sebelumnya redirect ke /login) dan
   `errorElement` router (galat render → 500). Fitur yang belum dibangun memakai `ErrorState`
   kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
@@ -328,7 +330,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
-- Logo: `src/components/LogoLppm.jsx` (`public/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
+- `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
+  `templates/` (`template-proposal.docx`), `legacy/` (sprite Vite, hanya `App.jsx`).
+- Logo: `src/components/LogoLppm.jsx` (`public/brand/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
   Dharma, juga favicon) dipakai di sidebar, Login/Register, halaman galat, verifikasi email.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
   beri `aria-hidden="true"` untuk ikon dekoratif. Jangan menulis `<svg>` inline baru. Sisa
@@ -345,8 +349,6 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `DashboardPage.jsx`, `DashboardDosen.jsx`, `DashboardMahasiswa.jsx` masih ada di
   `src/pages/` tetapi **tidak dipakai** (diganti `pages/dashboard/`); `ProfileModal.jsx`
   juga tidak dipakai. `recharts` hanya dipakai oleh berkas-berkas tak terpakai itu.
-- `src/public/` adalah salinan lama dari `public/` (favicon berbeda); yang dipakai Vite
-  adalah `public/` (termasuk `template-proposal.docx`).
 - Dashboard baru belum diuji terhadap backend asli (lihat CATATAN_REDESIGN.md).
 
 ## Konvensi kerja
