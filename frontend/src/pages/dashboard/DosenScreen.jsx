@@ -8,7 +8,6 @@ import {
   HeartHandshake,
   Microscope,
   NotebookText,
-  RefreshCw,
   Star,
   Timer,
   X,
@@ -16,8 +15,9 @@ import {
 import ApiPending from '../../components/ApiPending'
 import { API_BASE_URL } from '../../api/axios'
 import { ADAPTERS } from './adapters'
-import { DashboardBody, DashboardSkeleton, LoadError, Notice, ShortcutStrip } from './components'
-import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
+import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
+import { HaloHeader, SectionTitle, ToneCard, ToneCardGrid } from './HaloLayout'
+import { ROLE_LABEL, formatDay } from './format'
 
 // ---------------------------------------------------------------------------
 // Dashboard dosen (revamp sesuai desain "Halo, Dosen"): kartu dokumen, usulan
@@ -44,149 +44,15 @@ const ICONS = {
   sinta: (props) => <Star {...props} fill="currentColor" />,
   sertifikasi: Award,
   kepercayaan: BadgeCheck,
-  refresh: RefreshCw,
-}
-
-function SectionTitle({ id, children }) {
-  return (
-    <h2 id={id} className="text-xl font-semibold text-navy-950">
-      {children}
-    </h2>
-  )
 }
 
 const show = (value) => (value === null || value === undefined ? '—' : value)
 
-// ── Kepala halaman ──────────────────────────────────────────────────────────
-function DosenHeader({ now, name, roleLabel, summary, actions, loading, refreshing, updatedAt, onReload, shortcuts }) {
-  const firstName = String(name || '').split(/[\s,]+/)[0] || name
-  return (
-    <header className="space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="page-title">Dashboard</h1>
-        <nav aria-label="Breadcrumb" className="text-base">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">
-              /
-            </li>
-            <li aria-current="page" className="text-slate-500">
-              Dashboard
-            </li>
-          </ol>
-        </nav>
-      </div>
-
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 max-w-2xl">
-          <p className="text-[2rem] font-bold leading-tight text-navy-950">
-            <span aria-hidden="true">👋 </span>Halo {firstName}!
-          </p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
-            <span>{formatLongDate(now)}</span>
-            {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
-          </p>
-          {loading ? (
-            <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded bg-slate-200/70" aria-hidden="true" />
-          ) : summary ? (
-            <p className="page-desc text-slate-600">{summary}</p>
-          ) : null}
-        </div>
-
-        <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
-          {actions.length > 0 ? (
-            <nav aria-label="Aksi utama" className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
-              {actions.map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.to}
-                  className={`btn ${action.variant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
-          <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
-            {updatedAt ? <span>Diperbarui pukul {formatClock(updatedAt)}</span> : null}
-            <button type="button" onClick={onReload} disabled={loading || refreshing} className="btn btn-ghost btn-sm">
-              {refreshing ? <span className="spinner" aria-hidden="true" /> : <ICONS.refresh className="size-4" aria-hidden="true" />}
-              {refreshing ? 'Memuat ulang' : 'Muat ulang'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <ShortcutStrip items={shortcuts} />
-    </header>
-  )
-}
-
-// ── Kartu dokumen (4 warna) ─────────────────────────────────────────────────
-const CARD_TONES = {
-  green: {
-    box: 'border-green-400 bg-green-50',
-    label: 'text-green-700',
-    value: 'text-green-700',
-    badge: 'bg-green-600 text-white ring-4 ring-green-100',
-  },
-  red: {
-    box: 'border-red-300 bg-red-50',
-    label: 'text-red-700',
-    value: 'text-red-600',
-    badge: 'bg-red-500 text-white',
-  },
-  yellow: {
-    box: 'border-slate-800 bg-yellow-50',
-    label: 'text-slate-900',
-    value: 'text-slate-900',
-    badge: 'bg-yellow-400 text-white',
-  },
-  blue: {
-    box: 'border-navy-400 bg-navy-100',
-    label: 'text-navy-600',
-    value: 'text-navy-600',
-    badge: 'bg-white text-navy-600',
-  },
-}
-
-function DocCard({ tone, label, value, hint, icon: IconCmp, pending, to }) {
-  const t = CARD_TONES[tone]
-  const body = (
-    <>
-      <div className="min-w-0">
-        <p className={`text-sm font-semibold leading-tight ${t.label}`}>{label}</p>
-        <p className={`mt-2 text-[1.75rem] font-bold leading-none tabular-nums lining-nums ${t.value}`}>{show(value)}</p>
-        {pending ? <ApiPending className="mt-2" /> : hint ? <p className="mt-2 text-xs text-slate-600">{hint}</p> : null}
-      </div>
-      <span className={`grid size-14 shrink-0 place-items-center rounded-full ${t.badge}`}>
-        <IconCmp className="size-8" aria-hidden="true" />
-      </span>
-    </>
-  )
-  const cls = `flex h-full min-h-[7.25rem] items-center justify-between gap-3 rounded-xl border px-5 py-4 ${t.box}`
-  return (
-    <li>
-      {to ? (
-        <Link to={to} className={`${cls} transition-shadow hover:shadow-md`}>
-          {body}
-        </Link>
-      ) : (
-        <div className={cls}>{body}</div>
-      )}
-    </li>
-  )
-}
-
+// ── Kartu dokumen (4 warna, ToneCard dari HaloLayout) ──────────────────────
 function DocCards({ cards, luaran }) {
   return (
-    <section aria-label="Ringkasan dokumen">
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DocCard
+    <ToneCardGrid label="Ringkasan dokumen">
+        <ToneCard
           tone="green"
           label="Dokumen Diterima"
           value={cards.diterima}
@@ -194,7 +60,7 @@ function DocCards({ cards, luaran }) {
           icon={ICONS.check}
           to="/kegiatan/penelitian?status=disetujui"
         />
-        <DocCard
+        <ToneCard
           tone="red"
           label="Dokumen Ditolak"
           value={cards.ditolak}
@@ -202,7 +68,7 @@ function DocCards({ cards, luaran }) {
           icon={ICONS.cross}
           to="/kegiatan/penelitian?status=ditolak"
         />
-        <DocCard
+        <ToneCard
           tone="yellow"
           label="Dokumen Diproses"
           value={cards.diproses}
@@ -210,7 +76,7 @@ function DocCards({ cards, luaran }) {
           icon={ICONS.timer}
           to="/kegiatan/penelitian"
         />
-        <DocCard
+        <ToneCard
           tone="blue"
           label="Luaran Dapat Diklaim"
           value={luaran ? luaran.dapatDiklaim : null}
@@ -218,8 +84,7 @@ function DocCards({ cards, luaran }) {
           icon={ICONS.dollar}
           to="/kegiatan/penelitian"
         />
-      </ul>
-    </section>
+    </ToneCardGrid>
   )
 }
 
@@ -490,13 +355,13 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
         <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
         <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
-        <DashboardBody model={model} hideKpis />
+        <DashboardBody model={model} />
       </>
     )
 
   return (
     <div className="page rise space-y-8">
-      <DosenHeader
+      <HaloHeader
         now={now}
         name={name}
         roleLabel={ROLE_LABEL[role]}

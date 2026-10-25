@@ -251,9 +251,14 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/pages/dashboard/` — dashboard seragam semua peran; data per peran lewat
   `adapters/` (`pengelola`, `dosen`, `mahasiswa`, `reviewer`, `shared`). Status Inggris &
   Indonesia dipetakan ke satu kunci.
-  **Pintasan** (`model.shortcuts`) tampil sebagai baris kartu horizontal yang bisa diklik tepat di
-  bawah salam ("Selamat pagi…"/"Halo…") lewat `ShortcutStrip` (`components.jsx`) di `Masthead` &
-  `DosenHeader`; tidak lagi menjadi panel di `DashboardBody`. Ponsel: digeser horizontal.
+  **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`):
+  `HaloHeader` (judul "Dashboard" + breadcrumb, "Halo {nama}!", tanggal & peran, ringkasan, aksi,
+  muat ulang, lalu **Pintasan** `model.shortcuts` sebagai baris kartu horizontal `ShortcutStrip`,
+  digeser di ponsel) + kartu angka berwarna `ToneCard`/`ToneCardGrid`. **Isi tetap per peran**:
+  `DashboardScreen` (admin, ketua, mahasiswa, reviewer) = `KpiToneCards(model.kpis)` (total → biru,
+  tone warning → kuning, selesai → hijau, lainnya → navy) + `DashboardBody`; `DosenScreen` = kartu
+  dokumen, usulan terakhir, profil, statistik dosen + `DashboardBody`. `Masthead`/`KpiLedger` lama
+  dihapus.
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
   (kartu dokumen, usulan terakhir + tahapan, profil capaian, statistik dosen, lalu blok
   bersama `DashboardBody` tanpa ledger). Data dari `adapters/dosen.js` (`model.dosen`).

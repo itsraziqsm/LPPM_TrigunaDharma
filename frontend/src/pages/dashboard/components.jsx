@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { Link } from 'react-router-dom'
 import { TONE } from './format'
-import { Check, ChevronRight, RefreshCw } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Blok tampilan dashboard. Semua peran memakai blok yang sama; yang berbeda
@@ -15,120 +15,9 @@ function Chevron({ className = 'size-4' }) {
   )
 }
 
-function RefreshIcon() {
-  return (
-    <RefreshCw className="size-4" strokeWidth={1.8} aria-hidden="true" />
-  )
-}
-
 function CheckIcon() {
   return (
     <Check className="size-[18px]" aria-hidden="true" />
-  )
-}
-
-// ── Kepala halaman ──────────────────────────────────────────────────────────
-export function Masthead({
-  dateLabel,
-  roleLabel,
-  greeting,
-  name,
-  summary,
-  actions,
-  loading,
-  refreshing,
-  updatedLabel,
-  onReload,
-  shortcuts,
-}) {
-  return (
-    <header className="space-y-5">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 max-w-2xl">
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
-            <span>{dateLabel}</span>
-            {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
-          </p>
-          <h1 className="page-title mt-2 break-words">
-            {greeting}, {name}
-          </h1>
-          {loading ? (
-            <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded bg-slate-200/70" aria-hidden="true" />
-          ) : summary ? (
-            <p className="page-desc text-slate-600">{summary}</p>
-          ) : null}
-        </div>
-
-        <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
-          {actions.length > 0 ? (
-            <nav aria-label="Aksi utama" className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
-              {actions.map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.to}
-                  className={`btn ${action.variant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
-
-          <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
-            {updatedLabel ? <span>Diperbarui pukul {updatedLabel}</span> : null}
-            <button
-              type="button"
-              onClick={onReload}
-              disabled={loading || refreshing}
-              className="btn btn-ghost btn-sm"
-            >
-              {refreshing ? <span className="spinner" aria-hidden="true" /> : <RefreshIcon />}
-              {refreshing ? 'Memuat ulang' : 'Muat ulang'}
-            </button>
-          </div>
-        </div>
-      </div>
-      <ShortcutStrip items={shortcuts} />
-    </header>
-  )
-}
-
-// ── Ledger angka: satu strip berisi empat angka ─────────────────────────────
-export function KpiLedger({ items }) {
-  return (
-    <section aria-label="Ringkasan angka" className="card overflow-hidden">
-      <dl className="grid grid-cols-2 gap-px bg-slate-200 lg:grid-cols-4">
-        {items.map((item) => {
-          const missing = item.value === null || item.value === undefined
-          const alert = item.tone === 'warning' && Number(item.value) > 0
-          return (
-            <div
-              key={item.key}
-              className="row-span-3 grid grid-rows-subgrid bg-white px-5 py-4 sm:px-6 sm:py-5"
-            >
-              <dt className="flex items-center gap-2 text-sm text-slate-500">
-                {alert ? (
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: TONE.warning.hex }}
-                    aria-hidden="true"
-                  />
-                ) : null}
-                {item.label}
-              </dt>
-              <dd
-                className={`mt-2.5 font-serif text-[2.25rem] font-medium leading-none tracking-tight tabular-nums ${
-                  alert ? 'text-amber-700' : 'text-navy-950'
-                }`}
-              >
-                {missing ? '—' : item.value}
-              </dd>
-              {item.hint ? <dd className="mt-2.5 text-sm leading-snug text-slate-500">{item.hint}</dd> : null}
-            </div>
-          )
-        })}
-      </dl>
-    </section>
   )
 }
 
@@ -522,15 +411,13 @@ function Unavailable() {
 }
 
 // ── Isi dashboard: susunan yang sama untuk setiap peran ─────────────────────
-export function DashboardBody({ model, hideKpis = false }) {
-  // Pintasan tidak lagi di badan dashboard: tampil di bawah salam (ShortcutStrip).
-  const { kpis, attention, pipeline, list, side, feed } = model
+export function DashboardBody({ model }) {
+  // Kartu angka (model.kpis) & pintasan tampil di HaloLayout, bukan di sini.
+  const { attention, pipeline, list, side, feed } = model
   const pipelineTotal = pipeline.segments.reduce((sum, s) => sum + s.value, 0)
 
   return (
     <>
-      {hideKpis ? null : <KpiLedger items={kpis} />}
-
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <Panel

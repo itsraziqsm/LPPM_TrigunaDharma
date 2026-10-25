@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { ADAPTERS } from './adapters'
-import { DashboardBody, DashboardSkeleton, LoadError, Masthead, Notice } from './components'
-import { ROLE_LABEL, formatClock, formatLongDate, greeting } from './format'
+import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
+import { HaloHeader, KpiToneCards } from './HaloLayout'
+import { ROLE_LABEL } from './format'
 
-// Halaman dashboard yang sama untuk semua peran: kepala halaman, ledger angka,
-// lalu dua kolom (kerja di kiri, konteks di kanan). Komponen ini murni
-// presentasi — data datang dari useDashboardData lewat DashboardHome.
+// Dashboard Admin, Ketua LPPM, Mahasiswa, dan Reviewer memakai layout yang sama
+// dengan dashboard dosen (HaloLayout: kepala "Halo …!" + pintasan, kartu angka
+// berwarna), tetapi ISI tetap milik peran masing-masing dari adapter-nya:
+// model.kpis → kartu angka, lalu blok bersama DashboardBody (perlu perhatian,
+// daftar, aktivitas, sebaran status, periode). Murni presentasi — data dari
+// useDashboardData lewat DashboardHome.
 export default function DashboardScreen({
   role,
   adapterKey,
@@ -20,26 +24,31 @@ export default function DashboardScreen({
   const [openedAt] = useState(() => new Date())
   const now = updatedAt || openedAt
 
-  const name = user?.fullName || user?.name || ROLE_LABEL[role] || ''
+  const name = user?.name || user?.fullName || ROLE_LABEL[role] || ''
   const actions = ADAPTERS[adapterKey]?.actions ?? []
 
   let body
   if (loading) body = <DashboardSkeleton />
   else if (!model) body = <LoadError busy={refreshing} onRetry={onReload} />
-  else body = <DashboardBody model={model} />
+  else
+    body = (
+      <>
+        <KpiToneCards items={model.kpis} />
+        <DashboardBody model={model} />
+      </>
+    )
 
   return (
-    <div className="page rise space-y-6">
-      <Masthead
-        dateLabel={formatLongDate(now)}
-        roleLabel={ROLE_LABEL[role]}
-        greeting={greeting(now)}
+    <div className="page rise space-y-8">
+      <HaloHeader
+        now={now}
         name={name}
+        roleLabel={ROLE_LABEL[role]}
         summary={model?.summary}
         actions={actions}
         loading={loading}
         refreshing={refreshing}
-        updatedLabel={updatedAt ? formatClock(updatedAt) : null}
+        updatedAt={updatedAt}
         onReload={onReload}
         shortcuts={model?.shortcuts}
       />
