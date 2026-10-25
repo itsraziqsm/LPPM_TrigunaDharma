@@ -264,6 +264,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `?status=<status>` membuka dengan filter, `?detail=<id>` langsung membuka detail proposal
   (dipakai dashboard & notifikasi). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
+- Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
+  grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
+  User, **Print Laporan** (`/export`). Admin tetap `ADMIN_NAV_ITEMS` (Periode, User, Laporan Masuk,
+  Export Laporan).
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
@@ -311,7 +315,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
   kanan Foto Profil (unggah/hapus), Informasi Profil (+ jabatan fungsional, SINTA, dropdown
-  program studi, status verifikasi email `emailVerifiedAt` + kirim ulang), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout). Nilai awal
+  program studi, status verifikasi email `emailVerifiedAt` + kirim ulang), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout; **Ketua LPPM tidak bisa menghapus akun
+  sendiri**, diganti keterangan hubungi Admin). Nilai awal
   dari `/auth/me`; simpan hanya mengirim field yang berubah dan memperbarui store lewat
   `useAuthStore.setState` tanpa `fetchMe()` (fetchMe memicu layar memuat global).
 - Smooth scroll: **Lenis** (paket npm `lenis`, CSS di `main.jsx`) lewat hook

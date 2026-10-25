@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, LogOut, Menu, Microscope, PanelLeftClose, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -45,6 +45,35 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/export', label: 'Export Laporan', icon: (
       <FileDown className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+]
+
+// Ketua LPPM: Dashboard, Dokumen Masuk (Proposal & Laporan Kegiatan), Periode,
+// User, Print Laporan (halaman rekap/export).
+const KETUA_NAV_ITEMS = [
+  {
+    path: '/dokumen-masuk', label: 'Dokumen Masuk', icon: (
+      <Inbox className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    ),
+    children: [
+      { path: '/proposals', label: 'Proposal Kegiatan', icon: <FileText className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/laporan-masuk', label: 'Laporan Kegiatan', icon: <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    ],
+  },
+  {
+    path: '/periode', label: 'Periode', icon: (
+      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/users', label: 'User', icon: (
+      <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/export', label: 'Print Laporan', icon: (
+      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
 ]
@@ -275,7 +304,7 @@ export default function Sidebar() {
 
   const allNavItems = [
     ...NAV_ITEMS,
-    ...(isAdminOrKetua ? ADMIN_NAV_ITEMS : []),
+    ...(primaryRole === 'ketua_lppm' ? KETUA_NAV_ITEMS : primaryRole === 'admin' ? ADMIN_NAV_ITEMS : []),
     ...(isDosen ? DOSEN_NAV_ITEMS : []),
     ...(isMahasiswa ? MAHASISWA_NAV_ITEMS : []),
     ...(isReviewer ? REVIEWER_NAV_ITEMS : []),

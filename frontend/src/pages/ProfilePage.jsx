@@ -159,6 +159,8 @@ export default function ProfilePage() {
   const user = useAuthStore((s) => s.user)
   const roleNames = getRoleNames(user?.roles)
   const isMahasiswa = roleNames[0] === 'mahasiswa'
+  // Ketua LPPM tidak boleh menghapus akunnya sendiri (jabatan struktural).
+  const canDeleteAccount = !roleNames.includes('ketua_lppm')
 
   const [saved, setSaved] = useState(() => profileFrom(user))
   const [form, setForm] = useState(saved)
@@ -263,6 +265,7 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async (e) => {
     e.preventDefault()
+    if (!canDeleteAccount) return
     setDangerMsg(null)
     setDeleting(true)
     try {
@@ -665,7 +668,7 @@ export default function ProfilePage() {
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">Unduh data akun</h3>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Simpan salinan data dan dokumen Anda sebelum menghapus akun.
+                    {canDeleteAccount ? 'Simpan salinan data dan dokumen Anda sebelum menghapus akun.' : 'Simpan salinan data dan dokumen akun Anda.'}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -675,49 +678,60 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </li>
-              <li className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
+              {canDeleteAccount ? (
+                <>
+                  <li className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-slate-900">Hapus akun ini</h3>
+                      <p className="mt-0.5 text-sm text-slate-500">
+                        Akun dinonaktifkan dan data pribadi dikosongkan; Anda tidak bisa masuk lagi. Proposal, laporan,
+                        dan review tetap tersimpan sebagai arsip LPPM atas nama &ldquo;Pengguna Dihapus&rdquo;.
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmDelete((v) => !v)} aria-expanded={confirmDelete}>
+                        Hapus akun
+                      </button>
+                    </div>
+                  </li>
+                  {confirmDelete ? (
+                    <li className="bg-red-50/60 px-6 py-5">
+                      <form onSubmit={handleDeleteAccount} className="max-w-md space-y-3">
+                        <p className="text-sm font-semibold text-red-800">Tindakan ini tidak dapat dibatalkan.</p>
+                        <div>
+                          <label htmlFor="hapus-password" className="label">
+                            Masukkan password untuk konfirmasi
+                          </label>
+                          <input
+                            id="hapus-password"
+                            type="password"
+                            autoComplete="current-password"
+                            className="input"
+                            value={deletePassword}
+                            onChange={(e) => setDeletePassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="submit" className="btn btn-danger" disabled={deleting || !deletePassword}>
+                            {deleting ? 'Menghapus…' : 'Saya mengerti, hapus akun saya'}
+                          </button>
+                          <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                            Batal
+                          </button>
+                        </div>
+                      </form>
+                    </li>
+                  ) : null}
+                </>
+              ) : (
+                <li className="px-6 py-5">
                   <h3 className="text-base font-semibold text-slate-900">Hapus akun ini</h3>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Akun dinonaktifkan dan data pribadi dikosongkan; Anda tidak bisa masuk lagi. Proposal, laporan,
-                    dan review tetap tersimpan sebagai arsip LPPM atas nama &ldquo;Pengguna Dihapus&rdquo;.
+                    Akun Ketua LPPM tidak dapat dihapus sendiri. Hubungi Admin bila jabatan berpindah.
                   </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button type="button" className="btn btn-danger btn-sm" onClick={() => setConfirmDelete((v) => !v)} aria-expanded={confirmDelete}>
-                    Hapus akun
-                  </button>
-                </div>
-              </li>
-              {confirmDelete ? (
-                <li className="bg-red-50/60 px-6 py-5">
-                  <form onSubmit={handleDeleteAccount} className="max-w-md space-y-3">
-                    <p className="text-sm font-semibold text-red-800">Tindakan ini tidak dapat dibatalkan.</p>
-                    <div>
-                      <label htmlFor="hapus-password" className="label">
-                        Masukkan password untuk konfirmasi
-                      </label>
-                      <input
-                        id="hapus-password"
-                        type="password"
-                        autoComplete="current-password"
-                        className="input"
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button type="submit" className="btn btn-danger" disabled={deleting || !deletePassword}>
-                        {deleting ? 'Menghapus…' : 'Saya mengerti, hapus akun saya'}
-                      </button>
-                      <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>
-                        Batal
-                      </button>
-                    </div>
-                  </form>
                 </li>
-              ) : null}
+              )}
               {dangerMsg ? (
                 <li className="px-6 py-4">
                   <Message msg={dangerMsg} />
