@@ -10,7 +10,14 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Tidak ada. Semua API baru (`backend_go/new-api.md` bagian 10–14) sudah disambungkan.
+Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 15) tetapi **belum
+disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
+
+| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
+|---|---|---|---|
+| W-27 | Isi Laporan: Kata Kunci (Informasi Laporan & Preview) | `kataKunci` (array) di `PATCH /laporan/:id` (dan `POST /laporan`) | Disalin dari proposal saat laporan dibuat; mengubahnya tidak mengubah proposal. |
+| W-28 | Isi Laporan: Metode Penelitian (khusus penelitian) | `metodePenelitian` (string/null) di `PATCH /laporan/:id` & respons laporan | Untuk laporan pengabdian selalu `null`; nilai bukan null ditolak 400. |
+| W-30 | Manajemen User: tombol Jadikan/Cabut reviewer untuk Ketua LPPM | `PATCH /users/:id/roles` kini juga untuk `ketua_lppm` (hanya tambah/cabut `reviewer` pada dosen) | Cukup aktifkan `canEdit` untuk ketua; pemanggilan `onRoleChange` yang ada sudah sesuai. |
 
 ### Sudah disambungkan
 
@@ -110,13 +117,7 @@ Data yang **sudah** tersambung:
 | Tautan notifikasi `refType: laporan` | `/notifikasi` | — |
 | Capaian luaran (pengusul isi saat laporan draft/revisi; lainnya baca saja) | halaman laporan, Laporan Masuk, review laporan | `GET /luaran/proposal/:proposalId`, `PATCH /luaran/:id/capaian`, `POST/GET /luaran/:id/bukti` |
 
-Data yang **menunggu API** (wizard Isi Laporan, `frontend/src/pages/LaporanIsiPage.jsx`; backend tidak diubah dari sisi frontend):
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-27 | **Kata Kunci** laporan (Informasi Laporan & Preview) | Kata kunci laporan yang bisa diubah | Terima `kataKunci` (array, aturan sama dengan proposal) di `PATCH /laporan/:id` | Saat ini ditampilkan baca saja dari salinan proposal (`laporan.kataKunci`). |
-| W-28 | **Metode Penelitian** (Informasi Laporan & Preview, khusus penelitian) | Metode penelitian laporan | Kolom `metodePenelitian` (TEXT) di laporan penelitian, ikut `PATCH /laporan/:id` & respons | Input nonaktif. |
-
+Data yang **menunggu API**: tidak ada lagi (W-27, W-28 sudah tersedia, lihat bagian atas).
 
 ## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)
 
@@ -147,11 +148,7 @@ Data yang **sudah** tersambung:
 |---|---|
 | Jadikan / cabut peran reviewer (Admin) | `PATCH /users/:id/roles` (peran lain dipertahankan, `reviewer` ditambah/dihapus) |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-30 | Tombol **Jadikan reviewer / Cabut peran reviewer** untuk **Ketua LPPM** | Ketua boleh menambah/menghapus peran `reviewer` pada dosen | Izinkan `ketua_lppm` di `PATCH /users/:id/roles` khusus untuk menambah/menghapus `reviewer`, atau endpoint baru `PATCH /users/:id/reviewer` `{ "isReviewer": true }` (admin, ketua) | Saat ini route roles hanya admin; tombol nonaktif untuk Ketua. |
+Data yang **menunggu API**: tidak ada lagi (W-30 sudah tersedia, lihat bagian atas).
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

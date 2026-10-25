@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-26) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -54,7 +54,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 462 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 487 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -95,7 +95,7 @@ dan diperlakukan sebagai reviewer di UI.
 | Grup | Endpoint utama | Akses |
 |---|---|---|
 | `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
-| `/users` | search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/roles/delete admin |
+| `/users` | search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
@@ -138,8 +138,9 @@ dan diperlakukan sebagai reviewer di UI.
   `disetujui`; wajib file atau `dokumenUrl`.
 - **Laporan** (baris `tipe='laporan'` di Penelitian/Pengabdian, endpoint `/laporan`): dibuat
   pengusul dari proposal `disetujui`, maks 1 per proposal (`proposalId` unik), data proposal
-  (judul, abstrak, anggaran, `luaran`, periode) disalin. Kolom khusus: `luaranTercapai`,
-  `ringkasanHasil`, `realisasiAnggaran`. Status sama dengan proposal. Edit/upload saat
+  (judul, abstrak, anggaran, `luaran`, periode, kata kunci, dll.) disalin. Kolom khusus:
+  `luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `metodePenelitian` (khusus laporan
+  penelitian); `kataKunci` laporan bisa diubah terpisah dari proposal. Status sama dengan proposal. Edit/upload saat
   `draft`/`revisi`; submit wajib `luaranTercapai` + dokumen (file/URL) dan menotifikasi semua
   ketua; ketua/admin menugaskan reviewer (hanya `diajukan`/`review`, bukan pengusul) → `review`;
   reviewer simpan/finalisasi (hanya saat `review`); ketua/admin set status. Tugasan & review
@@ -180,7 +181,7 @@ Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedA
 (`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
 `Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
 ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
-`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `rumpunIlmu`, `bidang`, `kataKunci`; plus `skema` hanya di Penelitian dan
+`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `rumpunIlmu`, `bidang`, `kataKunci`; plus `skema` dan `metodePenelitian` (laporan) hanya di Penelitian dan
 `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
@@ -196,7 +197,8 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 (Penelitian/Pengabdian) + field `tipe`/`luaran`/`skema`/`mitra` di proposal; endpoint
 `/laporan`, `/program-studi`, `/users/profile/me` (GET), `/dosen/proposals/as-member` baru;
 `/auth/me` + field profil; stats + `review` & `?jenis=`; field `tahapan`; foto profil,
-export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian.
+export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian; kata kunci & metode
+penelitian di laporan; ketua boleh mengatur peran reviewer.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,

@@ -370,7 +370,7 @@ expect("lh delete missing", req("DELETE", "/api/v1/mahasiswa/laporan-harian/9999
 expect("lh delete", req("DELETE", f"/api/v1/mahasiswa/laporan-harian/{lhid}", mhs1), 200, "Laporan harian berhasil dihapus")
 
 # ── laporan (tipe 'laporan', endpoint baru /api/v1/laporan) ──
-LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
+LAP_KEYS = ["id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "metodePenelitian", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "proposal", "reviewerTugasan"]
 b = expect("laporan eligible", req("GET", "/api/v1/laporan/eligible", dosen1), 200, "Proposal siap dilaporkan fetched")
 check("laporan eligible has pid", any(x["id"] == pid for x in b["data"]) and list(b["data"][0].keys()) == ["id", "judul", "jenis", "status", "anggaran", "luaran", "approvedAt", "periode"], b["data"][:1])
 expect("laporan create invalid", req("POST", "/api/v1/laporan", dosen1, {"proposalId": 0}), 422)
@@ -672,6 +672,41 @@ expect("approve pengabdian mitra", req("PATCH", f"/api/v1/proposals/{mp['id']}/s
 b = expect("laporan copies mitra", req("POST", "/api/v1/laporan", dosen5, {"proposalId": mp["id"]}), 201)
 check("laporan mitra detail", b["data"]["mitraJenis"] == "Kelompok masyarakat" and b["data"]["mitraAlamat"] == MITRA["mitraAlamat"] and b["data"]["mitraKebutuhan"] == MITRA["mitraKebutuhan"], b["data"])
 expect("delete laporan mitra", req("DELETE", f"/api/v1/laporan/{b['data']['id']}", dosen5), 200)
+
+# ── W-27, W-28 (laporan), W-30 (ketua mengatur peran reviewer) ──
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk laporan W27", "abstrak": abstrak, "jenis": "penelitian", "kataKunci": ["awal"]})
+expect("w27 proposal", b, 201)
+wp = b[1]["data"]["id"]
+expect("w27 approve", req("PATCH", f"/api/v1/proposals/{wp}/status", ketua, {"status": "disetujui"}), 200)
+b = expect("w27 laporan", req("POST", "/api/v1/laporan", dosen5, {"proposalId": wp, "metodePenelitian": "Eksperimen"}), 201)
+wl = b["data"]
+check("laporan copies kata kunci + metode", wl["kataKunci"] == ["awal"] and wl["metodePenelitian"] == "Eksperimen", wl)
+b = expect("w27 update kata kunci", req("PATCH", f"/api/v1/laporan/{wl['id']}", dosen5, {"kataKunci": ["hasil", " IoT ", "iot"], "metodePenelitian": "Studi kasus"}), 200, "Laporan berhasil diperbarui")
+check("laporan kata kunci updated", b["data"]["kataKunci"] == ["hasil", "IoT"] and b["data"]["metodePenelitian"] == "Studi kasus", b["data"])
+check("proposal kata kunci tetap", req("GET", f"/api/v1/dosen/proposals/{wp}", dosen5)[1]["data"]["kataKunci"] == ["awal"])
+expect("w27 kata kunci invalid", req("PATCH", f"/api/v1/laporan/{wl['id']}", dosen5, {"kataKunci": "x"}), 422)
+b = expect("w28 metode clear", req("PATCH", f"/api/v1/laporan/{wl['id']}", dosen5, {"metodePenelitian": None}), 200)
+check("w28 metode null", b["data"]["metodePenelitian"] is None, b["data"])
+expect("w27 delete laporan", req("DELETE", f"/api/v1/laporan/{wl['id']}", dosen5), 200)
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Pengabdian untuk laporan W28", "abstrak": abstrak, "jenis": "pengabdian"})
+wpp = b[1]["data"]["id"]
+expect("w28 approve pengabdian", req("PATCH", f"/api/v1/proposals/{wpp}/status", ketua, {"status": "disetujui"}), 200)
+expect("w28 metode on pengabdian", req("POST", "/api/v1/laporan", dosen5, {"proposalId": wpp, "metodePenelitian": "x"}), 400, "Metode penelitian hanya untuk laporan penelitian")
+b = expect("w28 metode null on pengabdian", req("POST", "/api/v1/laporan", dosen5, {"proposalId": wpp, "metodePenelitian": None}), 201)
+check("w28 pengabdian metode null", b["data"]["metodePenelitian"] is None, b["data"])
+expect("w28 delete laporan pengabdian", req("DELETE", f"/api/v1/laporan/{b['data']['id']}", dosen5), 200)
+# W-30: dosen5 = dosen biasa
+before = [r["role"]["name"] for r in req("GET", f"/api/v1/users/{dosen5User['id']}", admin)[1]["data"]["roles"]]
+base = [r for r in before if r != "reviewer"]
+b = expect("ketua add reviewer", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", ketua, {"roles": base + ["reviewer"]}), 200, "Roles assigned")
+check("ketua added reviewer", "reviewer" in [r["role"]["name"] for r in b["data"]["roles"]], b["data"]["roles"])
+expect("ketua add admin forbidden", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", ketua, {"roles": base + ["reviewer", "admin"]}), 403, "Ketua LPPM hanya dapat menambah atau mencabut peran reviewer pada dosen")
+expect("ketua drop dosen forbidden", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", ketua, {"roles": ["reviewer"]}), 403)
+expect("ketua on non-dosen forbidden", req("PATCH", f"/api/v1/users/{rev1User['id']}/roles", ketua, {"roles": ["reviewer"]}), 403)
+b = expect("ketua remove reviewer", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", ketua, {"roles": base}), 200)
+check("ketua removed reviewer", "reviewer" not in [r["role"]["name"] for r in b["data"]["roles"]], b["data"]["roles"])
+expect("dosen roles forbidden", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", dosen1, {"roles": base}), 403, "Forbidden: insufficient permissions")
+expect("restore dosen5 roles", req("PATCH", f"/api/v1/users/{dosen5User['id']}/roles", admin, {"roles": before}), 200)
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")

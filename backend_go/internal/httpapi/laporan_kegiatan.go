@@ -25,7 +25,7 @@ import (
 // sama, dengan proposalId = id laporan (id unik global dari `Kegiatan`).
 
 var (
-	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran",
+	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "metodePenelitian",
 		"catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 
 	laporanListQuerySchema = zObj(
@@ -43,6 +43,8 @@ var (
 		optional("ringkasanHasil", zStr()),
 		optional("realisasiAnggaran", zNum().NonNegative()),
 		optional("dokumenUrl", zStr().URL("URL dokumen tidak valid")),
+		optional("kataKunci", zKataKunci{}),             // W-27
+		optional("metodePenelitian", zNullable{zStr()}), // W-28, khusus laporan penelitian
 	}
 	createLaporanKegiatanSchema = zObj(append([]zField{required("proposalId", zNum().Int().Positive())}, laporanEditableFields...)...)
 	updateLaporanKegiatanSchema = zObj(laporanEditableFields...)
@@ -235,16 +237,31 @@ func nullableString(ns sql.NullString) any {
 }
 
 // laporanFieldSets maps the validated body to SET columns.
-func laporanFieldSets(body map[string]any) ([]string, []any) {
+// metodePenelitian hanya ada di tabel Penelitian: nilai bukan null untuk laporan
+// pengabdian → 400, null diabaikan.
+func laporanFieldSets(body map[string]any, jenis string) ([]string, []any, error) {
 	cols := []string{}
 	args := []any{}
-	for _, field := range []string{"judul", "abstrak", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "dokumenUrl"} {
-		if v, ok := body[field]; ok {
-			cols = append(cols, field)
-			args = append(args, v)
+	for _, field := range []string{"judul", "abstrak", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "dokumenUrl", "kataKunci", "metodePenelitian"} {
+		v, ok := body[field]
+		if !ok {
+			continue
 		}
+		switch field {
+		case "kataKunci":
+			v = encodeKataKunci(v)
+		case "metodePenelitian":
+			if jenis != "penelitian" {
+				if v != nil {
+					return nil, nil, httpError(http.StatusBadRequest, "Metode penelitian hanya untuk laporan penelitian")
+				}
+				continue
+			}
+		}
+		cols = append(cols, field)
+		args = append(args, v)
 	}
-	return cols, args
+	return cols, args, nil
 }
 
 func (s *Server) ketuaUserIDs(ctx context.Context) ([]int64, error) {
@@ -429,8 +446,11 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 	if periodeID.Valid {
 		periode = periodeID.Int64
 	}
-	values := map[string]any{"judul": p.Judul, "abstrak": abstrak}
-	cols, args := laporanFieldSets(body)
+	values := map[string]any{"judul": p.Judul, "abstrak": abstrak, "kataKunci": nullableString(kataKunci)}
+	cols, args, err := laporanFieldSets(body, p.Jenis)
+	if err != nil {
+		return err
+	}
 	for i, col := range cols {
 		values[col] = args[i]
 	}
@@ -440,10 +460,11 @@ func (s *Server) createLaporanKegiatan(c *Ctx) error {
 	insertArgs := []any{proposalID, values["judul"], values["abstrak"], "draft", nullableString(anggaran), nullableString(luaran),
 		values["luaranTercapai"], values["ringkasanHasil"], values["realisasiAnggaran"], p.PengusulID, periode, values["dokumenUrl"], now, now}
 	insertCols = append(insertCols, "rumpunIlmu", "bidang", "kataKunci")
-	insertArgs = append(insertArgs, nullableString(rumpunIlmu), nullableString(bidang), nullableString(kataKunci))
-	// skema/mitra hanya ada di tabel jenisnya masing-masing.
+	insertArgs = append(insertArgs, nullableString(rumpunIlmu), nullableString(bidang), values["kataKunci"])
+	// skema/mitra/metodePenelitian hanya ada di tabel jenisnya masing-masing.
 	if p.Jenis == "penelitian" {
-		insertCols, insertArgs = append(insertCols, "skema"), append(insertArgs, nullableString(skema))
+		insertCols = append(insertCols, "skema", "metodePenelitian")
+		insertArgs = append(insertArgs, nullableString(skema), values["metodePenelitian"])
 	} else {
 		insertCols = append(insertCols, "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan")
 		insertArgs = append(insertArgs, nullableString(mitra), nullableString(mitraJenis), nullableString(mitraAlamat), nullableString(mitraKontak), nullableString(mitraKebutuhan))
@@ -495,7 +516,10 @@ func (s *Server) updateLaporanKegiatan(c *Ctx) error {
 		return err
 	}
 	ctx := c.r.Context()
-	cols, args := laporanFieldSets(c.bodyMap())
+	cols, args, err := laporanFieldSets(c.bodyMap(), l.Jenis)
+	if err != nil {
+		return err
+	}
 	sets := make([]string, 0, len(cols)+1)
 	for _, col := range cols {
 		sets = append(sets, "`"+col+"` = ?")

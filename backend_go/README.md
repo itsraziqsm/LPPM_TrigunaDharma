@@ -96,7 +96,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 462 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 487 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -138,7 +138,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
    anggota, dan `anggota[].user`; `/api/v1/master/{rumpun-ilmu,bidang,luaran}`.
 9. W-26 (lihat `new-api.md` bagian 14): `mitraJenis`, `mitraAlamat`, `mitraKontak`,
    `mitraKebutuhan` (khusus pengabdian) di proposal & laporan; master `jenis-mitra`.
-10. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+10. W-27/W-28/W-30 (lihat `new-api.md` bagian 15): `kataKunci` dan `metodePenelitian`
+    (khusus penelitian) bisa diubah di laporan; `PATCH /users/:id/roles` terbuka untuk
+    `ketua_lppm`, tetapi hanya untuk menambah/mencabut `reviewer` pada dosen.
+11. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

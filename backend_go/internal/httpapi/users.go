@@ -46,7 +46,8 @@ func (s *Server) registerUserRoutes() {
 	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
 	g.get("/:id", authorize("admin", "ketua_lppm"), s.getUser)
 	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
-	g.patch("/:id/roles", authorize("admin"), validateBody(assignRoleSchema), s.assignRoles)
+	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.
+	g.patch("/:id/roles", authorize("admin", "ketua_lppm"), validateBody(assignRoleSchema), s.assignRoles)
 	g.delete("/:id", authorize("admin"), s.deleteUser)
 }
 
@@ -238,6 +239,11 @@ func (s *Server) assignRoles(c *Ctx) error {
 		return err
 	}
 	list, _ := c.bodyMap()["roles"].([]any)
+	if !hasAnyRole(c.user.Roles, "admin") {
+		if err := s.checkKetuaReviewerChange(c, id, list); err != nil {
+			return err
+		}
+	}
 	names := make([]any, 0, len(list))
 	for _, r := range list {
 		names = append(names, r)
@@ -267,6 +273,44 @@ func (s *Server) assignRoles(c *Ctx) error {
 		data = user
 	}
 	return c.ok("Roles assigned", data)
+}
+
+// checkKetuaReviewerChange (W-30): ketua_lppm hanya boleh mengubah peran
+// `reviewer` pada user yang berperan dosen; peran lain harus tetap sama.
+func (s *Server) checkKetuaReviewerChange(c *Ctx, userID int64, requested []any) error {
+	current, err := s.rolesOf(c.r.Context(), s.db, userID)
+	if err != nil {
+		return err
+	}
+	denied := httpError(http.StatusForbidden, "Ketua LPPM hanya dapat menambah atau mencabut peran reviewer pada dosen")
+	if !hasAnyRole(current, "dosen") {
+		return denied
+	}
+	without := func(names []string) map[string]bool {
+		set := map[string]bool{}
+		for _, n := range names {
+			if n != "reviewer" {
+				set[n] = true
+			}
+		}
+		return set
+	}
+	next := make([]string, 0, len(requested))
+	for _, r := range requested {
+		if name, ok := r.(string); ok {
+			next = append(next, name)
+		}
+	}
+	a, b := without(current), without(next)
+	if len(a) != len(b) {
+		return denied
+	}
+	for n := range a {
+		if !b[n] {
+			return denied
+		}
+	}
+	return nil
 }
 
 // profileFields are the columns PATCH /users/profile/me may change.

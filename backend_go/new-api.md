@@ -15,6 +15,8 @@ API, dikelompokkan per rilis:
   kunci, master jenis luaran.
 - **Bagian 14** — W-26: detail mitra pengabdian (jenis, alamat, kontak, pernyataan kebutuhan) +
   master jenis mitra.
+- **Bagian 15** — W-27 kata kunci laporan, W-28 metode penelitian laporan, W-30 Ketua LPPM
+  mengatur peran reviewer.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -24,7 +26,8 @@ API, dikelompokkan per rilis:
   `migrations/20261026000000_sinta_foto_hapus_akun`,
   `migrations/20261027000000_luaran_verifikasi_email`,
   `migrations/20261028000000_rumpun_bidang_kata_kunci_master`,
-  `migrations/20261029000000_detail_mitra_pengabdian`
+  `migrations/20261029000000_detail_mitra_pengabdian`,
+  `migrations/20261030000000_metode_penelitian_laporan`
 
 ---
 
@@ -1249,3 +1252,56 @@ masterApi.list('jenis-mitra', { jenis: 'pengabdian' })
 Isi awal (bisa diubah admin): Kelompok masyarakat, UMKM, Koperasi, Sekolah / lembaga
 pendidikan, Pemerintah desa / kelurahan, Instansi pemerintah, Organisasi kemasyarakatan / LSM,
 Dunia usaha / industri, Lainnya.
+
+---
+
+## 15. W-27, W-28, W-30
+
+### 15.1 Kata kunci laporan (W-27)
+
+`POST /laporan` dan `PATCH /laporan/:id` sekarang menerima **`kataKunci`** (array string, aturan
+sama dengan proposal di bagian 13.1: maks 10 × 50 karakter, dipangkas, duplikat digabung,
+`[]` mengosongkan).
+
+- Saat laporan dibuat, kata kunci **disalin dari proposal**, kecuali `kataKunci` dikirim di body
+  `POST /laporan`.
+- Mengubah kata kunci laporan **tidak** mengubah kata kunci proposalnya.
+- Respons laporan selalu berisi `kataKunci` sebagai array.
+
+### 15.2 Metode penelitian laporan (W-28)
+
+Field baru **`metodePenelitian`** (string \| null, teks panjang) khusus **laporan penelitian**:
+
+- Diterima di `POST /laporan` dan `PATCH /laporan/:id`. `null` mengosongkan.
+- Objek laporan selalu memuat key ini (setelah `realisasiAnggaran`). Untuk laporan pengabdian
+  nilainya `null`.
+- Nilai bukan null untuk laporan pengabdian → `400 "Metode penelitian hanya untuk laporan
+  penelitian"`. Nilai `null` diabaikan.
+- Hanya bisa diubah saat laporan `draft`/`revisi`, sama seperti field laporan lain.
+
+```json
+// PATCH /laporan/:id
+{ "kataKunci": ["hasil", "IoT"], "metodePenelitian": "Eksperimen dengan kelompok kontrol" }
+```
+
+### 15.3 Ketua LPPM mengatur peran reviewer (W-30)
+
+`PATCH /users/:id/roles` kini juga bisa dipanggil **`ketua_lppm`**, dengan batasan:
+
+- target harus user yang **berperan dosen**;
+- daftar peran baru harus **sama dengan peran sekarang**, hanya boleh berbeda pada `reviewer`
+  (ditambah atau dihapus).
+
+Pelanggaran → `403 "Ketua LPPM hanya dapat menambah atau mencabut peran reviewer pada dosen"`.
+Admin tetap bebas mengubah semua peran seperti sebelumnya. Body dan respons sama persis untuk
+keduanya:
+
+```js
+// Jadikan reviewer: kirim peran sekarang + 'reviewer'
+api.patch(`/users/${id}/roles`, { roles: [...roleNames.filter((r) => r !== 'reviewer'), 'reviewer'] })
+// Cabut reviewer: kirim peran sekarang tanpa 'reviewer'
+api.patch(`/users/${id}/roles`, { roles: roleNames.filter((r) => r !== 'reviewer') })
+```
+
+Komponen `ReviewerAccess` di `UserManagementPage.jsx` cukup mengaktifkan tombolnya untuk Ketua
+(`canEdit`), karena pemanggilannya sudah memakai pola di atas.
