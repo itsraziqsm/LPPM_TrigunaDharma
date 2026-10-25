@@ -421,8 +421,10 @@
   }
 
   /* ── Tabel ──────────────────────────────────────────────────────────── */
+  /* relative: elemen absolut di dalam tabel (mis. label .sr-only di header) ikut
+     terpotong wadah ini; tanpa itu label tsb. melebarkan halaman (gulir horizontal). */
   .table-wrap {
-    @apply overflow-x-auto rounded-xl border border-slate-200 bg-white;
+    @apply relative overflow-x-auto rounded-xl border border-slate-200 bg-white;
   }
   .table {
     @apply w-full border-collapse text-left text-base;
