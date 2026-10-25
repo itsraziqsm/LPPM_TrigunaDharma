@@ -1,0 +1,598 @@
+OK	login user shape
+OK	wakil roles ordered by roleId
+OK	login wrong password → 500 Invalid credentials
+OK	login pending account → 500 Account not approved yet
+OK	login missing fields → 422 Validation error
+OK	login missing → Required
+OK	bad json → 400 
+OK	me → 200 Current user
+OK	me shape
+OK	me bad token → 401 Token invalid or expired
+OK	refresh blank → 400 Refresh token required
+OK	refresh unknown → 500 Refresh token invalid or expired
+OK	refresh → 200 Token refreshed
+OK	refresh shape
+OK	refresh reused → 500 Refresh token invalid or expired
+OK	logout → 200 Logged out successfully
+OK	logout has no data key
+OK	register dosen → 201 Registration submitted, awaiting approval
+OK	register shape
+OK	register duplicate → 409 Resource already exists
+OK	register bad date → 422 
+OK	register errors
+OK	forgot unknown email → 200 If your email is registered, you will receive a reset link
+OK	reset bad token → 500 Token invalid or expired
+OK	users list → 200 Users fetched
+OK	users meta
+OK	user shape
+OK	user roles shape
+OK	users limit>100 → 422 Validation error
+OK	users limit msg
+OK	users forbidden → 403 Forbidden: insufficient permissions
+OK	users filter role → 200 
+OK	users filter result
+OK	user by id → 200 User fetched
+OK	user 404 → 404 User not found
+OK	user bad id → ZodError 500 → 500 
+OK	zod message
+OK	approve user → 200 Status updated
+OK	status shape
+OK	assign roles → 200 Roles assigned
+OK	assigned roles
+OK	search users → 200 Users found
+OK	search shape
+OK	profile update → 200 Profile updated
+OK	profile values
+OK	change password wrong → 400 Old password is incorrect
+OK	change password → 200 Password changed successfully
+OK	delete user → 200 User deleted
+OK	delete user again → 500 
+OK	periode list → 200 Periode fetched
+OK	periode shape
+OK	periode order
+OK	periode filter
+OK	periode bad jenis → 500 
+OK	periode 404 → 500 Periode tidak ditemukan
+OK	admin create periode forbidden → 403 Forbidden: insufficient permissions
+OK	admin list periode → 200 Periode fetched
+OK	periode create invalid → 422 
+OK	periode errors
+OK	periode create → 201 Periode created
+OK	periode dates
+OK	periode update → 200 Periode updated
+OK	periode updated
+OK	admin update periode forbidden → 403 Forbidden: insufficient permissions
+OK	admin delete langsung forbidden → 403 Forbidden: insufficient permissions
+OK	ketua deletion-request forbidden → 403 Forbidden: insufficient permissions
+OK	deletion pending none → 200 Pending deletion request
+OK	deletion pending null
+OK	deletion no password → 400 Password wajib diisi
+OK	deletion wrong password → 500 Password salah
+OK	deletion request → 200 Permintaan penghapusan berhasil dibuat
+OK	deletion request shape
+OK	deletion pending shape
+OK	ketua got deletion notif
+OK	admin approve forbidden → 403 Forbidden: insufficient permissions
+OK	approve → 200 Periode berhasil dihapus
+OK	periode deleted → 500 Periode tidak ditemukan
+OK	cancel missing → 500 Permintaan penghapusan tidak ditemukan atau sudah tidak valid
+OK	periode create 2 → 201 
+OK	ketua delete no password → 400 Password wajib diisi
+OK	ketua delete wrong password → 500 Password salah
+OK	ketua delete langsung → 200 Periode berhasil dihapus
+OK	periode 2 deleted → 500 Periode tidak ditemukan
+OK	ketua delete missing → 500 Periode tidak ditemukan
+OK	admin notified direct delete
+OK	create proposal invalid → 422 
+OK	create proposal errors
+OK	create proposal no periode → 500 Periode harus dipilih
+OK	create proposal jenis mismatch → 500 Jenis proposal (pengabdian) tidak sesuai dengan jenis periode (penelitian)
+OK	create proposal forbidden → 403 Forbidden: insufficient permissions
+OK	create proposal → 201 Proposal created
+OK	proposal shape
+OK	tahapan draft
+OK	proposal values
+OK	proposal anggota
+OK	create dup anggota → 409 Resource already exists
+OK	my proposals → 200 My proposals fetched
+OK	my proposals meta
+OK	list proposals admin → 200 Proposals fetched
+OK	list filter
+OK	list proposals dosen forbidden → 403 
+OK	list page 0 → 500 
+OK	detail admin → 200 Proposal fetched
+OK	detail keys
+OK	detail pending member forbidden → 403 Anda tidak memiliki akses ke proposal ini
+OK	detail missing admin → 500 Proposal tidak ditemukan
+OK	detail missing dosen → 403 
+OK	detail NaN → 500 
+OK	invitations → 200 Invitations fetched
+OK	invitation shape
+OK	respond bad body → 400 
+OK	respond bad body no success key
+OK	respond other user → 500 Anda tidak memiliki akses ke undangan ini
+OK	accept invitation → 200 Undangan berhasil diterima
+OK	accept shape
+OK	accept again → 500 Undangan sudah direspon sebelumnya
+OK	reject invitation → 200 Undangan berhasil ditolak
+OK	detail accepted member → 200 
+OK	dosen list → 200 Proposals fetched
+OK	dosen list shape
+OK	dosen list bad status → 500 
+OK	dosen stats → 200 Stats fetched
+OK	stats shape
+OK	members search short → 400 Ketik minimal 2 karakter untuk mencari pengguna
+OK	members search → 200 Users fetched
+OK	members shape
+OK	dosen get other → 500 Anda tidak memiliki akses ke proposal ini
+OK	dosen get → 200 Proposal fetched
+OK	dosen detail keys
+OK	dosen submit with rejected member → 500 Proposal tidak dapat diajukan: 1 anggota menolak undangan. Semua anggota harus menyetujui undangan terlebih dahulu.
+OK	dosen update → 200 Proposal berhasil diperbarui
+OK	update reset anggota
+OK	submit tim kurang dosen → 400 Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul.
+OK	submit tim kurang dosen (proposals) → 400 Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul.
+OK	dosen update tim → 200 
+OK	update tim anggota
+OK	submit pending → 500 Proposal tidak dapat diajukan: 1 anggota belum merespons undangan. Semua anggota harus menyetujui undangan terlebih dahulu.
+OK	dosen submit → 200 Proposal berhasil diajukan
+OK	submitted
+OK	update after submit → 500 Proposal hanya bisa diedit saat status draft atau revisi
+OK	delete non draft → 500 Hanya proposal berstatus draft yang bisa dihapus
+OK	assign reviewer invalid → 422 
+OK	assign reviewer msg
+OK	assign reviewer → 200 Reviewer ditugaskan
+OK	assign shape
+OK	my tugasan → 200 Tugasan review fetched
+OK	tugasan shape
+OK	tugasan no duplicate
+OK	review not assigned → 500 Anda tidak ditugaskan untuk mereview proposal ini
+OK	finalize before review → 500 
+OK	submit review → 200 Review disimpan
+OK	review shape
+OK	submit review update → 200 
+OK	review upsert keeps
+OK	finalize → 200 Review diselesaikan
+OK	finalized
+OK	reviews by proposal → 200 Reviews fetched
+OK	reviews shape
+OK	me has tugasan → 200 
+OK	hasTugasan true
+OK	status invalid → 422 
+OK	status revisi → 200 Status proposal diperbarui
+OK	revisi catatan
+OK	revisi notif
+OK	status review clears catatan → 200 
+OK	catatan null
+OK	status disetujui → 200 
+OK	approvedAt
+OK	upload dokumen utama → 200 Dokumen berhasil diunggah
+OK	upload shape
+OK	download dokumen utama
+OK	upload fake pdf → 400 Tidak dapat mendeteksi tipe file. Pastikan file tidak corrupt.
+OK	upload xlsx as pdf → 400 Tipe file "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" tidak diizinkan. Hanya PDF atau DOCX yang diizinkan.
+OK	upload filtered mimetype → 500 Hanya file PDF atau DOCX yang diizinkan.
+OK	upload no file → 400 File tidak ditemukan dalam request.
+OK	upload unexpected field → 500 Unexpected field
+OK	upload by stranger → 403 
+OK	create laporan by mahasiswa forbidden → 403 Forbidden: insufficient permissions
+OK	create laporan → 201 Laporan diunggah
+OK	laporan shape
+OK	create laporan no source → 500 File atau URL dokumen wajib diisi.
+OK	create laporan url → 201 
+OK	list laporan → 200 Laporan fetched
+OK	laporan order desc
+OK	list laporan bad param → 400 Parameter proposalId tidak valid.
+OK	list laporan missing proposal → 500 
+OK	download laporan
+OK	download laporan no file → 404 File laporan tidak ditemukan.
+OK	patch laporan → 200 Laporan updated
+OK	patch laporan includes blob like Prisma
+OK	patch laporan invalid → 422 
+OK	patch laporan stranger → 403 
+OK	delete laporan → 200 Laporan deleted
+OK	delete laporan again → 500 
+OK	create dokumen invalid → 500 
+OK	dokumen zod message
+OK	create dokumen url → 201 Dokumen uploaded
+OK	dokumen shape
+OK	create dokumen by mahasiswa forbidden → 403 
+OK	create dokumen file → 201 
+OK	dokumen file
+OK	list dokumen → 200 Dokumen fetched
+OK	list dokumen
+OK	download dokumen
+OK	download dokumen no file → 404 File dokumen tidak ditemukan.
+OK	detail with relations → 200 
+OK	detail dokumenLampiran blob
+OK	detail reviews shape
+OK	delete dokumen → 200 Dokumen deleted
+OK	lh proposals → 200 Proposals fetched
+OK	lh proposals shape
+OK	lh forbidden role → 403 
+OK	lh unknown path still 403 → 403 
+OK	lh not member → 403 Anda bukan anggota proposal ini
+OK	lh create invalid → 400 Tanggal dan kegiatan wajib diisi
+OK	lh create → 201 Laporan harian berhasil dibuat
+OK	lh create shape
+OK	lh list → 200 Laporan harian fetched
+OK	lh list shape
+OK	lh download
+OK	lh download other → 403 Akses ditolak
+OK	lh delete missing → 404 Laporan tidak ditemukan
+OK	lh delete → 200 Laporan harian berhasil dihapus
+OK	laporan eligible → 200 Proposal siap dilaporkan fetched
+OK	laporan eligible has pid
+OK	laporan create invalid → 422 
+OK	laporan create by mahasiswa → 403 Forbidden: insufficient permissions
+OK	laporan create by non-pengusul → 403 Hanya pengusul proposal yang dapat membuat laporan
+OK	laporan create missing proposal → 404 Proposal tidak ditemukan
+OK	laporan create forbidden role → 403 
+OK	laporan create → 201 Laporan berhasil dibuat
+OK	laporan shape
+OK	laporan values
+OK	tahapan pelaksanaan
+OK	laporan create duplicate → 409 Proposal ini sudah memiliki laporan
+OK	laporan eligible after → 200 
+OK	laporan eligible excludes pid
+OK	laporan via old proposal endpoint → 500 Proposal tidak ditemukan
+OK	old my proposals excludes laporan
+OK	laporan submit incomplete → 400 Luaran tercapai wajib diisi sebelum laporan diajukan
+OK	laporan update by mahasiswa → 403 Forbidden: insufficient permissions
+OK	laporan update by anggota → 403 Anda tidak memiliki akses ke laporan ini
+OK	laporan update → 200 Laporan berhasil diperbarui
+OK	laporan updated
+OK	laporan submit no dokumen → 400 Dokumen laporan (file atau URL) wajib diunggah sebelum laporan diajukan
+OK	laporan upload dokumen → 200 Dokumen laporan berhasil diunggah
+OK	laporan upload shape
+OK	laporan download by anggota
+OK	laporan detail stranger → 403 
+OK	laporan assign before submit → 400 Laporan harus berstatus diajukan atau review untuk ditugaskan reviewer
+OK	laporan submit → 200 Laporan berhasil diajukan
+OK	laporan diajukan
+OK	tahapan seleksi lanjutan
+OK	ketua laporan notif
+OK	laporan edit after submit → 400 Laporan hanya bisa diubah saat status draft atau revisi
+OK	laporan assign pengusul → 400 Pengusul tidak dapat menjadi reviewer laporannya sendiri
+OK	laporan assign missing user → 400 Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer
+OK	laporan assign → 200 Reviewer laporan ditugaskan
+OK	laporan review status
+OK	laporan tugasan → 200 Tugasan review laporan fetched
+OK	laporan tugasan shape
+OK	old my-tugasan excludes laporan
+OK	laporan review without reviewer role → 403 Anda tidak memiliki peran reviewer
+OK	laporan review not assigned → 403 Anda tidak ditugaskan untuk mereview laporan ini
+OK	laporan review via old endpoint → 500 Anda tidak ditugaskan untuk mereview proposal ini
+OK	laporan finalize before save → 400 Simpan review terlebih dahulu sebelum finalisasi
+OK	laporan review save → 200 Review laporan disimpan
+OK	laporan review saved
+OK	laporan review finalize → 200 Review laporan diselesaikan
+OK	laporan review done
+OK	laporan reviews → 200 Review laporan fetched
+OK	laporan reviews shape
+OK	laporan detail → 200 Laporan fetched
+OK	laporan detail keys
+OK	laporan status by dosen → 403 
+OK	laporan status disetujui → 200 Status laporan diperbarui
+OK	laporan approved
+OK	tahapan pasca
+OK	pengusul laporan notif
+OK	laporan list admin → 200 Laporan fetched
+OK	laporan list
+OK	laporan list bad query → 422 
+OK	laporan list forbidden → 403 
+OK	laporan my → 200 Laporan saya fetched
+OK	laporan my has
+OK	laporan delete non-draft → 400 Hanya laporan berstatus draft yang bisa dihapus
+OK	laporan bad id → 400 Parameter id tidak valid.
+OK	laporan missing → 404 Laporan tidak ditemukan
+OK	laporan id is not proposal → 404 Laporan tidak ditemukan
+OK	create for jenis move → 201 
+OK	luaran saved
+OK	mitra on penelitian → 400 Mitra hanya untuk proposal pengabdian
+OK	skema on penelitian → 200 
+OK	skema saved
+OK	skema on pengabdian move → 400 Skema hanya untuk proposal penelitian
+OK	move jenis → 200 
+OK	move drops skema, sets mitra
+OK	moved jenis
+OK	delete moved → 200 
+OK	profile me → 200 Profile fetched
+OK	profile me shape
+OK	profile jabatan → 200 Profile updated
+OK	profile patch shape
+OK	me has profile
+OK	profile me no token → 401 
+OK	stats jenis → 200 Stats fetched
+OK	stats jenis total
+OK	stats bad jenis → 422 
+OK	as-member → 200 Proposals as member fetched
+OK	as-member has pid
+OK	as-member owner → 200 
+OK	as-member excludes own
+OK	as-member bad status → 422 
+OK	as-member forbidden → 403 
+OK	prodi public list → 200 Program studi fetched
+OK	prodi shape
+OK	prodi create invalid → 422 
+OK	prodi create forbidden → 403 
+OK	prodi create no token → 401 
+OK	prodi create → 201 Program studi berhasil dibuat
+OK	prodi created
+OK	prodi duplicate → 409 Resource already exists
+OK	prodi deactivate → 200 Program studi berhasil diperbarui
+OK	prodi deactivated
+OK	prodi hidden when inactive
+OK	prodi semua
+OK	prodi delete → 200 Program studi berhasil dihapus
+OK	prodi delete missing → 404 Program studi tidak ditemukan
+OK	sinta save → 200 Profile updated
+OK	sinta saved
+OK	sinta negative → 400 sintaScore harus bilangan bulat 0 atau lebih
+OK	sinta text → 400 
+OK	sinta string number → 200 
+OK	sinta string saved
+OK	me sinta
+OK	foto upload → 200 Foto profil berhasil diperbarui
+OK	foto upload shape
+OK	me fotoUrl
+OK	profile fotoUrl
+OK	foto public get
+OK	foto pdf mimetype → 400 Foto harus berformat JPG, PNG, atau WebP.
+OK	foto fake png → 400 Isi file bukan gambar JPG, PNG, atau WebP yang valid.
+OK	foto too large → 400 Ukuran foto maksimal 2 MB.
+OK	foto no file → 400 File foto tidak ditemukan dalam request.
+OK	foto delete → 200 Foto profil dihapus
+OK	foto delete again → 404 Foto profil belum ada
+OK	foto gone → 404 Foto tidak ditemukan
+OK	me fotoUrl null
+OK	foto bad id → 400 
+OK	export account
+OK	export no token → 401 
+OK	register for delete → 201 
+OK	approve for delete → 200 
+OK	delete account no password → 422 
+OK	delete account wrong password → 400 Password salah
+OK	delete account → 200 Akun berhasil dihapus
+OK	deleted cannot login → 500 Invalid credentials
+OK	deleted refresh revoked → 500 Refresh token invalid or expired
+OK	deleted anonymised
+OK	delete last admin → 400 Akun admin terakhir tidak dapat dihapus
+OK	luaran proposal → 201 
+OK	luaran create invalid → 422 
+OK	luaran create other user → 403 Hanya pengusul proposal yang dapat mengubah luaran
+OK	luaran create → 201 Luaran berhasil ditambahkan
+OK	luaran shape
+OK	luaran create 2 → 201 
+OK	luaran update target → 200 Luaran berhasil diperbarui
+OK	luaran updated
+OK	luaran capaian before approved → 400 Capaian luaran hanya bisa diisi setelah proposal disetujui
+OK	luaran list → 200 Luaran fetched
+OK	luaran list items
+OK	luaran list stranger → 403 
+OK	luaran list missing → 404 Proposal tidak ditemukan
+OK	luaran delete → 200 Luaran berhasil dihapus
+OK	luaran delete missing → 404 Luaran tidak ditemukan
+OK	luaran submit proposal (penelitian tanpa mahasiswa) → 200 
+OK	luaran target locked → 400 Target luaran hanya bisa diubah saat proposal berstatus draft atau revisi
+OK	luaran approve proposal → 200 
+OK	luaran capaian bad url → 422 
+OK	luaran capaian → 200 Capaian luaran berhasil disimpan
+OK	luaran tercapai
+OK	luaran bukti upload → 200 Bukti luaran berhasil diunggah
+OK	luaran bukti meta
+OK	luaran bukti fake → 400 Isi file bukti bukan PDF, DOCX, JPG, PNG, atau WebP yang valid.
+OK	luaran bukti download
+OK	luaran stats → 200 Statistik luaran fetched
+OK	luaran stats shape
+OK	luaran not yet claimable
+OK	luaran laporan → 201 
+OK	luaran laporan submit → 200 
+OK	luaran capaian locked → 400 Capaian luaran tidak bisa diubah karena laporan sudah diajukan
+OK	luaran laporan assign → 200 
+OK	luaran laporan review → 200 
+OK	luaran laporan finalize → 200 
+OK	luaran laporan approve → 200 
+OK	luaran claimable
+OK	kepercayaan → 200 Nilai kepercayaan fetched
+OK	kepercayaan shape
+OK	kepercayaan values
+OK	kepercayaan admin other → 200 
+OK	kepercayaan admin same
+OK	kepercayaan dosen other → 403 
+OK	kepercayaan reviewer only → 403 Forbidden: insufficient permissions
+OK	seed user verified
+OK	resend already verified → 400 Email sudah terverifikasi
+OK	register for verify → 201 
+OK	approve for verify → 200 
+OK	new user unverified
+OK	resend verification → 200 Email verifikasi telah dikirim ke verif0c5b23@lppm.dev
+OK	resend no token → 401 
+OK	verify empty → 422 
+OK	verify bad token → 400 Token verifikasi tidak valid atau kedaluwarsa
+OK	master rumpun ilmu → 200 Master data fetched
+OK	master rumpun shape
+OK	master bidang jenis
+OK	master luaran
+OK	master unknown → 404 
+OK	master bad jenis → 400 
+OK	master no token → 401 
+OK	master create forbidden → 403 
+OK	master jenisLuaran on bidang → 400 jenisLuaran hanya untuk master luaran
+OK	master create → 201 Master data berhasil dibuat
+OK	master duplicate → 409 
+OK	master update → 200 Master data berhasil diperbarui
+OK	master updated
+OK	master inactive hidden
+OK	master semua
+OK	master wrong kategori id → 404 Master data tidak ditemukan
+OK	master delete → 200 Master data berhasil dihapus
+OK	create with kata kunci → 201 
+OK	kata kunci saved
+OK	kata kunci too many → 422 
+OK	kata kunci not array → 422 
+OK	kata kunci clear → 200 
+OK	kata kunci empty array
+OK	anggota user kontak
+OK	delete kata kunci proposal → 200 
+OK	master jenis mitra → 200 Master data fetched
+OK	master jenis mitra isi
+OK	create pengabdian mitra → 201 
+OK	mitra detail saved
+OK	mitra detail clear → 200 
+OK	mitra kontak cleared
+OK	pengabdian submit tanpa tim → 400 Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0) dan minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul.
+OK	pengabdian submit tanpa mahasiswa → 400 Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul.
+OK	pengabdian submit tim lengkap → 200 Proposal berhasil diajukan
+OK	pengabdian tim lengkap
+OK	penelitian mitra null ignored → 201 
+OK	penelitian mitra null
+OK	penelitian mitra detail rejected → 400 Detail mitra hanya untuk proposal pengabdian
+OK	delete penelitian tanpa mitra → 200 
+OK	approve pengabdian mitra → 200 
+OK	laporan copies mitra → 201 
+OK	laporan mitra detail
+OK	delete laporan mitra → 200 
+OK	w27 proposal → 201 
+OK	w27 approve → 200 
+OK	w27 laporan → 201 
+OK	laporan copies kata kunci + metode
+OK	w27 update kata kunci → 200 Laporan berhasil diperbarui
+OK	laporan kata kunci updated
+OK	proposal kata kunci tetap
+OK	w27 kata kunci invalid → 422 
+OK	w28 metode clear → 200 
+OK	w28 metode null
+OK	w27 delete laporan → 200 
+OK	w28 approve pengabdian → 200 
+OK	w28 metode on pengabdian → 400 Metode penelitian hanya untuk laporan penelitian
+OK	w28 metode null on pengabdian → 201 
+OK	w28 pengabdian metode null
+OK	w28 delete laporan pengabdian → 200 
+OK	ketua add reviewer → 200 Roles assigned
+OK	ketua added reviewer
+OK	ketua add admin forbidden → 403 Ketua LPPM hanya dapat menambah atau mencabut peran reviewer pada dosen
+OK	ketua drop dosen forbidden → 403 
+OK	ketua on non-dosen forbidden → 403 
+OK	ketua remove reviewer → 200 
+OK	ketua removed reviewer
+OK	dosen roles forbidden → 403 Forbidden: insufficient permissions
+OK	restore dosen5 roles → 200 
+OK	dosen5 default bukan reviewer
+OK	ra submit → 200 
+OK	assign non-reviewer dosen → 400 Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer
+OK	non-reviewer my-tugasan → 403 Anda tidak memiliki peran reviewer
+OK	non-reviewer laporan tugasan → 403 Anda tidak memiliki peran reviewer
+OK	reviewer status → 200 Status reviewer fetched
+OK	reviewer status shape
+OK	reviewer status by dosen → 403 
+OK	grant to non-dosen → 400 Peran reviewer hanya dapat diatur untuk user berperan dosen
+OK	grant invalid body → 422 
+OK	admin grant reviewer → 200 Dosen dijadikan reviewer
+OK	granted
+OK	me reflects reviewer
+OK	grant again no change → 200 Peran reviewer tidak berubah
+OK	assign new reviewer dosen → 200 Reviewer ditugaskan
+OK	new reviewer my-tugasan (token lama) → 200 
+OK	new reviewer sees tugasan
+OK	new reviewer saves draft review → 200 Review disimpan
+OK	open tugasan listed
+OK	rekomendasi valid
+OK	kandidat reviewer → 200 Kandidat reviewer fetched
+OK	kandidat shape
+OK	kandidat urut beban
+OK	kandidat tanpa pengusul & dosen dicabut
+OK	kandidat sudah ditugaskan di bawah
+OK	rekomendasi = kandidat beban terkecil
+OK	kandidat bad itemId → 400 
+OK	kandidat missing item → 404 
+OK	kandidat forbidden → 403 
+OK	revoke blocked → 409 
+OK	roles endpoint revoke blocked → 409 
+OK	force revoke by admin forbidden → 403 
+OK	force revoke without pengalihan → 400 
+OK	force revoke lists missing
+OK	force revoke to non-reviewer → 400 Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer
+OK	force revoke to pengusul → 400 
+OK	force revoke unknown tugasan → 400 
+OK	force revoke → 200 Peran reviewer dicabut paksa
+OK	force revoked
+OK	rev2 got tugasan
+OK	rev2 notified
+OK	revoked dosen my-tugasan → 403 Anda tidak memiliki peran reviewer
+OK	revoked dosen review → 403 Anda tidak memiliki peran reviewer
+OK	old draft review removed
+OK	grant again then normal revoke → 200 
+OK	ra2 submit → 200 
+OK	assign d5 ra2 → 200 
+OK	force revoke otomatis → 200 Peran reviewer dicabut paksa
+OK	otomatis dialihkan
+OK	otomatis ke reviewer rekomendasi
+OK	grant d5 for normal revoke → 200 
+OK	normal revoke without tugasan → 200 Peran reviewer dicabut
+OK	restore dosen5 roles after reviewer tests → 200 
+OK	mhs create proposal (dosen api) → 403 Forbidden: insufficient permissions
+OK	mhs create proposal (proposals api) → 403 Forbidden: insufficient permissions
+OK	mhs list own proposals → 403 Forbidden: insufficient permissions
+OK	mhs stats → 403 Forbidden: insufficient permissions
+OK	mhs member search → 403 Forbidden: insufficient permissions
+OK	mhs update proposal → 403 Forbidden: insufficient permissions
+OK	mhs submit proposal → 403 Forbidden: insufficient permissions
+OK	mhs delete proposal → 403 Forbidden: insufficient permissions
+OK	mhs laporan my → 403 Forbidden: insufficient permissions
+OK	mhs laporan eligible → 403 Forbidden: insufficient permissions
+OK	mhs luaran create → 403 Forbidden: insufficient permissions
+OK	mhs luaran stats → 403 Forbidden: insufficient permissions
+OK	mhs invitations tetap → 200 Invitations fetched
+OK	mhs as-member tetap → 200 
+OK	mhs laporan harian tetap → 200 
+OK	mhs baca proposal anggota tetap → 200 
+OK	notifications → 200 Notifications fetched
+OK	notif shape
+OK	notif read → 200 Notification marked as read
+OK	onlyUnread
+OK	notif read all → 200 All notifications marked as read
+OK	notif delete → 200 Notification deleted
+OK	my activity → 200 Activity logs fetched
+OK	activity shape
+OK	activity ip from X-Forwarded-For
+OK	all activity → 200 
+OK	all activity shape
+OK	activity bad userId → 500 
+OK	activity forbidden → 403 
+OK	dashboard → 200 Dashboard stats fetched
+OK	dashboard shape
+OK	dashboard filtered → 200 
+OK	dashboard bad jenis → 500 
+OK	export → 200 Export data fetched
+OK	export row
+OK	export keys
+OK	dosen create without periode → 201 Proposal berhasil dibuat
+OK	dosen create periode null
+OK	dosen delete other → 500 Anda tidak memiliki akses ke proposal ini
+OK	admin delete draft → 200 Proposal deleted
+OK	dosen delete missing → 500 
+OK	unknown under auth router 401 → 401 Unauthorized
+OK	unknown under auth router 404 → 404 
+OK	method mismatch 404 → 404 
+OK	case insensitive route → 200 
+OK	preflight
+OK	etag 304
+OK	logout-all → 200 Logged out from all devices
+OK	backup list non-admin → 403 Forbidden: insufficient permissions
+OK	backup manual non-admin → 403 
+OK	backup jadwal → 200 Jadwal backup fetched
+OK	backup jadwal shape
+OK	backup manual 202
+OK	backup manual oleh admin
+OK	backup manual berhasil
+OK	backup list → 200 Log backup fetched
+OK	backup list meta
+OK	backup list bad filter → 422 
+OK	backup download
+OK	backup 404 → 404 Log backup tidak ditemukan
+OK	backup delete → 200 File backup berhasil dihapus
+OK	backup deleted log kept
+OK	backup download deleted → 410 File backup sudah dihapus
+OK	backup delete again → 409 File backup sudah dihapus
+OK	backup activity

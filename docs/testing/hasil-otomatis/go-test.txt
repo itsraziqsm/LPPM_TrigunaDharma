@@ -1,0 +1,49 @@
+?   	lppm-backend-go/cmd/hapus-proposal-mahasiswa	[no test files]
+?   	lppm-backend-go/cmd/migrate	[no test files]
+?   	lppm-backend-go/cmd/seed	[no test files]
+?   	lppm-backend-go/cmd/seed-tahap-1	[no test files]
+?   	lppm-backend-go/cmd/server	[no test files]
+=== RUN   TestLoadRequiresDatabaseAndJWTSecrets
+--- PASS: TestLoadRequiresDatabaseAndJWTSecrets (0.00s)
+=== RUN   TestLoadDefaultsAndPositiveRateLimits
+--- PASS: TestLoadDefaultsAndPositiveRateLimits (0.00s)
+PASS
+ok  	lppm-backend-go/internal/config	0.002s
+=== RUN   TestToDSNDecodesMySQLURLCredentials
+--- PASS: TestToDSNDecodesMySQLURLCredentials (0.00s)
+=== RUN   TestToDSNAcceptsNativeMySQLDSN
+--- PASS: TestToDSNAcceptsNativeMySQLDSN (0.00s)
+=== RUN   TestToDSNRejectsMalformedURL
+--- PASS: TestToDSNRejectsMalformedURL (0.00s)
+=== RUN   TestToDSNAcceptsUnencodedSpecialCharactersInPassword
+--- PASS: TestToDSNAcceptsUnencodedSpecialCharactersInPassword (0.00s)
+=== RUN   TestToDSNUsesUTCLikePrisma
+--- PASS: TestToDSNUsesUTCLikePrisma (0.00s)
+PASS
+ok  	lppm-backend-go/internal/database	0.004s
+=== RUN   TestWriteSQLValue
+--- PASS: TestWriteSQLValue (0.00s)
+=== RUN   TestDefinerStripped
+--- PASS: TestDefinerStripped (0.00s)
+=== RUN   TestJadwalBulanIni
+--- PASS: TestJadwalBulanIni (0.00s)
+=== RUN   TestJSONMatchesPrismaSerialisation
+--- PASS: TestJSONMatchesPrismaSerialisation (0.00s)
+=== RUN   TestZodMessages
+--- PASS: TestZodMessages (0.00s)
+=== RUN   TestFileTypeDetection
+--- PASS: TestFileTypeDetection (0.00s)
+=== RUN   TestIndonesianFormatting
+--- PASS: TestIndonesianFormatting (0.00s)
+=== RUN   TestJWTCompatibility
+--- PASS: TestJWTCompatibility (0.00s)
+=== RUN   TestBcryptAcceptsBcryptjsHashes
+--- PASS: TestBcryptAcceptsBcryptjsHashes (0.01s)
+=== RUN   TestHTTPBehaviourWithoutDatabase
+--- PASS: TestHTTPBehaviourWithoutDatabase (0.00s)
+=== RUN   TestProductionHidesErrorMessages
+--- PASS: TestProductionHidesErrorMessages (0.00s)
+=== RUN   TestTahapanIndex
+--- PASS: TestTahapanIndex (0.00s)
+PASS
+ok  	lppm-backend-go/internal/httpapi	0.015s

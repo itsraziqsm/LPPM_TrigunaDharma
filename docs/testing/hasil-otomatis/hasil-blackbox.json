@@ -1,0 +1,292 @@
+[
+ {
+  "id": "TC-01",
+  "modul": "Autentikasi",
+  "skenario": "Login dengan email dan password yang benar",
+  "langkah": "Buka /login, isi dosen1@lppm.dev dan password benar, klik Masuk ke Dashboard",
+  "harapan": "Masuk ke halaman Dashboard dosen",
+  "aktual": "Diarahkan ke /dashboard dan salam \"Halo\" tampil",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-02",
+  "modul": "Autentikasi",
+  "skenario": "Login dengan password salah",
+  "langkah": "Isi email benar dan password salah, klik Masuk ke Dashboard",
+  "harapan": "Login ditolak dan muncul pesan kesalahan",
+  "aktual": "Tetap di halaman login, pesan: \"Invalid credentials\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-03",
+  "modul": "Autentikasi",
+  "skenario": "Login akun yang belum disetujui admin",
+  "langkah": "Login dengan pending.dosen@lppm.dev",
+  "harapan": "Login ditolak dengan pesan akun belum disetujui",
+  "aktual": "Login ditolak, pesan: \"Account not approved yet\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-04",
+  "modul": "Autentikasi",
+  "skenario": "Membuka halaman privat tanpa login",
+  "langkah": "Buka /dashboard tanpa sesi login",
+  "harapan": "Diarahkan ke halaman login",
+  "aktual": "Diarahkan ke /login",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-05",
+  "modul": "Autentikasi",
+  "skenario": "Registrasi dengan isian kosong",
+  "langkah": "Buka /register, langsung klik Daftar Sekarang",
+  "harapan": "Registrasi tidak terkirim dan kolom wajib ditandai",
+  "aktual": "Tetap di /register; kolom wajib ditandai browser (\"Please fill out this field.\")",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-06",
+  "modul": "Autentikasi",
+  "skenario": "Keluar dari sistem",
+  "langkah": "Login, klik Keluar dari Sistem, konfirmasi",
+  "harapan": "Muncul dialog konfirmasi lalu kembali ke halaman login",
+  "aktual": "Dialog konfirmasi muncul, setelah dikonfirmasi kembali ke /login",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-07",
+  "modul": "Umum",
+  "skenario": "Membuka alamat yang tidak ada",
+  "langkah": "Buka /halaman-tidak-ada",
+  "harapan": "Tampil halaman galat 404",
+  "aktual": "Halaman galat 404 tampil",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-08",
+  "modul": "Usulan Proposal",
+  "skenario": "Lanjut ke langkah berikutnya tanpa mengisi judul",
+  "langkah": "Dosen membuka Usulan Penelitian baru, klik Berikutnya",
+  "harapan": "Tidak bisa lanjut dan muncul pesan isian wajib",
+  "aktual": "Tetap di langkah Identitas, pesan: \"wajib diisi\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-09",
+  "modul": "Usulan Proposal",
+  "skenario": "Menyimpan draf proposal baru tanpa abstrak",
+  "langkah": "Isi judul dan periode, klik Simpan draf",
+  "harapan": "Draf tidak disimpan dan muncul pesan isian minimal untuk draf",
+  "aktual": "Draf tidak disimpan, pesan: \"Untuk menyimpan draf, isi dulu abstrak minimal 20 karakter (langkah Dokumen).\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-10",
+  "modul": "Usulan Proposal",
+  "skenario": "Mengubah draf proposal yang sudah ada",
+  "langkah": "Buka draf \"Prediksi Kelulusan…\" (mode ubah), ubah judul, klik Simpan draf",
+  "harapan": "Draf tersimpan dan muncul pesan \"Draf tersimpan pukul …\"",
+  "aktual": "Muncul pesan \"Draf tersimpan pukul …\" dan judul baru tersimpan",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-11",
+  "modul": "Usulan Proposal",
+  "skenario": "Komposisi tim penelitian kurang dari aturan",
+  "langkah": "Buka draf baru, langkah Anggota tanpa menambah dosen, klik Berikutnya",
+  "harapan": "Sistem menampilkan aturan komposisi tim dan menahan langkah",
+  "aktual": "Langkah tertahan di Anggota; panel \"Ketentuan tim penelitian\" menampilkan anggota dosen 0 (ketentuan 2–3)",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-12",
+  "modul": "Usulan Proposal",
+  "skenario": "Mengajukan proposal saat undangan anggota belum diterima",
+  "langkah": "Buka Detail Kegiatan draf \"Prediksi Kelulusan…\"",
+  "harapan": "Tombol Ajukan proposal tidak aktif dan muncul keterangan anggota belum menerima undangan",
+  "aktual": "Tombol Ajukan proposal nonaktif; keterangan: \"3 anggota belum menerima undangan.\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-13",
+  "modul": "Kegiatan",
+  "skenario": "Melihat detail kegiatan yang disetujui",
+  "langkah": "Klik baris proposal \"Sistem Pendukung Keputusan…\" di Riwayat",
+  "harapan": "Tampil Detail Kegiatan berisi abstrak, tim, dokumen utama, dan tahapan",
+  "aktual": "Detail Kegiatan tampil lengkap (Abstrak, Tim, Dokumen utama) di /kegiatan/penelitian/detail/1",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-14",
+  "modul": "Kegiatan",
+  "skenario": "Menyaring riwayat berdasarkan status",
+  "langkah": "Pilih filter status Disetujui pada Riwayat Penelitian",
+  "harapan": "Hanya proposal berstatus disetujui yang tampil pada tabel Riwayat",
+  "aktual": "1 baris tampil pada Riwayat, semuanya berstatus Disetujui",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-15",
+  "modul": "Luaran",
+  "skenario": "Membuka menu Luaran (pencairan dana)",
+  "langkah": "Klik menu Luaran",
+  "harapan": "Tampil keterangan 501 fitur belum tersedia",
+  "aktual": "Halaman 501 (fitur menunggu keputusan kampus) tampil",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-16",
+  "modul": "Mahasiswa",
+  "skenario": "Menerima undangan ikut serta",
+  "langkah": "Mahasiswa2 membuka Undangan Ikut Serta, klik Terima pada undangan yang menunggu",
+  "harapan": "Status undangan berubah menjadi Diterima",
+  "aktual": "Undangan berhasil diterima, status menjadi Diterima",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-17",
+  "modul": "Mahasiswa",
+  "skenario": "Mengakses halaman usulan proposal",
+  "langkah": "Mahasiswa membuka /kegiatan/penelitian/usulan",
+  "harapan": "Akses ditolak (mahasiswa tidak mengusulkan proposal)",
+  "aktual": "Form usulan tidak tersedia; mahasiswa dialihkan ke Dashboard",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-18",
+  "modul": "Mahasiswa",
+  "skenario": "Mengisi laporan harian",
+  "langkah": "Buka Project Saya > project, klik Input Laporan Harian, isi tanggal, kegiatan, link, simpan",
+  "harapan": "Laporan harian baru tampil di riwayat",
+  "aktual": "Laporan harian tersimpan dan tampil di Riwayat Laporan Harian",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-19",
+  "modul": "Review",
+  "skenario": "Menyelesaikan penilaian proposal",
+  "langkah": "Reviewer1 membuka Penugasan Review, klik Lanjutkan Review, klik Selesaikan Review dan konfirmasi",
+  "harapan": "Review final tersimpan dan tugasan berstatus Selesai",
+  "aktual": "Review proposal \"Analisis Sentimen…\" tersimpan final (isDone = true), tugasan menjadi Selesai",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-20",
+  "modul": "Dokumen Masuk",
+  "skenario": "Menugaskan reviewer dari menu Dokumen Masuk Proposal",
+  "langkah": "Ketua membuka Ubah Status Proposal pada proposal Diajukan \"Pendampingan…\", memilih status, mencari pilihan reviewer, lalu menyimpan",
+  "harapan": "Ketua dapat memilih reviewer dan reviewer tercatat pada proposal",
+  "aktual": "Pilihan reviewer hanya muncul saat status \"Revisi\"; reviewer yang dicentang tidak tersimpan (0 reviewer) dan status langsung menjadi Revisi",
+  "status": "Gagal",
+  "bug": "BUG-01"
+ },
+ {
+  "id": "TC-21",
+  "modul": "Periode",
+  "skenario": "Menugaskan reviewer dari panel Periode",
+  "langkah": "Ketua membuka Periode > Penelitian Semester Ganjil 2025 > proposal Diajukan \"Rancang Bangun…\", klik Tugaskan Reviewer, pilih reviewer, simpan",
+  "harapan": "Reviewer tercatat dan status proposal menjadi Review",
+  "aktual": "Reviewer tercatat (1) dan status proposal menjadi \"review\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-22",
+  "modul": "Periode",
+  "skenario": "Admin tidak dapat menambah periode",
+  "langkah": "Admin membuka menu Periode",
+  "harapan": "Tombol Tambah Periode tidak tersedia",
+  "aktual": "Tombol Tambah Periode tidak tampil untuk Admin",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-23",
+  "modul": "Periode",
+  "skenario": "Ketua menambah periode baru",
+  "langkah": "Ketua klik Tambah Periode, isi nama, jenis, tahun, tanggal, simpan",
+  "harapan": "Periode baru muncul di Daftar Periode",
+  "aktual": "Periode \"Penelitian Semester Genap 2027 Uji\" muncul di Daftar Periode",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-24",
+  "modul": "Backup",
+  "skenario": "Admin melakukan backup manual",
+  "langkah": "Admin membuka Backup Data, klik Backup sekarang",
+  "harapan": "Backup baru berstatus Berhasil di Daftar Backup",
+  "aktual": "Baris backup bertambah (1 → 2) dengan status Berhasil",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-25",
+  "modul": "Pencarian",
+  "skenario": "Pencarian global dengan Ctrl+F",
+  "langkah": "Login dosen, tekan Ctrl+F, ketik \"Sistem Pendukung\"",
+  "harapan": "Popup pencarian menampilkan proposal yang cocok",
+  "aktual": "Popup menampilkan proposal \"Sistem Pendukung Keputusan Pemilihan Mitra…\" (proposal dan laporan)",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-26",
+  "modul": "Profil",
+  "skenario": "Mengganti password dengan password lama salah",
+  "langkah": "Buka Pengaturan, isi password lama salah dan password baru, simpan",
+  "harapan": "Penggantian password ditolak dengan pesan kesalahan",
+  "aktual": "Ditolak, pesan: \"Old password is incorrect\"",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-27",
+  "modul": "Cetak Dokumen",
+  "skenario": "Mencetak Export Rekapitulasi Proposal",
+  "langkah": "Ketua membuka Cetak Dokumen, klik Cetak pada kartu Export Rekapitulasi Proposal",
+  "harapan": "Berkas PDF rekapitulasi terunduh",
+  "aktual": "Berkas \"Laporan-Proposal-LPPM-2026-10-25.pdf\" terunduh (45413 byte)",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-28",
+  "modul": "Cetak Dokumen",
+  "skenario": "Membuat Surat Tugas untuk kegiatan disetujui",
+  "langkah": "Ketua membuka Konfigurasi Surat Tugas, memilih proposal disetujui, mengisi tugas, lalu mencetak",
+  "harapan": "Berkas PDF Surat Tugas terunduh",
+  "aktual": "Berkas \"Surat_Tugas_Pelatihan_Literasi_Digital_dan_Pemasaran.pdf\" terunduh (10884 byte)",
+  "status": "Berhasil",
+  "bug": ""
+ },
+ {
+  "id": "TC-29",
+  "modul": "Manajemen User",
+  "skenario": "Admin menyetujui akun yang mendaftar",
+  "langkah": "Admin membuka Manajemen User, filter status Pending, pilih \"pending.dosen\", ubah status menjadi Approved",
+  "harapan": "Status akun berubah menjadi Approved",
+  "aktual": "Status akun pending.dosen@lppm.dev berubah menjadi approved",
+  "status": "Berhasil",
+  "bug": ""
+ }
+]
