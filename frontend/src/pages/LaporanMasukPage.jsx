@@ -3,8 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { UserPlus, X } from 'lucide-react'
 import api from '../api/axios'
 import { laporanApi } from '../api/laporan'
-import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
-import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
+import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
@@ -287,8 +286,8 @@ export default function LaporanMasukPage() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('diajukan')
   const [jenis, setJenis] = useState('')
+  const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
-  const [searchOpen, setSearchOpen] = useState(null)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [tick, setTick] = useState(0)
@@ -313,22 +312,6 @@ export default function LaporanMasukPage() {
 
   const refresh = useCallback(() => setTick((t) => t + 1), [])
   const open = (id) => setParams(id ? { id: String(id) } : {})
-  const applyQuery = (q) => {
-    setQuery(q.trim())
-    setPage(1)
-  }
-  // Popup cari: rekomendasi dari GET /laporan?search= (semua status).
-  const fetchRecs = useCallback(async (q) => {
-    const r = await laporanApi.getAll({ page: 1, limit: 8, search: q })
-    return (r.data.data || []).map((l) => ({
-      key: l.id,
-      id: l.id,
-      title: l.judul,
-      subtitle: [l.pengusul?.fullName || l.pengusul?.name, JENIS_LABEL[l.jenis] || l.jenis, l.periode?.nama].filter(Boolean).join(' · '),
-      badge: STATUS_LABEL[l.status] || l.status,
-      badgeClass: STATUS_COLOR[l.status],
-    }))
-  }, [])
   const pages = Math.max(1, Math.ceil(total / LIMIT))
 
   return (
@@ -370,7 +353,15 @@ export default function LaporanMasukPage() {
             </button>
           ))}
         </div>
-        <div role="search" className="flex flex-col gap-2 sm:flex-row">
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setPage(1)
+            setQuery(search.trim())
+          }}
+          className="flex gap-2"
+        >
           <label htmlFor="lm-jenis" className="sr-only">
             Jenis
           </label>
@@ -387,30 +378,14 @@ export default function LaporanMasukPage() {
             <option value="penelitian">Penelitian</option>
             <option value="pengabdian">Pengabdian</option>
           </select>
-          <SearchTrigger
-            id="lm-cari"
-            className="sm:w-64"
-            label="Cari judul atau abstrak laporan"
-            placeholder="Cari judul atau abstrak"
-            value={query}
-            onOpen={setSearchOpen}
-            onClear={() => applyQuery('')}
-          />
-          <button type="button" onClick={() => setSearchOpen('')} className="btn btn-secondary">
+          <label htmlFor="lm-cari" className="sr-only">
+            Cari judul
+          </label>
+          <input id="lm-cari" type="search" className="input w-56" placeholder="Cari judul atau abstrak" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <button type="submit" className="btn btn-secondary">
             Cari
           </button>
-        </div>
-        <SearchPopup
-          open={searchOpen !== null}
-          onClose={() => setSearchOpen(null)}
-          title="Cari laporan masuk"
-          placeholder="Ketik judul atau abstrak laporan…"
-          initialQuery={searchOpen || query}
-          fetchRecs={fetchRecs}
-          onSelect={(item) => open(item.id)}
-          onSubmit={applyQuery}
-          hint="Rekomendasi laporan dari semua status muncul di sini sesuai ketikan."
-        />
+        </form>
       </div>
 
       <div className="table-wrap">

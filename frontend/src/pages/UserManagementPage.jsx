@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
-import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -778,8 +778,8 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
-  const [searchOpen, setSearchOpen] = useState(null) // popup cari: null = tertutup
   const [filterRole, setFilterRole] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [page, setPage] = useState(1)
@@ -788,19 +788,15 @@ export default function UserManagementPage() {
   const [detailUser, setDetailUser] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const applySearch = (val) => { setSearch(val.trim()); setPage(1) }
-  // Popup cari: rekomendasi dari GET /users?search= (semua peran & status).
-  const fetchRecs = useCallback(async (q) => {
-    const res = await usersApi.getAll({ page: 1, limit: 8, search: q })
-    return (res.data.data || []).map((u) => ({
-      key: u.id,
-      user: u,
-      title: u.fullName || u.name,
-      subtitle: [u.email, getRoleNames(u.roles).map((r) => ROLE_LABEL[r] || r).join(', ')].filter(Boolean).join(' · '),
-      badge: u.status,
-      badgeClass: STATUS_COLOR[u.status],
-    }))
-  }, [])
+  const debounceRef = useRef(null)
+  const handleSearchInput = (val) => {
+    setSearchInput(val)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setSearch(val)
+      setPage(1)
+    }, 400)
+  }
 
   const fetchUsers = async (opts = {}) => {
     setLoading(true); setError(null)
@@ -839,6 +835,15 @@ export default function UserManagementPage() {
   }
 
   const closeDetail = () => { setSelected(null); setDetailUser(null) }
+
+  // ?id=<userId> (dari pencarian global) langsung membuka detail user.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const linkedId = Number(searchParams.get('id')) || null
+  useEffect(() => {
+    if (!linkedId) return
+    setSearchParams({}, { replace: true })
+    if (selected !== linkedId) openDetail({ id: linkedId })
+  }, [linkedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshDetail = async (id) => {
     try { const r = await usersApi.getById(id); setDetailUser(r.data.data) } catch { }
@@ -907,25 +912,14 @@ export default function UserManagementPage() {
 
             <div className="grid gap-4 @lg:grid-cols-2 @3xl:grid-cols-12">
               <div className="@lg:col-span-2 @3xl:col-span-6">
-                <span className="label">Cari nama atau email</span>
-                <SearchTrigger
+                <label htmlFor="user-cari" className="label">Cari nama atau email</label>
+                <input
                   id="user-cari"
-                  label="Cari nama atau email"
+                  type="text"
                   placeholder="Cari nama / email..."
-                  value={search}
-                  onOpen={setSearchOpen}
-                  onClear={() => applySearch('')}
-                />
-                <SearchPopup
-                  open={searchOpen !== null}
-                  onClose={() => setSearchOpen(null)}
-                  title="Cari user"
-                  placeholder="Ketik nama atau email…"
-                  initialQuery={searchOpen || search}
-                  fetchRecs={fetchRecs}
-                  onSelect={(item) => { if (selected !== item.user.id) openDetail(item.user) }}
-                  onSubmit={applySearch}
-                  hint="Rekomendasi user (semua peran & status) muncul di sini sesuai ketikan."
+                  value={searchInput}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  className="input"
                 />
               </div>
 

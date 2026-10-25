@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
 import useAuthStore from '../store/authStore'
 import DashboardHome from './dashboard/DashboardHome'
@@ -188,6 +189,7 @@ export default function DashboardLayout({ page, jenis }) {
           </div>
         </section>
       </main>
+      {ready ? <GlobalSearch roleNames={roleNames} isReviewer={isReviewer} /> : null}
     </div>
   )
 }

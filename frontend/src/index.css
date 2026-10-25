@@ -480,3 +480,8 @@ html.search-open body,
 html.search-open [data-scroll-container] {
   overflow: hidden !important;
 }
+
+/* Tombol cari global (components/GlobalSearch) disembunyikan saat ada modal/dialog terbuka. */
+body:has([aria-modal='true'], .overlay) .global-search-fab {
+  display: none;
+}

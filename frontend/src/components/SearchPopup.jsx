@@ -3,56 +3,17 @@ import { createPortal } from 'react-dom'
 import { CornerDownLeft, Search, X } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
-// Pencarian bergaya popup (dipakai SEMUA fitur cari):
-//   SearchTrigger — "kolom cari" di halaman; klik / Enter / mulai mengetik
-//                   membuka popup. Menampilkan kata kunci aktif + tombol hapus.
-//   SearchPopup   — modal di tengah atas: kolom cari, lalu rekomendasi di bawah
-//                   kolom yang diperbarui mengikuti ketikan (debounce).
-//                   Latar di-blur dan tidak bisa digulir (kelas `search-open` di
-//                   <html>, lihat index.css). ↑/↓ memilih, Enter membuka, Esc /
-//                   klik latar menutup.
-// Rekomendasi: fetchRecs(q) → Promise<[{ key, title, subtitle?, badge?,
-// badgeClass?, disabled?, note? }]>. onSelect(item, q) saat rekomendasi dipilih;
-// onSubmit(q) (opsional) menambah baris pertama "Tampilkan semua hasil …"
-// (= terapkan sebagai filter daftar). decorate(item) (opsional) dipanggil saat
-// render, mis. menandai item yang sudah dipilih tanpa memuat ulang. fetchRecs
-// sebaiknya stabil (useCallback) agar tidak dimuat ulang tiap render.
+// Popup pencarian (dipakai GlobalSearch: tombol melayang kanan bawah / Ctrl+F).
+// Modal di tengah atas: kolom cari, lalu rekomendasi di bawah kolom yang
+// diperbarui mengikuti ketikan (debounce). Latar di-blur dan tidak bisa
+// digulir (kelas `search-open` di <html>, lihat index.css). Panah atas/bawah
+// memilih, Enter membuka, Esc / klik latar menutup.
+// Rekomendasi: fetchRecs(q) -> Promise<[{ key, title, subtitle?, group?, badge?,
+// badgeClass?, disabled?, note? }]>; `group` berurutan dirender sebagai judul
+// kelompok. onSelect(item, q) saat rekomendasi dipilih; onSubmit(q) (opsional)
+// menambah baris pertama "Tampilkan semua hasil ...". decorate(item) (opsional)
+// dipanggil saat render. fetchRecs wajib stabil (useCallback).
 // ---------------------------------------------------------------------------
-
-export function SearchTrigger({ id, label, value, placeholder, onOpen, onClear, className = '' }) {
-  return (
-    <div className={`relative min-w-0 ${className}`}>
-      <button
-        id={id}
-        type="button"
-        aria-haspopup="dialog"
-        aria-label={value ? `${label}: ${value}` : label}
-        onClick={() => onOpen('')}
-        onKeyDown={(e) => {
-          // Mulai mengetik langsung membuka popup dengan huruf tersebut.
-          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && e.key !== ' ') {
-            e.preventDefault()
-            onOpen(e.key)
-          }
-        }}
-        className={`input flex w-full items-center gap-2 pl-9 text-left ${value && onClear ? 'pr-10' : ''}`}
-      >
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-        <span className={`truncate ${value ? 'font-medium text-slate-900' : 'text-slate-400'}`}>{value || placeholder}</span>
-      </button>
-      {value && onClear ? (
-        <button
-          type="button"
-          onClick={onClear}
-          className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-        >
-          <span className="sr-only">Hapus kata kunci</span>
-          <X className="size-4" aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
-  )
-}
 
 function PopupPanel({
   title,
@@ -234,7 +195,12 @@ function PopupPanel({
         <div ref={listRef} data-lenis-prevent className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {rows.length > 0 ? (
             <ul id={listId} role="listbox" aria-label="Rekomendasi" className="py-1.5">
-              {rows.map((row, i) => (
+              {rows.map((row, i) => [
+                row.group && row.group !== rows[i - 1]?.group ? (
+                  <li key={`g-${row.group}`} role="presentation" className="px-4.5 pb-1 pt-3 text-xs font-semibold text-slate-500 first:pt-1.5">
+                    {row.group}
+                  </li>
+                ) : null,
                 <li
                   key={row.key}
                   id={`${listId}-${i}`}
@@ -272,8 +238,8 @@ function PopupPanel({
                     </>
                   )}
                   {i === activeIndex && !row.disabled ? <CornerDownLeft className="size-4 shrink-0 text-slate-400" aria-hidden="true" /> : null}
-                </li>
-              ))}
+                </li>,
+              ])}
             </ul>
           ) : null}
           {body}

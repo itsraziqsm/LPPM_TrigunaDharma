@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { proposalApi } from '../api/proposal'
 import { usersApi } from '../api/users'
 import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
 import { alertDialog } from '../utils/dialog'
-import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
 const isStatusFinal = (status) => status === 'disetujui'
@@ -100,7 +100,6 @@ export default function ProposalPage() {
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [search, setSearch] = useState('')
-  const [searchOpen, setSearchOpen] = useState(null) // popup cari: null = tertutup
   const [status, setStatus] = useState('')
   const [jenis, setJenis] = useState('')
   const [loading, setLoading] = useState(false)
@@ -185,6 +184,15 @@ export default function ProposalPage() {
     await fetchDetail(item.id)
   }
 
+  // ?detail=<id> (dari pencarian global) langsung membuka detail proposal.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const linkedId = Number(searchParams.get('detail')) || null
+  useEffect(() => {
+    if (!linkedId) return
+    setSearchParams({}, { replace: true })
+    handleOpenDetail({ id: linkedId })
+  }, [linkedId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCloseDetail = () => {
     setShowDetail(false)
     setSelected(null)
@@ -242,28 +250,11 @@ export default function ProposalPage() {
     }
   }
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = async (e) => {
     e.preventDefault()
-    setSearchOpen('')
-  }
-
-  const applySearch = (q) => {
-    setSearch(q.trim())
     setPage(1)
+    await fetchProposalList()
   }
-
-  // Popup cari: rekomendasi dari GET /proposals?search= (semua status & jenis).
-  const fetchRecs = useCallback(async (q) => {
-    const res = await proposalApi.getAll({ page: 1, limit: 8, search: q })
-    return (res?.data?.data || []).map((p) => ({
-      key: p.id,
-      proposal: p,
-      title: p.judul,
-      subtitle: [p.pengusul?.fullName || p.pengusul?.name, JENIS_LABEL[p.jenis] || p.jenis, p.periode?.nama].filter(Boolean).join(' · '),
-      badge: STATUS_LABEL[p.status] || p.status,
-      badgeClass: STATUS_COLOR[p.status],
-    }))
-  }, [])
 
   return (
     <>
@@ -307,16 +298,16 @@ export default function ProposalPage() {
           <form onSubmit={handleSearchSubmit}>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
               <div className="lg:col-span-5">
-                <span id="search-label" className="label">
+                <label htmlFor="search" className="label">
                   Kata Kunci Proposal
-                </span>
-                <SearchTrigger
+                </label>
+                <input
                   id="search"
-                  label="Cari judul proposal, ketua, atau email"
-                  placeholder="Cari judul proposal, ketua, atau email"
+                  type="text"
                   value={search}
-                  onOpen={setSearchOpen}
-                  onClear={() => applySearch('')}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari judul proposal, ketua, atau email"
+                  className="input"
                 />
               </div>
 
@@ -365,17 +356,6 @@ export default function ProposalPage() {
               </div>
             </div>
           </form>
-          <SearchPopup
-            open={searchOpen !== null}
-            onClose={() => setSearchOpen(null)}
-            title="Cari proposal"
-            placeholder="Ketik judul proposal, ketua, atau email…"
-            initialQuery={searchOpen || search}
-            fetchRecs={fetchRecs}
-            onSelect={(item) => handleOpenDetail(item.proposal)}
-            onSubmit={applySearch}
-            hint="Rekomendasi proposal dari semua status muncul di sini sesuai ketikan."
-          />
         </section>
 
         {/* Tabel data utama */}

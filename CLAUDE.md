@@ -380,15 +380,17 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   / `alertDialog({ title, message })` dari `src/utils/dialog.js` (Promise → `true/false`), dirender
   `<DialogHost />` (dipasang di `main.jsx`) dengan `src/components/ConfirmDialog.jsx` (gaya dialog
   Keluar; tone `danger|warning|primary|info|error`). ConfirmDialog juga bisa dipakai langsung.
-- **Pencarian = popup** (`src/components/SearchPopup.jsx`): semua fitur cari memakai `SearchTrigger`
-  (kolom cari di halaman; klik/Enter/mulai mengetik membuka popup, tampilkan kata kunci aktif + hapus)
-  dan `SearchPopup` (portal; kolom cari di atas, rekomendasi di bawahnya mengikuti ketikan, debounce
-  250 ms, min 2 karakter; ↑/↓/Enter/Esc; baris "Tampilkan semua hasil" = terapkan filter). Latar
+- **Pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
+  kaca pembesar melayang kanan bawah (disembunyikan saat ada modal, `.global-search-fab` di
+  `index.css`) atau **Ctrl/⌘ + F** membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
+  kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
   `data-scroll-container` (wadah gulir `DashboardLayout`, daftar Manajemen User) — wadah gulir baru
-  wajib diberi atribut ini. `fetchRecs` wajib stabil (`useCallback`). Dipakai di Kegiatan (Riwayat),
-  Laporan Masuk, Proposal (admin/ketua), Manajemen User, Laporan Harian (saring lokal) dan
-  `AnggotaSearch` (popup tetap terbuka, `decorate` menandai "Sudah ditambahkan").
+  wajib diberi atribut ini. Sumber hasil di `src/utils/globalSearch.js`: halaman sesuai peran
+  pertama + data (`search=`, limit 5) — dosen: proposal → `/kegiatan/:jenis?detail=`, laporan;
+  admin/ketua: proposal → `/proposals?detail=`, laporan → `/laporan-masuk?id=`, user →
+  `/users?id=`; mahasiswa: proposal tim (laporan harian). Kolom cari/filter di tiap halaman tetap
+  seperti semula.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

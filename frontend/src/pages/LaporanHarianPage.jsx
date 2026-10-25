@@ -3,9 +3,8 @@ import { API_BASE_URL } from '../api/axios'
 import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { ChevronLeft, ChevronRight, CircleCheck, CloudUpload, Download, ExternalLink, FileText, Plus, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, CloudUpload, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
-import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
 
@@ -859,7 +858,6 @@ export default function LaporanHarianPage() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')
-  const [searchOpen, setSearchOpen] = useState(null) // popup cari: null = tertutup
 
   const fetchProposals = useCallback(async () => {
     setLoading(true)
@@ -874,16 +872,6 @@ export default function LaporanHarianPage() {
   }, [])
 
   useEffect(() => { fetchProposals() }, [fetchProposals])
-
-  // Popup cari: rekomendasi disaring dari daftar proposal yang sudah dimuat
-  // (GET /mahasiswa/laporan-harian/proposals tidak punya parameter cari).
-  const fetchRecs = useCallback((q) => {
-    const k = q.toLowerCase()
-    return proposals
-      .filter(p => p.judul.toLowerCase().includes(k) || (p.pengusul?.name || '').toLowerCase().includes(k))
-      .slice(0, 8)
-      .map(p => ({ key: p.id, proposal: p, title: p.judul, subtitle: p.pengusul?.name || '', badge: p.jenis ? p.jenis.charAt(0).toUpperCase() + p.jenis.slice(1) : null }))
-  }, [proposals])
 
   if (selected) {
     return <ProposalDetail proposal={selected} onBack={() => setSelected(null)} />
@@ -917,27 +905,20 @@ export default function LaporanHarianPage() {
       </header>
 
       <div>
-        <SearchTrigger
-          id="lh-cari"
-          className="max-w-xl"
-          label="Cari proposal"
-          placeholder="Cari judul proposal atau nama pengusul..."
-          value={search}
-          onOpen={setSearchOpen}
-          onClear={() => setSearch('')}
-        />
-        <SearchPopup
-          open={searchOpen !== null}
-          onClose={() => setSearchOpen(null)}
-          title="Cari proposal"
-          placeholder="Ketik judul proposal atau nama pengusul…"
-          initialQuery={searchOpen || search}
-          minChars={1}
-          fetchRecs={fetchRecs}
-          onSelect={(item) => setSelected(item.proposal)}
-          onSubmit={(q) => setSearch(q.trim())}
-          emptyText="Tidak ada proposal yang cocok."
-        />
+        <label htmlFor="lh-cari" className="sr-only">
+          Cari Proposal
+        </label>
+        <div className="relative max-w-xl">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+          <input
+            id="lh-cari"
+            type="text"
+            placeholder="Cari judul proposal atau nama pengusul..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="input pl-10"
+          />
+        </div>
       </div>
 
       {error && (
