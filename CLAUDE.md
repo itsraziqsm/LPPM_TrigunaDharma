@@ -250,7 +250,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` (semua peran), `/undangan`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
@@ -344,7 +344,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Ketua pengusul (akun yang masuk) tidak bisa menjadi
+  anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
   pengabdian tepat 2 dosen + tepat 1 mahasiswa, penelitian minimal 2 dosen (mahasiswa bebas) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
   terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
@@ -397,6 +398,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Login/Register di `<main>`, Manajemen User di area daftarnya. Halaman baru yang punya wadah
   gulir sendiri wajib memanggil `useLenis`. Elemen bergulir bersarang tetap jalan
   (`allowNestedScroll`); pakai `data-lenis-prevent` untuk pengecualian.
+- **Detail Notifikasi** (`NotifikasiDetailPage.jsx`, `/notifikasi/:id`): dibuka dari item lonceng (klik/Enter) dan
+  judul/"Lihat detail" di `/notifikasi`; notifikasi dari state navigasi atau `GET /notifications` (tanpa endpoint
+  detail, dicari ≤ 5 × 100), ditandai dibaca saat dibuka; isi: ikon + label jenis, judul, pesan, tombol halaman
+  terkait (`targetFor`), kartu data terkait (proposal/laporan/periode via `GET /proposals|laporan|periode/:id`:
+  judul, status, pengusul, periode, tanggal, catatan revisi), panel Informasi (Dari = `pengirimFor`, karena backend
+  tidak menyimpan pengirim; tanggal & waktu WIB), Hapus. Helper bersama di `src/utils/notifikasi.js`
+  (`TYPE_META`, `targetFor`, `pengirimFor`).
 - `/notifikasi` (`NotifikasiPage.jsx`): daftar per rentang waktu, filter Semua/Belum dibaca,
   tandai dibaca/semua, hapus, muat lebih banyak, tautan ke halaman terkait sesuai peran
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.

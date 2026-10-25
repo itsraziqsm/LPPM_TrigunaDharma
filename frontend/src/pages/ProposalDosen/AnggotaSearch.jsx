@@ -5,7 +5,8 @@ import { Search, X } from 'lucide-react'
 
 // ── Komponen Pencarian Anggota ─────────────────────────────────────────────────
 // fixedRole: 'dosen' | 'mahasiswa' → pencarian dikunci ke satu peran (filter peran disembunyikan).
-export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggota tim', desc, placeholder }) {
+// ketuaId: id ketua pengusul → tampil nonaktif "Ketua kegiatan" (tidak bisa jadi anggota).
+export function AnggotaSearch({ onAdd, addedIds, ketuaId, fixedRole, title = 'Cari anggota tim', desc, placeholder }) {
     const [query, setQuery] = useState('')
     const [role, setRole] = useState(fixedRole || '')
     const [results, setResults] = useState([])
@@ -103,7 +104,8 @@ export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggot
 
             <div className="max-h-80 overflow-y-auto">
                 {results.length > 0 ? results.map(u => {
-                    const alreadyAdded = addedIds.includes(u.id)
+                    const isKetua = ketuaId != null && u.id === ketuaId
+                    const alreadyAdded = isKetua || addedIds.includes(u.id)
                     const roleNames = u.roles?.map(r => r.role?.name).filter(Boolean) || []
                     const isMahasiswa = roleNames.includes('mahasiswa')
                     const roleLabel = isMahasiswa ? 'Mahasiswa' : 'Dosen'
@@ -134,7 +136,7 @@ export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggot
                             <div className="shrink-0">
                                 {alreadyAdded ? (
                                     <span className="badge badge-neutral">
-                                        Sudah ditambahkan
+                                        {isKetua ? 'Ketua kegiatan' : 'Sudah ditambahkan'}
                                     </span>
                                 ) : (
                                     <span className="badge badge-tag">

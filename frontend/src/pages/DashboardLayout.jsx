@@ -21,6 +21,7 @@ import LaporanPage from './LaporanPage'
 import LaporanIsiPage from './LaporanIsiPage'
 import LaporanMasukPage from './LaporanMasukPage'
 import NotifikasiPage from './NotifikasiPage'
+import NotifikasiDetailPage from './NotifikasiDetailPage'
 import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
@@ -95,6 +96,7 @@ export default function DashboardLayout({ page, jenis }) {
     if (page === 'kegiatan-detail') return <KegiatanDetailPage jenis={jenis} />
     if (page === 'profil') return <ProfilePage />
     if (page === 'notifikasi') return <NotifikasiPage />
+    if (page === 'notifikasi-detail') return <NotifikasiDetailPage key={location.pathname} />
 
     if (isAdminOrKetua) {
       if (page === 'periode') return <PeriodePage />

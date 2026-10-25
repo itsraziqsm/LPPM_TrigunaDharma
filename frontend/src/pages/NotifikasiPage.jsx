@@ -1,81 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  Bell,
-  BellOff,
-  CheckCheck,
-  CircleCheck,
-  CircleX,
-  ClipboardCheck,
-  FileUp,
-  PencilLine,
-  Send,
-  Trash2,
-} from 'lucide-react'
+import { ArrowUpRight, BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
 import { notificationApi } from '../api/notification'
 import useAuthStore from '../store/authStore'
 import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
 import { daysSince, formatDate, timeAgo } from './dashboard/format'
+import { DEFAULT_META, TYPE_META, getRoleNames, targetFor } from '../utils/notifikasi'
 
 // ---------------------------------------------------------------------------
 // Halaman Notifikasi (/notifikasi), dibuka dari "Lihat semua notifikasi" di
+// (judul / "Lihat detail" → halaman detail /notifikasi/:id, NotifikasiDetailPage)
 // dropdown lonceng. Data: GET /notifications (page, limit, onlyUnread) +
 // PATCH /:id/read, PATCH /read-all, DELETE /:id. Perubahan di halaman ini
 // dan di lonceng saling diberitahukan lewat utils/notificationEvents.
 // ---------------------------------------------------------------------------
 
 const LIMIT = 20
-
-const TYPE_META = {
-  proposal_diajukan: { icon: Send, tone: 'bg-navy-50 text-navy-700' },
-  proposal_disetujui: { icon: CircleCheck, tone: 'bg-green-50 text-green-700' },
-  proposal_ditolak: { icon: CircleX, tone: 'bg-red-50 text-red-700' },
-  proposal_revisi: { icon: PencilLine, tone: 'bg-amber-50 text-amber-700' },
-  reviewer_ditugaskan: { icon: ClipboardCheck, tone: 'bg-purple-50 text-purple-700' },
-  review_selesai: { icon: BadgeCheck, tone: 'bg-green-50 text-green-700' },
-  laporan_diunggah: { icon: FileUp, tone: 'bg-navy-50 text-navy-700' },
-  laporan_diajukan: { icon: FileUp, tone: 'bg-navy-50 text-navy-700' },
-  laporan_disetujui: { icon: CircleCheck, tone: 'bg-green-50 text-green-700' },
-  laporan_ditolak: { icon: CircleX, tone: 'bg-red-50 text-red-700' },
-  laporan_revisi: { icon: PencilLine, tone: 'bg-amber-50 text-amber-700' },
-  deletion_request: { icon: Trash2, tone: 'bg-red-50 text-red-700' },
-  deletion_approved: { icon: Trash2, tone: 'bg-slate-100 text-slate-600' },
-  deletion_cancelled: { icon: Trash2, tone: 'bg-slate-100 text-slate-600' },
-}
-const DEFAULT_META = { icon: Bell, tone: 'bg-slate-100 text-slate-600' }
-
-function getRoleNames(roles) {
-  if (!roles || roles.length === 0) return []
-  if (typeof roles[0] === 'string') return roles
-  return roles.map((r) => r.role?.name || r.name || '')
-}
-
-// Halaman tujuan untuk notifikasi, mengikuti menu yang dimiliki peran. Halaman
-// belum mendukung membuka satu proposal tertentu, jadi tujuannya daftar.
-function targetFor(n, roles) {
-  const primary = roles[0]
-  const pengelola = primary === 'admin' || primary === 'ketua_lppm'
-  if (n.refType === 'periode' || n.type?.startsWith('deletion_')) return pengelola ? { to: '/periode', label: 'Buka periode' } : null
-  if (n.refType === 'laporan') {
-    if (n.type === 'reviewer_ditugaskan') return { to: '/penugasan?tab=laporan', label: 'Buka penugasan' }
-    if (pengelola) return { to: `/laporan-masuk?id=${n.refId}`, label: 'Kelola laporan' }
-    // Pengusul: jenis menyesuaikan otomatis setelah laporan dimuat.
-    if (primary === 'dosen' || primary === 'mahasiswa') return { to: `/kegiatan/penelitian/laporan/${n.refId}`, label: 'Buka laporan' }
-    return null
-  }
-  if (n.type === 'reviewer_ditugaskan' && roles.includes('reviewer')) {
-    return { to: '/penugasan', label: 'Buka penugasan' }
-  }
-  if (n.refType === 'proposal') {
-    if (pengelola) return { to: '/proposals', label: 'Buka proposal' }
-    // Halaman Detail Kegiatan; jenis tidak ada di notifikasi → halaman menyesuaikan jenis.
-    if (primary === 'dosen' || primary === 'mahasiswa') return { to: `/kegiatan/penelitian/detail/${n.refId}`, label: 'Buka kegiatan' }
-    if (primary === 'reviewer') return { to: '/penugasan', label: 'Buka penugasan' }
-  }
-  return null
-}
 
 function groupLabel(value) {
   const days = daysSince(value)
@@ -334,8 +274,10 @@ export default function NotifikasiPage() {
                             <span className="mt-2 size-2 shrink-0 rounded-full bg-navy-600" aria-hidden="true" />
                           ) : null}
                           <h3 className={`break-words text-base leading-snug ${n.isRead ? 'text-slate-700' : 'font-semibold text-navy-950'}`}>
-                            {!n.isRead ? <span className="sr-only">Belum dibaca: </span> : null}
-                            {n.judul}
+                            <Link to={`/notifikasi/${n.id}`} state={{ notif: n }} className="hover:text-navy-700 hover:underline">
+                              {!n.isRead ? <span className="sr-only">Belum dibaca: </span> : null}
+                              {n.judul}
+                            </Link>
                           </h3>
                         </div>
                         <p className="mt-0.5 break-words text-sm leading-relaxed text-slate-600">{n.pesan}</p>
@@ -343,6 +285,14 @@ export default function NotifikasiPage() {
                           <time dateTime={n.createdAt} title={formatDate(n.createdAt, { dateStyle: 'full' })} className="text-slate-500">
                             {timeAgo(n.createdAt)}
                           </time>
+                          <Link
+                            to={`/notifikasi/${n.id}`}
+                            state={{ notif: n }}
+                            className="inline-flex items-center gap-0.5 font-semibold text-navy-700 hover:text-navy-900"
+                          >
+                            Lihat detail
+                            <ChevronRight className="size-3.5" aria-hidden="true" />
+                          </Link>
                           {target ? (
                             <Link
                               to={target.to}
