@@ -99,6 +99,28 @@ dosen2, _, dosen2User = login("dosen2@lppm.dev", "dosen123456")
 dosen5, _, dosen5User = login("dosen5@lppm.dev", "dosen123456")
 mhs1, _, mhs1User = login("mahasiswa1@lppm.dev", "mhs1234567")
 mhs2, _, mhs2User = login("mahasiswa2@lppm.dev", "mhs1234567")
+dosen3, _, dosen3User = login("dosen3@lppm.dev", "dosen123456")
+dosen4, _, dosen4User = login("dosen4@lppm.dev", "dosen123456")
+
+
+def terima_undangan(pid, *tokens):
+    for tok in tokens:
+        for i in req("GET", "/api/v1/dosen/proposals/invitations", tok)[1]["data"]:
+            if i["proposal"]["id"] == pid and i["statusUndangan"] == "pending":
+                req("PATCH", f"/api/v1/dosen/proposals/invitations/{i['id']}", tok, {"status": "diterima"})
+
+
+def lengkapi_tim(pid, owner, jenis):
+    """Tim minimal: 2 dosen (+1 mahasiswa untuk pengabdian), selain ketua pengusul."""
+    ids = [{"userId": dosen3User["id"]}, {"userId": dosen4User["id"]}]
+    tokens = [dosen3, dosen4]
+    if jenis == "pengabdian":
+        ids.append({"userId": mhs1User["id"]})
+        tokens.append(mhs1)
+    r = req("PATCH", f"/api/v1/dosen/proposals/{pid}", owner, {"anggotaIds": ids})
+    assert r[0] == 200, r
+    terima_undangan(pid, *tokens)
+
 check("login user shape", list(adminUser.keys()) == ["id", "name", "fullName", "email", "status", "roles"], adminUser)
 check("wakil roles ordered by roleId", login("wakil.ketua@lppm.dev", "wakil123456")[2]["roles"] == ["ketua_lppm", "dosen"])
 
@@ -247,6 +269,13 @@ check("dosen detail keys", list(b["data"].keys())[-3:] == ["reviews", "laporan",
 expect("dosen submit with rejected member", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", dosen1), 500, "Proposal tidak dapat diajukan: 1 anggota menolak undangan. Semua anggota harus menyetujui undangan terlebih dahulu.")
 b = expect("dosen update", req("PATCH", f"/api/v1/dosen/proposals/{pid}", dosen1, {"judul": "Sistem Uji Coba Golang", "anggotaIds": [{"userId": mhs1User["id"], "peran": "anggota"}]}), 200, "Proposal berhasil diperbarui")
 check("update reset anggota", len(b["data"]["anggota"]) == 1 and b["data"]["anggota"][0]["statusUndangan"] == "pending", b["data"]["anggota"])
+# komposisi tim: penelitian minimal 2 dosen (selain ketua), mahasiswa opsional
+terima_undangan(pid, mhs1)
+expect("submit tim kurang dosen", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", dosen1), 400, "Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul.")
+expect("submit tim kurang dosen (proposals)", req("POST", f"/api/v1/proposals/{pid}/submit", dosen1), 400, "Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul.")
+b = expect("dosen update tim", req("PATCH", f"/api/v1/dosen/proposals/{pid}", dosen1, {"anggotaIds": [{"userId": mhs1User["id"], "peran": "anggota"}, {"userId": dosen3User["id"]}, {"userId": dosen4User["id"]}]}), 200)
+check("update tim anggota", len(b["data"]["anggota"]) == 3, b["data"]["anggota"])
+terima_undangan(pid, dosen3, dosen4)
 inv = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", mhs1)[1]["data"] if i["proposal"]["id"] == pid][0]
 expect("submit pending", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", dosen1), 500, "Proposal tidak dapat diajukan: 1 anggota belum merespons undangan. Semua anggota harus menyetujui undangan terlebih dahulu.")
 req("PATCH", f"/api/v1/dosen/proposals/invitations/{inv['id']}", mhs1, {"status": "diterima"})
@@ -576,7 +605,8 @@ expect("luaran list stranger", req("GET", f"/api/v1/luaran/proposal/{lp}", mhs2)
 expect("luaran list missing", req("GET", "/api/v1/luaran/proposal/999999", admin), 404, "Proposal tidak ditemukan")
 expect("luaran delete", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 200, "Luaran berhasil dihapus")
 expect("luaran delete missing", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 404, "Luaran tidak ditemukan")
-expect("luaran submit proposal", req("POST", f"/api/v1/dosen/proposals/{lp}/submit", dosen5), 200)
+lengkapi_tim(lp, dosen5, "penelitian")
+expect("luaran submit proposal (penelitian tanpa mahasiswa)", req("POST", f"/api/v1/dosen/proposals/{lp}/submit", dosen5), 200)
 expect("luaran target locked", req("PATCH", f"/api/v1/luaran/{lj['id']}", dosen5, {"target": "Jurnal SINTA 2"}), 400, "Target luaran hanya bisa diubah saat proposal berstatus draft atau revisi")
 expect("luaran approve proposal", req("PATCH", f"/api/v1/proposals/{lp}/status", ketua, {"status": "disetujui"}), 200)
 expect("luaran capaian bad url", req("PATCH", f"/api/v1/luaran/{lj['id']}/capaian", dosen5, {"buktiUrl": "bukan-url"}), 422)
@@ -669,6 +699,13 @@ mp = b[1]["data"]
 check("mitra detail saved", all(mp[k] == v for k, v in MITRA.items()) and mp["skema"] is None, mp)
 b = expect("mitra detail clear", req("PATCH", f"/api/v1/dosen/proposals/{mp['id']}", dosen5, {"mitraKontak": None}), 200)
 check("mitra kontak cleared", b["data"]["mitraKontak"] is None and b["data"]["mitraJenis"] == "Kelompok masyarakat", b["data"])
+# komposisi tim pengabdian: minimal 2 dosen + 1 mahasiswa (selain ketua)
+expect("pengabdian submit tanpa tim", req("POST", f"/api/v1/dosen/proposals/{mp['id']}/submit", dosen5), 400, "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0) dan minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul.")
+lengkapi_tim(mp["id"], dosen5, "penelitian")
+expect("pengabdian submit tanpa mahasiswa", req("POST", f"/api/v1/dosen/proposals/{mp['id']}/submit", dosen5), 400, "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul.")
+lengkapi_tim(mp["id"], dosen5, "pengabdian")
+b = expect("pengabdian submit tim lengkap", req("POST", f"/api/v1/dosen/proposals/{mp['id']}/submit", dosen5), 200, "Proposal berhasil diajukan")
+check("pengabdian tim lengkap", len(b["data"]["anggota"]) == 3, b["data"]["anggota"])
 b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Penelitian tanpa mitra", "abstrak": abstrak, "jenis": "penelitian", "mitraJenis": None})
 expect("penelitian mitra null ignored", b, 201)
 pn = b[1]["data"]
@@ -721,6 +758,7 @@ d5roles = [r["role"]["name"] for r in req("GET", f"/api/v1/users/{d5}", admin)[1
 check("dosen5 default bukan reviewer", "reviewer" not in d5roles, d5roles)
 b = req("POST", "/api/v1/dosen/proposals", dosen2, {"judul": "Proposal untuk uji akses reviewer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 ra = b[1]["data"]["id"]
+lengkapi_tim(ra, dosen2, "penelitian")
 expect("ra submit", req("POST", f"/api/v1/dosen/proposals/{ra}/submit", dosen2), 200)
 expect("assign non-reviewer dosen", req("POST", f"/api/v1/proposals/{ra}/reviewers", ketua, {"reviewerIds": [d5]}), 400, "Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer")
 expect("non-reviewer my-tugasan", req("GET", "/api/v1/reviewer/my-tugasan", dosen5), 403, "Anda tidak memiliki peran reviewer")
@@ -773,6 +811,7 @@ b = expect("grant again then normal revoke", req("PATCH", f"/api/v1/users/{d5}/r
 # cabut paksa otomatis: tugasan dialihkan ke reviewer rekomendasi (beban terkecil)
 b = req("POST", "/api/v1/dosen/proposals", dosen2, {"judul": "Proposal kedua uji akses reviewer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 ra2 = b[1]["data"]["id"]
+lengkapi_tim(ra2, dosen2, "penelitian")
 expect("ra2 submit", req("POST", f"/api/v1/dosen/proposals/{ra2}/submit", dosen2), 200)
 expect("assign d5 ra2", req("POST", f"/api/v1/proposals/{ra2}/reviewers", ketua, {"reviewerIds": [d5]}), 200)
 st = req("GET", f"/api/v1/users/{d5}/reviewer", ketua)[1]["data"]
@@ -828,7 +867,7 @@ b = expect("dashboard filtered", req("GET", "/api/v1/dashboard/stats?tahun=abc&j
 expect("dashboard bad jenis", req("GET", "/api/v1/dashboard/stats?jenis=x", ketua), 500)
 b = expect("export", req("GET", "/api/v1/export/proposals", admin), 200, "Export data fetched")
 row = [r for r in b["data"]["rows"] if r["id"] == pid][0]
-check("export row", row["anggaran"] == "15.000.000,5" and row["status"] == "Disetujui" and row["jenis"] == "Penelitian" and row["reviewer"] == "Dr. Reviewer 1, M.T" and row["anggota"] == "Mahasiswa 1 (anggota)" and row["jumlahReview"] == 1 and row["reviewSelesai"] == 1, row)
+check("export row", row["anggaran"] == "15.000.000,5" and row["status"] == "Disetujui" and row["jenis"] == "Penelitian" and row["reviewer"] == "Dr. Reviewer 1, M.T" and row["anggota"] == "Mahasiswa 1 (anggota); Prof. Dosen 3, M.T (anggota); Dr. Dosen 4, M.Kom (anggota)" and row["jumlahReview"] == 1 and row["reviewSelesai"] == 1, row)
 check("export keys", list(b["data"].keys()) == ["total", "ringkasan", "rows", "generatedAt"] and list(row.keys()) == ["no", "id", "judul", "jenis", "status", "pengusul", "nidn", "programStudi", "periode", "anggaran", "anggota", "reviewer", "jumlahReview", "reviewSelesai", "catatanRevisi", "submittedAt", "approvedAt", "createdAt"], row)
 
 # draft deletion (proposals route, admin)

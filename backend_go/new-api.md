@@ -21,6 +21,7 @@ API, dikelompokkan per rilis:
   biasa hanya tanpa tugasan terbuka, cabut paksa oleh Ketua dengan pengalihan tugasan; prioritas
   reviewer yang belum punya tugasan (kandidat, rekomendasi, pengalihan otomatis).
 - **Bagian 17** — Mahasiswa tidak lagi bisa mengusulkan proposal (hanya undangan tim & laporan harian).
+- **Bagian 18** — Aturan komposisi tim saat proposal diajukan (penelitian / pengabdian).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1517,3 +1518,33 @@ Frontend saat ini tidak menampilkan fitur usulan untuk mahasiswa (menu mahasiswa
 
 **Data lama**: proposal yang sudah terlanjur dibuat mahasiswa dihapus dengan command backend
 `go run ./cmd/hapus-proposal-mahasiswa` (lihat `backend_go/README.md`).
+
+---
+
+## 18. Aturan komposisi tim proposal
+
+Dicek saat proposal **diajukan** (`POST /dosen/proposals/:id/submit` dan `POST /proposals/:id/submit`).
+Menyimpan draft (POST/PATCH) tetap boleh dengan tim belum lengkap.
+
+| Jenis | Anggota dosen | Anggota mahasiswa |
+|---|---|---|
+| `penelitian` | minimal 2 | boleh 0 |
+| `pengabdian` | minimal 2 | minimal 1 |
+
+- Hitungan **tidak termasuk ketua pengusul** (sama dengan keterangan "selain ketua pengusul" di wizard).
+- Dosen = user berperan `dosen`; mahasiswa = user berperan `mahasiswa` tanpa peran `dosen`.
+- Anggota yang **menolak** undangan tidak dihitung. Di `/dosen/proposals/:id/submit` cek undangan
+  (semua harus `diterima`, respons 500 lama) berjalan lebih dulu, baru cek komposisi.
+- Tidak ada batas maksimum dari backend.
+
+Gagal → **400**:
+
+```json
+{ "success": false, "message": "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 1) dan minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul." }
+```
+
+Penelitian yang hanya kurang dosen: `"Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul."`
+
+Catatan FE: `utils/aturanTim.js` saat ini mewajibkan pengabdian **tepat** 2 dosen dan **tepat** 1
+mahasiswa; backend memakai **minimal** (sesuai ketentuan terbaru), jadi FE boleh melonggarkan batas
+maksimumnya.

@@ -132,7 +132,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 561 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 569 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -186,7 +186,9 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 12. Mahasiswa tidak lagi bisa menulis proposal, laporan (kegiatan maupun kemajuan/akhir),
     dokumen lampiran, dan luaran (`403`); tetap bisa undangan tim, `as-member`, membaca proposal
     tempat ia anggota, dan laporan harian. Lihat `new-api.md` bagian 17.
-13. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+13. Submit proposal mewajibkan komposisi tim (selain ketua): penelitian minimal 2 dosen,
+    pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400. Lihat `new-api.md` bagian 18.
+14. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

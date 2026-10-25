@@ -417,6 +417,9 @@ func (s *Server) submitProposal(c *Ctx) error {
 	if existing.Status != "draft" && existing.Status != "revisi" {
 		return plainError("Hanya proposal berstatus draft atau revisi yang bisa diajukan")
 	}
+	if err := s.checkKomposisiTim(ctx, existing); err != nil {
+		return err
+	}
 	now := s.nowMs()
 	if err := s.updateKegiatan(ctx, s.db, id, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
 		return err

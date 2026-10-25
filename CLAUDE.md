@@ -56,7 +56,7 @@ go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (statu
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 561 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 569 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -133,6 +133,9 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   - Edit & submit hanya saat `draft`/`revisi`; hapus hanya saat `draft`.
   - Submit lewat `/dosen/proposals/:id/submit` mewajibkan **semua anggota sudah menerima
     undangan** (`ProposalAnggota.statusUndangan`: `pending|diterima|ditolak`).
+  - **Komposisi tim** dicek saat submit (kedua route submit, `komposisi_tim.go`; draft bebas), anggota
+    selain ketua pengusul, yang menolak tidak dihitung: penelitian minimal 2 dosen (mahasiswa
+    opsional), pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400.
   - Menugaskan reviewer hanya untuk status `diajukan`/`review`, dan otomatis set `review`.
   - Field `tahapan` `{kode,label,urutan}` dihitung (tidak disimpan): belum `disetujui` →
     seleksi_usulan(1); disetujui + laporan tidak ada/draft → pelaksanaan(2); laporan

@@ -223,6 +223,9 @@ func (s *Server) dosenSubmitProposal(c *Ctx) error {
 		}
 		return plainError("Proposal tidak dapat diajukan: " + strings.Join(parts, ", ") + ". Semua anggota harus menyetujui undangan terlebih dahulu.")
 	}
+	if err := s.checkKomposisiTim(ctx, p); err != nil {
+		return err
+	}
 	now := s.nowMs()
 	if err := s.updateKegiatan(ctx, s.db, id, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
 		return err
