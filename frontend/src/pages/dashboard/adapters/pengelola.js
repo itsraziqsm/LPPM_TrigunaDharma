@@ -88,7 +88,7 @@ export async function load({ withReviewerDigest }) {
       key: 'tanpa-periode',
       tone: 'info',
       title: 'Belum ada periode aktif',
-      detail: 'Buat atau aktifkan periode dari halaman Periode.',
+      detail: 'Ketua LPPM membuat atau mengaktifkan periode dari halaman Periode.',
       to: '/periode',
       cta: 'Kelola periode',
     })

@@ -7,7 +7,7 @@ import { confirmDialog } from '../utils/dialog'
 // Backend saat ini hanya mengizinkan hapus berstatus draft (DELETE /proposals/:id,
 // DELETE /laporan/:id), dan draft tidak tampil di Dokumen Masuk. Hapus dokumen yang
 // sudah diajukan harus lewat permintaan yang disetujui Ketua LPPM (pola hapus
-// periode) → endpoint belum ada: W-33 di docs/waitingApi-list.md.
+// periode) → endpoint belum ada: W-34 di docs/waitingApi-list.md.
 //   onDelete() → Promise; hanya dipanggil untuk status draft.
 export default function HapusDokumen({ status, noun = 'dokumen', judul, onDelete, compact = false }) {
   const [busy, setBusy] = useState(false)

@@ -15,7 +15,6 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-33 | Hak akses Periode (`PeriodePage.jsx`): admin hanya melihat (sembunyikan Tambah/Ubah; Hapus = ajukan ke Ketua); Ketua hapus langsung | `DELETE /periode/:id` `{ password }` (Ketua); `POST /periode`/`PATCH /periode/:id` kini Ketua saja; `deletion-request` hanya admin, `approve` hanya Ketua (`new-api.md` bagian 20) | Tambah `remove(id, password)` di `src/api/periode.js` (`api.delete(url, { data: { password } })`); admin yang menekan Tambah/Ubah kini mendapat 403. |
 | W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
 
 ### Sudah disambungkan
@@ -43,6 +42,7 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 | W-26 | Langkah Mitra (pengabdian): Jenis Mitra (dropdown `GET /master/jenis-mitra?jenis=pengabdian`), Alamat, Kontak, Pernyataan Kebutuhan → `mitraJenis/Alamat/Kontak/Kebutuhan` (kosong dikirim `null`); tampil di Preview & modal detail |
 | W-27 / W-28 | Isi Laporan → Informasi Laporan: **Kata Kunci** (koma → array `kataKunci`, wajib ≥1, terpisah dari proposal) & **Metode Penelitian** (`metodePenelitian`, khusus penelitian, wajib); ikut Simpan draf, Preview, index laporan, Laporan Masuk, review laporan |
 | W-30 / W-31 | Manajemen User → **Penugasan Review** (`ReviewerAccess`): status (`GET /users/:id/reviewer`: tugasan belum selesai, review selesai), Jadikan/Cabut reviewer untuk Admin & Ketua (`PATCH /users/:id/reviewer`), **Cabut paksa** khusus Ketua (`POST /users/:id/reviewer/force-revoke`, pilih reviewer baru per tugasan; Admin hanya diberi tahu). Menu Penugasan Review = peran `reviewer` saja (`canReview`) |
+| W-33 | Periode (`PeriodePage.jsx`): Admin hanya melihat (Tambah/Ubah disembunyikan; Hapus = "Ajukan ke Ketua LPPM" `POST /periode/:id/deletion-request`, lalu pantau/batalkan); Ketua tambah/ubah, **hapus langsung** `DELETE /periode/:id { password }` (`periodeApi.remove`) dan menyetujui/menolak permintaan admin |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -174,11 +174,11 @@ Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `l
 
 Admin hanya **melihat & menghapus** di Dokumen Masuk (penugasan reviewer & keputusan oleh Ketua LPPM).
 Backend hanya mengizinkan hapus berstatus `draft`, sedangkan Dokumen Masuk hanya memuat dokumen yang
-sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan penanda `ApiPending`.
+sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan penanda `ApiPending` (W-34).
 
 | ID | Elemen | Kebutuhan | Usulan endpoint | Catatan |
 |---|---|---|---|---|
-| W-33 | Hapus proposal/laporan yang sudah diajukan oleh Admin **dengan izin** | Permintaan hapus oleh Admin, disetujui Ketua LPPM dengan password (pola hapus periode 2 langkah), notifikasi ke Ketua & pengusul, catat ActivityLog | `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`; `POST /dokumen/deletion-request/:requestId/approve` `{ password }` (Ketua) & `/cancel`; `GET .../deletion-request` (status permintaan) | Draft tetap bisa dihapus langsung lewat `DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada). |
+| W-34 | Hapus proposal/laporan yang sudah diajukan oleh Admin **dengan izin** | Permintaan hapus oleh Admin, disetujui Ketua LPPM dengan password (pola hapus periode 2 langkah), notifikasi ke Ketua & pengusul, catat ActivityLog | `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`; `POST /dokumen/deletion-request/:requestId/approve` `{ password }` (Ketua) & `/cancel`; `GET .../deletion-request` (status permintaan) | Draft tetap bisa dihapus langsung lewat `DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada). |
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

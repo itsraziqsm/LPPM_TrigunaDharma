@@ -6,7 +6,10 @@ export const periodeApi = {
   create: (data) => api.post('/periode', data),
   update: (id, data) => api.patch(`/periode/${id}`, data),
 
-  // 2-Step Delete
+  // Ketua LPPM: hapus langsung, konfirmasi password sendiri (new-api.md bagian 20)
+  remove: (id, password) => api.delete(`/periode/${id}`, { data: { password } }),
+
+  // Admin: permintaan hapus yang disetujui Ketua (2 langkah)
   getPendingDeletionRequest: (periodeId) =>
     api.get(`/periode/${periodeId}/deletion-request`),
   requestDelete: (periodeId, password) =>

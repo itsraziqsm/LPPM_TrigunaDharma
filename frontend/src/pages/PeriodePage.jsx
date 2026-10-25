@@ -14,8 +14,9 @@ export default function PeriodePage() {
   const isAdmin = roleNames.includes('admin')
   const isKetua = roleNames.includes('ketua_lppm')
   const canManage = isAdmin || isKetua
-  // Admin hanya melihat periode (tanpa tambah/edit); hapus tetap lewat permintaan 2 langkah
-  // yang disetujui pihak lain (admin ↔ ketua) — "hapus dengan izin".
+  // Hak akses periode (new-api.md bagian 20): Ketua tambah/ubah/hapus langsung
+  // (DELETE /periode/:id + password sendiri) dan menyetujui permintaan hapus admin;
+  // Admin hanya melihat, hapus lewat permintaan yang disetujui Ketua.
   const canEdit = isKetua
 
   const [periodes, setPeriodes] = useState([])
@@ -82,18 +83,15 @@ export default function PeriodePage() {
         setPendingRequest(req)
         // Jika user ini adalah requester → tampilkan status pending
         // Jika user ini bukan requester → langsung ke step approve
-        if (req.requester?.id === user?.id) {
-          setDeleteStep('pending')
-        } else {
-          setDeleteStep('approve')
-        }
+        // Ketua menyetujui/menolak permintaan admin; admin hanya bisa memantau/membatalkan.
+        setDeleteStep(isKetua ? 'approve' : 'pending')
       } else {
         setPendingRequest(null)
-        setDeleteStep('request')
+        setDeleteStep(isKetua ? 'direct' : 'request')
       }
     } catch {
       setPendingRequest(null)
-      setDeleteStep('request')
+      setDeleteStep(isKetua ? 'direct' : 'request')
     }
 
     setModal('delete')
@@ -173,6 +171,25 @@ export default function PeriodePage() {
     } finally { setSubmitting(false) }
   }
 
+  // Ketua: hapus langsung (DELETE /periode/:id { password })
+  const handleDirectDelete = async () => {
+    setDeletePasswordError(null)
+    if (!deletePassword) { setDeletePasswordError('Password wajib diisi'); return }
+    setSubmitting(true)
+    try {
+      await periodeApi.remove(selected.id, deletePassword)
+      if (activePeriode?.id === selected.id) setActivePeriode(null)
+      await fetchPeriodes(); closeModal()
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Terjadi kesalahan'
+      if (msg.toLowerCase().includes('password')) {
+        setDeletePasswordError(msg === 'Password wajib diisi' ? msg : 'Password salah. Coba lagi.')
+      } else {
+        setFormError(msg)
+      }
+    } finally { setSubmitting(false) }
+  }
+
   const handleCancelRequest = async () => {
     setSubmitting(true)
     try {
@@ -198,7 +215,7 @@ export default function PeriodePage() {
             </p>
             {!canEdit && canManage ? (
               <p className="mt-2 text-sm text-slate-500">
-                Akses Admin: lihat saja. Periode hanya bisa dihapus lewat permintaan hapus yang disetujui Ketua LPPM.
+                Akses Admin: lihat saja. Tombol Hapus mengajukan permintaan penghapusan yang harus disetujui Ketua LPPM.
               </p>
             ) : null}
           </div>
@@ -502,7 +519,8 @@ export default function PeriodePage() {
               </p>
             </section>
 
-            {/* Progress indicator */}
+            {/* Progress indicator (alur 2 langkah admin → Ketua) */}
+            {deleteStep !== 'direct' && (
             <div className="flex items-center gap-3">
               <div className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${deleteStep === 'request' ? 'bg-navy-800 text-white' : 'bg-green-100 text-green-700'}`}>
                 {deleteStep === 'request' ? '1' : '✓'}
@@ -517,14 +535,56 @@ export default function PeriodePage() {
                 {deleteStep === 'approve' && 'Langkah 2: Persetujuan'}
               </p>
             </div>
+            )}
+
+            {/* Ketua: hapus langsung dengan password sendiri */}
+            {deleteStep === 'direct' && (
+              <section className="space-y-4">
+                <div className="rounded-lg bg-slate-50 px-4 py-3">
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    Sebagai Ketua LPPM, Anda dapat menghapus periode ini secara langsung. Masukkan password
+                    Anda untuk konfirmasi.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="direct-password" className="label">
+                    Password Anda
+                  </label>
+                  <input
+                    id="direct-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => { setDeletePassword(e.target.value); setDeletePasswordError(null) }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && deletePassword && !submitting) handleDirectDelete() }}
+                    placeholder="Masukkan password login Anda"
+                    className={`input ${deletePasswordError ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15' : ''}`}
+                  />
+                  {deletePasswordError && (
+                    <p className="mt-2 text-sm text-red-600">{deletePasswordError}</p>
+                  )}
+                </div>
+                <div className="flex flex-col-reverse gap-2.5 pt-1 sm:flex-row sm:justify-end">
+                  <button onClick={closeModal} className="btn btn-secondary">
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleDirectDelete}
+                    disabled={submitting || !deletePassword}
+                    className="btn btn-destructive"
+                  >
+                    {submitting ? 'Menghapus...' : 'Hapus Periode'}
+                  </button>
+                </div>
+              </section>
+            )}
 
             {/* Step 1: Request */}
             {deleteStep === 'request' && (
               <section className="space-y-4">
                 <div className="rounded-lg bg-slate-50 px-4 py-3">
                   <p className="text-sm leading-relaxed text-slate-600">
-                    Permintaan penghapusan ini memerlukan persetujuan dari role lain
-                    (admin atau ketua LPPM). Masukkan password Anda untuk memulai proses.
+                    Admin tidak dapat menghapus periode secara langsung. Permintaan penghapusan
+                    dikirim ke Ketua LPPM untuk disetujui. Masukkan password Anda untuk mengajukan.
                   </p>
                 </div>
                 <div>
@@ -552,7 +612,7 @@ export default function PeriodePage() {
                     disabled={submitting || !deletePassword}
                     className="btn btn-destructive"
                   >
-                    {submitting ? 'Memproses...' : 'Ajukan Permintaan Hapus'}
+                    {submitting ? 'Memproses...' : 'Ajukan ke Ketua LPPM'}
                   </button>
                 </div>
               </section>
@@ -564,7 +624,10 @@ export default function PeriodePage() {
                 <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4">
                   <p className="text-sm font-semibold text-amber-800">Permintaan sedang menunggu persetujuan</p>
                   <p className="text-sm leading-relaxed text-amber-800/90">
-                    Notifikasi telah dikirim ke admin atau ketua LPPM lainnya. Permintaan ini berlaku
+                    {pendingRequest.requester?.id && pendingRequest.requester.id !== user?.id
+                      ? `Diajukan oleh ${pendingRequest.requester.name}. `
+                      : ''}
+                    Notifikasi telah dikirim ke Ketua LPPM. Permintaan ini berlaku
                     hingga <span className="font-medium">{new Date(pendingRequest.expiresAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>.
                   </p>
                 </div>
@@ -588,8 +651,8 @@ export default function PeriodePage() {
               <section className="space-y-4">
                 <div className="rounded-lg bg-slate-50 px-4 py-3">
                   <p className="text-sm leading-relaxed text-slate-600">
-                    Permintaan penghapusan diajukan oleh <span className="font-semibold text-slate-800">{pendingRequest.requester?.name}</span>.
-                    Masukkan password Anda untuk menyetujui dan mengeksekusi penghapusan.
+                    Admin <span className="font-semibold text-slate-800">{pendingRequest.requester?.name}</span> mengajukan
+                    penghapusan periode ini. Masukkan password Anda untuk menyetujui dan menghapus, atau tolak permintaannya.
                   </p>
                 </div>
                 <div>
