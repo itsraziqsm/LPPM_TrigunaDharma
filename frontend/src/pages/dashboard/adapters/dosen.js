@@ -1,14 +1,12 @@
 import { proposalDosenApi } from '../../../api/Proposaldosen'
 import { luaranApi } from '../../../api/luaran'
 import { periodeApi } from '../../../api/periode'
-import { notificationApi } from '../../../api/notification'
 import {
   JENIS_LABEL,
   formatDate,
   normalizeStatus,
   sortAttention,
   statusMeta,
-  timeAgo,
 } from '../format'
 import {
   PROFILE_SHORTCUT,
@@ -46,9 +44,6 @@ export async function load({ withReviewerDigest }) {
     ),
     periods: req('Periode aktif', () =>
       periodeApi.getAll({ limit: 100, isAktif: true }).then((r) => r.data.data || []),
-    ),
-    notifications: req('Notifikasi', () =>
-      notificationApi.getAll({ limit: 6 }).then((r) => r.data.data || []),
     ),
     penelitian: req('Jumlah penelitian', () => countDisetujui('penelitian')),
     pengabdian: req('Jumlah pengabdian', () => countDisetujui('pengabdian')),
@@ -236,19 +231,8 @@ export async function load({ withReviewerDigest }) {
         unavailable: !data.periods,
       },
 
-      feed: {
-        title: 'Notifikasi terbaru',
-        items: (data.notifications || []).map((item) => ({
-          key: item.id,
-          lead: item.judul,
-          detail: item.pesan,
-          when: timeAgo(item.createdAt),
-          unread: item.isRead === false,
-        })),
-        emptyTitle: 'Belum ada notifikasi',
-        emptyDesc: 'Kabar tentang proposal dan undangan Anda akan muncul di sini.',
-        unavailable: !data.notifications,
-      },
+      // Notifikasi terbaru tidak lagi tampil di Beranda (lonceng & /notifikasi tetap ada).
+      feed: null,
 
       shortcuts: [
         {

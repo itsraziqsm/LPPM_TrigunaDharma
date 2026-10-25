@@ -271,17 +271,17 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `src/pages/dashboard/` — dashboard seragam semua peran; data per peran lewat
   `adapters/` (`pengelola`, `dosen`, `mahasiswa`, `reviewer`, `shared`). Status Inggris &
   Indonesia dipetakan ke satu kunci.
-  **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`):
-  `HaloHeader` (judul "Dashboard" + breadcrumb, "Halo {nama}!", tanggal & peran, ringkasan, aksi,
-  muat ulang, lalu **Pintasan** `model.shortcuts` sebagai baris kartu horizontal `ShortcutStrip`,
-  digeser di ponsel) + kartu angka berwarna `ToneCard`/`ToneCardGrid`. **Isi tetap per peran**:
-  `DashboardScreen` (admin, ketua, mahasiswa, reviewer) = `KpiToneCards(model.kpis)` (total → biru,
-  tone warning → kuning, selesai → hijau, lainnya → navy) + `DashboardBody`; `DosenScreen` = kartu
-  dokumen, usulan terakhir, profil, statistik dosen + `DashboardBody`. `Masthead`/`KpiLedger` lama
-  dihapus.
+  **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`) dengan **urutan bagian Beranda
+  yang sama**: 1. **Halo** (`HaloHeader`: judul + breadcrumb, "Halo {nama}!", tanggal & peran, ringkasan, aksi, muat
+  ulang) → 2. **Pintasan** (`PintasanSection`: `model.shortcuts` sebagai baris kartu horizontal `ShortcutStrip`, digeser
+  di ponsel, lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
+  → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (+ umpan aktivitas
+  bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
+  **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
+  → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
+  adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
-  (kartu dokumen, usulan terakhir + tahapan, profil capaian, statistik dosen, lalu blok
-  bersama `DashboardBody` tanpa ledger). Data dari `adapters/dosen.js` (`model.dosen`).
+  (urutan di atas: Pintasan + kartu dokumen, Usulan Terakhir + tahapan, Informasi, Profil Dosen, Statistik Dosen). Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
 - Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,

@@ -410,14 +410,41 @@ function Unavailable() {
   )
 }
 
-// ── Isi dashboard: susunan yang sama untuk setiap peran ─────────────────────
+// ── Panel yang diminimalkan (mis. Periode berjalan): tertutup secara bawaan ──
+function CollapsiblePanel({ title, subtitle, count, footer, children }) {
+  return (
+    <details className="card group overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-base font-semibold text-navy-950">{title}</span>
+          {subtitle ? <span className="block text-xs text-slate-500">{subtitle}</span> : null}
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-sm text-slate-500">
+          {count != null ? <span className="badge badge-tag tabular-nums">{count}</span> : null}
+          <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" />
+        </span>
+      </summary>
+      <div className="border-t border-slate-200">
+        {children}
+        {footer}
+      </div>
+    </details>
+  )
+}
+
+// ── Bagian "Informasi": susunan yang sama untuk setiap peran ────────────────
+// Perlu perhatian · daftar utama (+ umpan aktivitas bila ada) | status · panel
+// samping (periode, diminimalkan). Notifikasi terbaru tidak lagi ditampilkan
+// (adapter boleh mengirim feed: null). Kartu angka & pintasan ada di PintasanSection.
 export function DashboardBody({ model }) {
-  // Kartu angka (model.kpis) & pintasan tampil di HaloLayout, bukan di sini.
   const { attention, pipeline, list, side, feed } = model
   const pipelineTotal = pipeline.segments.reduce((sum, s) => sum + s.value, 0)
 
   return (
-    <>
+    <section aria-labelledby="informasi" className="space-y-3">
+      <h2 id="informasi" className="text-xl font-semibold text-navy-950">
+        Informasi
+      </h2>
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <Panel
@@ -440,16 +467,18 @@ export function DashboardBody({ model }) {
             )}
           </Panel>
 
-          <Panel
-            title={feed.title}
-            footer={feed.to ? <PanelLink to={feed.to}>{feed.toLabel}</PanelLink> : null}
-          >
-            {feed.unavailable ? (
-              <Unavailable />
-            ) : (
-              <Feed items={feed.items} emptyTitle={feed.emptyTitle} emptyDesc={feed.emptyDesc} />
-            )}
-          </Panel>
+          {feed ? (
+            <Panel
+              title={feed.title}
+              footer={feed.to ? <PanelLink to={feed.to}>{feed.toLabel}</PanelLink> : null}
+            >
+              {feed.unavailable ? (
+                <Unavailable />
+              ) : (
+                <Feed items={feed.items} emptyTitle={feed.emptyTitle} emptyDesc={feed.emptyDesc} />
+              )}
+            </Panel>
+          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -461,9 +490,10 @@ export function DashboardBody({ model }) {
             {pipeline.unavailable ? <Unavailable /> : <StatusPipeline pipeline={pipeline} />}
           </Panel>
 
-          <Panel
+          <CollapsiblePanel
             title={side.title}
             subtitle={side.subtitle}
+            count={side.unavailable ? null : side.rows.length}
             footer={side.to && side.rows.length > 0 ? <PanelLink to={side.to}>{side.toLabel}</PanelLink> : null}
           >
             {side.unavailable ? (
@@ -471,10 +501,9 @@ export function DashboardBody({ model }) {
             ) : (
               <ProgressRows rows={side.rows} emptyTitle={side.emptyTitle} emptyDesc={side.emptyDesc} />
             )}
-          </Panel>
-
+          </CollapsiblePanel>
         </div>
       </div>
-    </>
+    </section>
   )
 }

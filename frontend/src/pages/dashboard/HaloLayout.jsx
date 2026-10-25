@@ -5,11 +5,15 @@ import { ShortcutStrip } from './components'
 import { formatClock, formatLongDate } from './format'
 
 // ---------------------------------------------------------------------------
-// Layout dashboard bergaya "Halo, Dosen" yang dipakai SEMUA peran:
-//   HaloHeader  — judul "Dashboard" + breadcrumb, salam "Halo {nama}!", tanggal,
-//                 peran, ringkasan, aksi utama, muat ulang, lalu baris pintasan.
-//   ToneCards   — kartu angka berwarna dengan ikon bulat (4 kolom).
-//   SectionTitle— judul bagian.
+// Layout dashboard bergaya "Halo, Dosen" yang dipakai SEMUA peran. Urutan bagian
+// Beranda (semua peran): 1. Halo → 2. Pintasan (kartu pintasan horizontal + kartu
+// angka) → [dosen: Usulan Terakhir] → 3. Informasi (DashboardBody) → [dosen:
+// Profil Dosen, Statistik Dosen].
+//   HaloHeader      — judul "Dashboard" + breadcrumb, salam "Halo {nama}!", tanggal,
+//                     peran, ringkasan, aksi utama, muat ulang.
+//   PintasanSection — judul "Pintasan", baris pintasan, lalu kartu angka (children).
+//   ToneCards       — kartu angka berwarna dengan ikon bulat (4 kolom).
+//   SectionTitle    — judul bagian.
 // Isi tiap peran tetap dari adapter masing-masing (model.kpis, model.shortcuts, …);
 // dosen menambah bagian khususnya sendiri di DosenScreen.
 // ---------------------------------------------------------------------------
@@ -25,7 +29,7 @@ export function SectionTitle({ id, children }) {
 const show = (value) => (value === null || value === undefined ? '—' : value)
 
 // ── Kepala halaman ──────────────────────────────────────────────────────────
-export function HaloHeader({ now, name, roleLabel, summary, actions = [], loading, refreshing, updatedAt, onReload, shortcuts }) {
+export function HaloHeader({ now, name, roleLabel, summary, actions = [], loading, refreshing, updatedAt, onReload }) {
   const firstName = String(name || '').split(/[\s,]+/)[0] || name
   return (
     <header className="space-y-6">
@@ -87,9 +91,19 @@ export function HaloHeader({ now, name, roleLabel, summary, actions = [], loadin
           </div>
         </div>
       </div>
-
-      <ShortcutStrip items={shortcuts} />
     </header>
+  )
+}
+
+// ── Bagian 2: Pintasan (baris kartu horizontal) + kartu angka ───────────────
+export function PintasanSection({ shortcuts, children }) {
+  if ((!shortcuts || shortcuts.length === 0) && !children) return null
+  return (
+    <section aria-labelledby="pintasan" className="space-y-3">
+      <SectionTitle id="pintasan">Pintasan</SectionTitle>
+      <ShortcutStrip items={shortcuts} />
+      {children}
+    </section>
   )
 }
 

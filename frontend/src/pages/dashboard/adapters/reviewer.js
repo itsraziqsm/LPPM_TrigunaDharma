@@ -1,11 +1,9 @@
-import { notificationApi } from '../../../api/notification'
 import {
   JENIS_LABEL,
   formatDate,
   normalizeStatus,
   sinceLabel,
   statusMeta,
-  timeAgo,
 } from '../format'
 import {
   PROFILE_SHORTCUT,
@@ -50,9 +48,6 @@ function createdTime(tugasan) {
 export async function load() {
   const { data, failed, ok } = await settleAll({
     tugasan: req('Tugasan review', loadTugasan),
-    notifications: req('Notifikasi', () =>
-      notificationApi.getAll({ limit: 6 }).then((r) => r.data.data || []),
-    ),
   })
 
   const digest = data.tugasan ? digestTugasan(data.tugasan) : null
@@ -211,19 +206,8 @@ export async function load() {
         unavailable: !hasDigest,
       },
 
-      feed: {
-        title: 'Notifikasi terbaru',
-        items: (data.notifications || []).map((item) => ({
-          key: item.id,
-          lead: item.judul,
-          detail: item.pesan,
-          when: timeAgo(item.createdAt),
-          unread: item.isRead === false,
-        })),
-        emptyTitle: 'Belum ada notifikasi',
-        emptyDesc: 'Kabar tentang penugasan review akan muncul di sini.',
-        unavailable: !data.notifications,
-      },
+      // Notifikasi terbaru tidak lagi tampil di Beranda (lonceng & /notifikasi tetap ada).
+      feed: null,
 
       shortcuts: [
         {

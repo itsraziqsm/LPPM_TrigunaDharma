@@ -16,14 +16,15 @@ import ApiPending from '../../components/ApiPending'
 import { API_BASE_URL } from '../../api/axios'
 import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
-import { HaloHeader, SectionTitle, ToneCard, ToneCardGrid } from './HaloLayout'
+import { HaloHeader, PintasanSection, SectionTitle, ToneCard, ToneCardGrid } from './HaloLayout'
 import { ROLE_LABEL, formatDay } from './format'
 
 // ---------------------------------------------------------------------------
-// Dashboard dosen (revamp sesuai desain "Halo, Dosen"): kartu dokumen, usulan
-// terakhir dengan tahapan, profil capaian, dan statistik dosen — lalu blok
-// dashboard bersama (perlu perhatian, proposal terbaru, notifikasi, sebaran
-// status, periode, pintasan) tetap dipertahankan di bawahnya.
+// Dashboard dosen (desain "Halo, Dosen"). Urutan bagian: 1. Halo, 2. Pintasan
+// (pintasan horizontal + kartu dokumen & luaran), 3. Usulan Terakhir (tahapan),
+// 4. Informasi (perlu perhatian, status proposal, proposal terbaru, periode
+// berjalan diminimalkan; notifikasi terbaru dihapus), 5. Profil Dosen (identitas &
+// data dosen), 6. Statistik Dosen (angka capaian).
 //
 // Bagian yang belum punya endpoint ditampilkan sebagai placeholder dengan
 // penanda "API belum ada". Daftarnya: docs/waitingApi-list.md (root repo).
@@ -191,7 +192,7 @@ function ProfileMetrics({ user, penelitian, pengabdian, luaran, kepercayaan }) {
   const hasSinta = user && Object.prototype.hasOwnProperty.call(user, 'sintaScore')
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
-      <SectionTitle id="profil-capaian">Profil</SectionTitle>
+      <SectionTitle id="profil-capaian">Statistik Dosen</SectionTitle>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
         <MetricCard label="Jurnal" icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} hint="Luaran jurnal yang dapat diklaim" />
@@ -281,7 +282,7 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
 
   return (
     <section aria-labelledby="statistik-dosen" className="space-y-3">
-      <SectionTitle id="statistik-dosen">Statistik Dosen</SectionTitle>
+      <SectionTitle id="statistik-dosen">Profil Dosen</SectionTitle>
       <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <article className="rounded-xl bg-white p-4 sm:p-5">
           <div className="flex flex-col gap-5 sm:flex-row">
@@ -349,13 +350,17 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
   if (loading) body = <DashboardSkeleton />
   else if (!model) body = <LoadError busy={refreshing} onRetry={onReload} />
   else
+    // Urutan: Halo → Pintasan (pintasan + info dokumen & luaran) → Usulan Terakhir →
+    // Informasi → Profil Dosen → Statistik Dosen.
     body = (
       <>
-        <DocCards cards={dosen.cards} luaran={dosen.luaran} />
+        <PintasanSection shortcuts={model.shortcuts}>
+          <DocCards cards={dosen.cards} luaran={dosen.luaran} />
+        </PintasanSection>
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
-        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
-        <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
         <DashboardBody model={model} />
+        <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
+        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
       </>
     )
 
@@ -371,7 +376,6 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
         refreshing={refreshing}
         updatedAt={updatedAt}
         onReload={onReload}
-        shortcuts={model?.shortcuts}
       />
 
       {model && failed.length > 0 ? <Notice failed={failed} busy={refreshing} onRetry={onReload} /> : null}
