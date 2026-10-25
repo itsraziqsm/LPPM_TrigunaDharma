@@ -44,7 +44,7 @@ const HALAMAN = {
   mahasiswa: [
     { to: '/project/penelitian', title: 'Project Penelitian', kata: 'project saya laporan harian' },
     { to: '/project/pengabdian', title: 'Project Pengabdian', kata: 'project saya laporan harian' },
-    { to: '/periode', title: 'Periode', kata: 'jadwal tahun' },
+    { to: '/riwayat-project', title: 'Riwayat Project', kata: 'periode riwayat kegiatan' },
     { to: '/undangan', title: 'Undangan Ikut Serta', kata: 'undangan tim anggota' },
     { to: '/laporan-harian', title: 'Laporan Harian (semua project)', kata: 'kegiatan harian' },
   ],

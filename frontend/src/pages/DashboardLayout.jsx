@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
@@ -26,7 +26,7 @@ import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
-import MahasiswaPeriodePage from './MahasiswaPeriodePage'
+import RiwayatProjectPage from './RiwayatProjectPage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -118,7 +118,9 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan-harian') return <LaporanHarianPage />
       // Project Saya per jenis → pilih project → Laporan Harian
       if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
-      if (page === 'periode') return <MahasiswaPeriodePage />
+      if (page === 'riwayat-project') return <RiwayatProjectPage />
+      // Menu lama "Periode" mahasiswa → Riwayat Project.
+      if (page === 'periode') return <Navigate to="/riwayat-project" replace />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="mahasiswa" isReviewer={isReviewer} />
     }

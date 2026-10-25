@@ -5,7 +5,8 @@ import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
 
 // ---------------------------------------------------------------------------
-// Mahasiswa › Periode (/periode): hanya periode yang memuat project (kegiatan dosen)
+// Mahasiswa › Riwayat Project (/riwayat-project; dulu menu "Periode", diganti karena
+// rancu dengan fitur Periode admin & ketua). Dikelompokkan per periode: hanya periode yang memuat project (kegiatan dosen)
 // tempat mahasiswa menjadi anggota tim `diterima`. Project dari
 // GET /mahasiswa/laporan-harian/proposals (berisi periode {id,nama,tahun}); tanggal &
 // status aktif periode dari GET /periode (boleh untuk semua user login). Klik project →
@@ -24,7 +25,7 @@ const STATUS_COLOR = {
 }
 const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
-export default function MahasiswaPeriodePage() {
+export default function RiwayatProjectPage() {
   const [data, setData] = useState(null) // [{ periode, projects }]
   const [error, setError] = useState('')
 
@@ -57,8 +58,8 @@ export default function MahasiswaPeriodePage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          <h1 className="page-title">Periode</h1>
-          <p className="page-desc">Periode kegiatan dosen yang Anda ikuti sebagai anggota tim, beserta project-nya.</p>
+          <h1 className="page-title">Riwayat Project</h1>
+          <p className="page-desc">Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, dikelompokkan per periode.</p>
         </div>
         <nav aria-label="Breadcrumb" className="text-sm">
           <ol className="flex items-center gap-1.5">
@@ -68,7 +69,7 @@ export default function MahasiswaPeriodePage() {
               </Link>
             </li>
             <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Periode</li>
+            <li aria-current="page" className="text-slate-500">Riwayat Project</li>
           </ol>
         </nav>
       </header>
@@ -84,9 +85,9 @@ export default function MahasiswaPeriodePage() {
         </div>
       ) : data.length === 0 ? (
         <section className="card px-6 py-12 text-center">
-          <h2 className="text-lg font-semibold text-navy-950">Belum ada periode</h2>
+          <h2 className="text-lg font-semibold text-navy-950">Belum ada riwayat project</h2>
           <p className="mx-auto mt-1 max-w-lg text-sm text-slate-500">
-            Periode muncul setelah Anda menerima undangan ikut serta dalam kegiatan dosen.
+            Project muncul setelah Anda menerima undangan ikut serta dalam kegiatan dosen.
           </p>
           <Link to="/undangan" className="btn btn-secondary btn-sm mt-4">
             Lihat Undangan Ikut Serta
