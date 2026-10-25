@@ -39,52 +39,56 @@ export function Masthead({
   refreshing,
   updatedLabel,
   onReload,
+  shortcuts,
 }) {
   return (
-    <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-      <div className="min-w-0 max-w-2xl">
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
-          <span>{dateLabel}</span>
-          {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
-        </p>
-        <h1 className="page-title mt-2 break-words">
-          {greeting}, {name}
-        </h1>
-        {loading ? (
-          <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded bg-slate-200/70" aria-hidden="true" />
-        ) : summary ? (
-          <p className="page-desc text-slate-600">{summary}</p>
-        ) : null}
-      </div>
+    <header className="space-y-5">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 max-w-2xl">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
+            <span>{dateLabel}</span>
+            {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
+          </p>
+          <h1 className="page-title mt-2 break-words">
+            {greeting}, {name}
+          </h1>
+          {loading ? (
+            <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded bg-slate-200/70" aria-hidden="true" />
+          ) : summary ? (
+            <p className="page-desc text-slate-600">{summary}</p>
+          ) : null}
+        </div>
 
-      <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
-        {actions.length > 0 ? (
-          <nav aria-label="Aksi utama" className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
-            {actions.map((action) => (
-              <Link
-                key={action.label}
-                to={action.to}
-                className={`btn ${action.variant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
-              >
-                {action.label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
+        <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
+          {actions.length > 0 ? (
+            <nav aria-label="Aksi utama" className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
+              {actions.map((action) => (
+                <Link
+                  key={action.label}
+                  to={action.to}
+                  className={`btn ${action.variant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  {action.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
 
-        <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
-          {updatedLabel ? <span>Diperbarui pukul {updatedLabel}</span> : null}
-          <button
-            type="button"
-            onClick={onReload}
-            disabled={loading || refreshing}
-            className="btn btn-ghost btn-sm"
-          >
-            {refreshing ? <span className="spinner" aria-hidden="true" /> : <RefreshIcon />}
-            {refreshing ? 'Memuat ulang' : 'Muat ulang'}
-          </button>
+          <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
+            {updatedLabel ? <span>Diperbarui pukul {updatedLabel}</span> : null}
+            <button
+              type="button"
+              onClick={onReload}
+              disabled={loading || refreshing}
+              className="btn btn-ghost btn-sm"
+            >
+              {refreshing ? <span className="spinner" aria-hidden="true" /> : <RefreshIcon />}
+              {refreshing ? 'Memuat ulang' : 'Muat ulang'}
+            </button>
+          </div>
         </div>
       </div>
+      <ShortcutStrip items={shortcuts} />
     </header>
   )
 }
@@ -390,20 +394,21 @@ export function Feed({ items, emptyTitle, emptyDesc }) {
   )
 }
 
-// ── Pintasan ────────────────────────────────────────────────────────────────
-export function Shortcuts({ items }) {
+// ── Pintasan: baris kartu horizontal di bawah salam (bisa digeser di layar sempit)
+export function ShortcutStrip({ items }) {
+  if (!items || items.length === 0) return null
   return (
-    <nav aria-label="Pintasan">
-      <ul className="divide-y divide-slate-100">
+    <nav aria-label="Pintasan" className="-mx-1 overflow-x-auto px-1 pb-1" data-lenis-prevent-horizontal>
+      <ul className="flex snap-x gap-3">
         {items.map((item) => (
-          <li key={`${item.to}-${item.label}`}>
+          <li key={`${item.to}-${item.label}`} className="min-w-[13.5rem] flex-1 snap-start lg:min-w-0">
             <Link
               to={item.to}
-              className="group flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-slate-50 sm:px-6"
+              className="group flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-navy-300 hover:bg-navy-50/50"
             >
               <span className="min-w-0">
-                <span className="block text-base font-semibold text-slate-900">{item.label}</span>
-                <span className="mt-0.5 block text-sm leading-snug text-slate-500">{item.desc}</span>
+                <span className="block text-sm font-semibold text-slate-900">{item.label}</span>
+                <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-slate-500">{item.desc}</span>
               </span>
               <Chevron className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-700" />
             </Link>
@@ -518,7 +523,8 @@ function Unavailable() {
 
 // ── Isi dashboard: susunan yang sama untuk setiap peran ─────────────────────
 export function DashboardBody({ model, hideKpis = false }) {
-  const { kpis, attention, pipeline, list, side, feed, shortcuts } = model
+  // Pintasan tidak lagi di badan dashboard: tampil di bawah salam (ShortcutStrip).
+  const { kpis, attention, pipeline, list, side, feed } = model
   const pipelineTotal = pipeline.segments.reduce((sum, s) => sum + s.value, 0)
 
   return (
@@ -580,9 +586,6 @@ export function DashboardBody({ model, hideKpis = false }) {
             )}
           </Panel>
 
-          <Panel title="Pintasan">
-            <Shortcuts items={shortcuts} />
-          </Panel>
         </div>
       </div>
     </>

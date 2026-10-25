@@ -16,7 +16,7 @@ import {
 import ApiPending from '../../components/ApiPending'
 import { API_BASE_URL } from '../../api/axios'
 import { ADAPTERS } from './adapters'
-import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
+import { DashboardBody, DashboardSkeleton, LoadError, Notice, ShortcutStrip } from './components'
 import { ROLE_LABEL, formatClock, formatDay, formatLongDate } from './format'
 
 // ---------------------------------------------------------------------------
@@ -58,7 +58,7 @@ function SectionTitle({ id, children }) {
 const show = (value) => (value === null || value === undefined ? '—' : value)
 
 // ── Kepala halaman ──────────────────────────────────────────────────────────
-function DosenHeader({ now, name, roleLabel, summary, actions, loading, refreshing, updatedAt, onReload }) {
+function DosenHeader({ now, name, roleLabel, summary, actions, loading, refreshing, updatedAt, onReload, shortcuts }) {
   const firstName = String(name || '').split(/[\s,]+/)[0] || name
   return (
     <header className="space-y-6">
@@ -120,6 +120,8 @@ function DosenHeader({ now, name, roleLabel, summary, actions, loading, refreshi
           </div>
         </div>
       </div>
+
+      <ShortcutStrip items={shortcuts} />
     </header>
   )
 }
@@ -212,7 +214,7 @@ function DocCards({ cards, luaran }) {
           tone="blue"
           label="Luaran Dapat Diklaim"
           value={luaran ? luaran.dapatDiklaim : null}
-          hint={luaran ? `${luaran.tercapai} tercapai dari ${luaran.total} target` : 'Data belum termuat'}
+          hint={luaran?.total != null ? `${luaran.tercapai} tercapai dari ${luaran.total} target` : 'Data belum termuat'}
           icon={ICONS.dollar}
           to="/kegiatan/penelitian"
         />
@@ -504,6 +506,7 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
         refreshing={refreshing}
         updatedAt={updatedAt}
         onReload={onReload}
+        shortcuts={model?.shortcuts}
       />
 
       {model && failed.length > 0 ? <Notice failed={failed} busy={refreshing} onRetry={onReload} /> : null}

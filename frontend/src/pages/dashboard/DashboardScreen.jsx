@@ -41,6 +41,7 @@ export default function DashboardScreen({
         refreshing={refreshing}
         updatedLabel={updatedAt ? formatClock(updatedAt) : null}
         onReload={onReload}
+        shortcuts={model?.shortcuts}
       />
 
       {model && failed.length > 0 ? <Notice failed={failed} busy={refreshing} onRetry={onReload} /> : null}
