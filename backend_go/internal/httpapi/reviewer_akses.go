@@ -3,8 +3,10 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -29,7 +31,7 @@ const (
 var (
 	setReviewerSchema = zObj(required("isReviewer", zBoolean{}))
 	pengalihanItem    = zObj(required("tugasanId", zNum().Int().Positive()), required("reviewerBaruId", zNum().Int().Positive()))
-	forceRevokeSchema = zObj(withDefault("pengalihan", &zArray{elem: pengalihanItem}, []any{}))
+	forceRevokeSchema = zObj(withDefault("pengalihan", &zArray{elem: pengalihanItem}, []any{}), withDefault("otomatis", zBoolean{}, false))
 )
 
 func (s *Server) registerReviewerAksesRoutes(g *mount) {
@@ -110,6 +112,160 @@ func (s *Server) unfinishedTugasan(ctx context.Context, q dbtx, reviewerID int64
 	return items, nil
 }
 
+// ── prioritas kandidat reviewer ──────────────────────────────────────────
+
+// openTugasanCountSQL counts a reviewer's open assignments (same definition as
+// unfinishedTugasan); `u` is the outer User alias.
+const openTugasanCountSQL = "(SELECT COUNT(*) FROM `ReviewerTugasan` t WHERE t.`reviewerId` = u.`id`" +
+	" AND NOT EXISTS (SELECT 1 FROM `ProposalReview` rv WHERE rv.`proposalId` = t.`proposalId` AND rv.`reviewerId` = t.`reviewerId` AND rv.`isDone` = true)" +
+	" AND (t.`proposalId` IN (SELECT `id` FROM `Proposal` WHERE `status` IN ('diajukan','review'))" +
+	" OR t.`proposalId` IN (SELECT `id` FROM `Laporan` WHERE `status` IN ('diajukan','review'))))"
+
+// reviewerCandidates lists approved users with the reviewer role, least busy
+// first: open assignments ascending, then total assignments, then name.
+func (s *Server) reviewerCandidates(ctx context.Context, exclude []int64) ([]O, error) {
+	where := ""
+	args := []any{}
+	if len(exclude) > 0 {
+		where = " AND u.`id` NOT IN (" + placeholders(len(exclude)) + ")"
+		args = idArgs(exclude)
+	}
+	rows, err := queryObjs(ctx, s.db,
+		"SELECT u.`id`,u.`name`,u.`fullName`,u.`email`,u.`programStudi`,"+openTugasanCountSQL+" AS `tugasanBelumSelesai`,"+
+			"(SELECT COUNT(*) FROM `ReviewerTugasan` t2 WHERE t2.`reviewerId` = u.`id`) AS `totalTugasan`"+
+			" FROM `User` u WHERE u.`status` = 'approved' AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'reviewer')"+
+			where+" ORDER BY `tugasanBelumSelesai` ASC, `totalTugasan` ASC, u.`name` ASC, u.`id` ASC", args...)
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].Set("prioritas", rows[i].Int64("tugasanBelumSelesai") == 0)
+	}
+	return rows, nil
+}
+
+// itemReviewers returns, per item id, the set of reviewers already assigned.
+func (s *Server) itemReviewers(ctx context.Context, itemIDs []int64) (map[int64]map[int64]bool, error) {
+	out := map[int64]map[int64]bool{}
+	if len(itemIDs) == 0 {
+		return out, nil
+	}
+	rows, err := queryObjs(ctx, s.db, "SELECT `proposalId`,`reviewerId` FROM `ReviewerTugasan` WHERE `proposalId` IN ("+placeholders(len(itemIDs))+")", idArgs(itemIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		k := r.Int64("proposalId")
+		if out[k] == nil {
+			out[k] = map[int64]bool{}
+		}
+		out[k][r.Int64("reviewerId")] = true
+	}
+	return out, nil
+}
+
+// recommendReviewers picks, for each open assignment of `fromID`, the least
+// busy eligible reviewer (not fromID, not the item's pengusul, not already on
+// the item). Picks are counted as they are made so the load is spread out.
+func (s *Server) recommendReviewers(ctx context.Context, fromID int64, open []O) (map[int64]O, error) {
+	result := map[int64]O{}
+	if len(open) == 0 {
+		return result, nil
+	}
+	cands, err := s.reviewerCandidates(ctx, []int64{fromID})
+	if err != nil {
+		return nil, err
+	}
+	assigned, err := s.itemReviewers(ctx, uniqueIDs(open, "itemId"))
+	if err != nil {
+		return nil, err
+	}
+	load := make([]int64, len(cands))
+	for i, c := range cands {
+		load[i] = c.Int64("tugasanBelumSelesai")
+	}
+	for _, t := range open {
+		best := -1
+		for i, c := range cands {
+			id := c.Int64("id")
+			if id == t.Int64("pengusulId") || assigned[t.Int64("itemId")][id] {
+				continue
+			}
+			if best < 0 || load[i] < load[best] || (load[i] == load[best] && c.Int64("totalTugasan") < cands[best].Int64("totalTugasan")) {
+				best = i
+			}
+		}
+		if best < 0 {
+			continue
+		}
+		c := cands[best]
+		result[t.Int64("id")] = O{
+			{"id", c.Get("id")}, {"name", c.Get("name")}, {"fullName", c.Get("fullName")},
+			{"tugasanBelumSelesai", load[best]}, {"prioritas", load[best] == 0},
+		}
+		load[best]++
+	}
+	return result, nil
+}
+
+// listKandidatReviewer: GET /users/kandidat-reviewer[?itemId=&exclude=]
+// Reviewer yang belum punya tugasan aktif tampil paling atas (prioritas: true).
+// itemId (proposal/laporan): pengusulnya dikeluarkan, reviewer yang sudah
+// ditugaskan di item itu ditandai dan ditaruh paling bawah.
+func (s *Server) listKandidatReviewer(c *Ctx) error {
+	ctx := c.r.Context()
+	exclude := []int64{}
+	if raw, ok := c.queryValue("exclude"); ok && raw != "" {
+		for _, part := range strings.Split(raw, ",") {
+			id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 32)
+			if err != nil || id <= 0 {
+				return httpError(http.StatusBadRequest, "Parameter exclude tidak valid.")
+			}
+			exclude = append(exclude, id)
+		}
+	}
+	var itemID int64
+	if raw, ok := c.queryValue("itemId"); ok && raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 32)
+		if err != nil || id <= 0 {
+			return httpError(http.StatusBadRequest, "Parameter itemId tidak valid.")
+		}
+		var pengusulID int64
+		err = s.db.QueryRowContext(ctx, "SELECT `pengusulId` FROM `Proposal` WHERE `id` = ? UNION ALL SELECT `pengusulId` FROM `Laporan` WHERE `id` = ?", id, id).Scan(&pengusulID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return httpError(http.StatusNotFound, "Proposal atau laporan tidak ditemukan")
+		}
+		if err != nil {
+			return err
+		}
+		itemID = id
+		exclude = append(exclude, pengusulID)
+	}
+	cands, err := s.reviewerCandidates(ctx, exclude)
+	if err != nil {
+		return err
+	}
+	assigned := map[int64]bool{}
+	if itemID != 0 {
+		sets, err := s.itemReviewers(ctx, []int64{itemID})
+		if err != nil {
+			return err
+		}
+		assigned = sets[itemID]
+	}
+	first, last := []O{}, []O{}
+	for _, cand := range cands {
+		already := assigned[cand.Int64("id")]
+		cand.Set("sudahDitugaskan", already)
+		if already {
+			last = append(last, cand)
+		} else {
+			first = append(first, cand)
+		}
+	}
+	return c.ok("Kandidat reviewer fetched", append(first, last...))
+}
+
 func (s *Server) reviewerTargetUser(c *Ctx) (int64, []string, error) {
 	id, err := idParam(c, "id")
 	if err != nil {
@@ -127,6 +283,17 @@ func (s *Server) reviewerStatus(ctx context.Context, userID int64, roles []strin
 	open, err := s.unfinishedTugasan(ctx, s.db, userID)
 	if err != nil {
 		return nil, err
+	}
+	rec, err := s.recommendReviewers(ctx, userID, open)
+	if err != nil {
+		return nil, err
+	}
+	for i := range open {
+		var r any
+		if v, ok := rec[open[i].Int64("id")]; ok {
+			r = v
+		}
+		open[i].Set("rekomendasi", r)
 	}
 	done, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ProposalReview` WHERE `reviewerId` = ? AND `isDone` = true", userID)
 	if err != nil {
@@ -277,6 +444,24 @@ func (s *Server) forceRevokeReviewer(c *Ctx) error {
 		}
 		plan[tid] = rid
 		newIDs = append(newIDs, rid)
+	}
+	if auto, _ := c.bodyMap()["otomatis"].(bool); auto {
+		rec, err := s.recommendReviewers(ctx, id, open)
+		if err != nil {
+			return err
+		}
+		for _, t := range open {
+			tid := t.Int64("id")
+			if _, ok := plan[tid]; ok {
+				continue
+			}
+			r, ok := rec[tid]
+			if !ok {
+				return httpError(http.StatusBadRequest, fmt.Sprintf("Tidak ada reviewer lain yang tersedia untuk tugasan #%d", tid))
+			}
+			plan[tid] = r.Int64("id")
+			newIDs = append(newIDs, r.Int64("id"))
+		}
 	}
 	missing := []string{}
 	for _, t := range open {

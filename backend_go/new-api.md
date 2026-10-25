@@ -18,7 +18,8 @@ API, dikelompokkan per rilis:
 - **Bagian 15** — W-27 kata kunci laporan, W-28 metode penelitian laporan, W-30 Ketua LPPM
   mengatur peran reviewer.
 - **Bagian 16** — Hak akses reviewer dosen: default bukan reviewer, diberi Admin/Ketua, cabut
-  biasa hanya tanpa tugasan terbuka, cabut paksa oleh Ketua dengan pengalihan tugasan.
+  biasa hanya tanpa tugasan terbuka, cabut paksa oleh Ketua dengan pengalihan tugasan; prioritas
+  reviewer yang belum punya tugasan (kandidat, rekomendasi, pengalihan otomatis).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1361,6 +1362,7 @@ berubah kalau perubahan itu terjadi pada user yang sedang login.
 | `tugasanBelumSelesai[].id` | **id tugasan**, dipakai sebagai `tugasanId` saat cabut paksa |
 | `tugasanBelumSelesai[].itemId` / `tipe` | id proposal atau laporan, dan jenisnya (`proposal` \| `laporan`) |
 | `tugasanBelumSelesai[].pengusulId` | Pengusul item. Reviewer baru tidak boleh pengusul ini |
+| `tugasanBelumSelesai[].rekomendasi` | Reviewer pengganti yang disarankan (bagian 16.5), atau `null` jika tidak ada kandidat |
 
 **`PATCH /users/:id/reviewer`**
 
@@ -1378,6 +1380,15 @@ berubah kalau perubahan itu terjadi pada user yang sedang login.
 ```json
 { "pengalihan": [ { "tugasanId": 42, "reviewerBaruId": 5 } ] }
 ```
+
+atau biarkan backend memilih (bagian 16.5):
+
+```json
+{ "otomatis": true }
+```
+
+`otomatis: true` mengisi tugasan yang **tidak** ada di `pengalihan` dengan reviewer rekomendasi.
+Entri `pengalihan` yang dikirim tetap diutamakan, jadi keduanya bisa digabung.
 
 - `pengalihan` wajib mencakup **semua** `tugasanBelumSelesai`, masing-masing sekali. Kalau tidak
   ada tugasan terbuka, kirim `[]` (sama dengan cabut biasa).
@@ -1409,18 +1420,66 @@ Error:
 | `POST /proposals/:id/reviews[/finalize]`, `POST /laporan/:id/reviews[/finalize]` | Wajib berperan reviewer (dicek di DB) → `403 "Anda tidak memiliki peran reviewer"` |
 | `PATCH /users/:id/roles` | Menghapus `reviewer` saat masih ada tugasan belum selesai → `409` (berlaku juga untuk admin). Aturan Ketua (bagian 15.3) tetap berlaku |
 
+### 16.5 Prioritas reviewer yang belum punya tugasan
+
+Saat mengalihkan tugasan (cabut paksa) atau menugaskan reviewer biasa, reviewer yang **belum punya
+tugasan aktif** didahulukan.
+
+**`GET /users/kandidat-reviewer`** (admin, ketua_lppm): semua user `approved` berperan
+`reviewer`, diurutkan dari yang paling longgar.
+
+| Query | Keterangan |
+|---|---|
+| `itemId` | (opsional) id proposal **atau** laporan. Pengusulnya dikeluarkan dari daftar, dan reviewer yang sudah ditugaskan di item itu ditandai `sudahDitugaskan: true` lalu ditaruh paling bawah. Item tidak ada → `404` |
+| `exclude` | (opsional) id user yang dikeluarkan, pisahkan dengan koma, mis. dosen yang sedang dicabut: `?exclude=13` |
+
+```json
+{ "success": true, "message": "Kandidat reviewer fetched",
+  "data": [
+    { "id": 5, "name": "Dr. Reviewer 2, M.Kom", "fullName": "Dr. Reviewer 2, M.Kom", "email": "reviewer2@lppm.dev",
+      "programStudi": "Sistem Informasi", "tugasanBelumSelesai": 0, "totalTugasan": 2, "prioritas": true, "sudahDitugaskan": false },
+    { "id": 4, "name": "Dr. Reviewer 1, M.T", "fullName": "Dr. Reviewer 1, M.T", "email": "reviewer1@lppm.dev",
+      "programStudi": "Teknik Informatika", "tugasanBelumSelesai": 3, "totalTugasan": 9, "prioritas": false, "sudahDitugaskan": false }
+  ] }
+```
+
+| Field | Keterangan |
+|---|---|
+| `tugasanBelumSelesai` | Jumlah tugasan aktif (definisi sama dengan bagian 16.1) |
+| `totalTugasan` | Semua tugasan sepanjang waktu (dipakai sebagai urutan kedua) |
+| `prioritas` | `true` jika `tugasanBelumSelesai = 0`. Tampilkan sebagai badge "Belum ada tugasan" / "Diprioritaskan" |
+| `sudahDitugaskan` | Hanya bermakna jika `itemId` dikirim |
+
+Urutan: `tugasanBelumSelesai` naik → `totalTugasan` naik → nama. Daftar ini bisa langsung
+menggantikan `GET /users?role=reviewer` di dialog **Tugaskan Reviewer** (proposal & laporan)
+dengan `?itemId=<id>`.
+
+**Rekomendasi di status reviewer.** Setiap item `tugasanBelumSelesai` di
+`GET /users/:id/reviewer` punya `rekomendasi`:
+
+```json
+"rekomendasi": { "id": 5, "name": "Dr. Reviewer 2, M.Kom", "fullName": "Dr. Reviewer 2, M.Kom", "tugasanBelumSelesai": 0, "prioritas": true }
+```
+
+Rekomendasi **disebar**: tiap pilihan menambah hitungan beban reviewer itu, sehingga jika dosen punya
+beberapa tugasan, tidak semuanya diarahkan ke satu orang. Kandidat yang dilewati: dosen yang dicabut,
+pengusul item, dan reviewer yang sudah ditugaskan di item tersebut. Frontend bisa memakai
+rekomendasi sebagai nilai awal dropdown per tugasan, lalu Ketua tetap bisa menggantinya.
+
 ### 16.4 Contoh pemanggilan (axios)
 
 ```js
 // src/api/users.js
 getReviewerStatus: (id) => api.get(`/users/${id}/reviewer`),
 setReviewer: (id, isReviewer) => api.patch(`/users/${id}/reviewer`, { isReviewer }),
-forceRevokeReviewer: (id, pengalihan) => api.post(`/users/${id}/reviewer/force-revoke`, { pengalihan }),
+forceRevokeReviewer: (id, pengalihan, otomatis = false) => api.post(`/users/${id}/reviewer/force-revoke`, { pengalihan, otomatis }),
+getKandidatReviewer: (params = {}) => api.get('/users/kandidat-reviewer', { params }), // { itemId, exclude }
 
 // Alur cabut di panel Manajemen User:
 // 1. setReviewer(id, false)
-// 2. jika 409 dan user = Ketua: getReviewerStatus(id) → tampilkan tugasanBelumSelesai,
-//    minta pilih reviewer baru per tugasan (GET /users?role=reviewer, kecuali dosen ini & pengusul),
-//    lalu forceRevokeReviewer(id, [{ tugasanId, reviewerBaruId }, ...])
+// 2. jika 409 dan user = Ketua: getReviewerStatus(id) → tampilkan tugasanBelumSelesai dengan
+//    dropdown per tugasan berisi getKandidatReviewer({ itemId: t.itemId, exclude: id }),
+//    nilai awal = t.rekomendasi.id; lalu forceRevokeReviewer(id, [{ tugasanId, reviewerBaruId }, ...])
+//    (atau tombol "Alihkan otomatis" → forceRevokeReviewer(id, [], true))
 // 3. jika 409 dan user = Admin: tampilkan pesan bahwa hanya Ketua yang bisa mencabut paksa
 ```

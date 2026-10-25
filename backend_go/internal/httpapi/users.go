@@ -44,6 +44,7 @@ func (s *Server) registerUserRoutes() {
 	g.delete("/profile/foto", s.deleteProfileFoto)                                 // baru (W-07)
 	g.patch("/profile/password", s.changePassword)
 	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
+	g.get("/kandidat-reviewer", authorize("admin", "ketua_lppm"), s.listKandidatReviewer) // baru, sebelum /:id
 	g.get("/:id", authorize("admin", "ketua_lppm"), s.getUser)
 	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
 	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.

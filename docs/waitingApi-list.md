@@ -10,7 +10,12 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Tidak ada. Semua API baru (`backend_go/new-api.md` bagian 10–16) sudah disambungkan.
+Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 16.5) tetapi **belum
+disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
+
+| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
+|---|---|---|---|
+| W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
 
 ### Sudah disambungkan
 

@@ -108,7 +108,7 @@ b = expect("login missing fields", req("POST", "/api/v1/auth/login", body={}), 4
 check("login missing → Required", b["errors"] == {"email": ["Required"], "password": ["Required"]}, b)
 expect("bad json", req("POST", "/api/v1/auth/login", raw=b'{"x":', ctype="application/json"), 400)
 b = expect("me", req("GET", "/api/v1/auth/me", dosen1), 200, "Current user")
-check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt"] and b["data"]["hasTugasan"] is False, b)
+check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt"] and isinstance(b["data"]["hasTugasan"], bool), b)
 expect("me bad token", req("GET", "/api/v1/auth/me", "xxx"), 401, "Token invalid or expired")
 expect("refresh blank", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "   "}), 400, "Refresh token required")
 expect("refresh unknown", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "nope"}), 500, "Refresh token invalid or expired")
@@ -735,7 +735,20 @@ check("new reviewer sees tugasan", any(x["proposalId"] == ra for x in b["data"])
 expect("new reviewer saves draft review", req("POST", f"/api/v1/proposals/{ra}/reviews", dosen5, {"catatan": "draf"}), 200, "Review disimpan")
 b = req("GET", f"/api/v1/users/{d5}/reviewer", ketua)[1]["data"]
 t5 = [t for t in b["tugasanBelumSelesai"] if t["itemId"] == ra]
-check("open tugasan listed", len(t5) == 1 and list(t5[0].keys()) == ["id", "itemId", "tipe", "createdAt", "judul", "status", "jenis", "pengusulId"] and t5[0]["status"] == "review", b["tugasanBelumSelesai"])
+check("open tugasan listed", len(t5) == 1 and list(t5[0].keys()) == ["id", "itemId", "tipe", "createdAt", "judul", "status", "jenis", "pengusulId", "rekomendasi"] and t5[0]["status"] == "review", b["tugasanBelumSelesai"])
+rk = t5[0]["rekomendasi"]
+check("rekomendasi valid", rk is not None and rk["id"] not in (d5, dosen2User["id"]) and list(rk.keys()) == ["id", "name", "fullName", "tugasanBelumSelesai", "prioritas"], rk)
+b = expect("kandidat reviewer", req("GET", f"/api/v1/users/kandidat-reviewer?itemId={ra}&exclude={d5}", ketua), 200, "Kandidat reviewer fetched")
+kc = b["data"]
+check("kandidat shape", len(kc) > 0 and list(kc[0].keys()) == ["id", "name", "fullName", "email", "programStudi", "tugasanBelumSelesai", "totalTugasan", "prioritas", "sudahDitugaskan"], kc[:1])
+fresh = [x for x in kc if not x["sudahDitugaskan"]]
+check("kandidat urut beban", [x["tugasanBelumSelesai"] for x in fresh] == sorted(x["tugasanBelumSelesai"] for x in fresh) and all(x["prioritas"] == (x["tugasanBelumSelesai"] == 0) for x in kc), [(x["id"], x["tugasanBelumSelesai"]) for x in kc])
+check("kandidat tanpa pengusul & dosen dicabut", all(x["id"] not in (d5, dosen2User["id"]) for x in kc), [x["id"] for x in kc])
+check("kandidat sudah ditugaskan di bawah", all(not x["sudahDitugaskan"] for x in kc[:len(fresh)]), [x["sudahDitugaskan"] for x in kc])
+check("rekomendasi = kandidat beban terkecil", rk["tugasanBelumSelesai"] == fresh[0]["tugasanBelumSelesai"], (rk, fresh[:2]))
+expect("kandidat bad itemId", req("GET", "/api/v1/users/kandidat-reviewer?itemId=abc", ketua), 400)
+expect("kandidat missing item", req("GET", "/api/v1/users/kandidat-reviewer?itemId=999999", ketua), 404)
+expect("kandidat forbidden", req("GET", "/api/v1/users/kandidat-reviewer", dosen1), 403)
 expect("revoke blocked", req("PATCH", f"/api/v1/users/{d5}/reviewer", ketua, {"isReviewer": False}), 409)
 expect("roles endpoint revoke blocked", req("PATCH", f"/api/v1/users/{d5}/roles", admin, {"roles": ["dosen"]}), 409)
 expect("force revoke by admin forbidden", req("POST", f"/api/v1/users/{d5}/reviewer/force-revoke", admin, {"pengalihan": []}), 403)
@@ -752,6 +765,18 @@ expect("revoked dosen my-tugasan", req("GET", "/api/v1/reviewer/my-tugasan", dos
 expect("revoked dosen review", req("POST", f"/api/v1/proposals/{ra}/reviews", dosen5, {"catatan": "x"}), 403, "Anda tidak memiliki peran reviewer")
 check("old draft review removed", all(r["reviewer"]["id"] != d5 for r in req("GET", f"/api/v1/proposals/{ra}/reviews", ketua)[1]["data"]))
 b = expect("grant again then normal revoke", req("PATCH", f"/api/v1/users/{d5}/reviewer", ketua, {"isReviewer": True}), 200)
+# cabut paksa otomatis: tugasan dialihkan ke reviewer rekomendasi (beban terkecil)
+b = req("POST", "/api/v1/dosen/proposals", dosen2, {"judul": "Proposal kedua uji akses reviewer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
+ra2 = b[1]["data"]["id"]
+expect("ra2 submit", req("POST", f"/api/v1/dosen/proposals/{ra2}/submit", dosen2), 200)
+expect("assign d5 ra2", req("POST", f"/api/v1/proposals/{ra2}/reviewers", ketua, {"reviewerIds": [d5]}), 200)
+st = req("GET", f"/api/v1/users/{d5}/reviewer", ketua)[1]["data"]
+t2 = [t for t in st["tugasanBelumSelesai"] if t["itemId"] == ra2][0]
+b = expect("force revoke otomatis", req("POST", f"/api/v1/users/{d5}/reviewer/force-revoke", ketua, {"otomatis": True}), 200, "Peran reviewer dicabut paksa")
+check("otomatis dialihkan", b["data"]["isReviewer"] is False and b["data"]["tugasanBelumSelesai"] == [], b["data"])
+rv = [x["reviewerTugasan"] for x in [req("GET", f"/api/v1/proposals/{ra2}", ketua)[1]["data"]]][0]
+check("otomatis ke reviewer rekomendasi", [x["reviewer"]["id"] for x in rv] == [t2["rekomendasi"]["id"]], (rv, t2["rekomendasi"]))
+expect("grant d5 for normal revoke", req("PATCH", f"/api/v1/users/{d5}/reviewer", ketua, {"isReviewer": True}), 200)
 expect("normal revoke without tugasan", req("PATCH", f"/api/v1/users/{d5}/reviewer", admin, {"isReviewer": False}), 200, "Peran reviewer dicabut")
 expect("restore dosen5 roles after reviewer tests", req("PATCH", f"/api/v1/users/{d5}/roles", admin, {"roles": d5roles}), 200)
 

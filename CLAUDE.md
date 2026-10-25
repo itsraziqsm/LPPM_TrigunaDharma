@@ -54,7 +54,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 525 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 541 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -92,7 +92,9 @@ User bisa punya banyak peran. Registrasi publik hanya dosen/mahasiswa dengan sta
 (`PATCH /users/:id/reviewer`); cabut biasa hanya bila tidak ada tugasan belum selesai (review belum
 final pada item `diajukan`/`review`), selain itu 409; cabut paksa hanya Ketua
 (`POST /users/:id/reviewer/force-revoke`) dengan mengalihkan semua tugasan terbuka ke reviewer lain
-dalam satu transaksi. Hanya user berperan `reviewer` (cek DB lewat `requireReviewerRole`, bukan
+dalam satu transaksi (`otomatis: true` memakai rekomendasi). Prioritas: `GET /users/kandidat-reviewer`
+(`?itemId=&exclude=`) mengurutkan reviewer dari tugasan aktif paling sedikit (`prioritas` = 0 tugasan
+aktif); `GET /users/:id/reviewer` memberi `rekomendasi` per tugasan yang disebar merata. Hanya user berperan `reviewer` (cek DB lewat `requireReviewerRole`, bukan
 token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `hasTugasan` di
 `/auth/me` tetap ada (frontend `canReview` mewajibkan peran reviewer untuk dosen).
 
@@ -100,7 +102,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | Grup | Endpoint utama | Akses |
 |---|---|---|
 | `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
-| `/users` | `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
+| `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |

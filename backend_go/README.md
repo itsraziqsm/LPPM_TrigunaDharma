@@ -97,7 +97,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 525 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 541 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -145,7 +145,9 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 11. Hak akses reviewer (lihat `new-api.md` bagian 16): hanya user berperan `reviewer`
     (dicek di DB) yang bisa ditugaskan, melihat tugasan, dan menyimpan review; endpoint
     `/users/:id/reviewer` (GET/PATCH) dan `/users/:id/reviewer/force-revoke` (Ketua);
-    `PATCH /users/:id/roles` menolak (409) pencabutan reviewer yang masih punya tugasan terbuka.
+    `PATCH /users/:id/roles` menolak (409) pencabutan reviewer yang masih punya tugasan terbuka;
+    `GET /users/kandidat-reviewer` (urut beban, `prioritas` = belum punya tugasan aktif),
+    `rekomendasi` per tugasan dan `otomatis: true` saat cabut paksa.
 12. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
