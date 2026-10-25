@@ -137,7 +137,7 @@ export default function KegiatanDetailPage({ jenis }) {
     const load = async () => {
       if (isDosen) {
         try {
-          const r = await proposalDosenApi.getById(id)
+          const r = await proposalDosenApi.getByIdLengkap(id)
           return { detail: r.data.data, sebagaiPengusul: true }
         } catch {
           /* bukan milik sendiri → coba sebagai anggota */

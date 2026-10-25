@@ -8,6 +8,21 @@ export const proposalDosenApi = {
     getKepercayaan: (params = {}) => api.get('/dosen/kepercayaan', { params }),
     getAll: (params = {}) => api.get('/dosen/proposals', { params }),
     getById: (id) => api.get(`/dosen/proposals/${id}`),
+    // Detail + metadata dokumen utama. Respons /dosen/proposals/:id (bentuk Node) tidak memuat
+    // dokumenNama/Mime/Ukuran walau file sudah tersimpan; GET /proposals/:id (boleh untuk
+    // pengusul) memuatnya, jadi field itu digabungkan. Bentuk respons sama dengan getById.
+    getByIdLengkap: async (id) => {
+        const [res, meta] = await Promise.all([
+            api.get(`/dosen/proposals/${id}`),
+            api.get(`/proposals/${id}`).catch(() => null),
+        ])
+        const m = meta?.data?.data
+        if (m && res.data?.data) {
+            const { dokumenNama, dokumenMime, dokumenUkuran, dokumenUrl } = m
+            Object.assign(res.data.data, { dokumenNama, dokumenMime, dokumenUkuran, dokumenUrl: res.data.data.dokumenUrl ?? dokumenUrl })
+        }
+        return res
+    },
     create: (data) => api.post('/dosen/proposals', data),
     update: (id, data) => api.patch(`/dosen/proposals/${id}`, data),
     submit: (id) => api.post(`/dosen/proposals/${id}/submit`),

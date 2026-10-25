@@ -265,6 +265,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `refreshToken`); `fetchMe()` mengisi `user`.
 - `src/api/axios.js` — interceptor Bearer token + auto refresh saat 401, gagal → logout.
 - `src/api/*.js` — satu modul per domain (`proposalApi`, `proposalDosenApi`, dst.).
+  **Catatan dokumen utama:** respons `GET /dosen/proposals/:id` (bentuk Node) tidak memuat
+  `dokumenNama/Mime/Ukuran` walau file tersimpan — pakai `proposalDosenApi.getByIdLengkap(id)` (menggabungkan
+  field itu dari `GET /proposals/:id`) di layar yang menampilkan dokumen (Usulan mode ubah, Detail Kegiatan).
 - `src/pages/dashboard/` — dashboard seragam semua peran; data per peran lewat
   `adapters/` (`pengelola`, `dosen`, `mahasiswa`, `reviewer`, `shared`). Status Inggris &
   Indonesia dipetakan ke satu kunci.

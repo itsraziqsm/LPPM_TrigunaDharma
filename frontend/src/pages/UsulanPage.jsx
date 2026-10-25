@@ -337,7 +337,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     if (!isEdit) return
     let alive = true
     proposalDosenApi
-      .getById(id)
+      .getByIdLengkap(id)
       .then((r) => {
         if (!alive) return
         const p = r.data.data
