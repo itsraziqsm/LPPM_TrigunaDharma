@@ -36,6 +36,7 @@ cp .env.example .env          # isi DATABASE_URL & JWT secret (bisa salin dari .
 go mod download
 go run ./cmd/migrate          # buat/upgrade tabel (setara `npx prisma migrate deploy`)
 go run ./cmd/seed             # opsional: role + akun demo + periode
+go run ./cmd/seed-tahap-1     # opsional: laporan contoh untuk proposal yang sudah disetujui
 go run ./cmd/server           # server di PORT (default 3000)
 ```
 
@@ -69,12 +70,29 @@ Sama dengan seeder Node: `admin@lppm.dev / admin123456`,
 `dosen1@lppm.dev / dosen123456`, `mahasiswa1@lppm.dev / mhs1234567`, dst.
 (Seeder Go tidak membuat proposal/review demo acak seperti seeder Node.)
 
+### Seed tahap 1: laporan atas proposal disetujui
+
+```bash
+go run ./cmd/seed-tahap-1                # status laporan campur (draft → diajukan → review → revisi → disetujui)
+go run ./cmd/seed-tahap-1 -status=draft  # semua laporan berstatus tertentu
+go run ./cmd/seed-tahap-1 -dry-run       # hanya tampilkan rencana
+```
+
+Untuk setiap proposal `disetujui` yang **belum** punya laporan, seeder membuat satu laporan
+(data proposal disalin seperti `POST /laporan`; luaran tercapai, ringkasan hasil, realisasi
+anggaran = 90% anggaran, metode penelitian untuk penelitian, link dokumen). Laporan
+review/revisi/disetujui mendapat reviewer berperan `reviewer` (bukan pengusul) dan review-nya;
+notifikasi `laporan_diajukan` ke ketua dan `laporan_revisi/disetujui` ke pengusul. Proposal tanpa
+item luaran diberi 2 target luaran, ditandai tercapai bila laporan sudah diajukan. Aman diulang
+(proposal yang sudah punya laporan dilewati). Di Docker: `docker compose exec app /app/seed-tahap-1`.
+
 ## Struktur
 
 ```
 cmd/server      entrypoint HTTP server
 cmd/migrate     runner migrasi (kompatibel _prisma_migrations)
 cmd/seed        seeder role, akun, periode
+cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)

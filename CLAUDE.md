@@ -52,6 +52,7 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 cp .env.example .env            # DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET wajib
 go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status)
 go run ./cmd/seed               # role + akun demo + periode (opsional)
+go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (status campur; -status=, -dry-run; aman diulang)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
 python3 scripts/e2e.py http://localhost:3000   # 541 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
@@ -60,7 +61,8 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
 
 ### Arsitektur
 - `cmd/server` (HTTP, graceful shutdown), `cmd/migrate` (runner kompatibel Prisma),
-  `cmd/seed`.
+  `cmd/seed`, `cmd/seed-tahap-1` (laporan + reviewer/review + target luaran untuk proposal
+  `disetujui` yang belum punya laporan; menulis SQL langsung mengikuti `insertKegiatan`).
 - `internal/config` — baca env (`godotenv`). Default: `PORT=3000`, `CORS_ORIGIN=*`,
   `JWT_ACCESS_EXPIRES_IN=15m`, `JWT_REFRESH_EXPIRES_IN=30d`, `RATE_LIMIT_MAX=500`
   per 15 menit. `NODE_ENV=production` menyembunyikan pesan error 500.
