@@ -23,6 +23,7 @@ API, dikelompokkan per rilis:
 - **Bagian 17** — Mahasiswa tidak lagi bisa mengusulkan proposal (hanya undangan tim & laporan harian).
 - **Bagian 18** — Aturan komposisi tim saat proposal diajukan (penelitian / pengabdian).
 - **Bagian 19** — Backup database: otomatis bulanan oleh sistem, manual oleh admin, log + unduh + hapus.
+- **Bagian 20** — Hak akses periode: admin hanya melihat, Ketua tambah/ubah/hapus langsung, admin hapus lewat verifikasi Ketua.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1650,3 +1651,51 @@ Backup manual, unduh, dan hapus juga dicatat di log aktivitas (`backup.manual|do
 ```bash
 gunzip < lppm-backup-....sql.gz | mysql -u <user> -p <database>
 ```
+
+---
+
+## 20. Hak akses periode (admin hanya melihat)
+
+Perubahan hak akses `/api/v1/periode` (endpoint lama, pesan & bentuk respons tetap):
+
+| Endpoint | Sebelumnya | Sekarang |
+|---|---|---|
+| `GET /periode`, `GET /periode/:id` | semua user login | tetap |
+| `POST /periode` (tambah) | admin, ketua | **ketua_lppm saja** |
+| `PATCH /periode/:id` (ubah) | admin, ketua | **ketua_lppm saja** |
+| `DELETE /periode/:id` (**baru**, hapus langsung) | — | **ketua_lppm** |
+| `POST /periode/:id/deletion-request` (minta hapus) | admin, ketua | **admin saja** |
+| `POST /periode/deletion-request/:requestId/approve` | pihak lain (admin ↔ ketua) | **ketua_lppm saja** |
+| `GET /periode/:id/deletion-request`, `POST .../cancel` | admin, ketua | tetap |
+
+Selain yang diizinkan → `403 "Forbidden: insufficient permissions"`.
+
+### Ketua: hapus langsung
+
+`DELETE /api/v1/periode/:id` dengan body `{ "password": "<password ketua sendiri>" }` (konfirmasi,
+bukan persetujuan pihak lain).
+
+| Kondisi | Respons |
+|---|---|
+| berhasil | `200 { "success": true, "message": "Periode berhasil dihapus" }` |
+| tanpa password | `400 "Password wajib diisi"` |
+| password salah | `500 "Password salah"` (sama dengan endpoint hapus lama) |
+| periode tidak ada | `500 "Periode tidak ditemukan"` |
+
+Bila ada permintaan hapus dari admin yang masih menunggu untuk periode itu, permintaannya ikut
+ditandai disetujui dan admin peminta mendapat notifikasi `deletion_approved`.
+
+### Admin: hapus lewat verifikasi Ketua
+
+Alur lama tetap: admin `POST /periode/:id/deletion-request` `{ password }` → semua Ketua LPPM
+mendapat notifikasi `deletion_request` → Ketua `POST /periode/deletion-request/:requestId/approve`
+`{ password }` (periode terhapus, admin mendapat `deletion_approved`) atau `.../cancel`
+(admin mendapat `deletion_cancelled`). Permintaan berlaku 1 hari.
+
+### Untuk frontend (`PeriodePage.jsx`)
+
+- Admin: sembunyikan tombol Tambah & Ubah periode; tombol Hapus tetap, membuka alur
+  "Ajukan penghapusan ke Ketua" (`requestDelete`).
+- Ketua: tombol Hapus → dialog password → `DELETE /periode/:id` (perlu fungsi baru di
+  `src/api/periode.js`, mis. `remove: (id, password) => api.delete(`/periode/${id}`, { data: { password } })`);
+  daftar permintaan dari admin tetap bisa disetujui/dibatalkan.

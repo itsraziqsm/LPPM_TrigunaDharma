@@ -15,6 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
+| W-33 | Hak akses Periode (`PeriodePage.jsx`): admin hanya melihat (sembunyikan Tambah/Ubah; Hapus = ajukan ke Ketua); Ketua hapus langsung | `DELETE /periode/:id` `{ password }` (Ketua); `POST /periode`/`PATCH /periode/:id` kini Ketua saja; `deletion-request` hanya admin, `approve` hanya Ketua (`new-api.md` bagian 20) | Tambah `remove(id, password)` di `src/api/periode.js` (`api.delete(url, { data: { password } })`); admin yang menekan Tambah/Ubah kini mendapat 403. |
 | W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
 
 ### Sudah disambungkan

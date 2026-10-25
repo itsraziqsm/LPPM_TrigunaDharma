@@ -189,13 +189,20 @@ periodePen = aktif[0]["id"]
 periodePeng = req("GET", "/api/v1/periode?isAktif=true&jenis=pengabdian", dosen1)[1]["data"][0]["id"]
 expect("periode bad jenis", req("GET", "/api/v1/periode?jenis=xx", dosen1), 500)
 expect("periode 404", req("GET", "/api/v1/periode/99999", dosen1), 500, "Periode tidak ditemukan")
-b = expect("periode create invalid", req("POST", "/api/v1/periode", admin, {"nama": "ab", "tahun": 1999, "jenis": "x", "tanggalMulai": "2026-13-01", "tanggalSelesai": 5}), 422)
+# hak akses: admin hanya melihat; tambah/ubah/hapus langsung hanya Ketua LPPM
+PERIODE_BARU = {"nama": "Periode Uji", "tahun": 2027, "jenis": "penelitian", "tanggalMulai": "2027-01-01", "tanggalSelesai": "2027-06-30T10:00:00+07:00"}
+expect("admin create periode forbidden", req("POST", "/api/v1/periode", admin, PERIODE_BARU), 403, "Forbidden: insufficient permissions")
+expect("admin list periode", req("GET", "/api/v1/periode", admin), 200, "Periode fetched")
+b = expect("periode create invalid", req("POST", "/api/v1/periode", ketua, {"nama": "ab", "tahun": 1999, "jenis": "x", "tanggalMulai": "2026-13-01", "tanggalSelesai": 5}), 422)
 check("periode errors", b["errors"] == {"nama": ["Nama minimal 3 karakter"], "tahun": ["Number must be greater than or equal to 2000"], "jenis": ["Invalid enum value. Expected 'penelitian' | 'pengabdian', received 'x'"], "tanggalMulai": ["Invalid datetime"], "tanggalSelesai": ["Invalid input"]}, b)
-b = expect("periode create", req("POST", "/api/v1/periode", admin, {"nama": "Periode Uji", "tahun": 2027, "jenis": "penelitian", "tanggalMulai": "2027-01-01", "tanggalSelesai": "2027-06-30T10:00:00+07:00"}), 201, "Periode created")
+b = expect("periode create", req("POST", "/api/v1/periode", ketua, PERIODE_BARU), 201, "Periode created")
 newPeriode = b["data"]["id"]
 check("periode dates", b["data"]["tanggalMulai"] == "2027-01-01T00:00:00.000Z" and b["data"]["tanggalSelesai"] == "2027-06-30T03:00:00.000Z" and b["data"]["isAktif"] is True, b["data"])
 b = expect("periode update", req("PATCH", f"/api/v1/periode/{newPeriode}", ketua, {"nama": "Periode Uji 2", "isAktif": False}), 200, "Periode updated")
 check("periode updated", b["data"]["nama"] == "Periode Uji 2" and b["data"]["isAktif"] is False, b["data"])
+expect("admin update periode forbidden", req("PATCH", f"/api/v1/periode/{newPeriode}", admin, {"nama": "Diubah Admin"}), 403, "Forbidden: insufficient permissions")
+expect("admin delete langsung forbidden", req("DELETE", f"/api/v1/periode/{newPeriode}", admin, {"password": "admin123456"}), 403, "Forbidden: insufficient permissions")
+expect("ketua deletion-request forbidden", req("POST", f"/api/v1/periode/{newPeriode}/deletion-request", ketua, {"password": "ketua123456"}), 403, "Forbidden: insufficient permissions")
 expect("deletion pending none", req("GET", f"/api/v1/periode/{newPeriode}/deletion-request", admin), 200, "Pending deletion request")
 check("deletion pending null", req("GET", f"/api/v1/periode/{newPeriode}/deletion-request", admin)[1]["data"] is None)
 expect("deletion no password", req("POST", f"/api/v1/periode/{newPeriode}/deletion-request", admin, {}), 400, "Password wajib diisi")
@@ -207,10 +214,20 @@ b = req("GET", f"/api/v1/periode/{newPeriode}/deletion-request", ketua)[1]
 check("deletion pending shape", b["data"]["id"] == reqId and b["data"]["requester"] == {"id": adminUser["id"], "name": "Admin LPPM"} and b["data"]["approverId"] is None, b)
 n = req("GET", "/api/v1/notifications", ketua)[1]
 check("ketua got deletion notif", any(x["type"] == "deletion_request" and x["refId"] == reqId for x in n["data"]), n["data"][:2])
-expect("approve own request", req("POST", f"/api/v1/periode/deletion-request/{reqId}/approve", admin, {"password": "admin123456"}), 500, "Tidak dapat menyetujui permintaan yang Anda buat sendiri")
+expect("admin approve forbidden", req("POST", f"/api/v1/periode/deletion-request/{reqId}/approve", admin, {"password": "admin123456"}), 403, "Forbidden: insufficient permissions")
 expect("approve", req("POST", f"/api/v1/periode/deletion-request/{reqId}/approve", ketua, {"password": "ketua123456"}), 200, "Periode berhasil dihapus")
 expect("periode deleted", req("GET", f"/api/v1/periode/{newPeriode}", ketua), 500, "Periode tidak ditemukan")
 expect("cancel missing", req("POST", f"/api/v1/periode/deletion-request/{reqId}/cancel", ketua), 500, "Permintaan penghapusan tidak ditemukan atau sudah tidak valid")
+# Ketua menghapus langsung (cukup password sendiri); permintaan admin yang menunggu ikut selesai
+b = expect("periode create 2", req("POST", "/api/v1/periode", ketua, dict(PERIODE_BARU, nama="Periode Uji Hapus Langsung")), 201)
+p2 = b["data"]["id"]
+reqId2 = req("POST", f"/api/v1/periode/{p2}/deletion-request", admin, {"password": "admin123456"})[1]["data"]["requestId"]
+expect("ketua delete no password", req("DELETE", f"/api/v1/periode/{p2}", ketua, {}), 400, "Password wajib diisi")
+expect("ketua delete wrong password", req("DELETE", f"/api/v1/periode/{p2}", ketua, {"password": "x"}), 500, "Password salah")
+expect("ketua delete langsung", req("DELETE", f"/api/v1/periode/{p2}", ketua, {"password": "ketua123456"}), 200, "Periode berhasil dihapus")
+expect("periode 2 deleted", req("GET", f"/api/v1/periode/{p2}", admin), 500, "Periode tidak ditemukan")
+expect("ketua delete missing", req("DELETE", f"/api/v1/periode/{p2}", ketua, {"password": "ketua123456"}), 500, "Periode tidak ditemukan")
+check("admin notified direct delete", any(x["type"] == "deletion_approved" and x["refId"] == reqId2 for x in req("GET", "/api/v1/notifications", admin)[1]["data"]))
 
 # ── proposals ──
 abstrak = "Abstrak penelitian yang cukup panjang untuk validasi."

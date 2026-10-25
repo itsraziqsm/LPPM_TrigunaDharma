@@ -32,11 +32,15 @@ func (s *Server) registerPeriodeRoutes() {
 	g := s.group("/api/v1/periode", s.authenticate)
 	g.get("/", s.listPeriode)
 	g.get("/:id", s.getPeriode)
-	g.post("/", authorize("admin", "ketua_lppm"), validateBody(periodeSchema), s.createPeriode)
-	g.patch("/:id", authorize("admin", "ketua_lppm"), validateBody(periodeSchema.partial()), s.updatePeriode)
+	// Hak akses (beda dengan Node): admin hanya melihat periode; tambah/ubah hanya Ketua LPPM.
+	// Hapus: Ketua langsung (DELETE /:id + password sendiri); admin lewat permintaan yang
+	// harus disetujui Ketua (deletion-request → approve).
+	g.post("/", authorize("ketua_lppm"), validateBody(periodeSchema), s.createPeriode)
+	g.patch("/:id", authorize("ketua_lppm"), validateBody(periodeSchema.partial()), s.updatePeriode)
+	g.delete("/:id", authorize("ketua_lppm"), s.deletePeriodeLangsung)
 	g.get("/:id/deletion-request", authorize("admin", "ketua_lppm"), s.pendingDeletionRequest)
-	g.post("/:id/deletion-request", authorize("admin", "ketua_lppm"), s.requestPeriodeDeletion)
-	g.post("/deletion-request/:requestId/approve", authorize("admin", "ketua_lppm"), s.approvePeriodeDeletion)
+	g.post("/:id/deletion-request", authorize("admin"), s.requestPeriodeDeletion)
+	g.post("/deletion-request/:requestId/approve", authorize("ketua_lppm"), s.approvePeriodeDeletion)
 	g.post("/deletion-request/:requestId/cancel", authorize("admin", "ketua_lppm"), s.cancelPeriodeDeletion)
 }
 
@@ -261,8 +265,7 @@ func (s *Server) requestPeriodeDeletion(c *Ctx) error {
 		return c.fail(http.StatusBadRequest, "Password wajib diisi")
 	}
 	ctx := c.r.Context()
-	roles := c.user.Roles
-	if !isAdminOrKetua(roles) {
+	if !isAdminOrKetua(c.user.Roles) {
 		return plainError("Hanya admin atau ketua LPPM yang dapat melakukan tindakan ini")
 	}
 	periode, periodeID, err := s.ensurePeriodeExists(ctx, c.param("id"))
@@ -289,13 +292,10 @@ func (s *Server) requestPeriodeDeletion(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	targetRole := "admin"
-	if contains(roles, "admin") {
-		targetRole = "ketua_lppm"
-	}
+	// Permintaan admin selalu diverifikasi oleh Ketua LPPM.
 	rows, err := s.db.QueryContext(ctx,
-		"SELECT u.`id` FROM `User` u WHERE u.`status` = 'approved' AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = ?) ORDER BY u.`id`",
-		targetRole)
+		"SELECT u.`id` FROM `User` u WHERE u.`status` = 'approved' AND u.`id` <> ? AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'ketua_lppm') ORDER BY u.`id`",
+		c.user.UserID)
 	if err != nil {
 		return err
 	}
@@ -354,14 +354,8 @@ func (s *Server) approvePeriodeDeletion(c *Ctx) error {
 		}
 		return plainError("Permintaan penghapusan tidak ditemukan atau sudah tidak valid")
 	}
+	// Hanya Ketua (route) yang menyetujui permintaan admin, bukan permintaannya sendiri.
 	if requesterID == approverID {
-		return plainError("Tidak dapat menyetujui permintaan yang Anda buat sendiri")
-	}
-	requesterRoles, err := s.rolesOf(ctx, s.db, requesterID)
-	if err != nil {
-		return err
-	}
-	if contains(approverRoles, "admin") == contains(requesterRoles, "admin") {
 		return plainError("Tidak dapat menyetujui permintaan yang Anda buat sendiri")
 	}
 	if err := s.verifyUserPassword(ctx, approverID, password); err != nil {
@@ -428,4 +422,74 @@ func (s *Server) cancelPeriodeDeletion(c *Ctx) error {
 		}
 	}
 	return c.ok("Permintaan penghapusan dibatalkan", noData)
+}
+
+// deletePeriodeLangsung: Ketua LPPM menghapus periode tanpa persetujuan pihak lain, cukup
+// konfirmasi password sendiri. Permintaan hapus admin yang masih menunggu untuk periode ini
+// ikut ditandai disetujui dan peminta diberi notifikasi.
+func (s *Server) deletePeriodeLangsung(c *Ctx) error {
+	password, ok := passwordFromBody(c)
+	if !ok {
+		return c.fail(http.StatusBadRequest, "Password wajib diisi")
+	}
+	ctx := c.r.Context()
+	periode, periodeID, err := s.ensurePeriodeExists(ctx, c.param("id"))
+	if err != nil {
+		return err
+	}
+	if err := s.verifyUserPassword(ctx, c.user.UserID, password); err != nil {
+		return err
+	}
+	type pending struct{ id, requesterID int64 }
+	var waiting []pending
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		rows, err := tx.QueryContext(ctx, "SELECT `id`,`requesterId` FROM `PeriodeDeletionRequest` WHERE `periodeId` = ? AND `status` = 'pending'", periodeID)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			var p pending
+			if err := rows.Scan(&p.id, &p.requesterID); err != nil {
+				rows.Close()
+				return err
+			}
+			waiting = append(waiting, p)
+		}
+		rows.Close()
+		if _, err := tx.ExecContext(ctx,
+			"UPDATE `PeriodeDeletionRequest` SET `status` = 'approved', `approverId` = ?, `updatedAt` = ? WHERE `periodeId` = ? AND `status` = 'pending'",
+			c.user.UserID, s.nowMs(), periodeID); err != nil {
+			return err
+		}
+		res, err := tx.ExecContext(ctx, "DELETE FROM `Periode` WHERE `id` = ?", periodeID)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return notFoundRecord("Periode")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for _, p := range waiting {
+		if p.requesterID == c.user.UserID {
+			continue
+		}
+		if err := s.createNotification(ctx, s.db, notification{
+			UserID: p.requesterID, Type: "deletion_approved", Judul: "Periode Berhasil Dihapus",
+			Pesan: `Periode "` + periode.Str("nama") + `" telah dihapus oleh Ketua LPPM.`,
+			RefID: p.id, RefType: "PeriodeDeletionRequest",
+		}); err != nil {
+			return err
+		}
+	}
+	if err := s.logActivity(ctx, s.db, c, activityEntry{
+		UserID: c.user.UserID, Action: "periode.delete", EntityType: "periode", EntityID: periodeID,
+		Detail: `Periode "` + periode.Str("nama") + `" dihapus langsung oleh Ketua LPPM`,
+	}); err != nil {
+		return err
+	}
+	return c.ok("Periode berhasil dihapus", noData)
 }

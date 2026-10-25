@@ -150,7 +150,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 587 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 599 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -208,7 +208,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
     pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400. Lihat `new-api.md` bagian 18.
 14. Backup database `/api/v1/backup` (admin, baru): otomatis sebulan sekali + manual, log,
     unduh, hapus. Lihat bagian "Backup database" di bawah dan `new-api.md` bagian 19.
-15. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+15. Periode: admin hanya melihat; tambah/ubah hanya Ketua; Ketua hapus langsung (`DELETE
+    /periode/:id` + password sendiri, baru); admin hapus lewat permintaan yang disetujui Ketua
+    (Node: admin ↔ ketua saling menyetujui). Lihat `new-api.md` bagian 20.
+16. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

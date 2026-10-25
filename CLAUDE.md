@@ -56,7 +56,7 @@ go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (statu
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 587 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 599 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -110,7 +110,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 |---|---|---|
 | `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
 | `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
-| `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
+| `/periode` | list, detail, create, update, DELETE `/:id` (hapus langsung + password); `deletion-request` (+ approve/cancel) | baca: semua; create/update/DELETE: ketua; deletion-request: admin; approve: ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
@@ -180,9 +180,10 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 - **Verifikasi email** opsional (login tetap bisa): token 24 jam di `EmailVerificationToken`,
   link `FRONTEND_URL/verify-email?token=`; user lama & seed dianggap terverifikasi; tanpa
   `SMTP_HOST` di luar production link hanya di-log.
-- Hapus periode: admin/ketua membuat permintaan (berlaku 1 hari), harus disetujui pihak
-  **lain** dengan password — admin ↔ ketua (peminta dan penyetuju tidak boleh sama-sama
-  admin atau sama-sama non-admin). Notifikasi `deletion_request|approved|cancelled`.
+- Periode: **admin hanya melihat**; tambah/ubah hanya Ketua LPPM. Hapus: Ketua langsung
+  (`DELETE /periode/:id` + password sendiri; permintaan admin yang menunggu ikut disetujui);
+  admin membuat permintaan (berlaku 1 hari) yang harus disetujui **Ketua** dengan password.
+  Notifikasi `deletion_request|approved|cancelled`.
 - Notifikasi (`NotifType`): `proposal_diajukan`, `proposal_disetujui`, `proposal_ditolak`,
   `proposal_revisi`, `reviewer_ditugaskan`, `review_selesai`, `laporan_diunggah`,
   `deletion_request`, `deletion_approved`, `deletion_cancelled`, `laporan_diajukan`,
@@ -222,7 +223,8 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 `/auth/me` + field profil; stats + `review` & `?jenis=`; field `tahapan`; foto profil,
 export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian; kata kunci & metode
 penelitian di laporan; ketua boleh mengatur peran reviewer; hanya peran reviewer yang bisa
-ditugaskan/mereview, beri/cabut/cabut paksa reviewer.
+ditugaskan/mereview, beri/cabut/cabut paksa reviewer; periode: admin hanya melihat, Ketua
+tambah/ubah/hapus langsung, admin hapus lewat persetujuan Ketua.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,
