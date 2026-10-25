@@ -14,6 +14,7 @@ import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
 import ExportPage from './ExportPage' // ← BARU
 import KegiatanPage from './KegiatanPage'
+import KegiatanDetailPage from './KegiatanDetailPage'
 import UsulanPage from './UsulanPage'
 import LuaranPage from './LuaranPage'
 import LaporanPage from './LaporanPage'
@@ -90,6 +91,8 @@ export default function DashboardLayout({ page, jenis }) {
   }
 
   const renderContent = () => {
+    // Detail kegiatan: pengusul, anggota tim (dosen/mahasiswa), admin & ketua (baca saja).
+    if (page === 'kegiatan-detail') return <KegiatanDetailPage jenis={jenis} />
     if (page === 'profil') return <ProfilePage />
     if (page === 'notifikasi') return <NotifikasiPage />
 

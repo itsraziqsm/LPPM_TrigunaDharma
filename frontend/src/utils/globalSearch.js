@@ -89,7 +89,7 @@ export async function cariGlobal(q, ctx) {
   if (ctx.peran === 'dosen') {
     const [prop, lap] = await Promise.all([safe(proposalDosenApi.getAll(params)), safe(laporanApi.getMy(params))])
     data = [
-      ...daftar(prop).map((p) => kegiatanItem(p, 'Proposal', `/kegiatan/${p.jenis}?detail=${p.id}`)),
+      ...daftar(prop).map((p) => kegiatanItem(p, 'Proposal', `/kegiatan/${p.jenis}/detail/${p.id}`)),
       ...daftar(lap).map((l) => kegiatanItem(l, 'Laporan', `/kegiatan/${l.jenis}/laporan/${l.id}`)),
     ]
   } else if (ctx.peran === 'pengelola') {

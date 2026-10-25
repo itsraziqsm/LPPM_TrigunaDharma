@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, Trash2, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, Trash2, X } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
 import { alertDialog, confirmDialog } from '../utils/dialog'
-import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
@@ -14,8 +13,9 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 // atau laporan (GET /laporan/my) untuk satu jenis — baris draft/revisi punya tombol
 // "Lanjutkan" (draft juga "Hapus") — lalu tombol sekunder Usulkan Proposal Baru &
 // Kirim Laporan Baru. Menggantikan halaman Proposal Saya (dihapus): tautan lama
-// diarahkan ke sini, `?status=` membuka dengan filter status, `?detail=<id>`
-// langsung membuka detail proposal (dipakai notifikasi & dashboard).
+// diarahkan ke sini, `?status=` membuka dengan filter status, `?detail=<id>` dialihkan ke
+// halaman Detail Kegiatan (/kegiatan/:jenis/detail/:id); seluruh baris Riwayat bisa diklik
+// (proposal → Detail Kegiatan, laporan → index laporan).
 // Bagian "sebagai anggota tim" dari GET /dosen/proposals/as-member.
 // ---------------------------------------------------------------------------
 
@@ -55,9 +55,28 @@ function TahapanBadge({ tahapan }) {
   )
 }
 
+// Seluruh baris tabel bisa diklik (mouse & keyboard) untuk membuka detail; tombol di
+// dalam baris (Lanjutkan, Hapus) menghentikan propagasi.
+function barisKlik(buka, judul) {
+  return {
+    onClick: buka,
+    onKeyDown: (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        buka()
+      }
+    },
+    tabIndex: 0,
+    role: 'link',
+    'aria-label': `Buka detail: ${judul}`,
+    className: 'cursor-pointer transition-colors hover:bg-navy-50/60 focus-visible:bg-navy-50 focus-visible:outline-none',
+  }
+}
+
 // Proposal milik dosen lain tempat user menjadi anggota (undangan diterima):
 // GET /dosen/proposals/as-member. Detail lewat GET /proposals/:id (readOnly).
-function MemberSection({ jenis, label, userId, onDetail }) {
+function MemberSection({ jenis, label, userId }) {
+  const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -132,8 +151,9 @@ function MemberSection({ jenis, label, userId, onDetail }) {
             ) : (
               rows.map((p) => {
                 const saya = (p.anggota || []).find((a) => a.user?.id === userId)
+                const buka = () => navigate(`/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} {...barisKlik(buka, p.judul)}>
                     <td className="min-w-[16rem] max-w-md">
                       <p className="line-clamp-2 font-semibold text-slate-900" title={p.judul}>
                         {p.judul}
@@ -149,9 +169,7 @@ function MemberSection({ jenis, label, userId, onDetail }) {
                       <TahapanBadge tahapan={p.tahapan} />
                     </td>
                     <td className="text-right">
-                      <button type="button" onClick={() => onDetail(p.id)} className="btn btn-ghost btn-sm">
-                        Detail
-                      </button>
+                      <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
                     </td>
                   </tr>
                 )
@@ -237,14 +255,12 @@ export default function KegiatanPage({ jenis }) {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [selectedId, setSelectedId] = useState(() => Number(new URLSearchParams(location.search).get('detail')) || null)
-  // ?detail=<id> juga saat sudah di halaman ini (pencarian global).
+  // ?detail=<id> (tautan lama: notifikasi, dashboard) → halaman Detail Kegiatan.
   const detailParam = Number(new URLSearchParams(location.search).get('detail')) || null
   useEffect(() => {
-    if (detailParam) setSelectedId(detailParam)
-  }, [detailParam])
+    if (detailParam) navigate(`/kegiatan/${jenis}/detail/${detailParam}`, { replace: true })
+  }, [detailParam, jenis, navigate])
   const [deleting, setDeleting] = useState(null)
-  const [memberDetailId, setMemberDetailId] = useState(null)
   const user = useAuthStore((s) => s.user)
   const [tick, setTick] = useState(0)
 
@@ -538,8 +554,11 @@ export default function KegiatanPage({ jenis }) {
               ) : (
                 rows.map((p) => {
                   const lanjut = p.status === 'draft' || p.status === 'revisi'
+                  const buka = () =>
+                    navigate(isLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}` : `/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
+                  const klik = barisKlik(buka, p.judul)
                   return (
-                  <tr key={`${tipe}-${p.id}`} className={lanjut ? 'bg-amber-50/60' : undefined}>
+                  <tr key={`${tipe}-${p.id}`} {...klik} className={`${klik.className} ${lanjut ? 'bg-amber-50/60' : ''}`}>
                     <td className="whitespace-nowrap tabular-nums">{dateTime(p.createdAt)}</td>
                     <td className="min-w-[16rem] max-w-md">
                       <p className="line-clamp-2 font-semibold text-slate-900" title={p.judul}>
@@ -552,6 +571,8 @@ export default function KegiatanPage({ jenis }) {
                       {lanjut ? (
                         <Link
                           to={isLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi` : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
                           className="btn btn-primary btn-sm mt-2"
                         >
                           Lanjutkan {p.status === 'revisi' ? 'revisi' : 'draf'}
@@ -579,25 +600,26 @@ export default function KegiatanPage({ jenis }) {
                     )}
                     <td className="whitespace-nowrap text-right">
                       {isLaporan ? (
-                        <Link to={`/kegiatan/${p.jenis || jenis}/laporan/${p.id}`} className="btn btn-ghost btn-sm">
-                          Detail
-                        </Link>
+                        <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
                       ) : (
                         <>
-                          <button type="button" onClick={() => setSelectedId(p.id)} className="btn btn-ghost btn-sm">
-                            Detail
-                          </button>
                           {p.status === 'draft' ? (
                             <button
                               type="button"
-                              onClick={() => hapus(p)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                hapus(p)
+                              }}
+                              onKeyDown={(e) => e.stopPropagation()}
                               disabled={deleting === p.id}
                               className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="size-4" aria-hidden="true" />
                               {deleting === p.id ? 'Menghapus…' : 'Hapus'}
                             </button>
-                          ) : null}
+                          ) : (
+                            <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
+                          )}
                         </>
                       )}
                     </td>
@@ -638,14 +660,7 @@ export default function KegiatanPage({ jenis }) {
         </Link>
       </div>
 
-      <MemberSection jenis={jenis} label={label} userId={user?.id} onDetail={(pid) => setMemberDetailId(pid)} />
-
-      {selectedId ? (
-        <ProposalDetailModal proposalId={selectedId} onClose={() => setSelectedId(null)} onRefresh={refresh} />
-      ) : null}
-      {memberDetailId ? (
-        <ProposalDetailModal proposalId={memberDetailId} readOnly onClose={() => setMemberDetailId(null)} />
-      ) : null}
+      <MemberSection jenis={jenis} label={label} userId={user?.id} />
     </div>
   )
 }

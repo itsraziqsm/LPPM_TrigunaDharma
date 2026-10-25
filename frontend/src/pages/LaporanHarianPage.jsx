@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../api/axios'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -756,6 +756,13 @@ function ProposalDetail({ proposal, onBack }) {
             <h1 className="mt-1.5 font-serif text-2xl font-medium leading-snug text-navy-950">
               {proposal.judul}
             </h1>
+            <Link
+              to={`/kegiatan/${proposal.jenis}/detail/${proposal.id}`}
+              className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-navy-700 hover:text-navy-900"
+            >
+              Lihat detail kegiatan
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </Link>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Badge

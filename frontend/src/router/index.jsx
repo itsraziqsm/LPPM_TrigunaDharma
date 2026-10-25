@@ -42,6 +42,8 @@ const router = createBrowserRouter([
       { path: '/cetak-dokumen/surat-tugas', element: <DashboardLayout page="surat-tugas" /> },
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },
+      { path: '/kegiatan/penelitian/detail/:id', element: <DashboardLayout page="kegiatan-detail" jenis="penelitian" /> },
+      { path: '/kegiatan/pengabdian/detail/:id', element: <DashboardLayout page="kegiatan-detail" jenis="pengabdian" /> },
       { path: '/kegiatan/penelitian/usulan', element: <DashboardLayout page="usulan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian/usulan', element: <DashboardLayout page="usulan" jenis="pengabdian" /> },
       { path: '/kegiatan/penelitian/usulan/:id', element: <DashboardLayout page="usulan" jenis="penelitian" /> },

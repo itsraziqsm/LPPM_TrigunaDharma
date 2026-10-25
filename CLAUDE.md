@@ -249,7 +249,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
-  `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
+  `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
@@ -289,9 +289,16 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; satu baris cari ·
   filter status (select) · Cari · "Hapus filter" hanya saat ada filter) tab Proposal
   (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`), lalu tombol sekunder
-  **Usulkan Proposal Baru** & **Kirim Laporan Baru**. Draft bisa **Hapus** dari Riwayat. Query
-  `?status=<status>` membuka dengan filter, `?detail=<id>` langsung membuka detail proposal
-  (dipakai dashboard & notifikasi). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
+  **Usulkan Proposal Baru** & **Kirim Laporan Baru**. Draft bisa **Hapus** dari Riwayat. **Tanpa tombol Detail**:
+  seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
+  dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan
+  lama) dialihkan ke Detail Kegiatan.
+- **Detail Kegiatan** (`src/pages/KegiatanDetailPage.jsx`, `/kegiatan/:jenis/detail/:id`, menggantikan
+  `ProposalDetailModal` yang dihapus): kepala (judul, status, ketua, periode, stepper 4 tahapan, aksi pengusul:
+  Lanjutkan, Ajukan, Kirim/Buka laporan), kolom utama (Abstrak, Informasi kegiatan, Mitra untuk pengabdian, Target &
+  capaian luaran, Hasil review; pengusul: Dokumen lampiran & Laporan kemajuan/akhir) dan samping (Tim, Dokumen utama,
+  Riwayat waktu). Dosen pengusul `GET /dosen/proposals/:id`; anggota tim (dosen/mahasiswa) & admin/ketua
+  `GET /proposals/:id` (baca saja). Jenis di URL disesuaikan dengan proposal (notifikasi tanpa jenis). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
