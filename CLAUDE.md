@@ -415,7 +415,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `<DialogHost />` (dipasang di `main.jsx`) dengan `src/components/ConfirmDialog.jsx` (gaya dialog
   Keluar; tone `danger|warning|primary|info|error`). ConfirmDialog juga bisa dipakai langsung.
 - **Pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
-  kaca pembesar melayang kanan bawah (disembunyikan saat ada modal, `.global-search-fab` di
+  kaca pembesar melayang kanan bawah (bulat; hover/fokus melebar ke kiri jadi pil "Telusuri" + ikon; disembunyikan saat ada modal, `.global-search-fab` di
   `index.css`) atau **Ctrl/⌘ + F** membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen

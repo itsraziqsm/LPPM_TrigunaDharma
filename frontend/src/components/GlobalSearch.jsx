@@ -28,14 +28,21 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
 
   return (
     <>
+      {/* Bulat 56px; saat hover/fokus melebar ke kiri (berlabuh di kanan) menjadi pil "Telusuri" + ikon. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title={`Cari (${MOD_KEY} + F)`}
-        className="global-search-fab fixed bottom-5 right-5 z-20 grid size-14 place-items-center rounded-full bg-navy-800 text-white shadow-lg ring-4 ring-white transition-colors hover:bg-navy-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-400 lg:bottom-6 lg:right-6"
+        title={`Telusuri (${MOD_KEY} + F)`}
+        aria-label={`Telusuri (${MOD_KEY} + F)`}
+        className="global-search-fab group fixed bottom-5 right-5 z-20 flex h-14 items-center rounded-full bg-navy-800 px-4 text-white shadow-lg ring-4 ring-white transition-colors duration-300 hover:bg-navy-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-400 lg:bottom-6 lg:right-6"
       >
-        <Search className="size-6" aria-hidden="true" />
-        <span className="sr-only">Cari ({MOD_KEY} + F)</span>
+        <span
+          aria-hidden="true"
+          className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-semibold opacity-0 transition-[max-width,opacity,margin] duration-300 ease-out group-hover:mr-2 group-hover:max-w-24 group-hover:opacity-100 group-focus-visible:mr-2 group-focus-visible:max-w-24 group-focus-visible:opacity-100 motion-reduce:transition-none"
+        >
+          Telusuri
+        </span>
+        <Search className="size-6 shrink-0" aria-hidden="true" />
       </button>
       <SearchPopup
         open={open}
