@@ -20,6 +20,8 @@ import LaporanIsiPage from './LaporanIsiPage'
 import LaporanMasukPage from './LaporanMasukPage'
 import NotifikasiPage from './NotifikasiPage'
 import { canReview } from '../utils/roles'
+import CetakDokumenPage from './cetak/CetakDokumenPage'
+import SuratTugasPage from './cetak/SuratTugasPage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -92,7 +94,9 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'periode') return <PeriodePage />
       if (page === 'proposals') return <ProposalPage />
       if (page === 'users') return <UserManagementPage />
-      if (page === 'export') return <ExportPage /> // ← BARU
+      if (page === 'cetak-dokumen') return <CetakDokumenPage />
+      if (page === 'export') return <ExportPage />
+      if (page === 'surat-tugas') return <SuratTugasPage />
       if (page === 'laporan-masuk') return <LaporanMasukPage />
       return <DashboardHome role={primaryRole} isReviewer={isReviewer} />
     }

@@ -25,7 +25,7 @@ import {
 // Admin dan Ketua LPPM memakai satu adapter: keduanya mengelola proposal,
 // periode, dan akun.
 export const actions = [
-  { to: '/export', label: 'Export laporan', variant: 'secondary' },
+  { to: '/cetak-dokumen', label: 'Cetak dokumen', variant: 'secondary' },
   { to: '/proposals', label: 'Buka proposal', variant: 'primary' },
 ]
 
@@ -212,7 +212,7 @@ export async function load({ withReviewerDigest }) {
           label: 'Periode',
           desc: periodsKnown ? `${periods.length} periode aktif.` : 'Kelola periode proposal.',
         },
-        { to: '/export', label: 'Export laporan', desc: 'Unduh data proposal ke PDF atau Excel.' },
+        { to: '/cetak-dokumen', label: 'Cetak dokumen', desc: 'Rekap proposal & surat tugas (PDF).' },
         ...(withReviewerDigest ? [tugasanShortcut(digest)] : []),
         PROFILE_SHORTCUT,
       ],

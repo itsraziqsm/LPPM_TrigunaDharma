@@ -34,7 +34,9 @@ const router = createBrowserRouter([
       { path: '/kegiatan/pengabdian/laporan/:id', element: <DashboardLayout page="laporan" jenis="pengabdian" /> },
       { path: '/kegiatan/penelitian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="pengabdian" /> },
-      { path: '/export', element: <DashboardLayout page="export" /> }, // ← BARU
+      { path: '/cetak-dokumen', element: <DashboardLayout page="cetak-dokumen" /> },
+      { path: '/cetak-dokumen/rekap-proposal', element: <DashboardLayout page="export" /> },
+      { path: '/cetak-dokumen/surat-tugas', element: <DashboardLayout page="surat-tugas" /> },
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },
       { path: '/kegiatan/penelitian/usulan', element: <DashboardLayout page="usulan" jenis="penelitian" /> },
@@ -47,6 +49,8 @@ const router = createBrowserRouter([
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <ErrorPage routeError /> },
   // Halaman galat: /error/401, /error/403, /error/408, /error/500, /error/503, dst.
   { path: '/error/:code', element: <ErrorPage /> },
+  // Export/Print Laporan kini menu Cetak Dokumen; tautan lama tetap jalan.
+  { path: '/export', element: <Navigate to="/cetak-dokumen" replace /> },
   // Halaman Proposal Saya dilebur ke menu Kegiatan; tautan/bookmark lama tetap jalan.
   { path: '/proposal-saya', element: <Navigate to="/kegiatan/penelitian" replace /> },
   { path: '/', element: <Navigate to="/dashboard" replace /> },

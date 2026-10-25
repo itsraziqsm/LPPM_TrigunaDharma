@@ -152,6 +152,23 @@ Data yang **sudah** tersambung:
 
 Data yang **menunggu API**: tidak ada lagi.
 
+## Cetak Dokumen (`frontend/src/pages/cetak/`, route `/cetak-dokumen`, Admin & Ketua)
+
+Wadah dokumen cetak (dulu Export/Print Laporan). Tiap kartu: status konfigurasi, **Cetak**, **Konfigurasi**.
+
+Data yang **sudah** tersambung:
+
+| Dokumen | Sumber |
+|---|---|
+| Export Rekapitulasi Proposal (konfigurasi = halaman export lama `/cetak-dokumen/rekap-proposal`, PDF/Excel) | `GET /export/proposals` (filter periode/jenis/status/tahun), `GET /periode` |
+| Surat Tugas (`/cetak-dokumen/surat-tugas`): pilih kegiatan, isian diwarisi lalu PDF dibuat di frontend (`utils/suratTugasPDF.js`, jspdf) | `GET /proposals?status=disetujui`, `GET /laporan`, `GET /proposals/:id` / `GET /laporan/:id` (judul, jenis, pengusul, anggota, mitra/alamat), `GET /periode/:id` (tanggal mulai/selesai) |
+
+Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `localStorage` lewat `utils/cetakConfig.js`):
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-32 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

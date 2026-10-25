@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileDown, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, Printer, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -41,16 +41,15 @@ const ADMIN_NAV_ITEMS = [
       <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
-  // ← BARU: Menu Export Laporan
   {
-    path: '/export', label: 'Export Laporan', icon: (
-      <FileDown className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
+      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
 ]
 
 // Ketua LPPM: Dashboard, Dokumen Masuk (Proposal & Laporan Kegiatan), Periode,
-// User, Print Laporan (halaman rekap/export).
+// User, Cetak Dokumen (rekap proposal & surat tugas).
 const KETUA_NAV_ITEMS = [
   {
     path: '/dokumen-masuk', label: 'Dokumen Masuk', icon: (
@@ -72,7 +71,7 @@ const KETUA_NAV_ITEMS = [
     )
   },
   {
-    path: '/export', label: 'Print Laporan', icon: (
+    path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
       <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },

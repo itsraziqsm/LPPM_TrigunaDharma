@@ -1,9 +1,17 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { exportApi } from '../api/export'
 import { periodeApi } from '../api/periode'
 import { exportToPDF } from '../utils/exportPDF'
 import { exportToExcel } from '../utils/exportExcel'
-import { FileDown, Search } from 'lucide-react'
+import { FileDown, Save, Search } from 'lucide-react'
+import { loadCetakConfig, saveCetakConfig } from '../utils/cetakConfig'
+import { REKAP_KEY } from './cetak/dokumen'
+import CetakBreadcrumb from './cetak/CetakBreadcrumb'
+
+// Halaman konfigurasi "Export Rekapitulasi Proposal" di Cetak Dokumen
+// (/cetak-dokumen/rekap-proposal). Logika & tampilan export lama tetap; filter
+// bisa disimpan sebagai konfigurasi yang dipakai tombol Cetak di Cetak Dokumen.
 
 // ─── Konstanta ─────────────────────────────────────────────────────────────────
 
@@ -55,7 +63,7 @@ const DownloadIcon = () => (
   <FileDown className="size-4" strokeWidth={1.8} aria-hidden="true" />
 )
 
-function FilterBar({ filter, periodes, onChange, onSearch, loading }) {
+function FilterBar({ filter, periodes, onChange, onSearch, onSave, loading }) {
   return (
     <section className="card p-6">
       <h2 className="mb-4 text-lg font-semibold text-navy-950">
@@ -144,6 +152,10 @@ function FilterBar({ filter, periodes, onChange, onSearch, loading }) {
               Tampilkan Data
             </>
           )}
+        </button>
+        <button onClick={onSave} type="button" className="btn btn-secondary">
+          <Save className="size-4" aria-hidden="true" />
+          Simpan konfigurasi
         </button>
       </div>
     </section>
@@ -259,8 +271,14 @@ function DataTable({ rows }) {
 
 const EMPTY_FILTER = { periodeId: '', jenis: '', status: '', tahun: '' }
 
+function savedFilter() {
+  const c = loadCetakConfig(REKAP_KEY)
+  return c ? { periodeId: c.periodeId || '', jenis: c.jenis || '', status: c.status || '', tahun: c.tahun || '' } : EMPTY_FILTER
+}
+
 export default function ExportPage() {
-  const [filter, setFilter] = useState(EMPTY_FILTER)
+  const navigate = useNavigate()
+  const [filter, setFilter] = useState(savedFilter)
   const [periodes, setPeriodes] = useState([])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -313,6 +331,12 @@ export default function ExportPage() {
     }
   }
 
+  // Simpan filter sebagai konfigurasi dokumen rekap (dipakai tombol Cetak).
+  const handleSaveConfig = () => {
+    saveCetakConfig(REKAP_KEY, { ...filter, periodeNama: buildFilterContext().periodeNama })
+    navigate('/cetak-dokumen', { state: { flash: 'Konfigurasi Rekapitulasi Proposal disimpan.' } })
+  }
+
   const handleExportPDF = async () => {
     if (!data) return
     setExporting('pdf')
@@ -338,9 +362,12 @@ export default function ExportPage() {
       {/* Judul halaman */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
+          <div className="mb-2">
+            <CetakBreadcrumb last="Rekapitulasi Proposal" />
+          </div>
           <h1 className="page-title">Export Rekapitulasi Proposal</h1>
           <p className="page-desc">
-            Atur filter, tampilkan data, lalu unduh sebagai PDF atau Excel.
+            Atur filter, tampilkan data, lalu unduh sebagai PDF atau Excel. Simpan filter sebagai konfigurasi untuk tombol Cetak.
           </p>
         </div>
 
@@ -383,6 +410,7 @@ export default function ExportPage() {
           periodes={periodes}
           onChange={handleFilterChange}
           onSearch={fetchData}
+          onSave={handleSaveConfig}
           loading={loading}
         />
 
