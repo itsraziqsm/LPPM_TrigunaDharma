@@ -39,7 +39,7 @@ const HALAMAN = {
     { to: '/kegiatan/penelitian/laporan/baru', title: 'Kirim Laporan Penelitian', kata: 'baru buat' },
     { to: '/kegiatan/pengabdian/laporan/baru', title: 'Kirim Laporan Pengabdian', kata: 'baru buat' },
     { to: '/luaran', title: 'Luaran', kata: 'pencairan dana' },
-    { to: '/undangan', title: 'Undangan Tim', kata: 'anggota' },
+    { to: '/undangan', title: 'Undangan Kerja Sama', kata: 'undangan tim anggota' },
   ],
   mahasiswa: [
     { to: '/project/penelitian', title: 'Project Penelitian', kata: 'project saya laporan harian' },

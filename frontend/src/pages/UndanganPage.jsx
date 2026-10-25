@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { refreshInvitationBadge } from '../components/Sidebar'
 import { Users } from 'lucide-react'
+import useAuthStore from '../store/authStore'
+import { getRoleNames } from '../utils/roles'
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
@@ -25,14 +27,14 @@ function Badge({ label, className }) {
   return <span className={`badge ${className}`}>{label}</span>
 }
 
-function EmptyState() {
+function EmptyState({ judul }) {
   return (
     <section className="flex flex-col items-center justify-center px-6 py-16 text-center sm:px-10">
       <div className="mb-5 grid size-12 place-items-center rounded-full bg-navy-50 text-navy-600">
         <Users className="size-6" strokeWidth={1.5} aria-hidden="true" />
       </div>
 
-      <h2 className="text-lg font-semibold text-navy-950">Belum ada undangan tim</h2>
+      <h2 className="text-lg font-semibold text-navy-950">Belum ada {judul.toLowerCase()}</h2>
       <p className="mt-1.5 max-w-md text-base leading-relaxed text-slate-500">
         Anda akan menerima undangan ketika ditambahkan sebagai anggota tim proposal oleh pengusul.
       </p>
@@ -161,6 +163,7 @@ function UndanganCard({ undangan: u, onRespond, responding }) {
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 
 export default function UndanganPage() {
+  const user = useAuthStore((s) => s.user)
   const [undangan, setUndangan] = useState([])
   const [loading, setLoading] = useState(true)
   const [responding, setResponding] = useState(null)
@@ -189,6 +192,8 @@ export default function UndanganPage() {
     }
   }
 
+  // Dosen: "Undangan Kerja Sama"; mahasiswa: "Undangan Ikut Serta".
+  const judul = getRoleNames(user?.roles)[0] === 'mahasiswa' ? 'Undangan Ikut Serta' : 'Undangan Kerja Sama'
   const pending = undangan.filter(u => u.statusUndangan === 'pending')
   const riwayat = undangan.filter(u => u.statusUndangan !== 'pending')
 
@@ -197,7 +202,7 @@ export default function UndanganPage() {
       {/* Judul halaman */}
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <h1 className="page-title">Undangan Tim Proposal</h1>
+          <h1 className="page-title">{judul}</h1>
           <p className="page-desc">
             Tinjau, terima, atau tolak undangan sebagai anggota tim proposal secara jelas
             dan terstruktur.
@@ -224,12 +229,12 @@ export default function UndanganPage() {
         <section className="card px-6 py-16 text-center">
           <p className="flex items-center justify-center gap-3 text-base text-slate-500">
             <span className="spinner text-navy-600" aria-hidden="true" />
-            Memuat data undangan tim...
+            Memuat data {judul.toLowerCase()}...
           </p>
         </section>
       ) : undangan.length === 0 ? (
         <section className="card">
-          <EmptyState />
+          <EmptyState judul={judul} />
         </section>
       ) : (
         <div className="space-y-10">

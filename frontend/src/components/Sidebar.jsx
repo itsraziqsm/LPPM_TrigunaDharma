@@ -102,7 +102,7 @@ const DOSEN_NAV_ITEMS = [
     )
   },
   {
-    path: '/undangan', label: 'Undangan Tim', badge: true, icon: (
+    path: '/undangan', label: 'Undangan Kerja Sama', badge: true, icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),
   },
