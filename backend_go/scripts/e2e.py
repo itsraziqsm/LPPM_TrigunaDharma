@@ -894,5 +894,43 @@ st3, *_ = req("GET", "/api/v1/periode", dosen1, headers={"If-None-Match": hdrs["
 check("etag 304", st3 == 304, st3)
 expect("logout-all", req("POST", "/api/v1/auth/logout-all", dosen1), 200, "Logged out from all devices")
 
+# ── backup database (admin): otomatis bulanan oleh sistem + manual oleh admin ──
+import gzip, time
+expect("backup list non-admin", req("GET", "/api/v1/backup", ketua), 403, "Forbidden: insufficient permissions")
+expect("backup manual non-admin", req("POST", "/api/v1/backup", dosen5), 403)
+b = expect("backup jadwal", req("GET", "/api/v1/backup/jadwal", admin), 200, "Jadwal backup fetched")
+check("backup jadwal shape", list(b["data"].keys()) == ["otomatisAktif", "tanggal", "jam", "zonaWaktu", "keterangan", "berikutnyaAt", "sedangBerjalan", "terakhirOtomatis"], b["data"])
+BK_KEYS = ["id", "sumber", "keterangan", "status", "periode", "namaFile", "ukuran", "jumlahTabel", "jumlahBaris", "pesanError", "mulaiAt", "selesaiAt", "durasiMs", "fileTersedia", "dihapusAt", "dibuatOleh", "dihapusOleh"]
+if b["data"]["otomatisAktif"]:
+    # server sudah melewati jadwal bulan ini → backup otomatis bulan ini dibuat saat start
+    for _ in range(60):
+        auto = req("GET", "/api/v1/backup?sumber=sistem&limit=1", admin)[1]["data"]
+        if auto and auto[0]["status"] != "berjalan":
+            break
+        time.sleep(0.5)
+    check("backup otomatis ada", auto and auto[0]["sumber"] == "sistem" and auto[0]["dibuatOleh"] is None and auto[0]["keterangan"] == "Otomatis oleh sistem (jadwal bulanan)" and auto[0]["periode"] is not None, auto[:1])
+st, b, *_ = req("POST", "/api/v1/backup", admin)
+check("backup manual 202", st == 202 and b["message"] == "Backup dimulai. Pantau statusnya lewat GET /backup/:id" and list(b["data"].keys()) == BK_KEYS, (st, b))
+bk = b["data"]["id"]
+check("backup manual oleh admin", b["data"]["sumber"] == "admin" and b["data"]["dibuatOleh"]["id"] == adminUser["id"] and b["data"]["keterangan"].startswith("Manual oleh admin "), b["data"])
+for _ in range(120):
+    b = req("GET", f"/api/v1/backup/{bk}", admin)[1]
+    if b["data"]["status"] != "berjalan":
+        break
+    time.sleep(0.5)
+check("backup manual berhasil", b["data"]["status"] == "berhasil" and b["data"]["fileTersedia"] and b["data"]["ukuran"] > 0 and b["data"]["jumlahTabel"] >= 20 and b["data"]["durasiMs"] is not None, b["data"])
+b = expect("backup list", req("GET", "/api/v1/backup?sumber=admin&limit=5", admin), 200, "Log backup fetched")
+check("backup list meta", b["meta"]["limit"] == 5 and b["data"][0]["id"] == bk and all(x["sumber"] == "admin" for x in b["data"]), b)
+expect("backup list bad filter", req("GET", "/api/v1/backup?sumber=x", admin), 422)
+st, _, hdrs, content = req("GET", f"/api/v1/backup/{bk}/download", admin)
+sql = gzip.decompress(content).decode() if st == 200 else ""
+check("backup download", st == 200 and hdrs["Content-Type"] == "application/gzip" and "attachment" in hdrs["Content-Disposition"] and "CREATE TABLE `User`" in sql and "VIEW `Proposal`" in sql and sql.rstrip().endswith("-- Selesai"), (st, dict(hdrs)))
+expect("backup 404", req("GET", "/api/v1/backup/999999", admin), 404, "Log backup tidak ditemukan")
+b = expect("backup delete", req("DELETE", f"/api/v1/backup/{bk}", admin), 200, "File backup berhasil dihapus")
+check("backup deleted log kept", b["data"]["dihapusAt"] is not None and b["data"]["fileTersedia"] is False and b["data"]["dihapusOleh"]["id"] == adminUser["id"], b["data"])
+expect("backup download deleted", req("GET", f"/api/v1/backup/{bk}/download", admin), 410, "File backup sudah dihapus")
+expect("backup delete again", req("DELETE", f"/api/v1/backup/{bk}", admin), 409, "File backup sudah dihapus")
+check("backup activity", any(x["action"] == "backup.manual" for x in req("GET", "/api/v1/activity-logs/my?limit=20", admin)[1]["data"]))
+
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

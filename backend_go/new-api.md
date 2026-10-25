@@ -22,6 +22,7 @@ API, dikelompokkan per rilis:
   reviewer yang belum punya tugasan (kandidat, rekomendasi, pengalihan otomatis).
 - **Bagian 17** — Mahasiswa tidak lagi bisa mengusulkan proposal (hanya undangan tim & laporan harian).
 - **Bagian 18** — Aturan komposisi tim saat proposal diajukan (penelitian / pengabdian).
+- **Bagian 19** — Backup database: otomatis bulanan oleh sistem, manual oleh admin, log + unduh + hapus.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1548,3 +1549,104 @@ Penelitian yang hanya kurang dosen: `"Proposal penelitian belum dapat diajukan: 
 Catatan FE: `utils/aturanTim.js` saat ini mewajibkan pengabdian **tepat** 2 dosen dan **tepat** 1
 mahasiswa; backend memakai **minimal** (sesuai ketentuan terbaru), jadi FE boleh melonggarkan batas
 maksimumnya.
+
+---
+
+## 19. Backup database (admin)
+
+Sistem mem-backup **seluruh database** (struktur + data + file blob) **otomatis sebulan sekali**
+(default tanggal 1 pukul 02:00 WIB). Admin juga bisa backup **kapan saja**. Setiap backup tercatat
+di log beserta siapa yang melakukannya: **sistem** atau **admin** (nama admin). File `.sql.gz`
+disimpan di server dan bisa diunduh/dihapus dari halaman log.
+
+Semua endpoint: `Authorization: Bearer <token admin>`; selain admin → `403 Forbidden: insufficient permissions`.
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/v1/backup` | Daftar log (`?page=1&limit=10`, maks 100; filter `?sumber=sistem\|admin`, `?status=berjalan\|berhasil\|gagal`), terbaru dulu, + `meta` |
+| GET | `/api/v1/backup/jadwal` | Info jadwal otomatis + backup otomatis terakhir |
+| POST | `/api/v1/backup` | Backup manual sekarang (tanpa body) → **202**, berjalan di latar |
+| GET | `/api/v1/backup/:id` | Detail satu log (dipakai untuk memantau status setelah POST) |
+| GET | `/api/v1/backup/:id/download` | Unduh file `.sql.gz` (`Content-Disposition: attachment`) |
+| DELETE | `/api/v1/backup/:id` | Hapus **file** backup; baris log tetap ada (ditandai `dihapusAt`/`dihapusOleh`) |
+
+### Bentuk satu log
+
+```json
+{
+  "id": 3,
+  "sumber": "admin",
+  "keterangan": "Manual oleh admin Admin LPPM",
+  "status": "berhasil",
+  "periode": null,
+  "namaFile": "lppm-backup-20261025-102334-admin-3.sql.gz",
+  "ukuran": 146202,
+  "jumlahTabel": 25,
+  "jumlahBaris": 6061,
+  "pesanError": null,
+  "mulaiAt": "2026-10-25T03:23:34.120Z",
+  "selesaiAt": "2026-10-25T03:23:34.231Z",
+  "durasiMs": 111,
+  "fileTersedia": true,
+  "dihapusAt": null,
+  "dibuatOleh": { "id": 1, "name": "Admin LPPM", "fullName": null, "email": "admin@lppm.dev" },
+  "dihapusOleh": null
+}
+```
+
+| Field | Arti |
+|---|---|
+| `sumber` | `sistem` (otomatis terjadwal) atau `admin` (manual). Tampilkan kolom "Dilakukan oleh". |
+| `keterangan` | Teks siap tampil: `"Otomatis oleh sistem (jadwal bulanan)"` / `"Manual oleh admin <nama>"` |
+| `dibuatOleh` | Admin yang menekan tombol; `null` untuk sistem |
+| `status` | `berjalan` → `berhasil` / `gagal` (`pesanError` berisi alasan) |
+| `periode` | `"YYYY-MM"` bulan jadwal untuk backup otomatis; `null` untuk manual |
+| `ukuran` | byte file terkompresi; `jumlahTabel`, `jumlahBaris` = isi dump |
+| `fileTersedia` | `true` bila tombol **Unduh**/**Hapus** boleh aktif (berhasil & belum dihapus) |
+| `dihapusAt`, `dihapusOleh` | diisi setelah file dihapus admin |
+
+### Backup manual
+
+`POST /api/v1/backup` → **202** `"Backup dimulai. Pantau statusnya lewat GET /backup/:id"`, `data` = log
+berstatus `berjalan`. Polling `GET /backup/:id` tiap 1–2 detik sampai status bukan `berjalan`
+(biasanya beberapa detik). Hanya satu backup boleh berjalan: bila ada yang sedang berjalan (manual
+atau otomatis) → **409** `"Backup lain sedang berjalan. Tunggu hingga selesai."`
+
+### Jadwal
+
+`GET /api/v1/backup/jadwal`:
+
+```json
+{
+  "otomatisAktif": true,
+  "tanggal": 1,
+  "jam": 2,
+  "zonaWaktu": "Asia/Jakarta",
+  "keterangan": "Setiap tanggal 1 pukul 02:00 (Asia/Jakarta)",
+  "berikutnyaAt": "2026-10-31T19:00:00.000Z",
+  "sedangBerjalan": false,
+  "terakhirOtomatis": { "...": "bentuk log di atas, atau null" }
+}
+```
+
+`berikutnyaAt` `null` bila otomatis dimatikan. Bila server mati saat jadwal, backup bulan itu
+dijalankan begitu server hidup lagi (dicek tiap 10 menit); gagal dicoba ulang 6 jam kemudian.
+
+### Unduh & hapus — status error
+
+| Kondisi | Unduh | Hapus |
+|---|---|---|
+| log tidak ada | 404 `Log backup tidak ditemukan` | 404 |
+| masih berjalan | 409 `Backup masih berjalan` | 409 |
+| gagal | 409 `Backup gagal, tidak ada file` | 409 |
+| file sudah dihapus | **410** `File backup sudah dihapus` | 409 `File backup sudah dihapus` |
+| file hilang dari disk | 404 `File backup tidak ditemukan di server` | (log tetap ditandai dihapus) |
+
+Unduh lewat axios: `responseType: 'blob'`, lalu simpan dengan nama dari `namaFile`.
+Backup manual, unduh, dan hapus juga dicatat di log aktivitas (`backup.manual|download|delete`).
+
+### Memulihkan (dilakukan di server, bukan lewat API)
+
+```bash
+gunzip < lppm-backup-....sql.gz | mysql -u <user> -p <database>
+```

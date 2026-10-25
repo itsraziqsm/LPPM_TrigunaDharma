@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -56,7 +56,7 @@ go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (statu
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 569 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 587 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -127,6 +127,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua) | |
 | `/export/proposals` | data export | admin, ketua |
+| `/backup` | log (`?sumber=sistem\|admin&status=`), `/jadwal`, POST manual (202, latar; 409 bila ada yang berjalan), `/:id`, `/:id/download` (.sql.gz), DELETE `/:id` (hapus file, log tetap) | admin |
 
 ### Aturan bisnis penting
 - Status proposal: `draft → diajukan → review → revisi|disetujui|ditolak`.
@@ -188,6 +189,11 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   `laporan_disetujui`, `laporan_ditolak`, `laporan_revisi` (notifikasi laporan memakai
   `refType: "laporan"`).
 - Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`).
+- **Backup database** (`backup.go`, `backup_dump.go`): otomatis sebulan sekali (env `BACKUP_HARI`=1,
+  `BACKUP_JAM`=2, `BACKUP_ZONA`=Asia/Jakarta, `BACKUP_OTOMATIS`; terlewat → dijalankan saat server
+  hidup, cek tiap 10 menit) + manual admin; dump SQL gzip ditulis Go sendiri (snapshot konsisten) ke
+  `BACKUP_DIR` (default `backups/`, tidak di-commit); log `BackupLog` (`sumber` sistem|admin,
+  `dibuatOlehId`, status berjalan|berhasil|gagal, `periode` YYYY-MM untuk otomatis, `dihapusAt`).
 
 ### Database (MySQL/MariaDB)
 Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
@@ -202,7 +208,7 @@ ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
 `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
-`Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `_prisma_migrations`.
+`Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `BackupLog`, `_prisma_migrations`.
 VIEW (baca saja): `Proposal`, `Laporan`. Kolom `proposalId` di tabel relasi ber-FK ke
 `Kegiatan.id`; id proposal & laporan unik bersama sehingga URL `/proposals/:id` tidak berubah.
 Migrasi baru: buat folder `migrations/<YYYYMMDDHHMMSS>_<nama>/migration.sql` (format Prisma);

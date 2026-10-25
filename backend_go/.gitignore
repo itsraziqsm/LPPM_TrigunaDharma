@@ -27,8 +27,9 @@ logs/
 go.work
 vendor/
 
-# Uploads
+# Uploads & backup database
 uploads/
+backups/
 
 # OS & editor
 .DS_Store

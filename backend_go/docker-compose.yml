@@ -19,6 +19,12 @@ services:
       SMTP_USER: "your_email@gmail.com"
       SMTP_PASS: "your_app_password"
       FRONTEND_URL: "http://localhost:5173"
+      BACKUP_DIR: "/app/backups"
+      BACKUP_HARI: "1"
+      BACKUP_JAM: "2"
+      BACKUP_ZONA: "Asia/Jakarta"
+    volumes:
+      - backup_data:/app/backups
     depends_on:
       db:
         condition: service_healthy
@@ -43,3 +49,4 @@ services:
 
 volumes:
   mysql_data:
+  backup_data:

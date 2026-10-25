@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -35,6 +36,10 @@ type Server struct {
 	now func() time.Time
 	// sleep is used for the anti-enumeration delay (overridable in tests).
 	sleep func(time.Duration)
+	// Pekerjaan latar (penjadwal & proses backup), dihentikan oleh Close.
+	bgCtx    context.Context
+	bgCancel context.CancelFunc
+	bgWG     sync.WaitGroup
 }
 
 // New builds the server and registers every route of the Node backend.
@@ -48,6 +53,7 @@ func New(cfg config.Config, db *sql.DB) (*Server, error) {
 	}
 	s := newServer(cfg, db)
 	s.accessLog = accessLog
+	s.startBackupScheduler()
 	return s, nil
 }
 
@@ -60,12 +66,16 @@ func newServer(cfg config.Config, db *sql.DB) *Server {
 		now:     time.Now,
 		sleep:   time.Sleep,
 	}
+	s.bgCtx, s.bgCancel = context.WithCancel(context.Background())
 	s.registerRoutes()
 	return s
 }
 
-// Close releases the access log file.
+// Close stops background work (a running backup is aborted and logged as failed) and
+// releases the access log file.
 func (s *Server) Close() error {
+	s.bgCancel()
+	s.bgWG.Wait()
 	if s.accessLog != nil {
 		return s.accessLog.Close()
 	}
@@ -92,6 +102,7 @@ func (s *Server) registerRoutes() {
 	s.registerDashboardRoutes()
 	s.registerActivityLogRoutes()
 	s.registerExportRoutes()
+	s.registerBackupRoutes() // baru, tidak ada di Node
 }
 
 // nowMs returns the current time truncated to milliseconds, like JS Date.

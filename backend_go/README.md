@@ -70,6 +70,24 @@ Sama dengan seeder Node: `admin@lppm.dev / admin123456`,
 `dosen1@lppm.dev / dosen123456`, `mahasiswa1@lppm.dev / mhs1234567`, dst.
 (Seeder Go tidak membuat proposal/review demo acak seperti seeder Node.)
 
+### Backup database
+
+Server membuat backup penuh (`.sql.gz`, struktur + data + blob + VIEW, snapshot konsisten, tanpa
+butuh `mysqldump`) **sebulan sekali** dan admin bisa backup kapan saja lewat `/api/v1/backup`.
+Log di tabel `BackupLog`, file di `BACKUP_DIR`.
+
+| Env | Default | Arti |
+|---|---|---|
+| `BACKUP_OTOMATIS` | `true` | `false` mematikan backup terjadwal (manual tetap bisa) |
+| `BACKUP_DIR` | `backups` | folder file backup (Docker: volume `backup_data` di `/app/backups`) |
+| `BACKUP_HARI` | `1` | tanggal 1–28 |
+| `BACKUP_JAM` | `2` | jam 0–23 |
+| `BACKUP_ZONA` | `Asia/Jakarta` | zona waktu jadwal |
+
+Bila server mati saat jadwal, backup bulan itu dibuat begitu server menyala (dicek tiap 10 menit).
+Hanya satu backup berjalan per database (`GET_LOCK`). Log `berjalan` sisa server mati ditandai
+`gagal` saat start. Memulihkan: `gunzip < file.sql.gz | mysql -u <user> -p <database>`.
+
 ### Hapus proposal yang pengusulnya mahasiswa
 
 Mahasiswa tidak lagi boleh mengusulkan proposal (tugasnya laporan harian). Untuk membersihkan
@@ -132,7 +150,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 569 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 587 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -188,7 +206,9 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
     tempat ia anggota, dan laporan harian. Lihat `new-api.md` bagian 17.
 13. Submit proposal mewajibkan komposisi tim (selain ketua): penelitian minimal 2 dosen,
     pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400. Lihat `new-api.md` bagian 18.
-14. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+14. Backup database `/api/v1/backup` (admin, baru): otomatis sebulan sekali + manual, log,
+    unduh, hapus. Lihat bagian "Backup database" di bawah dan `new-api.md` bagian 19.
+15. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

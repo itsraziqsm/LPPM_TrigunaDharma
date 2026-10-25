@@ -25,6 +25,12 @@ type Config struct {
 	SMTPPass          string
 	AppName           string
 	FrontendURL       string
+	// Backup otomatis bulanan (lihat httpapi/backup.go).
+	BackupOtomatis bool
+	BackupDir      string
+	BackupHari     int // tanggal 1–28
+	BackupJam      int // 0–23
+	BackupZona     string
 }
 
 func Load() (Config, error) {
@@ -49,6 +55,12 @@ func Load() (Config, error) {
 		SMTPPass:     os.Getenv("SMTP_PASS"),
 		AppName:      envOr("APP_NAME", "LPPM App"),
 		FrontendURL:  os.Getenv("FRONTEND_URL"),
+
+		BackupOtomatis: os.Getenv("BACKUP_OTOMATIS") != "false",
+		BackupDir:      envOr("BACKUP_DIR", "backups"),
+		BackupHari:     envIntRange("BACKUP_HARI", 1, 1, 28),
+		BackupJam:      envIntRange("BACKUP_JAM", 2, 0, 23),
+		BackupZona:     envOr("BACKUP_ZONA", "Asia/Jakarta"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("missing required environment variable: DATABASE_URL")
@@ -72,6 +84,15 @@ func envOr(key, fallback string) string {
 func envPositiveInt(key string, fallback int) int {
 	value, err := strconv.Atoi(os.Getenv(key))
 	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+// envIntRange reads an integer within [min, max], otherwise the fallback.
+func envIntRange(key string, fallback, min, max int) int {
+	value, err := strconv.Atoi(os.Getenv(key))
+	if err != nil || value < min || value > max {
 		return fallback
 	}
 	return value
