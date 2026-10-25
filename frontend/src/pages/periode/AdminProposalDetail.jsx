@@ -1,6 +1,7 @@
 import { JENIS_LABEL, STATUS_LABEL, STATUS_COLOR } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel, SectionLabel } from './periodeComponents'
 import { ChevronLeft } from 'lucide-react'
+import UserAvatar from '../../components/UserAvatar'
 
 // ─── Admin Proposal Detail ────────────────────────────────────────────────────
 
@@ -51,11 +52,7 @@ export default function AdminProposalDetail({ proposal, onClose, onBack }) {
                     <section className="py-6">
                         <SectionLabel>Ketua Pengusul</SectionLabel>
                         <div className="flex items-center gap-4">
-                            <div className="grid size-11 shrink-0 place-items-center rounded-full bg-navy-800">
-                                <span className="text-base font-semibold text-white">
-                                    {(ketua?.name || '?').charAt(0).toUpperCase()}
-                                </span>
-                            </div>
+                            <UserAvatar user={ketua} className="size-11 text-base" fallbackClassName="bg-navy-800 text-white" />
                             <div className="min-w-0">
                                 <p className="text-base font-semibold text-slate-900">
                                     {ketua?.fullName || ketua?.name || '—'}
@@ -72,11 +69,7 @@ export default function AdminProposalDetail({ proposal, onClose, onBack }) {
                             <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
                                 {anggota.map((a) => (
                                     <article key={a.id} className="flex items-center gap-4 px-4 py-3">
-                                        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-navy-50">
-                                            <span className="text-sm font-semibold text-navy-700">
-                                                {(a.user?.name || '?').charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
+                                        <UserAvatar user={a.user} className="size-9 text-sm" fallbackClassName="bg-navy-50 text-navy-700" />
                                         <div className="min-w-0 flex-1">
                                             <p className="text-base font-medium text-slate-900">
                                                 {a.user?.fullName || a.user?.name || '—'}

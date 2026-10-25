@@ -377,7 +377,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
-- Foto profil: `src/components/UserAvatar.jsx` (`API_BASE_URL + user.fotoUrl`, fallback inisial).
+- Foto profil: `src/components/UserAvatar.jsx` dipakai di **semua** tempat yang menampilkan orang (sidebar, profil,
+  Manajemen User, tim & reviewer di Detail Kegiatan/Dokumen Masuk/panel Periode, hasil cari anggota, review laporan,
+  Profil Dosen). Sumber: `user.fotoUrl` bila field ada di respons (null = tanpa foto), selain itu `GET /users/:id/foto`
+  (publik) dari `user.id`/`userId`; gagal (404) → inisial, URL gagal diingat selama sesi. Daftar orang baru wajib memakainya.
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
   menu"; saat ciut tampil logo (bukan tombol) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,

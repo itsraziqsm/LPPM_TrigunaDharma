@@ -5,6 +5,7 @@ import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
+import UserAvatar from '../components/UserAvatar'
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -51,7 +52,6 @@ function formatDate(val) {
   return new Date(val).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
-function initial(name) { return (name || '?').charAt(0).toUpperCase() }
 
 // Determine primary role for display purposes
 function getPrimaryRole(roleNames) {
@@ -562,9 +562,7 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
         {/* Ringkasan utama */}
         <section className="border-b border-slate-200 px-6 py-6">
           <div className="flex items-start gap-4">
-            <div className="grid size-14 shrink-0 place-items-center rounded-full bg-navy-800">
-              <span className="font-serif text-2xl font-medium text-white">{initial(user.name)}</span>
-            </div>
+            <UserAvatar user={user} className="size-14 text-2xl" fallbackClassName="bg-navy-800 font-serif font-medium text-white" />
 
             <div className="min-w-0 flex-1">
               <h3 className="break-words text-xl font-semibold leading-tight text-navy-950">{displayName}</h3>
@@ -1002,9 +1000,7 @@ export default function UserManagementPage() {
                       {/* Baris lebar: empat kolom; saat ruang menyempit (panel detail terbuka) jadi dua kolom */}
                       <div className="hidden items-center gap-4 @lg:grid @lg:grid-cols-[minmax(0,1fr)_auto] @4xl:grid-cols-[minmax(0,1fr)_9rem_6.5rem_9rem]">
                         <div className="flex min-w-0 items-center gap-3.5">
-                          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-navy-100">
-                            <span className="text-sm font-semibold text-navy-800">{initial(u.name)}</span>
-                          </div>
+                          <UserAvatar user={u} className="size-10 text-sm" fallbackClassName="bg-navy-100 text-navy-800" />
                           <div className="min-w-0">
                             <p className="truncate text-base font-semibold text-slate-900">{u.name}</p>
                             <p className="truncate text-sm text-slate-500">{u.email}</p>
@@ -1031,9 +1027,7 @@ export default function UserManagementPage() {
                       {/* Baris sempit (ponsel): kartu bertumpuk */}
                       <div className="space-y-3 @lg:hidden">
                         <div className="flex items-start gap-3.5">
-                          <div className="grid size-10 shrink-0 place-items-center rounded-full bg-navy-100">
-                            <span className="text-sm font-semibold text-navy-800">{initial(u.name)}</span>
-                          </div>
+                          <UserAvatar user={u} className="size-10 text-sm" fallbackClassName="bg-navy-100 text-navy-800" />
                           <div className="min-w-0 flex-1">
                             <p className="text-base font-semibold text-slate-900">{u.name}</p>
                             <p className="break-all text-sm text-slate-500">{u.email}</p>

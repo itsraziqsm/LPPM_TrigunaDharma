@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../../api/axios'
 import { Search, X } from 'lucide-react'
+import UserAvatar from '../../components/UserAvatar'
 
 // ── Komponen Pencarian Anggota ─────────────────────────────────────────────────
 // fixedRole: 'dosen' | 'mahasiswa' → pencarian dikunci ke satu peran (filter peran disembunyikan).
@@ -120,9 +121,7 @@ export function AnggotaSearch({ onAdd, addedIds, ketuaId, fixedRole, title = 'Ca
                                 : 'cursor-pointer hover:bg-navy-50/60'
                                 }`}
                         >
-                            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-navy-100 text-sm font-semibold text-navy-800">
-                                {(u.fullName || u.name || '?').charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatar user={u} className="size-9 text-sm" fallbackClassName="bg-navy-100 text-navy-800" />
 
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-base font-semibold text-slate-900">{u.fullName || u.name}</p>

@@ -27,6 +27,7 @@ import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
+import UserAvatar from '../components/UserAvatar'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -157,9 +158,7 @@ export default function DashboardLayout({ page, jenis }) {
           </header>
 
           <div className="flex items-start gap-4 px-6 py-6">
-            <div className="grid size-12 shrink-0 place-items-center rounded-full bg-navy-800 font-serif text-xl text-white">
-              {user.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
+            <UserAvatar user={user} className="size-12 text-xl" fallbackClassName="bg-navy-800 font-serif font-normal text-white" />
 
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-500">Selamat datang</p>

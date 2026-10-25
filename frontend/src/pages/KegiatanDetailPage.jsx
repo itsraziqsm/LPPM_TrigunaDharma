@@ -24,6 +24,7 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL, UNDANGAN_COLOR } from './Propo
 import { ReviewList } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { LaporanTab } from './ProposalDosen/LaporanTab'
+import UserAvatar from '../components/UserAvatar'
 import { DokumenTab } from './ProposalDosen/DokumenTab'
 
 // ---------------------------------------------------------------------------
@@ -400,7 +401,8 @@ export default function KegiatanDetailPage({ jenis }) {
           <Section icon={Users} title={`Tim (${anggota.length + 1} orang)`}>
             <ul className="space-y-3">
               <li className="flex items-start justify-between gap-3">
-                <span className="min-w-0">
+                <UserAvatar user={detail.pengusul} className="size-9 text-sm" fallbackClassName="bg-navy-50 text-navy-700" />
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-slate-900">{nama(detail.pengusul)}</span>
                   <span className="block truncate text-xs text-slate-500">{detail.pengusul?.email || 'Ketua pengusul'}</span>
                 </span>
@@ -408,7 +410,8 @@ export default function KegiatanDetailPage({ jenis }) {
               </li>
               {anggota.map((a) => (
                 <li key={a.id} className="flex items-start justify-between gap-3 border-t border-slate-100 pt-3">
-                  <span className="min-w-0">
+                  <UserAvatar user={a.user || { id: a.userId }} className="size-9 text-sm" fallbackClassName="bg-navy-50 text-navy-700" />
+                  <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-slate-900">{nama(a.user)}</span>
                     <span className="block truncate text-xs capitalize text-slate-500">
                       {a.peran || 'anggota'}

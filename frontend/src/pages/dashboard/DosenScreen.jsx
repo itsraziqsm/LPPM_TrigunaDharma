@@ -13,10 +13,10 @@ import {
   X,
 } from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
-import { API_BASE_URL } from '../../api/axios'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
 import { HaloHeader, PintasanSection, SectionTitle, ToneCard, ToneCardGrid } from './HaloLayout'
 import { ROLE_LABEL, formatDay } from './format'
+import UserAvatar from '../../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
 // Dashboard dosen (desain "Halo, Dosen"). Urutan bagian: 1. Halo, 2. Pintasan
@@ -263,12 +263,6 @@ function StatChip({ icon: IconCmp, value, label, pending }) {
 
 function DosenStats({ user, penelitian, pengabdian, luaran }) {
   const name = user?.fullName || user?.name || '—'
-  const initials = String(user?.name || name)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join('')
 
   const phone = profileValue(user, ['noHp', 'kontak'])
   const jabatan = profileValue(user, ['jabatanFungsional'], (v) => v)
@@ -285,13 +279,7 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
       <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <article className="rounded-xl bg-white p-4 sm:p-5">
           <div className="flex flex-col gap-5 sm:flex-row">
-            {user?.fotoUrl ? (
-              <img src={`${API_BASE_URL}${user.fotoUrl}`} alt={`Foto ${name}`} className="size-28 shrink-0 rounded-xl object-cover" />
-            ) : (
-              <div className="grid size-28 shrink-0 place-items-center rounded-xl bg-navy-100 font-serif text-4xl text-navy-800" aria-hidden="true">
-                {initials || '?'}
-              </div>
-            )}
+            <UserAvatar user={user} className="size-28 text-4xl" rounded="rounded-xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${name}`} />
             <div className="min-w-0 space-y-1.5">
               <h3 className="break-words text-xl font-semibold text-navy-700">{name}</h3>
               <p className="text-base text-slate-900">
