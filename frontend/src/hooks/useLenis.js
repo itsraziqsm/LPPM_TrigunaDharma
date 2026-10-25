@@ -14,6 +14,14 @@ import Lenis from 'lenis'
 // Elemen bergulir di dalamnya (dropdown, modal, tabel) tetap bisa digulir
 // berkat allowNestedScroll; tambahkan `data-lenis-prevent` bila perlu
 // mengecualikan elemen tertentu. Dinonaktifkan untuk prefers-reduced-motion.
+const MODAL_SELECTOR = "[aria-modal='true'], .overlay, [data-scroll-lock]"
+
+export function adaModalTerbuka() {
+  if (document.documentElement.classList.contains('search-open')) return true
+  if (document.querySelector(MODAL_SELECTOR)) return true
+  return window.matchMedia('(max-width: 79.99rem)').matches && Boolean(document.querySelector('[data-scroll-lock-mobile]'))
+}
+
 export default function useLenis(wrapperRef, { contentRef, resetKey, enabled = true } = {}) {
   useEffect(() => {
     const wrapper = wrapperRef.current
@@ -28,6 +36,8 @@ export default function useLenis(wrapperRef, { contentRef, resetKey, enabled = t
       autoRaf: true,
       anchors: true,
       allowNestedScroll: true,
+      // Saat modal/dialog/popup terbuka, latar tidak ikut digulir (lihat index.css).
+      prevent: () => adaModalTerbuka(),
     })
     return () => lenis.destroy()
   }, [wrapperRef, contentRef, resetKey, enabled])

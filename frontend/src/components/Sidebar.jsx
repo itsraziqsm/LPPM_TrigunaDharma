@@ -25,7 +25,21 @@ const NAV_ITEMS = [
   },
 ]
 
+// Dokumen Masuk (Proposal & Laporan Kegiatan): Ketua mengelola; Admin lihat & hapus.
+const DOKUMEN_MASUK = {
+  path: '/dokumen-masuk', label: 'Dokumen Masuk', icon: (
+    <Inbox className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+  ),
+  children: [
+    { path: '/proposals', label: 'Proposal Kegiatan', icon: <FileText className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    { path: '/laporan-masuk', label: 'Laporan Kegiatan', icon: <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+  ],
+}
+
+// Admin: Dokumen Masuk (lihat & hapus), Periode (lihat saja + hapus dengan izin), User,
+// Cetak Dokumen, Backup Data.
 const ADMIN_NAV_ITEMS = [
+  DOKUMEN_MASUK,
   {
     path: '/periode', label: 'Periode', icon: (
       <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
@@ -34,11 +48,6 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/users', label: 'User', icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/laporan-masuk', label: 'Laporan Masuk', icon: (
-      <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {
@@ -56,15 +65,7 @@ const ADMIN_NAV_ITEMS = [
 // Ketua LPPM: Dashboard, Dokumen Masuk (Proposal & Laporan Kegiatan), Periode,
 // User, Cetak Dokumen (rekap proposal & surat tugas).
 const KETUA_NAV_ITEMS = [
-  {
-    path: '/dokumen-masuk', label: 'Dokumen Masuk', icon: (
-      <Inbox className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    ),
-    children: [
-      { path: '/proposals', label: 'Proposal Kegiatan', icon: <FileText className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
-      { path: '/laporan-masuk', label: 'Laporan Kegiatan', icon: <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
-    ],
-  },
+  DOKUMEN_MASUK,
   {
     path: '/periode', label: 'Periode', icon: (
       <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
@@ -341,6 +342,7 @@ export default function Sidebar() {
       {/* ── Latar gelap drawer (mobile) ────────────────────────────────── */}
       {mobileOpen && (
         <div
+          data-scroll-lock
           className="fixed inset-0 z-40 bg-navy-950/60 lg:hidden"
           onClick={() => setMobileOpen(false)}
           aria-hidden="true"

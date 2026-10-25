@@ -295,7 +295,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
-  User, **Cetak Dokumen**. Admin tetap `ADMIN_NAV_ITEMS` (Periode, User, Laporan Masuk, Cetak Dokumen, Backup Data).
+  User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,
+  Cetak Dokumen, Backup Data.
+- **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua) tetapi
+  hapus tetap lewat permintaan 2 langkah yang disetujui pihak lain ("hapus dengan izin"); **Dokumen Masuk** lihat &
+  hapus saja (`viewOnly`: tanpa Ubah Status/Tugaskan reviewer/Keputusan; `components/HapusDokumen.jsx` = hapus
+  langsung bila draft, selain itu "Ajukan hapus (izin Ketua)" nonaktif + `ApiPending` W-33).
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
   jumlah perlu ditangani, klik = saring), filter bawaan "Perlu ditangani" (`diajukan`+`review`), Revisi/Disetujui/
@@ -399,7 +404,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
   `data-scroll-container` (wadah gulir `DashboardLayout`, daftar Manajemen User) — wadah gulir baru
-  wajib diberi atribut ini. Sumber hasil di `src/utils/globalSearch.js`: halaman sesuai peran
+  wajib diberi atribut ini. Kunci yang sama berlaku **global untuk semua modal** (`html:has([aria-modal='true'],
+  .overlay, [data-scroll-lock])` di `index.css`, laci ponsel `data-scroll-lock`, panel detail Manajemen User di bawah
+  xl `data-scroll-lock-mobile`) dan Lenis berhenti lewat opsi `prevent` (`adaModalTerbuka()` di `hooks/useLenis.js`):
+  modal baru wajib punya `aria-modal="true"` atau kelas `.overlay`. Sumber hasil di `src/utils/globalSearch.js`: halaman sesuai peran
   pertama + data (`search=`, limit 5) — dosen: proposal → `/kegiatan/:jenis?detail=`, laporan;
   admin/ketua: proposal → `/proposals?detail=`, laporan → `/laporan-masuk?id=`, user →
   `/users?id=`; mahasiswa: proposal tim (laporan harian). Kolom cari/filter di tiap halaman tetap

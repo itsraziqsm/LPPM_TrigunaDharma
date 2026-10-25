@@ -473,12 +473,23 @@
   }
 }
 
-/* Popup pencarian (components/SearchPopup) mengunci gulir latar. Di luar @layer
-   + !important agar menang atas utilitas overflow-y-auto pada wadah gulir. */
+/* Kunci gulir latar saat ada modal/dialog/popup terbuka (global): popup pencarian
+   (kelas search-open), elemen [aria-modal='true'] / .overlay, laci ponsel
+   ([data-scroll-lock]) dan panel detail Manajemen User di bawah xl
+   ([data-scroll-lock-mobile]). Wadah gulir halaman wajib diberi
+   data-scroll-container. Lenis ikut berhenti (hooks/useLenis.js). Di luar
+   @layer + !important agar menang atas utilitas overflow-y-auto. */
 html.search-open,
 html.search-open body,
-html.search-open [data-scroll-container] {
+html.search-open [data-scroll-container],
+html:has([aria-modal='true'], .overlay, [data-scroll-lock]) body,
+html:has([aria-modal='true'], .overlay, [data-scroll-lock]) [data-scroll-container] {
   overflow: hidden !important;
+}
+@media (max-width: 79.99rem) {
+  html:has([data-scroll-lock-mobile]) [data-scroll-container] {
+    overflow: hidden !important;
+  }
 }
 
 /* Tombol cari global (components/GlobalSearch) disembunyikan saat ada modal/dialog terbuka. */

@@ -14,6 +14,9 @@ export default function PeriodePage() {
   const isAdmin = roleNames.includes('admin')
   const isKetua = roleNames.includes('ketua_lppm')
   const canManage = isAdmin || isKetua
+  // Admin hanya melihat periode (tanpa tambah/edit); hapus tetap lewat permintaan 2 langkah
+  // yang disetujui pihak lain (admin ↔ ketua) — "hapus dengan izin".
+  const canEdit = isKetua
 
   const [periodes, setPeriodes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -193,8 +196,13 @@ export default function PeriodePage() {
               Kelola daftar periode secara terstruktur untuk mendukung proses pengajuan,
               evaluasi, dan pemantauan kegiatan penelitian maupun pengabdian.
             </p>
+            {!canEdit && canManage ? (
+              <p className="mt-2 text-sm text-slate-500">
+                Akses Admin: lihat saja. Periode hanya bisa dihapus lewat permintaan hapus yang disetujui Ketua LPPM.
+              </p>
+            ) : null}
           </div>
-          {canManage && (
+          {canEdit && (
             <div className="flex shrink-0 items-start sm:justify-end">
               <button onClick={openCreate} className="btn btn-primary">
                 <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
@@ -300,12 +308,14 @@ export default function PeriodePage() {
                         <div className="col-span-2 flex items-center justify-end gap-1">
                           {canManage && (
                             <>
-                              <button
-                                onClick={(e) => openEdit(p, e)}
-                                className="btn btn-ghost btn-sm"
-                              >
-                                Edit
-                              </button>
+                              {canEdit && (
+                                <button
+                                  onClick={(e) => openEdit(p, e)}
+                                  className="btn btn-ghost btn-sm"
+                                >
+                                  Edit
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => openDelete(p, e)}
                                 className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50 hover:text-red-800"
@@ -340,12 +350,14 @@ export default function PeriodePage() {
                         </div>
                         {canManage && (
                           <div className="flex flex-col gap-2 sm:flex-row">
-                            <button
-                              onClick={(e) => openEdit(p, e)}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              Edit Periode
-                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={(e) => openEdit(p, e)}
+                                className="btn btn-secondary btn-sm"
+                              >
+                                Edit Periode
+                              </button>
+                            )}
                             <button
                               onClick={(e) => openDelete(p, e)}
                               className="btn btn-danger btn-sm"
@@ -375,7 +387,7 @@ export default function PeriodePage() {
       )}
 
       {/* Create / Edit Modal */}
-      {(modal === 'create' || modal === 'edit') && (
+      {canEdit && (modal === 'create' || modal === 'edit') && (
         <Modal title={modal === 'create' ? 'Tambah Periode' : 'Edit Periode'} onClose={closeModal}>
           <form onSubmit={handleSubmit} className="space-y-6">
             {formError && (

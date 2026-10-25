@@ -40,7 +40,7 @@ export default function LoginPage() {
   }, [])
 
   return (
-    <main ref={scrollRef} className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
+    <main ref={scrollRef} data-scroll-container className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
       {/* Panel kiri: identitas — navy polos, tanpa dekorasi */}
       <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">

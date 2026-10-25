@@ -8,6 +8,8 @@ import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
 import { alertDialog } from '../utils/dialog'
+import { getRoleNames } from '../utils/roles'
+import HapusDokumen from '../components/HapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
 const isStatusFinal = (status) => status === 'disetujui'
@@ -99,6 +101,8 @@ const fetchProposals = (params) => proposalApi.getAll(params)
 
 export default function ProposalPage() {
   const { user } = useAuthStore()
+  // Admin (peran pertama): lihat & hapus saja; ubah status/penugasan oleh Ketua LPPM.
+  const viewOnly = getRoleNames(user?.roles)[0] === 'admin'
 
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
@@ -449,14 +453,16 @@ export default function ProposalPage() {
                               Lihat Detail Proposal
                             </button>
 
-                            <button
-                              onClick={() => handleOpenStatusModal(p)}
-                              disabled={isStatusFinal(p.status)}
-                              title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : undefined}
-                              className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800 disabled:cursor-not-allowed disabled:text-slate-400"
-                            >
-                              {isStatusFinal(p.status) ? 'Status final (disetujui)' : 'Ubah Status Proposal'}
-                            </button>
+                            {viewOnly ? null : (
+                              <button
+                                onClick={() => handleOpenStatusModal(p)}
+                                disabled={isStatusFinal(p.status)}
+                                title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : undefined}
+                                className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800 disabled:cursor-not-allowed disabled:text-slate-400"
+                              >
+                                {isStatusFinal(p.status) ? 'Status final (disetujui)' : 'Ubah Status Proposal'}
+                              </button>
+                            )}
 
                             <button
                               onClick={() => openDokumenWithAuth(p.id)}
@@ -464,6 +470,21 @@ export default function ProposalPage() {
                             >
                               Lihat Dokumen Utama
                             </button>
+
+                            {viewOnly ? (
+                              <div className="px-2 pt-1">
+                                <HapusDokumen
+                                  compact
+                                  status={p.status}
+                                  noun="proposal"
+                                  judul={p.judul}
+                                  onDelete={async () => {
+                                    await proposalApi.delete(p.id)
+                                    setTick((t) => t + 1)
+                                  }}
+                                />
+                              </div>
+                            ) : null}
                           </div>
                         </td>
                       </tr>

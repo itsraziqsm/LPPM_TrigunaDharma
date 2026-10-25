@@ -1099,7 +1099,7 @@ export default function UserManagementPage() {
 
       {/* Latar redup untuk panel yang menimpa layar kecil (menutup panel saat diketuk) */}
       {selected && (
-        <div className="fixed inset-0 z-40 bg-navy-950/40 xl:hidden" onClick={closeDetail} aria-hidden="true" />
+        <div data-scroll-lock-mobile className="fixed inset-0 z-40 bg-navy-950/40 xl:hidden" onClick={closeDetail} aria-hidden="true" />
       )}
 
       {/* Panel detail: berdampingan di layar lebar, menimpa dari kanan di layar kecil */}

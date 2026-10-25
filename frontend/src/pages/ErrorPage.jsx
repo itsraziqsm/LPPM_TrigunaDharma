@@ -35,7 +35,7 @@ export default function ErrorPage({ code: codeProp, routeError = false }) {
   }
 
   return (
-    <main ref={scrollRef} className="fixed inset-0 overflow-y-auto bg-canvas">
+    <main ref={scrollRef} data-scroll-container className="fixed inset-0 overflow-y-auto bg-canvas">
       <div className="flex min-h-full flex-col px-5 py-6 sm:px-8">
         <header className="flex items-center gap-3">
           <LogoLppm className="size-10" />

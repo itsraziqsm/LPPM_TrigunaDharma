@@ -10,6 +10,9 @@ import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './l
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
 import { confirmDialog } from '../utils/dialog'
+import { getRoleNames } from '../utils/roles'
+import useAuthStore from '../store/authStore'
+import HapusDokumen from '../components/HapusDokumen'
 
 // ---------------------------------------------------------------------------
 // Laporan Masuk (Ketua LPPM / Admin): daftar semua laporan (GET /laporan),
@@ -27,7 +30,8 @@ function errorText(e, fallback) {
   return e.response?.data?.message || fallback
 }
 
-function DetailPanel({ id, onClose, onChanged }) {
+// viewOnly (Admin): lihat saja + hapus dengan izin; tugaskan reviewer & keputusan = Ketua.
+function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
   const [laporan, setLaporan] = useState(null)
   const [error, setError] = useState('')
   const [msg, setMsg] = useState(null)
@@ -119,9 +123,9 @@ function DetailPanel({ id, onClose, onChanged }) {
     }
   }
 
-  const canAssign = laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
+  const canAssign = !viewOnly && laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
   // Laporan yang sudah disetujui berstatus final: status tidak bisa diubah lagi.
-  const canDecide = laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
+  const canDecide = !viewOnly && laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
 
   return (
     <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -177,9 +181,11 @@ function DetailPanel({ id, onClose, onChanged }) {
                     {laporan.reviewerTugasan.map((t) => (
                       <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <span>{t.reviewer?.fullName || t.reviewer?.name}</span>
-                        <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
-                          Hapus
-                        </button>
+                        {viewOnly ? null : (
+                          <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
+                            Hapus
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -227,6 +233,25 @@ function DetailPanel({ id, onClose, onChanged }) {
                 <h3 className="text-base font-semibold text-navy-950">Hasil review</h3>
                 <ReviewList reviews={laporan.reviews} />
               </section>
+
+              {viewOnly ? (
+                <section className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-base font-semibold text-navy-950">Akses Admin</h3>
+                  <p className="text-sm text-slate-600">
+                    Admin hanya dapat melihat dan menghapus. Penugasan reviewer dan keputusan dilakukan Ketua LPPM.
+                  </p>
+                  <HapusDokumen
+                    status={laporan.status}
+                    noun="laporan"
+                    judul={laporan.judul}
+                    onDelete={async () => {
+                      await laporanApi.remove(laporan.id)
+                      onChanged()
+                      onClose()
+                    }}
+                  />
+                </section>
+              ) : null}
 
               {canDecide ? (
                 <form onSubmit={decide} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -284,6 +309,8 @@ function DetailPanel({ id, onClose, onChanged }) {
 const fetchLaporan = (params) => laporanApi.getAll(params)
 
 export default function LaporanMasukPage() {
+  // Admin (peran pertama): lihat & hapus saja; Ketua mengelola reviewer & keputusan.
+  const viewOnly = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
   const [params, setParams] = useSearchParams()
   const openId = params.get('id')
   const [periodeId, setPeriodeId] = useState('') // '' = semua periode aktif
@@ -315,7 +342,9 @@ export default function LaporanMasukPage() {
         <div>
           <h1 className="page-title">Laporan Masuk</h1>
           <p className="page-desc">
-            Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.
+            {viewOnly
+              ? 'Laporan dari periode aktif. Akses Admin: lihat dan hapus; penugasan reviewer dan keputusan oleh Ketua LPPM.'
+              : 'Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.'}
           </p>
         </div>
         <nav aria-label="Breadcrumb" className="text-sm">
@@ -442,7 +471,7 @@ export default function LaporanMasukPage() {
                   <td className="tabular-nums">{(l.reviewerTugasan || []).length}</td>
                   <td className="text-right">
                     <button type="button" onClick={() => open(l.id)} className="btn btn-ghost btn-sm">
-                      Kelola
+                      {viewOnly ? 'Lihat' : 'Kelola'}
                     </button>
                   </td>
                 </tr>
@@ -472,7 +501,7 @@ export default function LaporanMasukPage() {
         <p className="text-xs text-amber-700">Lebih dari {FETCH_LIMIT} laporan cocok di satu periode; persempit dengan pencarian atau filter.</p>
       ) : null}
 
-      {openId ? <DetailPanel key={openId} id={openId} onClose={() => open(null)} onChanged={refresh} /> : null}
+      {openId ? <DetailPanel key={openId} id={openId} viewOnly={viewOnly} onClose={() => open(null)} onChanged={refresh} /> : null}
     </div>
   )
 }

@@ -170,6 +170,16 @@ Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `l
 |---|---|---|---|---|
 | W-32 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
 
+## Dokumen Masuk — akses Admin (`ProposalPage.jsx`, `LaporanMasukPage.jsx`, `components/HapusDokumen.jsx`)
+
+Admin hanya **melihat & menghapus** di Dokumen Masuk (penugasan reviewer & keputusan oleh Ketua LPPM).
+Backend hanya mengizinkan hapus berstatus `draft`, sedangkan Dokumen Masuk hanya memuat dokumen yang
+sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan penanda `ApiPending`.
+
+| ID | Elemen | Kebutuhan | Usulan endpoint | Catatan |
+|---|---|---|---|---|
+| W-33 | Hapus proposal/laporan yang sudah diajukan oleh Admin **dengan izin** | Permintaan hapus oleh Admin, disetujui Ketua LPPM dengan password (pola hapus periode 2 langkah), notifikasi ke Ketua & pengusul, catat ActivityLog | `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`; `POST /dokumen/deletion-request/:requestId/approve` `{ password }` (Ketua) & `/cancel`; `GET .../deletion-request` (status permintaan) | Draft tetap bisa dihapus langsung lewat `DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada). |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

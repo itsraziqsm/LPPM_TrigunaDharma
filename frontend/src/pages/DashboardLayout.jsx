@@ -72,7 +72,7 @@ export default function DashboardLayout({ page, jenis }) {
         <Sidebar />
 
         {/* Keadaan memuat: tenang, satu pesan */}
-        <main className="flex min-w-0 flex-1 items-center justify-center overflow-y-auto px-6 pt-14 lg:pt-0">
+        <main data-scroll-container className="flex min-w-0 flex-1 items-center justify-center overflow-y-auto px-6 pt-14 lg:pt-0">
           <section className="w-full max-w-md text-center">
             <span className="spinner mx-auto text-navy-600" />
             <h1 className="mt-6 font-serif text-2xl text-navy-950">
