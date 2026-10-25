@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { proposalApi } from '../api/proposal'
+import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
+import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { usersApi } from '../api/users'
 import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
@@ -92,17 +94,30 @@ function Modal({ title, onClose, children, wide }) {
   )
 }
 
+// Proposal Kegiatan (Dokumen Masuk): hanya periode aktif, bawaan "Perlu ditangani".
+const fetchProposals = (params) => proposalApi.getAll(params)
+
 export default function ProposalPage() {
   const { user } = useAuthStore()
 
-  const [proposals, setProposals] = useState([])
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('perlu')
   const [jenis, setJenis] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [periodeId, setPeriodeId] = useState('') // '' = semua periode aktif
+  const [tick, setTick] = useState(0)
+  const { periodes, periodeFailed, counts, all, truncated, loading, noPeriode } = useDokumenMasuk({
+    fetchList: fetchProposals,
+    filter,
+    periodeId,
+    jenis,
+    query,
+    tick,
+  })
+  const total = all.length
+  const proposals = all.slice((page - 1) * limit, page * limit)
 
   const [selected, setSelected] = useState(null)
   const [detail, setDetail] = useState(null)
@@ -117,29 +132,6 @@ export default function ProposalPage() {
   const [savingStatus, setSavingStatus] = useState(false)
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
-
-  const fetchProposalList = useCallback(async () => {
-    try {
-      setLoading(true)
-      const res = await proposalApi.getAll({
-        page,
-        limit,
-        search,
-        status,
-        jenis,
-      })
-
-      const payload = res?.data || {}
-      setProposals(payload?.data || [])
-      setTotal(payload?.total || 0)
-    } catch (error) {
-      console.error(error)
-      setProposals([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, limit, search, status, jenis])
 
   const fetchDetail = useCallback(async (id) => {
     try {
@@ -167,10 +159,6 @@ export default function ProposalPage() {
       setReviewerList([])
     }
   }, [])
-
-  useEffect(() => {
-    fetchProposalList()
-  }, [fetchProposalList])
 
   useEffect(() => {
     if (showStatusModal && newStatus === 'revisi') {
@@ -239,7 +227,7 @@ export default function ProposalPage() {
         reviewerIds: selectedReviewers,
       })
 
-      await fetchProposalList()
+      setTick((t) => t + 1)
       await fetchDetail(selected.id)
       handleCloseStatusModal()
     } catch (error) {
@@ -250,10 +238,10 @@ export default function ProposalPage() {
     }
   }
 
-  const handleSearchSubmit = async (e) => {
+  const handleSearchSubmit = (e) => {
     e.preventDefault()
     setPage(1)
-    await fetchProposalList()
+    setQuery(search.trim())
   }
 
   return (
@@ -291,13 +279,36 @@ export default function ProposalPage() {
           </dl>
         </header>
 
+        {/* Dokumen Masuk: periode aktif + filter "Perlu ditangani" (hooks/useDokumenMasuk) */}
+        {noPeriode ? (
+          <TanpaPeriodeAktif failed={periodeFailed} noun="Proposal" />
+        ) : (
+          <PeriodeAktif
+            periodes={periodes}
+            counts={counts}
+            selected={periodeId}
+            noun="Proposal"
+            onSelect={(id) => {
+              setPeriodeId(id)
+              setPage(1)
+            }}
+          />
+        )}
+        <FilterMasuk
+          value={filter}
+          onChange={(key) => {
+            setFilter(key)
+            setPage(1)
+          }}
+        />
+
         {/* Pencarian dan filter */}
         <section className="card px-6 py-5" aria-labelledby="filter-proposal-title">
           <h2 id="filter-proposal-title" className="sr-only">Pencarian dan Filter</h2>
 
           <form onSubmit={handleSearchSubmit}>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              <div className="lg:col-span-5">
+              <div className="lg:col-span-6">
                 <label htmlFor="search" className="label">
                   Kata Kunci Proposal
                 </label>
@@ -312,32 +323,16 @@ export default function ProposalPage() {
               </div>
 
               <div className="lg:col-span-3">
-                <label htmlFor="status" className="label">
-                  Status Proposal
-                </label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="input"
-                >
-                  <option value="">Semua status</option>
-                  {Object.entries(STATUS_LABEL).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="lg:col-span-2">
                 <label htmlFor="jenis" className="label">
                   Jenis Proposal
                 </label>
                 <select
                   id="jenis"
                   value={jenis}
-                  onChange={(e) => setJenis(e.target.value)}
+                  onChange={(e) => {
+                    setJenis(e.target.value)
+                    setPage(1)
+                  }}
                   className="input"
                 >
                   <option value="">Semua jenis</option>
@@ -349,7 +344,7 @@ export default function ProposalPage() {
                 </select>
               </div>
 
-              <div className="flex items-end lg:col-span-2">
+              <div className="flex items-end lg:col-span-3">
                 <button type="submit" className="btn btn-primary w-full">
                   Cari Proposal
                 </button>
@@ -362,7 +357,10 @@ export default function ProposalPage() {
         <section className="card overflow-hidden">
           <header className="border-b border-slate-200 px-6 py-4">
             <h2 className="text-lg font-semibold text-navy-950">Daftar Proposal</h2>
-            <p className="mt-0.5 text-sm text-slate-500">{total} proposal ditemukan.</p>
+            <p className="mt-0.5 text-sm text-slate-500">
+              {total} proposal ({FILTERS_MASUK.find((f) => f.key === filter).label.toLowerCase()}) dari periode aktif.
+              {truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian.` : ''}
+            </p>
           </header>
 
           {loading ? (
@@ -376,8 +374,8 @@ export default function ProposalPage() {
                 Tidak ada proposal ditemukan
               </h3>
               <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-slate-500">
-                Coba ubah kata kunci pencarian atau filter status untuk melihat
-                data lain.
+                Coba ubah kata kunci, filter status, atau periode. Proposal periode
+                sebelumnya ada di menu Periode.
               </p>
             </div>
           ) : (

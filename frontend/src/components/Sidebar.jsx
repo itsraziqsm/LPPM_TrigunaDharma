@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -44,6 +44,11 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
       <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/backup', label: 'Backup Data', icon: (
+      <DatabaseBackup className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
 ]

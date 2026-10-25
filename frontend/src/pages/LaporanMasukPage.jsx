@@ -3,11 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { UserPlus, X } from 'lucide-react'
 import api from '../api/axios'
 import { laporanApi } from '../api/laporan'
-import { periodeApi } from '../api/periode'
+import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
+import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
-import { hari, rupiah, tanggal } from './laporan/format'
+import { rupiah, tanggal } from './laporan/format'
 import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
@@ -278,160 +279,35 @@ function DetailPanel({ id, onClose, onChanged }) {
   )
 }
 
-// Laporan Masuk hanya memuat laporan dari periode AKTIF (Periode.isAktif). Filter
-// bawaan "Perlu ditangani" = diajukan (belum ada reviewer) + review (menunggu
-// keputusan). Laporan periode lama (mis. yang sudah disetujui) dilihat lewat menu
-// Periode → pilih periode → tab Laporan. GET /laporan hanya menerima satu
-// periodeId & satu status, jadi data diambil per periode × status (limit 100)
-// lalu digabung dan dipaginasi di peramban.
-const FILTERS = [
-  { key: 'perlu', label: 'Perlu ditangani', statuses: ['diajukan', 'review'] },
-  { key: 'revisi', label: STATUS_LABEL.revisi, statuses: ['revisi'] },
-  { key: 'disetujui', label: STATUS_LABEL.disetujui, statuses: ['disetujui'] },
-  { key: 'ditolak', label: STATUS_LABEL.ditolak, statuses: ['ditolak'] },
-  { key: 'semua', label: 'Semua', statuses: [null] },
-]
-const FETCH_LIMIT = 100
-const waktuLaporan = (l) => new Date(l.submittedAt || l.updatedAt || l.createdAt || 0).getTime()
-
-function PeriodeAktif({ periodes, counts, selected, onSelect }) {
-  return (
-    <section aria-labelledby="periode-aktif" className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="periode-aktif" className="text-lg font-semibold text-navy-950">
-          Periode aktif
-        </h2>
-        <Link to="/periode" className="text-sm font-medium text-navy-600 hover:text-navy-800">
-          Laporan periode sebelumnya ada di menu Periode
-        </Link>
-      </div>
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {periodes.map((p) => {
-          const active = selected === String(p.id)
-          const n = counts[p.id]
-          return (
-            <li key={p.id}>
-              <button
-                type="button"
-                aria-pressed={active}
-                onClick={() => onSelect(active ? '' : String(p.id))}
-                className={`flex w-full items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${
-                  active ? 'border-navy-800 bg-navy-50 ring-1 ring-navy-800' : 'border-slate-200 bg-white hover:border-navy-300'
-                }`}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-semibold text-slate-900">{p.nama}</span>
-                  <span className="mt-0.5 block text-sm text-slate-500">
-                    {JENIS_LABEL[p.jenis] || p.jenis}
-                    {p.tanggalMulai ? ` · ${hari(p.tanggalMulai)} – ${hari(p.tanggalSelesai)}` : ''}
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className={`block text-2xl font-bold leading-none tabular-nums ${n ? 'text-amber-700' : 'text-slate-400'}`}>
-                    {n === undefined ? '…' : n === null ? '—' : n}
-                  </span>
-                  <span className="text-xs text-slate-500">perlu ditangani</span>
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
-  )
-}
+// Laporan Masuk = Dokumen Masuk › Laporan Kegiatan: hanya periode aktif, bawaan
+// "Perlu ditangani" (logika bersama di hooks/useDokumenMasuk.js).
+const fetchLaporan = (params) => laporanApi.getAll(params)
 
 export default function LaporanMasukPage() {
   const [params, setParams] = useSearchParams()
   const openId = params.get('id')
-  const [periodes, setPeriodes] = useState(null) // periode aktif; null = memuat
-  const [periodeFailed, setPeriodeFailed] = useState(false)
   const [periodeId, setPeriodeId] = useState('') // '' = semua periode aktif
-  const [counts, setCounts] = useState({})
-  const [all, setAll] = useState([])
-  const [truncated, setTruncated] = useState(false)
   const [page, setPage] = useState(1)
   const [filter, setFilter] = useState('perlu')
   const [jenis, setJenis] = useState('')
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
   const [tick, setTick] = useState(0)
-
-  useEffect(() => {
-    let alive = true
-    periodeApi
-      .getAll()
-      .then((r) => alive && setPeriodes((r.data.data || []).filter((p) => p.isAktif)))
-      .catch(() => {
-        if (!alive) return
-        setPeriodes([])
-        setPeriodeFailed(true)
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  // Jumlah "perlu ditangani" per periode aktif (meta.total, limit 1).
-  useEffect(() => {
-    if (!periodes?.length) return undefined
-    let alive = true
-    const total = (r) => Number(r.data.meta?.total) || 0
-    Promise.all(
-      periodes.map((p) =>
-        Promise.all(['diajukan', 'review'].map((st) => laporanApi.getAll({ periodeId: p.id, status: st, limit: 1 })))
-          .then((rs) => [p.id, rs.reduce((n, r) => n + total(r), 0)])
-          .catch(() => [p.id, null]),
-      ),
-    ).then((pairs) => alive && setCounts(Object.fromEntries(pairs)))
-    return () => {
-      alive = false
-    }
-  }, [periodes, tick])
-
-  const targets = (periodes || []).filter((p) => (periodeId ? String(p.id) === periodeId : true) && (jenis ? p.jenis === jenis : true))
-  const targetKey = targets.map((p) => p.id).join(',')
-
-  useEffect(() => {
-    if (periodes === null) return undefined
-    let alive = true
-    const ids = targetKey ? targetKey.split(',') : []
-    const statuses = FILTERS.find((f) => f.key === filter).statuses
-    setLoading(true)
-    setFailed(false)
-    Promise.all(
-      ids.flatMap((id) =>
-        statuses.map((st) =>
-          laporanApi.getAll({ periodeId: id, limit: FETCH_LIMIT, ...(st ? { status: st } : {}), ...(query ? { search: query } : {}) }),
-        ),
-      ),
-    )
-      .then((rs) => {
-        if (!alive) return
-        const seen = new Set()
-        const merged = rs
-          .flatMap((r) => r.data.data || [])
-          .filter((l) => l.status !== 'draft' && !seen.has(l.id) && seen.add(l.id))
-          .sort((x, y) => waktuLaporan(y) - waktuLaporan(x))
-        setAll(merged)
-        setTruncated(rs.some((r) => Number(r.data.meta?.total) > FETCH_LIMIT))
-      })
-      .catch(() => alive && setFailed(true))
-      .finally(() => alive && setLoading(false))
-    return () => {
-      alive = false
-    }
-  }, [periodes, targetKey, filter, query, tick])
+  const { periodes, periodeFailed, counts, all, truncated, loading, failed, noPeriode } = useDokumenMasuk({
+    fetchList: fetchLaporan,
+    filter,
+    periodeId,
+    jenis,
+    query,
+    tick,
+  })
 
   const refresh = useCallback(() => setTick((t) => t + 1), [])
   const open = (id) => setParams(id ? { id: String(id) } : {})
   const total = all.length
   const pages = Math.max(1, Math.ceil(total / LIMIT))
   const rows = all.slice((page - 1) * LIMIT, page * LIMIT)
-  const filterLabel = FILTERS.find((f) => f.key === filter).label
-  const noPeriode = periodes !== null && periodes.length === 0
+  const filterLabel = FILTERS_MASUK.find((f) => f.key === filter).label
 
   return (
     <div className="page space-y-6">
@@ -455,25 +331,14 @@ export default function LaporanMasukPage() {
         </nav>
       </header>
 
-      {periodes === null ? (
-        <div className="h-20 animate-pulse rounded-xl bg-slate-100" aria-hidden="true" />
-      ) : noPeriode ? (
-        <section className="card px-6 py-8 text-center">
-          <h2 className="text-lg font-semibold text-navy-950">{periodeFailed ? 'Periode gagal dimuat' : 'Tidak ada periode aktif'}</h2>
-          <p className="mx-auto mt-1 max-w-lg text-sm text-slate-500">
-            {periodeFailed
-              ? 'Daftar periode tidak dapat dimuat. Muat ulang halaman untuk mencoba lagi.'
-              : 'Laporan Masuk hanya menampilkan laporan dari periode aktif. Laporan periode sebelumnya dapat dilihat di menu Periode.'}
-          </p>
-          <Link to="/periode" className="btn btn-secondary btn-sm mt-4">
-            Buka Periode
-          </Link>
-        </section>
+      {noPeriode ? (
+        <TanpaPeriodeAktif failed={periodeFailed} noun="Laporan" />
       ) : (
         <PeriodeAktif
           periodes={periodes}
           counts={counts}
           selected={periodeId}
+          noun="Laporan"
           onSelect={(id) => {
             setPeriodeId(id)
             setPage(1)
@@ -482,24 +347,13 @@ export default function LaporanMasukPage() {
       )}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-2" aria-label="Filter status">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              aria-pressed={filter === f.key}
-              onClick={() => {
-                setFilter(f.key)
-                setPage(1)
-              }}
-              className={`inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
-                filter === f.key ? 'border-navy-800 bg-navy-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <FilterMasuk
+          value={filter}
+          onChange={(key) => {
+            setFilter(key)
+            setPage(1)
+          }}
+        />
         <form
           role="search"
           onSubmit={(e) => {

@@ -248,7 +248,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/notifikasi` (semua peran), `/undangan`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` (semua peran), `/undangan`
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
@@ -293,7 +293,16 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
-  User, **Cetak Dokumen**. Admin tetap `ADMIN_NAV_ITEMS` (Periode, User, Laporan Masuk, Cetak Dokumen).
+  User, **Cetak Dokumen**. Admin tetap `ADMIN_NAV_ITEMS` (Periode, User, Laporan Masuk, Cetak Dokumen, Backup Data).
+- **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
+  logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
+  jumlah perlu ditangani, klik = saring), filter bawaan "Perlu ditangani" (`diajukan`+`review`), Revisi/Disetujui/
+  Ditolak/Semua (tanpa draft); data per periode × status (limit 100) digabung & dipaginasi di peramban. Dokumen
+  periode lama → Periode → panel periode tab Proposal/Laporan.
+- **Backup Data** (`src/pages/BackupPage.jsx`, `/backup`, admin; `src/api/backup.js`, new-api.md bagian 19): kartu
+  "Backup sekarang" (`POST /backup` 202 → pantau `GET /backup/:id` tiap 1,5 dtk; info jadwal `GET /backup/jadwal`),
+  lalu tabel **Daftar Backup** (`GET /backup`, filter pelaku `sumber`) dengan kolom "Dilakukan oleh" (Sistem /
+  nama admin), status, file + ukuran (atau "dihapus oleh"), isi, durasi, Unduh (blob `.sql.gz`) & Hapus file.
 - **Cetak Dokumen** (`src/pages/cetak/`, admin & ketua): `CetakDokumenPage` = wadah kartu dokumen
   (status konfigurasi, Cetak, Konfigurasi). (1) **Export Rekapitulasi Proposal** → konfigurasi =
   `ExportPage.jsx` lama (`/cetak-dokumen/rekap-proposal`, + "Simpan konfigurasi" filter); Cetak =
@@ -334,9 +343,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `PATCH /luaran/:id/capaian`; Kata Kunci laporan (`kataKunci`, terpisah dari proposal) & Metode
   Penelitian (`metodePenelitian`, khusus penelitian) wajib di Informasi Laporan; helper
   `src/utils/kataKunci.js` dipakai bersama Usulan), Ketua/Admin di `LaporanMasukPage.jsx`
-  (menu "Laporan Masuk"/"Laporan Kegiatan", hanya laporan dari **periode aktif** (`isAktif`): kartu periode aktif
-  + jumlah perlu ditangani (klik = saring), filter bawaan "Perlu ditangani" = `diajukan`+`review`, lalu Revisi/
-  Disetujui/Ditolak/Semua (tanpa draft); diambil per periode × status lalu digabung & dipaginasi di peramban;
+  (menu "Laporan Masuk"/"Laporan Kegiatan", logika Dokumen Masuk di atas;
   laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
   (bawaan Disetujui, klik → `/laporan-masuk?id=`); panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab

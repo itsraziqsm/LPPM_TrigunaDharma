@@ -23,6 +23,7 @@ import NotifikasiPage from './NotifikasiPage'
 import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
+import BackupPage from './BackupPage'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -99,6 +100,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'export') return <ExportPage />
       if (page === 'surat-tugas') return <SuratTugasPage />
       if (page === 'laporan-masuk') return <LaporanMasukPage />
+      if (page === 'backup' && primaryRole === 'admin') return <BackupPage />
       return <DashboardHome role={primaryRole} isReviewer={isReviewer} />
     }
 

@@ -45,17 +45,18 @@ const HALAMAN = {
     { to: '/undangan', title: 'Undangan Tim', kata: 'anggota' },
     { to: '/laporan-harian', title: 'Laporan Harian', kata: 'kegiatan harian' },
   ],
+  admin: [{ to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' }],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
 }
 
 export function konteksPencarian(roleNames, isReviewer) {
   const primary = roleNames[0] || ''
   const peran = primary === 'admin' || primary === 'ketua_lppm' ? 'pengelola' : primary
-  return { peran, isReviewer }
+  return { peran, isReviewer, isAdmin: primary === 'admin' }
 }
 
-function halaman({ peran, isReviewer }) {
-  return [...UMUM, ...(HALAMAN[peran] || []), ...(isReviewer ? HALAMAN.reviewer : [])]
+function halaman({ peran, isReviewer, isAdmin }) {
+  return [...UMUM, ...(HALAMAN[peran] || []), ...(isAdmin ? HALAMAN.admin : []), ...(isReviewer ? HALAMAN.reviewer : [])]
 }
 
 const tgl = (iso) => (iso ? new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : null)
