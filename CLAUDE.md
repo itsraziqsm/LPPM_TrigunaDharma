@@ -334,7 +334,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `PATCH /luaran/:id/capaian`; Kata Kunci laporan (`kataKunci`, terpisah dari proposal) & Metode
   Penelitian (`metodePenelitian`, khusus penelitian) wajib di Informasi Laporan; helper
   `src/utils/kataKunci.js` dipakai bersama Usulan), Ketua/Admin di `LaporanMasukPage.jsx`
-  (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
+  (menu "Laporan Masuk"/"Laporan Kegiatan", hanya laporan dari **periode aktif** (`isAktif`): kartu periode aktif
+  + jumlah perlu ditangani (klik = saring), filter bawaan "Perlu ditangani" = `diajukan`+`review`, lalu Revisi/
+  Disetujui/Ditolak/Semua (tanpa draft); diambil per periode × status lalu digabung & dipaginasi di peramban;
+  laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
+  (bawaan Disetujui, klik → `/laporan-masuk?id=`); panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel } from './periodeComponents'
@@ -7,6 +8,10 @@ import AdminProposalDetail from './AdminProposalDetail'
 import { ChevronRight } from 'lucide-react'
 
 // ─── Proposal Panel (list) — centered overlay ─────────────────────────────────
+// Tab Proposal (GET /proposals?periodeId=) dan Laporan (GET /laporan?periodeId=,
+// bawaan status Disetujui): tempat melihat kegiatan periode lama yang sudah
+// diterima — Laporan Masuk hanya memuat periode aktif. Klik laporan membuka
+// panelnya di /laporan-masuk?id=.
 
 export default function ProposalPanel({ periode, isKetua, onClose }) {
     const [proposals, setProposals] = useState([])
@@ -17,6 +22,10 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
     const [search, setSearch] = useState('')
     const [searchInput, setSearchInput] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
+    const [tipe, setTipe] = useState('proposal')
+    const navigate = useNavigate()
+    const isLaporan = tipe === 'laporan'
+    const noun = isLaporan ? 'laporan' : 'proposal'
     const [selectedProposal, setSelectedProposal] = useState(null)
     const debounceRef = useRef(null)
 
@@ -28,20 +37,27 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
                 const params = { periodeId: periode.id, page, limit: 10 }
                 if (search) params.search = search
                 if (statusFilter) params.status = statusFilter
-                const res = await api.get('/proposals', { params })
+                const res = await api.get(tipe === 'laporan' ? '/laporan' : '/proposals', { params })
                 if (!cancelled) {
                     setProposals((res.data.data || []).filter(p => p.jenis === periode.jenis))
                     setMeta(res.data.meta || { total: 0, limit: 10 })
                 }
             } catch {
-                if (!cancelled) setError('Gagal memuat proposal')
+                if (!cancelled) setError(`Gagal memuat ${tipe === 'laporan' ? 'laporan' : 'proposal'}`)
             } finally {
                 if (!cancelled) setLoading(false)
             }
         }
         fetch()
         return () => { cancelled = true }
-    }, [periode.id, page, search, statusFilter])
+    }, [periode.id, page, search, statusFilter, tipe])
+
+    const switchTipe = (next) => {
+        if (next === tipe) return
+        setTipe(next)
+        setStatusFilter(next === 'laporan' ? 'disetujui' : '')
+        setPage(1)
+    }
 
     const handleSearchInput = (val) => {
         setSearchInput(val)
@@ -81,14 +97,28 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
             <header className="border-b border-slate-200 px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                        <p className="text-sm text-slate-500">Daftar Proposal</p>
+                        <p className="text-sm text-slate-500">Kegiatan Periode</p>
                         <h1 className="mt-1 text-2xl text-navy-950">{periode.nama}</h1>
                         <p className="mt-1.5 text-base text-slate-500">
-                            Total proposal pada periode ini: <span className="font-semibold text-slate-700">{meta.total}</span>
+                            Total {noun}{statusFilter ? ` (${(STATUS_LABEL[statusFilter] || statusFilter).toLowerCase()})` : ''} pada periode ini: <span className="font-semibold text-slate-700">{meta.total}</span>
                         </p>
                     </div>
 
                     <CloseButton onClick={onClose} label="Tutup Panel" />
+                </div>
+                <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-6">
+                    {[['proposal', 'Proposal'], ['laporan', 'Laporan']].map(([key, label]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            role="tab"
+                            aria-selected={tipe === key}
+                            onClick={() => switchTipe(key)}
+                            className={`-mb-5 border-b-2 pb-3 text-sm font-semibold transition-colors ${tipe === key ? 'border-navy-800 text-navy-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
             </header>
 
@@ -96,11 +126,11 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
             <section className="border-b border-slate-200 bg-slate-50/60 px-6 py-4">
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
                     <div>
-                        <label htmlFor="panel-cari" className="label">Cari Judul Proposal</label>
+                        <label htmlFor="panel-cari" className="label">Cari Judul {isLaporan ? 'Laporan' : 'Proposal'}</label>
                         <input
                             id="panel-cari"
                             type="text"
-                            placeholder="Masukkan judul proposal..."
+                            placeholder={`Masukkan judul ${noun}...`}
                             value={searchInput}
                             onChange={(e) => handleSearchInput(e.target.value)}
                             className="input"
@@ -129,7 +159,7 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
                     <div className="px-6 py-14 text-center">
                         <p className="flex items-center justify-center gap-3 text-base text-slate-500">
                             <span className="spinner text-navy-600" aria-hidden="true" />
-                            Memuat daftar proposal...
+                            Memuat daftar {noun}...
                         </p>
                     </div>
                 ) : error ? (
@@ -138,15 +168,15 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
                     </div>
                 ) : proposals.length === 0 ? (
                     <div className="px-6 py-14 text-center">
-                        <p className="text-base font-semibold text-slate-700">Tidak ada proposal</p>
-                        <p className="mt-1 text-sm text-slate-500">Belum ada data proposal untuk periode ini.</p>
+                        <p className="text-base font-semibold text-slate-700">Tidak ada {noun}</p>
+                        <p className="mt-1 text-sm text-slate-500">Belum ada data {noun}{statusFilter ? ` berstatus ${(STATUS_LABEL[statusFilter] || statusFilter).toLowerCase()}` : ''} untuk periode ini.</p>
                     </div>
                 ) : (
                     <section className="divide-y divide-slate-100">
                         {proposals.map((p) => (
                             <article
                                 key={p.id}
-                                onClick={() => setSelectedProposal(p.id)}
+                                onClick={() => (isLaporan ? navigate(`/laporan-masuk?id=${p.id}`) : setSelectedProposal(p.id))}
                                 className="group cursor-pointer px-6 py-4 transition-colors duration-150 hover:bg-slate-50"
                             >
                                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
@@ -179,7 +209,7 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
                                         </div>
 
                                         <span className="inline-flex items-center gap-1 text-sm font-medium text-navy-700">
-                                            Lihat detail proposal
+                                            Lihat detail {noun}
                                             <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                                         </span>
                                     </div>
