@@ -2,8 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
-import ApiPending from '../components/ApiPending'
-import { confirmDialog } from '../utils/dialog'
+import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
 
 
@@ -259,39 +258,90 @@ function Modal({ title, onClose, children }) {
 
 // ─── Akses Penugasan Review (dosen ↔ reviewer) ───────────────────────────────
 // Dosen hanya melihat menu "Penugasan Review" bila punya peran `reviewer`
-// (utils/roles.js → canReview). Admin mengubahnya lewat PATCH /users/:id/roles
-// (peran lain dipertahankan). Ketua LPPM belum punya endpoint (route roles khusus
-// admin) → tombol nonaktif + ApiPending (docs/waitingApi-list.md W-30).
-function ReviewerAccess({ user, roleNames, canEdit, onRoleChange }) {
-  const aktif = roleNames.includes('reviewer')
+// (utils/roles.js → canReview). Admin & Ketua LPPM: GET/PATCH /users/:id/reviewer
+// (status + beri/cabut biasa). Cabut biasa ditolak (409) bila masih ada tugasan
+// belum selesai; hanya Ketua yang bisa cabut paksa (POST .../force-revoke) dengan
+// mengalihkan setiap tugasan ke reviewer lain (new-api.md bagian 16).
+function ReviewerAccess({ user, isKetua, onChanged }) {
+  const [status, setStatus] = useState(null)
+  const [loadErr, setLoadErr] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState(null)
+  const [msg, setMsg] = useState(null)
+  const [forceOpen, setForceOpen] = useState(false)
+  const [tick, setTick] = useState(0)
   const name = user.fullName || user.name
 
-  const toggle = async () => {
-    const ok = await confirmDialog(
-      aktif
-        ? {
-            tone: 'danger',
-            icon: ClipboardCheck,
-            title: 'Cabut peran reviewer?',
-            message: `${name} tidak lagi melihat menu Penugasan Review dan tidak muncul di daftar reviewer.`,
-            confirmText: 'Ya, cabut',
-          }
-        : {
-            icon: ClipboardCheck,
-            title: 'Jadikan reviewer?',
-            message: `${name} akan melihat menu Penugasan Review dan bisa ditugaskan menilai proposal/laporan.`,
-            confirmText: 'Ya, jadikan reviewer',
-          },
-    )
+  useEffect(() => {
+    let alive = true
+    setLoadErr(null)
+    usersApi
+      .getReviewerStatus(user.id)
+      .then((r) => alive && setStatus(r.data.data))
+      .catch((e) => alive && setLoadErr(e.response?.data?.message || 'Status reviewer gagal dimuat.'))
+    return () => {
+      alive = false
+    }
+  }, [user.id, tick])
+
+  const aktif = status ? status.isReviewer : getRoleNames(user.roles).includes('reviewer')
+  const terbuka = status?.tugasanBelumSelesai || []
+
+  const done = async (text, next) => {
+    if (next) setStatus(next)
+    setMsg({ ok: true, text })
+    setTick((t) => t + 1)
+    await onChanged(user.id, next?.roles)
+  }
+
+  const beri = async () => {
+    const ok = await confirmDialog({
+      icon: ClipboardCheck,
+      title: 'Jadikan reviewer?',
+      message: `${name} akan melihat menu Penugasan Review dan bisa ditugaskan menilai proposal/laporan.`,
+      confirmText: 'Ya, jadikan reviewer',
+    })
     if (!ok) return
     setBusy(true)
-    setErr(null)
+    setMsg(null)
     try {
-      await onRoleChange(user.id, aktif ? roleNames.filter((r) => r !== 'reviewer') : [...roleNames, 'reviewer'])
+      const r = await usersApi.setReviewer(user.id, true)
+      await done(r.data.message || 'Dosen dijadikan reviewer', r.data.data)
     } catch (e) {
-      setErr(e.response?.data?.message || 'Gagal mengubah peran reviewer.')
+      setMsg({ ok: false, text: e.response?.data?.message || 'Gagal menjadikan reviewer.' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const cabut = async () => {
+    // Masih ada tugasan terbuka: Ketua langsung ke cabut paksa, Admin diberi tahu.
+    if (terbuka.length > 0) {
+      if (isKetua) return setForceOpen(true)
+      return alertDialog({
+        tone: 'warning',
+        title: 'Belum bisa dicabut',
+        message: `${name} masih memiliki ${terbuka.length} tugasan review yang belum selesai. Hanya Ketua LPPM yang dapat mencabut paksa dengan mengalihkan tugasan tersebut.`,
+      })
+    }
+    const ok = await confirmDialog({
+      tone: 'danger',
+      icon: ClipboardCheck,
+      title: 'Cabut peran reviewer?',
+      message: `${name} tidak lagi melihat menu Penugasan Review dan tidak muncul di daftar reviewer. Review yang sudah final tetap tersimpan.`,
+      confirmText: 'Ya, cabut',
+    })
+    if (!ok) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      const r = await usersApi.setReviewer(user.id, false)
+      await done(r.data.message || 'Peran reviewer dicabut', r.data.data)
+    } catch (e) {
+      if (e.response?.status === 409) {
+        setTick((t) => t + 1) // muat ulang daftar tugasan terbaru
+        if (isKetua) setForceOpen(true)
+      }
+      setMsg({ ok: false, text: e.response?.data?.message || 'Gagal mencabut peran reviewer.' })
     } finally {
       setBusy(false)
     }
@@ -309,35 +359,151 @@ function ReviewerAccess({ user, roleNames, canEdit, onRoleChange }) {
           </div>
           <span className={`badge ${aktif ? 'badge-success' : 'badge-neutral'}`}>{aktif ? 'Reviewer' : 'Bukan reviewer'}</span>
         </div>
+
+        {status ? (
+          <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <dt className="text-xs text-slate-500">Tugasan belum selesai</dt>
+              <dd className={`text-base font-semibold tabular-nums ${terbuka.length ? 'text-amber-700' : 'text-slate-900'}`}>{terbuka.length}</dd>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2">
+              <dt className="text-xs text-slate-500">Review selesai</dt>
+              <dd className="text-base font-semibold tabular-nums text-slate-900">{status.jumlahReviewSelesai ?? 0}</dd>
+            </div>
+          </dl>
+        ) : loadErr ? (
+          <p className="mt-3 text-sm text-red-700">{loadErr}</p>
+        ) : (
+          <span className="spinner mt-3 block text-navy-600" aria-hidden="true" />
+        )}
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={toggle}
-            disabled={!canEdit || busy}
-            className={`btn btn-sm ${aktif ? 'btn-secondary text-red-700' : 'btn-primary'}`}
-          >
-            <ClipboardCheck className="size-4" aria-hidden="true" />
-            {busy ? 'Menyimpan…' : aktif ? 'Cabut peran reviewer' : 'Jadikan reviewer'}
-          </button>
-          {!canEdit ? (
-            <span className="inline-flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              Ketua LPPM mengubah peran reviewer: <ApiPending />
-            </span>
-          ) : null}
+          {aktif ? (
+            <button type="button" onClick={cabut} disabled={busy || !status} className="btn btn-secondary btn-sm text-red-700">
+              <ClipboardCheck className="size-4" aria-hidden="true" />
+              {busy ? 'Menyimpan…' : terbuka.length && isKetua ? 'Cabut paksa & alihkan tugasan' : 'Cabut peran reviewer'}
+            </button>
+          ) : (
+            <button type="button" onClick={beri} disabled={busy || !status} className="btn btn-primary btn-sm">
+              <ClipboardCheck className="size-4" aria-hidden="true" />
+              {busy ? 'Menyimpan…' : 'Jadikan reviewer'}
+            </button>
+          )}
         </div>
-        {err ? (
-          <p role="alert" className="mt-2 text-sm text-red-700">
-            {err}
+        {aktif && terbuka.length > 0 && !isKetua ? (
+          <p className="mt-2 text-xs text-slate-500">Masih ada tugasan belum selesai; pencabutan paksa hanya oleh Ketua LPPM.</p>
+        ) : null}
+        {msg ? (
+          <p role={msg.ok ? 'status' : 'alert'} className={`mt-2 text-sm ${msg.ok ? 'text-green-700' : 'text-red-700'}`}>
+            {msg.text}
           </p>
         ) : null}
       </div>
+
+      {forceOpen && status ? (
+        <ForceRevokeModal
+          user={user}
+          tugasan={terbuka}
+          onClose={() => setForceOpen(false)}
+          onDone={async (next, text) => {
+            setForceOpen(false)
+            await done(text, next)
+          }}
+        />
+      ) : null}
     </Section>
+  )
+}
+
+// Cabut paksa (Ketua): pilih reviewer baru untuk setiap tugasan belum selesai.
+// Reviewer baru = user berperan reviewer, bukan dosen ini, bukan pengusul item.
+function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
+  const [reviewers, setReviewers] = useState(null)
+  const [pilih, setPilih] = useState({})
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    usersApi
+      .getAll({ role: 'reviewer', status: 'approved', limit: 100 })
+      .then((r) => setReviewers((r.data.data || []).filter((u) => u.id !== user.id)))
+      .catch(() => setReviewers([]))
+  }, [user.id])
+
+  const lengkap = tugasan.every((t) => pilih[t.id])
+
+  const submit = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      const pengalihan = tugasan.map((t) => ({ tugasanId: t.id, reviewerBaruId: Number(pilih[t.id]) }))
+      const r = await usersApi.forceRevokeReviewer(user.id, pengalihan)
+      const n = r.data.data?.jumlahDialihkan ?? pengalihan.length
+      await onDone(r.data.data, `${r.data.message || 'Peran reviewer dicabut paksa'} — ${n} tugasan dialihkan.`)
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Gagal mencabut paksa.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="Cabut paksa peran reviewer" onClose={busy ? () => {} : onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          {user.fullName || user.name} masih memiliki {tugasan.length} tugasan review yang belum selesai. Alihkan setiap tugasan ke
+          reviewer lain; pengalihan dan pencabutan dilakukan sekaligus. Draf review yang belum final akan dihapus.
+        </p>
+        {err ? (
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {err}
+          </div>
+        ) : null}
+        <ul className="max-h-80 space-y-3 overflow-y-auto" data-lenis-prevent>
+          {tugasan.map((t) => {
+            const opsi = (reviewers || []).filter((u) => u.id !== t.pengusulId)
+            return (
+              <li key={t.id} className="rounded-lg border border-slate-200 px-3 py-3">
+                <p className="text-xs text-slate-500">
+                  {t.tipe === 'laporan' ? 'Laporan' : 'Proposal'} · {t.jenis} · status {t.status} · tugasan #{t.id}
+                </p>
+                <p className="font-semibold text-slate-900">{t.judul}</p>
+                <label htmlFor={`fr-${t.id}`} className="sr-only">
+                  Reviewer baru untuk tugasan #{t.id}
+                </label>
+                <select
+                  id={`fr-${t.id}`}
+                  className="input mt-2"
+                  value={pilih[t.id] || ''}
+                  disabled={reviewers === null}
+                  onChange={(e) => setPilih((p) => ({ ...p, [t.id]: e.target.value }))}
+                >
+                  <option value="">{reviewers === null ? 'Memuat reviewer…' : '-- Pilih reviewer baru --'}</option>
+                  {opsi.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.fullName || u.name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </li>
+            )
+          })}
+        </ul>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
+            Batal
+          </button>
+          <button type="button" className="btn bg-red-600 text-white hover:bg-red-700" onClick={submit} disabled={!lengkap || busy}>
+            {busy ? 'Memproses…' : 'Alihkan & cabut reviewer'}
+          </button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 
 // ─── Detail Panel ────────────────────────────────────────────────────────────
 
-function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleChange, onDelete }) {
+function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleChange, onReviewerChanged, onDelete }) {
   const roleNames = getRoleNames(user.roles)
   const primaryRole = getPrimaryRole(roleNames)
 
@@ -426,7 +592,7 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
           </Section>
 
           {(isAdmin || isKetua) && roleNames.includes('dosen') && (
-            <ReviewerAccess user={user} roleNames={roleNames} canEdit={isAdmin} onRoleChange={onRoleChange} />
+            <ReviewerAccess user={user} isKetua={isKetua} onChanged={onReviewerChanged} />
           )}
 
           {isAdmin && (
@@ -685,6 +851,14 @@ export default function UserManagementPage() {
     fetchUsers()
   }
 
+  // Setelah peran reviewer berubah: segarkan panel & daftar; bila yang diubah
+  // akun sendiri, perbarui roles di store agar menu ikut berubah (tanpa fetchMe).
+  const handleReviewerChanged = async (id, roles) => {
+    if (roles && me?.id === id) useAuthStore.setState((st) => ({ user: st.user ? { ...st.user, roles } : st.user }))
+    await refreshDetail(id)
+    fetchUsers()
+  }
+
   const handleDelete = async (id) => {
     await usersApi.deleteUser(id)
     fetchUsers()
@@ -936,6 +1110,7 @@ export default function UserManagementPage() {
               onClose={closeDetail}
               onStatusChange={handleStatusChange}
               onRoleChange={handleRoleChange}
+              onReviewerChanged={handleReviewerChanged}
               onDelete={handleDelete}
             />
           </div>

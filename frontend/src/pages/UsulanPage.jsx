@@ -19,6 +19,7 @@ import { proposalDosenApi } from '../api/Proposaldosen'
 import { periodeApi } from '../api/periode'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import { masterApi } from '../api/master'
+import { kataKunciError, parseKataKunci } from '../utils/kataKunci'
 import useAuthStore from '../store/authStore'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
 import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
@@ -59,14 +60,6 @@ const stepsFor = (jenis) => (jenis === 'pengabdian' ? STEPS_PENGABDIAN : STEPS)
 // proposal tetap diisi ringkasan item supaya tampilan lama & laporan ikut membaca.
 let luaranKey = 0
 const newLuaran = () => ({ key: `n${(luaranKey += 1)}`, id: null, jenis: 'jurnal', target: '', targetTanggal: '' })
-// Kata kunci diketik dipisah koma; dikirim sebagai array (maks 10 × 50 karakter).
-const parseKataKunci = (text) => {
-  const seen = new Set()
-  return text
-    .split(',')
-    .map((k) => k.trim())
-    .filter((k) => k && !seen.has(k.toLowerCase()) && seen.add(k.toLowerCase()))
-}
 const luaranRingkas = (items) =>
   items
     .filter((i) => i.target.trim())
@@ -109,9 +102,8 @@ function validate(form, file, existingDoc, luaranItems) {
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
   if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
-  const kk = parseKataKunci(form.kataKunci)
-  if (kk.length > 10) e.kataKunci = `Maksimal 10 kata kunci (sekarang ${kk.length}).`
-  else if (kk.some((k) => k.length > 50)) e.kataKunci = 'Setiap kata kunci maksimal 50 karakter.'
+  const kkError = kataKunciError(form.kataKunci)
+  if (kkError) e.kataKunci = kkError
   if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'

@@ -54,7 +54,7 @@ function getRoleNames(roles) {
 
 // Halaman tujuan untuk notifikasi, mengikuti menu yang dimiliki peran. Halaman
 // belum mendukung membuka satu proposal tertentu, jadi tujuannya daftar.
-function targetFor(n, roles, hasTugasan) {
+function targetFor(n, roles) {
   const primary = roles[0]
   const pengelola = primary === 'admin' || primary === 'ketua_lppm'
   if (n.refType === 'periode' || n.type?.startsWith('deletion_')) return pengelola ? { to: '/periode', label: 'Buka periode' } : null
@@ -65,7 +65,7 @@ function targetFor(n, roles, hasTugasan) {
     if (primary === 'dosen' || primary === 'mahasiswa') return { to: `/kegiatan/penelitian/laporan/${n.refId}`, label: 'Buka laporan' }
     return null
   }
-  if (n.type === 'reviewer_ditugaskan' && (roles.includes('reviewer') || hasTugasan)) {
+  if (n.type === 'reviewer_ditugaskan' && roles.includes('reviewer')) {
     return { to: '/penugasan', label: 'Buka penugasan' }
   }
   if (n.refType === 'proposal') {
@@ -319,7 +319,7 @@ export default function NotifikasiPage() {
                 {group.items.map((n) => {
                   const meta = TYPE_META[n.type] || DEFAULT_META
                   const Icon = meta.icon
-                  const target = targetFor(n, roles, user?.hasTugasan === true)
+                  const target = targetFor(n, roles)
                   return (
                     <li
                       key={n.id}

@@ -5,6 +5,11 @@ export const usersApi = {
   getById: (id) => api.get(`/users/${id}`),
   updateStatus: (id, status) => api.patch(`/users/${id}/status`, { status }),
   assignRoles: (id, roles) => api.patch(`/users/${id}/roles`, { roles }),
+  // Hak akses reviewer dosen (new-api.md bagian 16) — admin & ketua
+  getReviewerStatus: (id) => api.get(`/users/${id}/reviewer`),
+  setReviewer: (id, isReviewer) => api.patch(`/users/${id}/reviewer`, { isReviewer }),
+  // Cabut paksa (khusus Ketua LPPM): pengalihan = [{ tugasanId, reviewerBaruId }]
+  forceRevokeReviewer: (id, pengalihan) => api.post(`/users/${id}/reviewer/force-revoke`, { pengalihan }),
   deleteUser: (id) => api.delete(`/users/${id}`),
   // Search user by role untuk dropdown (semua authenticated user bisa akses)
   search: (params) => api.get('/users/search', { params }),

@@ -96,6 +96,8 @@ function ReviewLaporanModal({ tugasan, onClose, onUpdated }) {
                 ['Pengusul', laporan.pengusul?.fullName || laporan.pengusul?.name],
                 ['Periode', laporan.periode?.nama],
                 ['Abstrak', laporan.abstrak],
+                ['Kata kunci', (laporan.kataKunci || []).join(', ') || '—'],
+                ...(laporan.jenis === 'penelitian' ? [['Metode penelitian', laporan.metodePenelitian || '—']] : []),
                 ['Target luaran', laporan.luaran || '—'],
                 ['Luaran tercapai', laporan.luaranTercapai || '—'],
                 ['Ringkasan hasil', laporan.ringkasanHasil || '—'],

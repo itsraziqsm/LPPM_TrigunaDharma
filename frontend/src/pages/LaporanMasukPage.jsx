@@ -149,6 +149,8 @@ function DetailPanel({ id, onClose, onChanged }) {
                   ['Pengusul', `${laporan.pengusul?.fullName || laporan.pengusul?.name || '—'}${laporan.pengusul?.nidn ? ` · NIDN ${laporan.pengusul.nidn}` : ''}`],
                   ['Periode', laporan.periode?.nama],
                   ['Diajukan', tanggal(laporan.submittedAt)],
+                  ['Kata kunci', (laporan.kataKunci || []).join(', ') || '—'],
+                  ...(laporan.jenis === 'penelitian' ? [['Metode penelitian', laporan.metodePenelitian || '—']] : []),
                   ['Target luaran', laporan.luaran || '—'],
                   ['Luaran tercapai', laporan.luaranTercapai || '—'],
                   ['Ringkasan hasil', laporan.ringkasanHasil || '—'],

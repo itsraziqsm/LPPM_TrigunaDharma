@@ -233,10 +233,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (dosen/mhs), `/laporan-harian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
-  (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (peran `reviewer`;
-  dosen **wajib** punya peran reviewer — `hasTugasan` saja tidak cukup; peran lain tetap lewat
-  `hasTugasan`). Admin/Ketua mengatur dosen ↔ reviewer di panel detail Manajemen User
-  (`ReviewerAccess`: admin via `PATCH /users/:id/roles`; Ketua = ApiPending W-30). `Sidebar.jsx`
+  (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (hanya peran
+  `reviewer`; `hasTugasan` tidak lagi dipakai — backend menolak user tanpa peran reviewer).
+  Admin/Ketua mengatur dosen ↔ reviewer di panel detail Manajemen User (`ReviewerAccess`:
+  `GET/PATCH /users/:id/reviewer`; masih ada tugasan → Ketua **cabut paksa** lewat
+  `ForceRevokeModal` (`POST .../force-revoke`, pilih reviewer baru per tugasan), Admin diberi tahu;
+  ubah akun sendiri → roles di store diperbarui). `Sidebar.jsx`
   memakai logika yang sama; ubah keduanya bersamaan.
 - `src/store/authStore.js` (Zustand) — token di `localStorage` (`accessToken`,
   `refreshToken`); `fetchMe()` mengisi `user`.
@@ -287,7 +289,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Penelitian/Pengabdian: Informasi Umum (baca saja dari proposal + anggota) → Informasi Laporan →
   Dokumen & Luaran (file/URL, capaian luaran) → Preview; Simpan draf di tengah, Simpan → kembali
   ke index; Link Jurnal/Video = `buktiUrl` item luaran jurnal/prosiding & media_massa lewat
-  `PATCH /luaran/:id/capaian`; kata kunci laporan & metode penelitian = `ApiPending` W-27, W-28), Ketua/Admin di `LaporanMasukPage.jsx`
+  `PATCH /luaran/:id/capaian`; Kata Kunci laporan (`kataKunci`, terpisah dari proposal) & Metode
+  Penelitian (`metodePenelitian`, khusus penelitian) wajib di Informasi Laporan; helper
+  `src/utils/kataKunci.js` dipakai bersama Usulan), Ketua/Admin di `LaporanMasukPage.jsx`
   (menu "Laporan Masuk", panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama

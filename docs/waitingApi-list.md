@@ -10,19 +10,11 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 15–16) tetapi **belum
-disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
-
-| ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
-|---|---|---|---|
-| W-27 | Isi Laporan: Kata Kunci (Informasi Laporan & Preview) | `kataKunci` (array) di `PATCH /laporan/:id` (dan `POST /laporan`) | Disalin dari proposal saat laporan dibuat; mengubahnya tidak mengubah proposal. |
-| W-28 | Isi Laporan: Metode Penelitian (khusus penelitian) | `metodePenelitian` (string/null) di `PATCH /laporan/:id` & respons laporan | Untuk laporan pengabdian selalu `null`; nilai bukan null ditolak 400. |
-| W-30 | Manajemen User: tombol Jadikan/Cabut reviewer untuk Ketua LPPM | `PATCH /users/:id/roles` kini juga untuk `ketua_lppm` (hanya tambah/cabut `reviewer` pada dosen) | Cukup aktifkan `canEdit` untuk ketua; pemanggilan `onRoleChange` yang ada sudah sesuai. |
-| W-31 | Manajemen User: Penugasan Review (beri/cabut reviewer, cabut paksa oleh Ketua dengan pengalihan tugasan) | `GET/PATCH /users/:id/reviewer` (admin, ketua), `POST /users/:id/reviewer/force-revoke` (ketua) | Cabut biasa → 409 bila masih ada tugasan belum selesai; Ketua lalu memilih reviewer baru per tugasan (`tugasanBelumSelesai`). Hanya peran reviewer yang bisa ditugaskan & mereview (bagian 16.3). |
+Tidak ada. Semua API baru (`backend_go/new-api.md` bagian 10–16) sudah disambungkan.
 
 ### Sudah disambungkan
 
-Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), bagian 13, dan bagian 14:
+Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bagian 13–16:
 
 | ID | Disambungkan di |
 |---|---|
@@ -43,6 +35,8 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), bagian 
 | W-24 | Kata Kunci (dipisah koma → array `kataKunci`, maks 10 × 50) di Dokumen, Preview & modal detail |
 | W-25 | `GET /master/luaran?jenis=` → pilihan "Tambah dari daftar luaran" di editor Target Luaran (item `/luaran` dengan `jenis` = `jenisLuaran`) |
 | W-26 | Langkah Mitra (pengabdian): Jenis Mitra (dropdown `GET /master/jenis-mitra?jenis=pengabdian`), Alamat, Kontak, Pernyataan Kebutuhan → `mitraJenis/Alamat/Kontak/Kebutuhan` (kosong dikirim `null`); tampil di Preview & modal detail |
+| W-27 / W-28 | Isi Laporan → Informasi Laporan: **Kata Kunci** (koma → array `kataKunci`, wajib ≥1, terpisah dari proposal) & **Metode Penelitian** (`metodePenelitian`, khusus penelitian, wajib); ikut Simpan draf, Preview, index laporan, Laporan Masuk, review laporan |
+| W-30 / W-31 | Manajemen User → **Penugasan Review** (`ReviewerAccess`): status (`GET /users/:id/reviewer`: tugasan belum selesai, review selesai), Jadikan/Cabut reviewer untuk Admin & Ketua (`PATCH /users/:id/reviewer`), **Cabut paksa** khusus Ketua (`POST /users/:id/reviewer/force-revoke`, pilih reviewer baru per tugasan; Admin hanya diberi tahu). Menu Penugasan Review = peran `reviewer` saja (`canReview`) |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -111,14 +105,14 @@ Data yang **sudah** tersambung:
 |---|---|---|
 | Buat laporan (pilih proposal disetujui) | `/kegiatan/:jenis/laporan/baru` (`LaporanPage.jsx`) | `GET /laporan/eligible`, `POST /laporan` |
 | Index laporan: ringkasan, ajukan, hapus, status & hasil review (pengusul; anggota baca saja) | `/kegiatan/:jenis/laporan/:id` (`LaporanPage.jsx`) | `GET/DELETE /laporan/:id`, `POST /laporan/:id/submit`, `GET /laporan/:id/dokumen` |
-| Isi laporan (wizard desain UI Laporan: Informasi Umum → Informasi Laporan → Dokumen → Preview, + Simpan draf) | `/kegiatan/:jenis/laporan/:id/isi` (`LaporanIsiPage.jsx`) | `GET/PATCH /laporan/:id` (judul, abstrak, ringkasanHasil, luaranTercapai, realisasiAnggaran, dokumenUrl), `POST /laporan/:id/dokumen`, capaian luaran |
+| Isi laporan (wizard desain UI Laporan: Informasi Umum → Informasi Laporan → Dokumen → Preview, + Simpan draf) | `/kegiatan/:jenis/laporan/:id/isi` (`LaporanIsiPage.jsx`) | `GET/PATCH /laporan/:id` (judul, kataKunci, metodePenelitian, abstrak, ringkasanHasil, luaranTercapai, realisasiAnggaran, dokumenUrl), `POST /laporan/:id/dokumen`, capaian luaran |
 | Link Jurnal & Link Video / Dokumentasi (Dokumen & Preview) — W-29 | `/kegiatan/:jenis/laporan/:id/isi` | Tanpa field khusus di laporan: disimpan sebagai `buktiUrl` item luaran proposal berjenis `jurnal`/`prosiding` (Link Jurnal) dan `media_massa` (Link Video) lewat `PATCH /luaran/:id/capaian` (`null` = hapus). Satu tautan per target; menambah target hanya saat proposal draft/revisi. |
 | Laporan Masuk (Ketua LPPM/Admin): tugaskan reviewer, keputusan | `/laporan-masuk[?id=]` (`LaporanMasukPage.jsx`) | `GET /laporan`, `POST/DELETE /laporan/:id/reviewers`, `PATCH /laporan/:id/status` |
 | Tab Laporan di Penugasan Review (reviewer) | `/penugasan?tab=laporan` | `GET /laporan/tugasan`, `POST /laporan/:id/reviews[/finalize]` |
 | Tautan notifikasi `refType: laporan` | `/notifikasi` | — |
 | Capaian luaran (pengusul isi saat laporan draft/revisi; lainnya baca saja) | halaman laporan, Laporan Masuk, review laporan | `GET /luaran/proposal/:proposalId`, `PATCH /luaran/:id/capaian`, `POST/GET /luaran/:id/bukti` |
 
-Data yang **menunggu API**: tidak ada lagi (W-27, W-28 sudah tersedia, lihat bagian atas).
+Data yang **menunggu API**: tidak ada lagi.
 
 ## Pengaturan (`frontend/src/pages/ProfilePage.jsx`, route `/profil`)
 
@@ -139,17 +133,19 @@ Data yang **menunggu API**: tidak ada lagi.
 
 ## Manajemen User → Penugasan Review (`frontend/src/pages/UserManagementPage.jsx`)
 
-Menu **Penugasan Review** untuk dosen hanya tampil bila dosen punya peran `reviewer`
-(`canReview` di `frontend/src/utils/roles.js`). Admin/Ketua mengaturnya dari panel detail user
-(bagian "Penugasan Review", hanya untuk user berperan dosen).
+Menu **Penugasan Review** hanya tampil untuk user berperan `reviewer` (`canReview` di
+`frontend/src/utils/roles.js`; backend juga menolak tugasan/review tanpa peran ini). Admin/Ketua
+mengatur dosen ↔ reviewer dari panel detail user (bagian "Penugasan Review", hanya untuk dosen).
 
 Data yang **sudah** tersambung:
 
 | Elemen | Sumber |
 |---|---|
-| Jadikan / cabut peran reviewer (Admin) | `PATCH /users/:id/roles` (peran lain dipertahankan, `reviewer` ditambah/dihapus) |
+| Status reviewer: tugasan belum selesai, jumlah review selesai | `GET /users/:id/reviewer` |
+| Jadikan / cabut peran reviewer (Admin & Ketua) | `PATCH /users/:id/reviewer` `{ isReviewer }` (409 bila masih ada tugasan belum selesai) |
+| Cabut paksa + pengalihan tiap tugasan ke reviewer lain (Ketua) | `POST /users/:id/reviewer/force-revoke` `{ pengalihan: [{ tugasanId, reviewerBaruId }] }`; pilihan reviewer dari `GET /users?role=reviewer` (tanpa dosen ini & pengusul item) |
 
-Data yang **menunggu API**: tidak ada lagi (W-30 sudah tersedia, lihat bagian atas).
+Data yang **menunggu API**: tidak ada lagi.
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

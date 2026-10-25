@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, 
 import { laporanApi } from '../api/laporan'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
 import useAuthStore from '../store/authStore'
-import ApiPending from '../components/ApiPending'
+import { kataKunciError, parseKataKunci } from '../utils/kataKunci'
 import { FieldError, PreviewTable, Required, StepCard, Stepper } from '../components/Wizard'
 import { JENIS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan } from './laporan/shared'
@@ -19,8 +19,8 @@ import { rupiah } from './laporan/format'
 // POST /laporan/:id/dokumen, capaian luaran (LuaranCapaian). Link Jurnal & Link
 // Video = bukti (`buktiUrl`) item luaran proposal berjenis jurnal/prosiding dan
 // media massa (PATCH /luaran/:id/capaian) — backend tidak punya field link khusus
-// di laporan. Kata kunci laporan & metode penelitian belum ada field-nya
-// (ApiPending, docs/waitingApi-list.md W-27, W-28).
+// di laporan. Kata kunci laporan (W-27, terpisah dari proposal) dan metode
+// penelitian (W-28, khusus penelitian) lewat PATCH /laporan/:id.
 // ---------------------------------------------------------------------------
 
 const STEPS = [
@@ -33,10 +33,10 @@ const STEPS = [
 const EDITABLE = ['draft', 'revisi']
 const MAX_FILE = 10 * 1024 * 1024
 const DOC_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-const FIELDS = ['judul', 'abstrak', 'luaranTercapai', 'ringkasanHasil', 'realisasiAnggaran', 'dokumenUrl']
+const FIELDS = ['judul', 'kataKunci', 'metodePenelitian', 'abstrak', 'luaranTercapai', 'ringkasanHasil', 'realisasiAnggaran', 'dokumenUrl']
 const STEP_FIELDS = {
   umum: [],
-  laporan: ['judul', 'abstrak', 'ringkasanHasil', 'luaranTercapai', 'realisasiAnggaran'],
+  laporan: ['judul', 'kataKunci', 'metodePenelitian', 'abstrak', 'ringkasanHasil', 'luaranTercapai', 'realisasiAnggaran'],
   dokumen: ['dokumen', 'dokumenUrl', 'links'],
 }
 
@@ -45,7 +45,8 @@ const JURNAL_JENIS = ['jurnal', 'prosiding']
 const VIDEO_JENIS = ['media_massa']
 const isUrl = (v) => /^https?:\/\/\S+$/i.test(v)
 
-const formFrom = (l) => Object.fromEntries(FIELDS.map((k) => [k, l?.[k] == null ? '' : String(l[k])]))
+const formFrom = (l) =>
+  Object.fromEntries(FIELDS.map((k) => [k, k === 'kataKunci' ? (l?.kataKunci || []).join(', ') : l?.[k] == null ? '' : String(l[k])]))
 
 function errorText(e, fallback) {
   const errs = e.response?.data?.errors
@@ -58,6 +59,9 @@ function validate(form, file, laporan, links) {
   if ((links || []).some((l) => l.url.trim() && !isUrl(l.url.trim()))) e.links = 'Link jurnal/video harus berupa URL (https://…).'
   const judul = form.judul.trim()
   if (judul.length < 5) e.judul = 'Judul laporan minimal 5 karakter.'
+  if (parseKataKunci(form.kataKunci).length === 0) e.kataKunci = 'Isi minimal satu kata kunci.'
+  else if (kataKunciError(form.kataKunci)) e.kataKunci = kataKunciError(form.kataKunci)
+  if (laporan?.jenis === 'penelitian' && !form.metodePenelitian.trim()) e.metodePenelitian = 'Metode penelitian wajib diisi.'
   const abstrak = form.abstrak.trim()
   if (abstrak.length < 20) e.abstrak = `Abstrak minimal 20 karakter (sekarang ${abstrak.length}).`
   if (!form.ringkasanHasil.trim()) e.ringkasanHasil = 'Ringkasan laporan wajib diisi.'
@@ -247,6 +251,15 @@ export default function LaporanIsiPage({ jenis }) {
           continue
         }
         payload[k] = v
+      } else if (k === 'kataKunci') {
+        if (kataKunciError(form.kataKunci)) {
+          skipped.push('kata kunci')
+          continue
+        }
+        payload[k] = parseKataKunci(form.kataKunci)
+      } else if (k === 'metodePenelitian') {
+        if (laporan.jenis !== 'penelitian') continue
+        payload[k] = v || null
       } else if ((k === 'judul' || k === 'abstrak') && errors[k]) {
         if (!draft) throw new Error(errors[k])
         skipped.push(k)
@@ -367,7 +380,6 @@ export default function LaporanIsiPage({ jenis }) {
   }
 
   const anggota = laporan.anggota || []
-  const kataKunci = (laporan.kataKunci || []).join(', ')
   const luaranLabel = `Luaran ${label}`
 
   return (
@@ -448,19 +460,38 @@ export default function LaporanIsiPage({ jenis }) {
             <div>
               <label htmlFor="li-kk" className="label">
                 Kata Kunci
+                <Required />
               </label>
-              <input id="li-kk" className="input" value={kataKunci} disabled placeholder="Kata kunci Anda" />
-              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                Disalin dari proposal. Mengubah kata kunci laporan: <ApiPending />
-              </p>
+              <input
+                id="li-kk"
+                className="input"
+                value={form.kataKunci}
+                onChange={set('kataKunci')}
+                placeholder="mis. sistem pakar, fuzzy, UMKM"
+                aria-invalid={Boolean(err('kataKunci'))}
+              />
+              {err('kataKunci') ? (
+                <FieldError message={err('kataKunci')} />
+              ) : (
+                <p className="mt-1.5 text-xs text-slate-500">Pisahkan dengan koma, maksimal 10. Awalnya disalin dari proposal; mengubahnya tidak mengubah proposal.</p>
+              )}
             </div>
             {jenis === 'penelitian' ? (
               <div>
                 <label htmlFor="li-metode" className="label">
                   Metode Penelitian
+                  <Required />
                 </label>
-                <input id="li-metode" className="input" disabled placeholder="Metode penelitian Anda" />
-                <ApiPending className="mt-1.5" />
+                <textarea
+                  id="li-metode"
+                  rows={3}
+                  className="input resize-y"
+                  value={form.metodePenelitian}
+                  onChange={set('metodePenelitian')}
+                  placeholder="Metode penelitian Anda"
+                  aria-invalid={Boolean(err('metodePenelitian'))}
+                />
+                <FieldError message={err('metodePenelitian')} />
               </div>
             ) : null}
             <div>
@@ -645,8 +676,8 @@ export default function LaporanIsiPage({ jenis }) {
               <PreviewTable
                 rows={[
                   ['Judul Laporan', form.judul || '—'],
-                  ['Kata Kunci', kataKunci || '—'],
-                  ...(jenis === 'penelitian' ? [['Metode Penelitian', <ApiPending key="m" />]] : []),
+                  ['Kata Kunci', parseKataKunci(form.kataKunci).join(', ') || '—'],
+                  ...(jenis === 'penelitian' ? [['Metode Penelitian', form.metodePenelitian || '—']] : []),
                   ['Abstrak', form.abstrak || '—'],
                   ['Ringkasan Laporan', form.ringkasanHasil || '—'],
                   ['Luaran Tercapai', form.luaranTercapai || '—'],

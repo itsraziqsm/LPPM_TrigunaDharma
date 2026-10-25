@@ -7,15 +7,10 @@ export function getRoleNames(roles) {
   return roles.map((r) => r.role?.name || r.name || '')
 }
 
-// Menu & halaman "Penugasan Review":
-// - punya peran `reviewer` (reviewer murni, atau dosen yang dijadikan reviewer
-//   oleh Admin/Ketua) → tampil;
-// - dosen TANPA peran reviewer → disembunyikan walau masih punya tugasan
-//   (`hasTugasan`); aksesnya diatur lewat peran reviewer;
-// - peran lain (mis. mahasiswa) yang punya tugasan tetap tampil seperti sebelumnya.
+// Menu & halaman "Penugasan Review": hanya user berperan `reviewer` (reviewer murni
+// atau dosen yang dijadikan reviewer oleh Admin/Ketua). Sejak aturan hak akses
+// reviewer (new-api.md bagian 16) backend menolak tugasan/review dari user tanpa
+// peran ini (403), termasuk mahasiswa yang masih punya `hasTugasan`.
 export function canReview(user) {
-  const roles = getRoleNames(user?.roles)
-  if (roles.includes('reviewer')) return true
-  if (roles.includes('dosen')) return false
-  return user?.hasTugasan === true
+  return getRoleNames(user?.roles).includes('reviewer')
 }
