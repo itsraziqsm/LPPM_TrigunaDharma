@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
+import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -777,8 +778,8 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(null) // popup cari: null = tertutup
   const [filterRole, setFilterRole] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [page, setPage] = useState(1)
@@ -787,15 +788,19 @@ export default function UserManagementPage() {
   const [detailUser, setDetailUser] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const debounceRef = useRef(null)
-  const handleSearchInput = (val) => {
-    setSearchInput(val)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      setSearch(val)
-      setPage(1)
-    }, 400)
-  }
+  const applySearch = (val) => { setSearch(val.trim()); setPage(1) }
+  // Popup cari: rekomendasi dari GET /users?search= (semua peran & status).
+  const fetchRecs = useCallback(async (q) => {
+    const res = await usersApi.getAll({ page: 1, limit: 8, search: q })
+    return (res.data.data || []).map((u) => ({
+      key: u.id,
+      user: u,
+      title: u.fullName || u.name,
+      subtitle: [u.email, getRoleNames(u.roles).map((r) => ROLE_LABEL[r] || r).join(', ')].filter(Boolean).join(' · '),
+      badge: u.status,
+      badgeClass: STATUS_COLOR[u.status],
+    }))
+  }, [])
 
   const fetchUsers = async (opts = {}) => {
     setLoading(true); setError(null)
@@ -869,7 +874,7 @@ export default function UserManagementPage() {
   return (
     <div className="flex h-full min-h-0">
       {/* Area utama daftar */}
-      <div ref={listScrollRef} className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
+      <div ref={listScrollRef} data-scroll-container className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div ref={listContentRef} className="page space-y-6">
           {/* Judul halaman */}
           <header className="flex flex-col gap-5 @4xl:flex-row @4xl:items-end @4xl:justify-between">
@@ -902,14 +907,25 @@ export default function UserManagementPage() {
 
             <div className="grid gap-4 @lg:grid-cols-2 @3xl:grid-cols-12">
               <div className="@lg:col-span-2 @3xl:col-span-6">
-                <label htmlFor="user-cari" className="label">Cari nama atau email</label>
-                <input
+                <span className="label">Cari nama atau email</span>
+                <SearchTrigger
                   id="user-cari"
-                  type="text"
+                  label="Cari nama atau email"
                   placeholder="Cari nama / email..."
-                  value={searchInput}
-                  onChange={(e) => handleSearchInput(e.target.value)}
-                  className="input"
+                  value={search}
+                  onOpen={setSearchOpen}
+                  onClear={() => applySearch('')}
+                />
+                <SearchPopup
+                  open={searchOpen !== null}
+                  onClose={() => setSearchOpen(null)}
+                  title="Cari user"
+                  placeholder="Ketik nama atau email…"
+                  initialQuery={searchOpen || search}
+                  fetchRecs={fetchRecs}
+                  onSelect={(item) => { if (selected !== item.user.id) openDetail(item.user) }}
+                  onSubmit={applySearch}
+                  hint="Rekomendasi user (semua peran & status) muncul di sini sesuai ketikan."
                 />
               </div>
 

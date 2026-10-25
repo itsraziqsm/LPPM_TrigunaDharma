@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
 import { alertDialog } from '../utils/dialog'
+import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
 const isStatusFinal = (status) => status === 'disetujui'
@@ -99,6 +100,7 @@ export default function ProposalPage() {
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [search, setSearch] = useState('')
+  const [searchOpen, setSearchOpen] = useState(null) // popup cari: null = tertutup
   const [status, setStatus] = useState('')
   const [jenis, setJenis] = useState('')
   const [loading, setLoading] = useState(false)
@@ -240,11 +242,28 @@ export default function ProposalPage() {
     }
   }
 
-  const handleSearchSubmit = async (e) => {
+  const handleSearchSubmit = (e) => {
     e.preventDefault()
-    setPage(1)
-    await fetchProposalList()
+    setSearchOpen('')
   }
+
+  const applySearch = (q) => {
+    setSearch(q.trim())
+    setPage(1)
+  }
+
+  // Popup cari: rekomendasi dari GET /proposals?search= (semua status & jenis).
+  const fetchRecs = useCallback(async (q) => {
+    const res = await proposalApi.getAll({ page: 1, limit: 8, search: q })
+    return (res?.data?.data || []).map((p) => ({
+      key: p.id,
+      proposal: p,
+      title: p.judul,
+      subtitle: [p.pengusul?.fullName || p.pengusul?.name, JENIS_LABEL[p.jenis] || p.jenis, p.periode?.nama].filter(Boolean).join(' · '),
+      badge: STATUS_LABEL[p.status] || p.status,
+      badgeClass: STATUS_COLOR[p.status],
+    }))
+  }, [])
 
   return (
     <>
@@ -288,16 +307,16 @@ export default function ProposalPage() {
           <form onSubmit={handleSearchSubmit}>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
               <div className="lg:col-span-5">
-                <label htmlFor="search" className="label">
+                <span id="search-label" className="label">
                   Kata Kunci Proposal
-                </label>
-                <input
+                </span>
+                <SearchTrigger
                   id="search"
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  label="Cari judul proposal, ketua, atau email"
                   placeholder="Cari judul proposal, ketua, atau email"
-                  className="input"
+                  value={search}
+                  onOpen={setSearchOpen}
+                  onClear={() => applySearch('')}
                 />
               </div>
 
@@ -346,6 +365,17 @@ export default function ProposalPage() {
               </div>
             </div>
           </form>
+          <SearchPopup
+            open={searchOpen !== null}
+            onClose={() => setSearchOpen(null)}
+            title="Cari proposal"
+            placeholder="Ketik judul proposal, ketua, atau email…"
+            initialQuery={searchOpen || search}
+            fetchRecs={fetchRecs}
+            onSelect={(item) => handleOpenDetail(item.proposal)}
+            onSubmit={applySearch}
+            hint="Rekomendasi proposal dari semua status muncul di sini sesuai ketikan."
+          />
         </section>
 
         {/* Tabel data utama */}

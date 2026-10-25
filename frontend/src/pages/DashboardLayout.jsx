@@ -182,7 +182,7 @@ export default function DashboardLayout({ page, jenis }) {
 
       {/* Area konten: satu penggulir, latar kanvas tenang */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden pt-14 lg:pt-0">
-        <section ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <section ref={scrollRef} data-scroll-container className="min-h-0 flex-1 overflow-y-auto">
           <div ref={contentRef} className={selfScrolling ? 'h-full' : undefined}>
             {renderContent()}
           </div>

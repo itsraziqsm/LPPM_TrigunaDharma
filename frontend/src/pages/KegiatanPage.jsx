@@ -5,6 +5,7 @@ import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
 import { alertDialog, confirmDialog } from '../utils/dialog'
+import SearchPopup, { SearchTrigger } from '../components/SearchPopup'
 import { ProposalDetailModal } from './ProposalDosen/ProposalDetailModal'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
@@ -234,8 +235,8 @@ export default function KegiatanPage({ jenis }) {
     const st = new URLSearchParams(location.search).get('status')
     return STATUSES.includes(st) ? st : ''
   })
-  const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(null) // null = tertutup; string = huruf awal
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState(() => Number(new URLSearchParams(location.search).get('detail')) || null)
   const [deleting, setDeleting] = useState(null)
@@ -293,6 +294,34 @@ export default function KegiatanPage({ jenis }) {
 
   const refresh = useCallback(() => setTick((t) => t + 1), [])
 
+  // Popup cari: rekomendasi dari endpoint daftar yang sama (search=, limit 8).
+  const fetchRecs = useCallback(
+    async (q) => {
+      const params = { jenis, page: 1, limit: 8, search: q }
+      const r = tipe === 'laporan' ? await laporanApi.getMy(params) : await proposalDosenApi.getAll(params)
+      return (r.data.data || []).map((p) => ({
+        key: p.id,
+        id: p.id,
+        jenis: p.jenis || jenis,
+        title: p.judul,
+        subtitle: [p.periode?.nama, p.updatedAt ? `Diperbarui ${new Date(p.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}` : null]
+          .filter(Boolean)
+          .join(' · '),
+        badge: STATUS_LABEL[p.status] || p.status,
+        badgeClass: STATUS_COLOR[p.status],
+      }))
+    },
+    [jenis, tipe],
+  )
+  const applyQuery = (q) => {
+    setQuery(q.trim())
+    setPage(1)
+  }
+  const pilihRekomendasi = (item) => {
+    if (tipe === 'laporan') navigate(`/kegiatan/${item.jenis}/laporan/${item.id}`)
+    else setSelectedId(item.id)
+  }
+
   // Hapus proposal draft (DELETE /dosen/proposals/:id), dari halaman Proposal Saya lama.
   const hapus = async (p) => {
     const ok = await confirmDialog({
@@ -325,10 +354,9 @@ export default function KegiatanPage({ jenis }) {
     counts && tipe !== 'laporan' && counts.draft + counts.revisi > 0
       ? { total: counts.draft + counts.revisi, status: counts.revisi > 0 ? 'revisi' : 'draft' }
       : null
-  const filterAktif = Boolean(status || query || search.trim())
+  const filterAktif = Boolean(status || query)
   const clearFilter = () => {
     setStatus('')
-    setSearch('')
     setQuery('')
     setPage(1)
   }
@@ -423,30 +451,17 @@ export default function KegiatanPage({ jenis }) {
         </header>
 
         <div className="space-y-4 p-4 sm:p-5">
-          {/* Satu baris: kata kunci · filter status · Cari · Hapus filter (hanya bila ada filter) */}
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault()
-              setPage(1)
-              setQuery(search.trim())
-            }}
-            className="flex flex-col gap-2 sm:flex-row sm:items-center"
-          >
-            <div className="relative min-w-0 flex-1">
-              <label htmlFor="cari-kegiatan" className="sr-only">
-                Cari judul atau abstrak
-              </label>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-              <input
-                id="cari-kegiatan"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
-                className="input pl-9"
-              />
-            </div>
+          {/* Satu baris: kata kunci (popup cari) · filter status · Cari · Hapus filter (hanya bila ada filter) */}
+          <div role="search" className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <SearchTrigger
+              id="cari-kegiatan"
+              className="flex-1"
+              label={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
+              placeholder={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
+              value={query}
+              onOpen={setSearchOpen}
+              onClear={() => applyQuery('')}
+            />
             <label htmlFor="filter-status" className="sr-only">
               Filter status
             </label>
@@ -467,7 +482,7 @@ export default function KegiatanPage({ jenis }) {
                 </option>
               ))}
             </select>
-            <button type="submit" className="btn btn-primary shrink-0">
+            <button type="button" onClick={() => setSearchOpen('')} className="btn btn-primary shrink-0">
               <Search className="size-4" aria-hidden="true" />
               Cari
             </button>
@@ -477,7 +492,18 @@ export default function KegiatanPage({ jenis }) {
                 Hapus filter
               </button>
             ) : null}
-          </form>
+          </div>
+          <SearchPopup
+            open={searchOpen !== null}
+            onClose={() => setSearchOpen(null)}
+            title={`Cari ${isLaporan ? 'laporan' : 'proposal'} ${label.toLowerCase()}`}
+            placeholder={`Ketik judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}…`}
+            initialQuery={searchOpen || query}
+            fetchRecs={fetchRecs}
+            onSelect={pilihRekomendasi}
+            onSubmit={applyQuery}
+            hint={`Rekomendasi ${isLaporan ? 'laporan' : 'proposal'} ${label.toLowerCase()} Anda muncul di sini sesuai ketikan.`}
+          />
 
         <div className="table-wrap">
           <table className="table table-tight">

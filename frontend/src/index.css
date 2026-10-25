@@ -472,3 +472,11 @@
     @apply inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent;
   }
 }
+
+/* Popup pencarian (components/SearchPopup) mengunci gulir latar. Di luar @layer
+   + !important agar menang atas utilitas overflow-y-auto pada wadah gulir. */
+html.search-open,
+html.search-open body,
+html.search-open [data-scroll-container] {
+  overflow: hidden !important;
+}
