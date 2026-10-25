@@ -17,6 +17,8 @@ API, dikelompokkan per rilis:
   master jenis mitra.
 - **Bagian 15** — W-27 kata kunci laporan, W-28 metode penelitian laporan, W-30 Ketua LPPM
   mengatur peran reviewer.
+- **Bagian 16** — Hak akses reviewer dosen: default bukan reviewer, diberi Admin/Ketua, cabut
+  biasa hanya tanpa tugasan terbuka, cabut paksa oleh Ketua dengan pengalihan tugasan.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1305,3 +1307,120 @@ api.patch(`/users/${id}/roles`, { roles: roleNames.filter((r) => r !== 'reviewer
 
 Komponen `ReviewerAccess` di `UserManagementPage.jsx` cukup mengaktifkan tombolnya untuk Ketua
 (`canEdit`), karena pemanggilannya sudah memakai pola di atas.
+
+---
+
+## 16. Hak akses reviewer dosen
+
+### 16.1 Aturan
+
+| Aturan | Keterangan |
+|---|---|
+| Default | Dosen **tidak** berperan reviewer. Registrasi dosen hanya memberi peran `dosen` |
+| Memberi | **Admin** dan **Ketua LPPM** bisa menjadikan dosen reviewer |
+| Mencabut biasa | Admin/Ketua, **hanya bila tidak ada tugasan yang belum selesai**. Kalau masih ada → `409` |
+| Cabut paksa | **Hanya Ketua LPPM**. Setiap tugasan yang belum selesai **wajib dialihkan** ke reviewer baru dulu; pengalihan + pencabutan terjadi dalam satu transaksi |
+| Siapa yang bisa mereview | Hanya user berperan **`reviewer`** (dosen yang dijadikan reviewer atau reviewer murni). Berlaku untuk semua user, termasuk mahasiswa |
+
+**Tugasan belum selesai** = tugasan yang reviewnya belum difinalisasi, pada proposal atau
+laporan yang masih berstatus `diajukan`/`review`. Tugasan pada item yang sudah diputuskan tidak
+menghalangi pencabutan. Review yang sudah final tetap tersimpan sebagai arsip.
+
+Peran reviewer dibaca dari **database**, bukan dari token. Jadi dosen yang baru dijadikan
+reviewer langsung bisa mengakses tugasan tanpa login ulang. Untuk menampilkan menu, frontend
+tetap memakai `roles` dari `GET /auth/me` (`canReview`), jadi panggil `fetchMe()` setelah peran
+berubah kalau perubahan itu terjadi pada user yang sedang login.
+
+### 16.2 Endpoint
+
+| Method | Path | Akses | Keterangan |
+|---|---|---|---|
+| GET | `/users/:id/reviewer` | admin, ketua_lppm | Status reviewer + daftar tugasan belum selesai |
+| PATCH | `/users/:id/reviewer` | admin, ketua_lppm | `{ "isReviewer": true \| false }`: beri atau cabut biasa |
+| POST | `/users/:id/reviewer/force-revoke` | **ketua_lppm** | Cabut paksa + pengalihan tugasan |
+
+**Objek status reviewer** (respons ketiga endpoint):
+
+```json
+{
+  "userId": 13,
+  "roles": ["dosen", "reviewer"],
+  "isReviewer": true,
+  "bisaDijadikanReviewer": true,
+  "tugasanBelumSelesai": [
+    { "id": 42, "itemId": 118, "tipe": "proposal", "createdAt": "2026-10-25T03:10:00.000Z",
+      "judul": "Proposal untuk uji akses reviewer", "status": "review", "jenis": "penelitian", "pengusulId": 10 }
+  ],
+  "jumlahReviewSelesai": 3
+}
+```
+
+| Field | Keterangan |
+|---|---|
+| `bisaDijadikanReviewer` | `true` jika user berperan dosen (hanya dosen yang perannya bisa diatur lewat endpoint ini) |
+| `tugasanBelumSelesai[].id` | **id tugasan**, dipakai sebagai `tugasanId` saat cabut paksa |
+| `tugasanBelumSelesai[].itemId` / `tipe` | id proposal atau laporan, dan jenisnya (`proposal` \| `laporan`) |
+| `tugasanBelumSelesai[].pengusulId` | Pengusul item. Reviewer baru tidak boleh pengusul ini |
+
+**`PATCH /users/:id/reviewer`**
+
+| Hasil | Status · message |
+|---|---|
+| Diberi | `200 "Dosen dijadikan reviewer"` |
+| Dicabut | `200 "Peran reviewer dicabut"` |
+| Sudah sesuai | `200 "Peran reviewer tidak berubah"` |
+| Masih ada tugasan belum selesai | `409 "Dosen masih memiliki N tugasan review yang belum selesai. Ketua LPPM dapat mencabut paksa ..."` |
+| User bukan dosen | `400 "Peran reviewer hanya dapat diatur untuk user berperan dosen"` |
+| `isReviewer` bukan boolean | `422` |
+
+**`POST /users/:id/reviewer/force-revoke`** (Ketua LPPM)
+
+```json
+{ "pengalihan": [ { "tugasanId": 42, "reviewerBaruId": 5 } ] }
+```
+
+- `pengalihan` wajib mencakup **semua** `tugasanBelumSelesai`, masing-masing sekali. Kalau tidak
+  ada tugasan terbuka, kirim `[]` (sama dengan cabut biasa).
+- `reviewerBaruId` harus user `approved` yang berperan `reviewer`, bukan dosen yang dicabut, dan
+  bukan pengusul item itu. Kalau reviewer baru sudah ditugaskan di item yang sama, tugasan lama
+  cukup dihapus.
+- Efek: tugasan dipindah ke reviewer baru (dapat notifikasi `reviewer_ditugaskan`,
+  `refType` `proposal`/`laporan`), draf review dosen lama yang belum final dihapus, lalu peran
+  `reviewer` dicabut.
+- Respons `200 "Peran reviewer dicabut paksa"`: objek status + `jumlahDialihkan`.
+
+Error:
+
+| Status | message |
+|---|---|
+| 400 | `"Semua tugasan belum selesai wajib dialihkan terlebih dahulu. Belum dialihkan: #42, ..."` |
+| 400 | `"Tugasan #N bukan tugasan belum selesai milik dosen ini"` · `"Tugasan #N dialihkan lebih dari sekali"` |
+| 400 | `"Reviewer baru tidak boleh dosen yang sama"` · `"Reviewer baru untuk tugasan #N adalah pengusulnya sendiri"` |
+| 400 | `"Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer"` |
+| 400 | `"User ini tidak berperan reviewer"` · `"Peran reviewer hanya dapat diatur untuk user berperan dosen"` |
+| 403 | bukan Ketua LPPM (admin juga ditolak) |
+
+### 16.3 Perubahan pada endpoint lain
+
+| Endpoint | Perubahan |
+|---|---|
+| `POST /proposals/:id/reviewers`, `POST /laporan/:id/reviewers` | Semua `reviewerIds` wajib user `approved` berperan `reviewer` → kalau tidak, `400 "Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer"`. Untuk daftar pilihan reviewer, tetap pakai `GET /users?role=reviewer` (sudah termasuk dosen yang dijadikan reviewer) |
+| `GET /reviewer/my-tugasan`, `GET /laporan/tugasan` | Hanya user berperan reviewer. Selain itu `403 "Anda tidak memiliki peran reviewer"` (sebelumnya dosen/mahasiswa juga boleh) |
+| `POST /proposals/:id/reviews[/finalize]`, `POST /laporan/:id/reviews[/finalize]` | Wajib berperan reviewer (dicek di DB) → `403 "Anda tidak memiliki peran reviewer"` |
+| `PATCH /users/:id/roles` | Menghapus `reviewer` saat masih ada tugasan belum selesai → `409` (berlaku juga untuk admin). Aturan Ketua (bagian 15.3) tetap berlaku |
+
+### 16.4 Contoh pemanggilan (axios)
+
+```js
+// src/api/users.js
+getReviewerStatus: (id) => api.get(`/users/${id}/reviewer`),
+setReviewer: (id, isReviewer) => api.patch(`/users/${id}/reviewer`, { isReviewer }),
+forceRevokeReviewer: (id, pengalihan) => api.post(`/users/${id}/reviewer/force-revoke`, { pengalihan }),
+
+// Alur cabut di panel Manajemen User:
+// 1. setReviewer(id, false)
+// 2. jika 409 dan user = Ketua: getReviewerStatus(id) → tampilkan tugasanBelumSelesai,
+//    minta pilih reviewer baru per tugasan (GET /users?role=reviewer, kecuali dosen ini & pengusul),
+//    lalu forceRevokeReviewer(id, [{ tugasanId, reviewerBaruId }, ...])
+// 3. jika 409 dan user = Admin: tampilkan pesan bahwa hanya Ketua yang bisa mencabut paksa
+```

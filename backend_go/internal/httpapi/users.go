@@ -48,6 +48,7 @@ func (s *Server) registerUserRoutes() {
 	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
 	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.
 	g.patch("/:id/roles", authorize("admin", "ketua_lppm"), validateBody(assignRoleSchema), s.assignRoles)
+	s.registerReviewerAksesRoutes(g) // baru: /:id/reviewer (GET, PATCH), /:id/reviewer/force-revoke
 	g.delete("/:id", authorize("admin"), s.deleteUser)
 }
 
@@ -244,6 +245,11 @@ func (s *Server) assignRoles(c *Ctx) error {
 			return err
 		}
 	}
+	// Go saja: peran reviewer tidak boleh hilang selama masih ada tugasan belum selesai
+	// (pakai cabut paksa Ketua LPPM, POST /users/:id/reviewer/force-revoke).
+	if err := s.guardReviewerRemoval(ctx, id, list); err != nil {
+		return err
+	}
 	names := make([]any, 0, len(list))
 	for _, r := range list {
 		names = append(names, r)
@@ -273,6 +279,26 @@ func (s *Server) assignRoles(c *Ctx) error {
 		data = user
 	}
 	return c.ok("Roles assigned", data)
+}
+
+func (s *Server) guardReviewerRemoval(ctx context.Context, userID int64, requested []any) error {
+	for _, r := range requested {
+		if r == "reviewer" {
+			return nil
+		}
+	}
+	current, err := s.rolesOf(ctx, s.db, userID)
+	if err != nil || !hasAnyRole(current, "reviewer") {
+		return err
+	}
+	open, err := s.unfinishedTugasan(ctx, s.db, userID)
+	if err != nil {
+		return err
+	}
+	if len(open) > 0 {
+		return openTugasanError(len(open))
+	}
+	return nil
 }
 
 // checkKetuaReviewerChange (W-30): ketua_lppm hanya boleh mengubah peran

@@ -12,7 +12,8 @@ import (
 
 func (s *Server) registerReviewerRoutes() {
 	g := s.group("/api/v1/reviewer", s.authenticate)
-	g.get("/my-tugasan", authorize("reviewer", "dosen", "mahasiswa"), s.myTugasan)
+	// Go saja: hanya user berperan reviewer (dicek di DB).
+	g.get("/my-tugasan", s.requireReviewerRole, s.myTugasan)
 }
 
 func (s *Server) tugaskanReviewer(c *Ctx) error {
@@ -38,6 +39,10 @@ func (s *Server) tugaskanReviewer(c *Ctx) error {
 	}
 	if proposal.Status != "diajukan" && proposal.Status != "review" {
 		return plainError("Proposal harus berstatus diajukan atau review untuk ditugaskan reviewer")
+	}
+	// Go saja: hanya user approved yang berperan reviewer.
+	if err := s.ensureReviewerCandidates(ctx, reviewerIDs); err != nil {
+		return err
 	}
 	now := s.nowMs()
 	if len(reviewerIDs) > 0 {

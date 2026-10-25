@@ -63,7 +63,7 @@ func (s *Server) registerLaporanKegiatanRoutes() {
 	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(laporanListQuerySchema), s.listLaporanKegiatan)
 	g.get("/my", authorize("dosen", "mahasiswa"), s.validateQuery(laporanListQuerySchema), s.myLaporanKegiatan)
 	g.get("/eligible", authorize("dosen", "mahasiswa"), s.eligibleLaporanProposals)
-	g.get("/tugasan", authorize("reviewer", "dosen", "mahasiswa"), s.validateQuery(reviewerPaginationSchema), s.myLaporanTugasan)
+	g.get("/tugasan", s.requireReviewerRole, s.validateQuery(reviewerPaginationSchema), s.myLaporanTugasan)
 	g.post("/", authorize("dosen", "mahasiswa"), validateBody(createLaporanKegiatanSchema), s.createLaporanKegiatan)
 	g.get("/:id", s.getLaporanKegiatan)
 	g.patch("/:id", authorize("dosen", "mahasiswa"), validateBody(updateLaporanKegiatanSchema), s.updateLaporanKegiatan)
@@ -75,8 +75,8 @@ func (s *Server) registerLaporanKegiatanRoutes() {
 	g.post("/:id/reviewers", authorize("ketua_lppm", "admin"), validateBody(tugaskanReviewerSchema), s.tugaskanLaporanReviewer)
 	g.delete("/:id/reviewers/:reviewerId", authorize("ketua_lppm", "admin"), s.hapusLaporanReviewer)
 	g.get("/:id/reviews", s.getLaporanReviews)
-	g.post("/:id/reviews", authorize("reviewer", "dosen", "mahasiswa"), validateBody(submitReviewSchema), s.submitLaporanReview)
-	g.post("/:id/reviews/finalize", authorize("reviewer", "dosen", "mahasiswa"), s.finalizeLaporanReview)
+	g.post("/:id/reviews", s.requireReviewerRole, validateBody(submitReviewSchema), s.submitLaporanReview)
+	g.post("/:id/reviews/finalize", s.requireReviewerRole, s.finalizeLaporanReview)
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
@@ -735,12 +735,8 @@ func (s *Server) tugaskanLaporanReviewer(c *Ctx) error {
 		}
 	}
 	ctx := c.r.Context()
-	found, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `User` WHERE `status` = 'approved' AND `id` IN ("+placeholders(len(ids))+")", idArgs(ids)...)
-	if err != nil {
+	if err := s.ensureReviewerCandidates(ctx, ids); err != nil {
 		return err
-	}
-	if found != int64(len(ids)) {
-		return httpError(http.StatusBadRequest, "Reviewer tidak ditemukan atau belum disetujui")
 	}
 	now := s.nowMs()
 	values := make([]string, len(ids))

@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -54,7 +54,7 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 487 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 525 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -88,14 +88,19 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
 `admin`, `ketua_lppm` (dulu `ketua_prpm`, sudah dimigrasi), `dosen`, `reviewer`, `mahasiswa`.
 User bisa punya banyak peran. Registrasi publik hanya dosen/mahasiswa dengan status
 `pending`; login ditolak sampai admin mengubah status ke `approved` (`pending|approved|rejected`).
-Dosen/mahasiswa yang memiliki baris `ReviewerTugasan` mendapat `hasTugasan: true` di `/auth/me`
-dan diperlakukan sebagai reviewer di UI.
+**Hak akses reviewer:** dosen default bukan reviewer; Admin/Ketua memberi peran `reviewer`
+(`PATCH /users/:id/reviewer`); cabut biasa hanya bila tidak ada tugasan belum selesai (review belum
+final pada item `diajukan`/`review`), selain itu 409; cabut paksa hanya Ketua
+(`POST /users/:id/reviewer/force-revoke`) dengan mengalihkan semua tugasan terbuka ke reviewer lain
+dalam satu transaksi. Hanya user berperan `reviewer` (cek DB lewat `requireReviewerRole`, bukan
+token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `hasTugasan` di
+`/auth/me` tetap ada (frontend `canReview` mewajibkan peran reviewer untuk dosen).
 
 ### Endpoint (`/api/v1`, semua butuh Bearer token kecuali auth publik & `/health`)
 | Grup | Endpoint utama | Akses |
 |---|---|---|
 | `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
-| `/users` | search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
+| `/users` | `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update; hapus 2 langkah via `deletion-request` (+ approve/cancel) | tulis: admin+ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
@@ -105,7 +110,7 @@ dan diperlakukan sebagai reviewer di UI.
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
-| `/reviewer/my-tugasan` | tugasan review **proposal** milik user | reviewer, dosen, mahasiswa |
+| `/reviewer/my-tugasan` | tugasan review **proposal** milik user | hanya peran reviewer (cek DB) |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
 | `/luaran` | `/stats`, `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan) | pengusul tulis; baca = akses proposal |
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
@@ -198,7 +203,8 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 `/laporan`, `/program-studi`, `/users/profile/me` (GET), `/dosen/proposals/as-member` baru;
 `/auth/me` + field profil; stats + `review` & `?jenis=`; field `tahapan`; foto profil,
 export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian; kata kunci & metode
-penelitian di laporan; ketua boleh mengatur peran reviewer.
+penelitian di laporan; ketua boleh mengatur peran reviewer; hanya peran reviewer yang bisa
+ditugaskan/mereview, beri/cabut/cabut paksa reviewer.
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,

@@ -88,7 +88,8 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   profil_akun.go (SINTA, foto profil, unduh data akun, hapus akun sendiri),
   luaran.go (item luaran kegiatan, /api/v1/luaran), kepercayaan.go (nilai kepercayaan),
   verifikasi_email.go (verifikasi email opsional), master.go (master rumpun ilmu, bidang,
-  luaran), kata_kunci.go (validasi & simpan kata kunci)
+  luaran), kata_kunci.go (validasi & simpan kata kunci), reviewer_akses.go (hak akses reviewer
+  dosen: beri, cabut, cabut paksa + pengalihan tugasan)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 ```
 
@@ -96,7 +97,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 487 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 525 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -141,7 +142,11 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 10. W-27/W-28/W-30 (lihat `new-api.md` bagian 15): `kataKunci` dan `metodePenelitian`
     (khusus penelitian) bisa diubah di laporan; `PATCH /users/:id/roles` terbuka untuk
     `ketua_lppm`, tetapi hanya untuk menambah/mencabut `reviewer` pada dosen.
-11. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+11. Hak akses reviewer (lihat `new-api.md` bagian 16): hanya user berperan `reviewer`
+    (dicek di DB) yang bisa ditugaskan, melihat tugasan, dan menyimpan review; endpoint
+    `/users/:id/reviewer` (GET/PATCH) dan `/users/:id/reviewer/force-revoke` (Ketua);
+    `PATCH /users/:id/roles` menolak (409) pencabutan reviewer yang masih punya tugasan terbuka.
+12. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

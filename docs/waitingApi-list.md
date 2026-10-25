@@ -10,7 +10,7 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 15) tetapi **belum
+Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 15–16) tetapi **belum
 disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
@@ -18,6 +18,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 | W-27 | Isi Laporan: Kata Kunci (Informasi Laporan & Preview) | `kataKunci` (array) di `PATCH /laporan/:id` (dan `POST /laporan`) | Disalin dari proposal saat laporan dibuat; mengubahnya tidak mengubah proposal. |
 | W-28 | Isi Laporan: Metode Penelitian (khusus penelitian) | `metodePenelitian` (string/null) di `PATCH /laporan/:id` & respons laporan | Untuk laporan pengabdian selalu `null`; nilai bukan null ditolak 400. |
 | W-30 | Manajemen User: tombol Jadikan/Cabut reviewer untuk Ketua LPPM | `PATCH /users/:id/roles` kini juga untuk `ketua_lppm` (hanya tambah/cabut `reviewer` pada dosen) | Cukup aktifkan `canEdit` untuk ketua; pemanggilan `onRoleChange` yang ada sudah sesuai. |
+| W-31 | Manajemen User: Penugasan Review (beri/cabut reviewer, cabut paksa oleh Ketua dengan pengalihan tugasan) | `GET/PATCH /users/:id/reviewer` (admin, ketua), `POST /users/:id/reviewer/force-revoke` (ketua) | Cabut biasa → 409 bila masih ada tugasan belum selesai; Ketua lalu memilih reviewer baru per tugasan (`tugasanBelumSelesai`). Hanya peran reviewer yang bisa ditugaskan & mereview (bagian 16.3). |
 
 ### Sudah disambungkan
 

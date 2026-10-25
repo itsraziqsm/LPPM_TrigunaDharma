@@ -78,8 +78,8 @@ func (s *Server) registerProposalRoutes() {
 	g.post("/:proposalId/reviewers", authorize("ketua_lppm", "admin"), validateBody(tugaskanReviewerSchema), s.tugaskanReviewer)
 	g.delete("/:proposalId/reviewers/:reviewerId", authorize("ketua_lppm", "admin"), s.hapusTugasan)
 	g.get("/:proposalId/reviews", authorize("ketua_lppm", "admin", "reviewer"), s.getReviewsByProposal)
-	g.post("/:proposalId/reviews", authorize("reviewer"), validateBody(submitReviewSchema), s.submitReview)
-	g.post("/:proposalId/reviews/finalize", authorize("reviewer"), s.finalizeReview)
+	g.post("/:proposalId/reviews", s.requireReviewerRole, validateBody(submitReviewSchema), s.submitReview)
+	g.post("/:proposalId/reviews/finalize", s.requireReviewerRole, s.finalizeReview)
 
 	g.get("/:proposalId/laporan", s.listLaporan)
 	g.post("/:proposalId/laporan", authorize("dosen", "mahasiswa"), multerSingle("file"), s.createLaporan)
