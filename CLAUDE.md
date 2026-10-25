@@ -317,7 +317,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   diambil dari `GET /notifications?onlyUnread=true` → `meta.total`.
 - **Halaman galat**: `src/components/ErrorState.jsx` (tampilan) + `src/utils/errorCodes.js` (teks/ikon/
   ilustrasi per kode 400, 401, 403, 404, 408, 429, 500, 501, 502, 503, 504). Ilustrasi WebP latar
-  transparan di `public/images/errors/` (408 & 504 berbagi `408-504.webp`; 501 tanpa ilustrasi →
+  transparan di `public/images/errors/` (408 & 504 berbagi `408-504.webp`; kode tanpa `image` →
   ubin ikon) tampil di depan angka kode besar. `src/pages/ErrorPage.jsx` mandiri
   dipakai untuk `/error/:code`, route tak dikenal (`*` → 404, sebelumnya redirect ke /login) dan
   `errorElement` router (galat render → 500). Fitur yang belum dibangun memakai `ErrorState`

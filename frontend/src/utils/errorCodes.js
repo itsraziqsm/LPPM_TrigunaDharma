@@ -16,7 +16,7 @@ import {
 // info (navy), warning (kuning), danger (merah). `retry` = tampilkan tombol
 // "Coba lagi" (muat ulang), `login` = arahkan ke halaman masuk. `image` =
 // ilustrasi (PNG latar transparan → WebP) di public/images/errors/; kode tanpa
-// ilustrasi (501) tetap memakai ubin ikon.
+// `image` memakai ubin ikon.
 const img = (name) => `/images/errors/${name}.webp`
 export const ERROR_CODES = {
   400: {
@@ -81,6 +81,7 @@ export const ERROR_CODES = {
     retry: true,
   },
   501: {
+    image: img('501'),
     name: 'Not Implemented',
     title: 'Fitur belum diimplementasikan',
     desc: 'Fitur ini belum tersedia di sistem.',
