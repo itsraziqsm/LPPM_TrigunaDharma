@@ -345,9 +345,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
 - Foto profil: `src/components/UserAvatar.jsx` (`API_BASE_URL + user.fotoUrl`, fallback inisial).
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
-  menu"; saat ciut tampil logo (klik untuk membuka) + rail ikon akses cepat untuk semua
+  menu"; saat ciut tampil logo (bukan tombol) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
-  dan keluar. Menu baru wajib punya `icon` (termasuk item `children`). Sidebar dua bagian:
+  dan keluar; satu-satunya tombol buka = ikon `PanelLeftOpen` (kebalikan `PanelLeftClose`) di posisi yang sama (tepat di atas profil). Menu baru wajib punya `icon` (termasuk item `children`). Sidebar dua bagian:
   **atas** terang `bg-rail-soft` (#E5EDFF: merek, menu, lalu tombol "Sembunyikan menu" tepat di
   atas profil, dengan bantuan pintasan `Ctrl`/`⌘` + `B` (`MOD_KEY`); item aktif kartu putih +
   garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol

@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, Printer, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -347,23 +347,9 @@ export default function Sidebar() {
         aria-label="Navigasi"
         className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 transition-[transform,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem] lg:shadow-none' : ''} shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)]`}
       >
-        {/* Merek — saat diciutkan, logo menjadi tombol untuk membuka rail */}
+        {/* Merek (saat diciutkan hanya logo; tombol buka ada di atas profil) */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
-          {collapsed ? (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label="Tampilkan navigasi (Ctrl+B)"
-              aria-expanded={false}
-              title={`Tampilkan navigasi (${MOD_KEY} + B)`}
-              className="hidden shrink-0 rounded-full transition-transform hover:scale-105 focus-visible:outline-2 lg:block"
-            >
-              <LogoLppm className="size-10" />
-            </button>
-          ) : null}
-          <span className={hideWhenCollapsed}>
-            <LogoLppm className="size-10" />
-          </span>
+          <LogoLppm className="size-10 shrink-0" />
           <div className={`min-w-0 ${hideWhenCollapsed}`}>
             <p className="font-serif text-xl font-medium leading-none tracking-wide text-navy-950">LPPM</p>
             <p className="mt-1.5 truncate text-[0.6875rem] leading-none text-slate-500">Pengelolaan Proposal</p>
@@ -433,6 +419,20 @@ export default function Sidebar() {
                   </NavLink>
                 ))}
             </nav>
+            {/* Satu-satunya tombol buka rail: posisi sama dengan "Sembunyikan menu", ikon dibalik */}
+            <div className="hidden shrink-0 justify-center pb-3 pt-2 lg:flex">
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-expanded={false}
+                aria-keyshortcuts="Control+B"
+                aria-label="Tampilkan menu"
+                title={`Tampilkan menu (${MOD_KEY} + B)`}
+                className="grid size-10 place-items-center rounded-lg bg-white/60 text-slate-600 ring-1 ring-inset ring-navy-200/70 transition-colors hover:bg-white hover:text-navy-950"
+              >
+                <PanelLeftOpen className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            </div>
             <section aria-label="Akun" className="hidden shrink-0 flex-col items-center gap-1 bg-rail py-3 text-white lg:flex">
               <NavLink to="/profil" aria-label={`Profil: ${user?.name || ''}`} title={user?.name || 'Profil'} className={railProfileClass}>
                 <UserAvatar user={user} className="size-8 text-sm" />
