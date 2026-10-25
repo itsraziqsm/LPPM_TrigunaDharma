@@ -3,8 +3,8 @@
 //   Penelitian : dosen minimal 2, mahasiswa minimal 0 (bebas)
 // Ubah di sini bila ketentuan LPPM berubah; dipakai validasi & keterangan wizard Usulan.
 export const ATURAN_TIM = {
-  pengabdian: { dosen: { min: 2, max: 2 }, mahasiswa: { min: 1, max: 1 } },
-  penelitian: { dosen: { min: 2 }, mahasiswa: { min: 0 } },
+  pengabdian: { dosen: { min: 2, max: 3 }, mahasiswa: { min: 1, max: 2 } },
+  penelitian: { dosen: { min: 2, max: 3 }, mahasiswa: { min: 0, max: 2 } },
 }
 
 const LABEL = { dosen: 'dosen', mahasiswa: 'mahasiswa' }
