@@ -19,7 +19,8 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 // Bagian "sebagai anggota tim" dari GET /dosen/proposals/as-member.
 // ---------------------------------------------------------------------------
 
-const LIMIT = 10
+// Baris per halaman: Riwayat (proposal/laporan) & tabel "sebagai anggota tim" sama-sama 5.
+const LIMIT = 5
 const STATUSES = ['draft', 'diajukan', 'review', 'revisi', 'disetujui', 'ditolak']
 
 const COPY = {
@@ -86,7 +87,7 @@ function MemberSection({ jenis, label, userId }) {
     let alive = true
     setState('loading')
     proposalDosenApi
-      .getAsMember({ jenis, page, limit: 5 })
+      .getAsMember({ jenis, page, limit: LIMIT })
       .then((r) => {
         if (!alive) return
         setRows(r.data.data || [])
@@ -99,7 +100,7 @@ function MemberSection({ jenis, label, userId }) {
     }
   }, [jenis, page])
 
-  const pages = Math.max(1, Math.ceil(total / 5))
+  const pages = Math.max(1, Math.ceil(total / LIMIT))
 
   return (
     <section aria-labelledby="kegiatan-anggota" className="space-y-3">
@@ -178,7 +179,7 @@ function MemberSection({ jenis, label, userId }) {
           </tbody>
         </table>
       </div>
-      {total > 5 ? (
+      {total > LIMIT ? (
         <nav aria-label="Halaman keanggotaan" className="flex items-center justify-between gap-3 text-sm text-slate-600">
           <span className="tabular-nums">
             Halaman {page} dari {pages} · {total} {label.toLowerCase()}
