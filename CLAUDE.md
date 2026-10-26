@@ -342,7 +342,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
   User, **Cetak Dokumen**. Sidebar mendukung **3 tingkat** (`NavGroup` rekursif, `daunMenu` = tautan daun untuk rail ciut).
   Admin `ADMIN_NAV_ITEMS`: Dashboard · **Akademik** (Dokumen Masuk (`DOKUMEN_MASUK`) › Proposal/Laporan Kegiatan, Luaran
-  `/luaran-dosen`, Periode) · **Pengguna** (`/users`) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
+  `/luaran-dosen`, Periode) · **Pengguna** (`/users`, `UserManagementPage` judul "Manajemen Pengguna": kepala `KepalaMasuk` + panel cari kolom cari · Filter (Peran, Status akun) · Cari, "Filter aktif" hanya bila ada) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
   Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti, Unduh CSV `;` & ZIP;
   panel cari = kolom cari · tombol Filter (membuka panel 7 filter) · Cari, baris "Filter aktif" hanya bila ada filter; tabel
   Daftar luaran bergaya Riwayat dosen (bingkai navy, kepala gelap)),
