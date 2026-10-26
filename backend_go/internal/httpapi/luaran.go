@@ -21,7 +21,13 @@ import (
 // Item luaran selalu milik proposal (proposalId = id proposal, bukan laporan).
 
 var (
-	luaranJenis   = []string{"jurnal", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"}
+	// Urutan = urutan tampil; jurnal & poster adalah luaran prioritas (luaranPrioritas).
+	luaranJenis     = []string{"jurnal", "poster", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"}
+	luaranPrioritas = map[string]bool{"jurnal": true, "poster": true}
+	luaranLabel     = map[string]string{
+		"jurnal": "Artikel jurnal", "poster": "Poster", "prosiding": "Prosiding seminar", "hki": "Hak Kekayaan Intelektual (HKI)",
+		"buku": "Buku", "produk": "Produk / teknologi tepat guna", "media_massa": "Video / publikasi media massa", "lainnya": "Lainnya",
+	}
 	luaranColumns = "`id`,`proposalId`,`jenis`,`target`,`targetTanggal`,`status`,`judulCapaian`,`keterangan`,`tercapaiAt`,`buktiUrl`,`buktiNama`,`buktiMime`,`buktiUkuran`,`createdAt`,`updatedAt`"
 
 	luaranTanggal          = zNullable{periodeTanggal}
@@ -50,6 +56,7 @@ func (z zNullable) parse(value any, present bool, path []any, issues *[]zIssue) 
 
 func (s *Server) registerLuaranRoutes() {
 	g := s.group("/api/v1/luaran", s.authenticate)
+	s.registerLuaranAdminRoutes(g) // /jenis, admin: /, /unduh-csv, /unduh-zip (sebelum /:id)
 	g.get("/stats", authorize("dosen"), s.luaranStats)
 	g.get("/proposal/:proposalId", s.listLuaran)
 	g.post("/", authorize("dosen"), validateBody(createLuaranSchema), s.createLuaran)
@@ -373,7 +380,7 @@ func (s *Server) luaranStats(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	var total, tercapai, diklaim, jurnal int64
+	var total, tercapai, diklaim, jurnal, poster int64
 	perJenis := map[string]int64{}
 	for _, row := range rows {
 		total++
@@ -384,8 +391,11 @@ func (s *Server) luaranStats(c *Ctx) error {
 		tercapai++
 		if row.Str("laporanStatus") == "disetujui" {
 			diklaim++
-			if row.Str("jenis") == "jurnal" {
+			switch row.Str("jenis") {
+			case "jurnal":
 				jurnal++
+			case "poster":
+				poster++
 			}
 		}
 	}
@@ -394,6 +404,6 @@ func (s *Server) luaranStats(c *Ctx) error {
 		jenis = append(jenis, KV{j, perJenis[j]})
 	}
 	return c.ok("Statistik luaran fetched", O{
-		{"total", total}, {"tercapai", tercapai}, {"dapatDiklaim", diklaim}, {"jurnal", jurnal}, {"perJenis", jenis},
+		{"total", total}, {"tercapai", tercapai}, {"dapatDiklaim", diklaim}, {"jurnal", jurnal}, {"poster", poster}, {"perJenis", jenis},
 	})
 }

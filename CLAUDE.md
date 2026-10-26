@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -57,7 +57,7 @@ go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahas
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 705 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # ±730 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -126,7 +126,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
 | `/reviewer/my-tugasan` | tugasan review **proposal** milik user | hanya peran reviewer (cek DB) |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
-| `/luaran` | `/stats`, `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan) | pengusul tulis; baca = akses proposal |
+| `/luaran` | `/jenis` (daftar jenis, jurnal & poster prioritas), `/stats` (+ `poster`), `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan); admin: `GET /` (semua luaran + filter), `/unduh-csv`, `/unduh-zip` (bukti + daftar-luaran.csv, maks 1000) | pengusul tulis; baca = akses proposal; admin unduh |
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
@@ -181,6 +181,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   targetTanggal) diubah saat proposal draft/revisi; capaian (status tercapai/belum, judul,
   keterangan, tercapaiAt, bukti URL/file) saat proposal disetujui dan laporan belum diajukan.
   Dapat diklaim = tercapai + laporan disetujui; jurnal = dapat diklaim berjenis jurnal.
+  Jenis: jurnal, **poster**, prosiding, hki, buku, produk, media_massa, lainnya; **jurnal & poster = prioritas**
+  (ditampilkan paling atas di `/luaran/jenis`, `/master/luaran` (+ `prioritas`), daftar admin), tidak wajib.
   (Menu `/luaran` di frontend = pencairan dana, hal lain, menunggu kampus.)
 - **Nilai kepercayaan** = 5 × rata-rata komponen yang ada datanya (persetujuan proposal,
   persetujuan laporan dari proposal disetujui yang periodenya selesai/laporannya diputuskan,

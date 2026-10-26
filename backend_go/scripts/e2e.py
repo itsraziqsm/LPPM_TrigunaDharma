@@ -637,7 +637,7 @@ expect("luaran bukti fake", req("POST", f"/api/v1/luaran/{lj['id']}/bukti", dose
 st, _, hdrs, content = req("GET", f"/api/v1/luaran/{lj['id']}/bukti", ketua)
 check("luaran bukti download", st == 200 and content == PDF, st)
 b = expect("luaran stats", req("GET", "/api/v1/luaran/stats", dosen5), 200, "Statistik luaran fetched")
-check("luaran stats shape", list(b["data"].keys()) == ["total", "tercapai", "dapatDiklaim", "jurnal", "perJenis"] and list(b["data"]["perJenis"].keys()) == ["jurnal", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"], b["data"])
+check("luaran stats shape", list(b["data"].keys()) == ["total", "tercapai", "dapatDiklaim", "jurnal", "poster", "perJenis"] and list(b["data"]["perJenis"].keys()) == ["jurnal", "poster", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"], b["data"])
 check("luaran not yet claimable", b["data"]["tercapai"] == statsBefore["tercapai"] + 1 and b["data"]["dapatDiklaim"] == statsBefore["dapatDiklaim"], (statsBefore, b["data"]))
 # laporan → disetujui → luaran dapat diklaim
 b = expect("luaran laporan", req("POST", "/api/v1/laporan", dosen5, {"proposalId": lp, "luaranTercapai": "1 artikel jurnal", "dokumenUrl": "https://drive.example/lap"}), 201)
@@ -679,6 +679,8 @@ b = req("GET", "/api/v1/master/bidang?jenis=pengabdian", dosen1)[1]["data"]
 check("master bidang jenis", len(b) > 0 and all(x["jenisKegiatan"] in (None, "pengabdian") for x in b), b[:2])
 b = req("GET", "/api/v1/master/luaran?jenis=penelitian", dosen1)[1]["data"]
 check("master luaran", b[0]["nama"] == "Artikel jurnal nasional terakreditasi (SINTA)" and b[0]["jenisLuaran"] == "jurnal" and all(x["jenisKegiatan"] in (None, "penelitian") for x in b), b[:2])
+pr = [x["prioritas"] for x in b]
+check("master luaran prioritas di atas", pr == sorted(pr, reverse=True) and any(x["jenisLuaran"] == "poster" and x["prioritas"] for x in b) and pr.count(True) >= 3, [(x["nama"], x["prioritas"]) for x in b])
 expect("master unknown", req("GET", "/api/v1/master/xyz", dosen1), 404)
 expect("master bad jenis", req("GET", "/api/v1/master/bidang?jenis=x", dosen1), 400)
 expect("master no token", req("GET", "/api/v1/master/bidang"), 401)
@@ -1105,6 +1107,51 @@ check("monitoring dosen shape", list(d0.keys()) == ["dosen", "jumlahProposal", "
 check("monitoring dosen1 ada", any(x["dosen"]["id"] == dosen1User["id"] for x in b["data"]), [x["dosen"]["id"] for x in b["data"]][:10])
 b = expect("monitoring dosen cari", req("GET", "/api/v1/monitoring/dosen?search=Dosen%201", ketua), 200)
 check("monitoring dosen cari isi", b["meta"]["total"] >= 1 and any(x["dosen"]["id"] == dosen1User["id"] for x in b["data"]), b["data"][:3])
+
+# ── luaran prioritas (jurnal, poster) + admin mengunduh luaran dosen ──
+import zipfile as _zf
+b = expect("luaran jenis", req("GET", "/api/v1/luaran/jenis", dosen1), 200, "Jenis luaran fetched")
+check("luaran jenis prioritas", [x["kode"] for x in b["data"][:2]] == ["jurnal", "poster"] and b["data"][1] == {"kode": "poster", "label": "Poster", "prioritas": True} and not b["data"][2]["prioritas"], b["data"][:3])
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal dengan luaran poster", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
+pp = b[1]["data"]["id"]
+b = expect("luaran poster", req("POST", "/api/v1/luaran", dosen5, {"proposalId": pp, "jenis": "poster", "target": "Poster seminar nasional"}), 201)
+check("luaran poster jenis", b["data"]["jenis"] == "poster", b["data"])
+req("POST", "/api/v1/luaran", dosen5, {"proposalId": pp, "jenis": "hki", "target": "Hak cipta"})
+expect("admin luaran dosen forbidden", req("GET", "/api/v1/luaran", dosen1), 403)
+expect("admin luaran ketua forbidden", req("GET", "/api/v1/luaran", ketua), 403)
+b = expect("admin luaran list", req("GET", f"/api/v1/luaran?proposalId={pp}", admin), 200, "Luaran fetched")
+check("admin luaran prioritas dulu", [x["jenis"] for x in b["data"]] == ["poster", "hki"] and b["meta"]["total"] == 2, b["data"])
+it0 = b["data"][0]
+check("admin luaran shape", list(it0.keys()) == ["id", "jenis", "jenisLabel", "prioritas", "target", "targetTanggal", "status", "judulCapaian", "keterangan", "tercapaiAt", "buktiUrl", "buktiFile", "dapatDiklaim", "proposal", "pengusul", "createdAt", "updatedAt", "tepatWaktu"] and it0["prioritas"] is True and it0["pengusul"]["id"] == dosen5User["id"] and it0["proposal"]["id"] == pp, it0)
+b = expect("admin luaran bukti list", req("GET", f"/api/v1/luaran?proposalId={lp}&adaBukti=true", admin), 200)
+lb = [x for x in b["data"] if x["id"] == lj["id"]]
+check("admin luaran buktiFile", lb and lb[0]["buktiFile"]["unduhUrl"] == f"/luaran/{lj['id']}/bukti" and lb[0]["buktiFile"]["mime"] == "application/pdf", lb)
+st, _, _, content = req("GET", f"/api/v1/luaran/{lj['id']}/bukti", admin)
+check("admin unduh satu bukti", st == 200 and content == PDF, st)
+b = expect("admin luaran filter poster", req("GET", "/api/v1/luaran?jenis=poster&limit=100", admin), 200)
+check("admin luaran poster saja", b["data"] and all(x["jenis"] == "poster" for x in b["data"]), b["meta"])
+b = expect("admin luaran prioritas false", req("GET", f"/api/v1/luaran?proposalId={pp}&prioritas=false", admin), 200)
+check("admin luaran non prioritas", [x["jenis"] for x in b["data"]] == ["hki"], b["data"])
+expect("admin luaran filter salah", req("GET", "/api/v1/luaran?jenis=x", admin), 422)
+st, _, hdrs, content = req("GET", f"/api/v1/luaran/unduh-csv?proposalId={lp}", admin)
+txt = content.decode("utf-8") if st == 200 else ""
+check("admin unduh csv", st == 200 and hdrs["Content-Type"].startswith("text/csv") and txt.startswith("\ufeffID Luaran,Jenis,Prioritas") and str(lj["id"]) in txt and "attachment" in hdrs["Content-Disposition"], (st, txt[:120]))
+st, _, _, content = req("GET", f"/api/v1/luaran/unduh-csv?proposalId={lp}&pemisah=titikkoma", admin)
+check("admin unduh csv titik koma", st == 200 and content.decode("utf-8").startswith("\ufeffID Luaran;Jenis;"), content[:60])
+expect("admin unduh csv dosen forbidden", req("GET", "/api/v1/luaran/unduh-csv", dosen5), 403)
+st, _, hdrs, content = req("GET", f"/api/v1/luaran/unduh-zip?proposalId={lp}", admin)
+names, buktiOk = [], False
+if st == 200:
+    z = _zf.ZipFile(io.BytesIO(content))
+    names = z.namelist()
+    bn = [n for n in names if n.startswith(f"bukti/jurnal/{lj['id']}_")]
+    buktiOk = bool(bn) and z.read(bn[0]) == PDF and "File di ZIP" in z.read("daftar-luaran.csv").decode("utf-8")
+check("admin unduh zip", st == 200 and hdrs["Content-Type"] == "application/zip" and names[0] == "daftar-luaran.csv" and buktiOk, (st, names))
+st, _, _, content = req("GET", f"/api/v1/luaran/unduh-zip?proposalId={pp}", admin)
+check("admin unduh zip tanpa file", st == 200 and _zf.ZipFile(io.BytesIO(content)).namelist() == ["daftar-luaran.csv"], st)
+expect("admin unduh zip dosen forbidden", req("GET", "/api/v1/luaran/unduh-zip", dosen5), 403)
+check("admin unduh activity", any(x["action"] == "luaran.unduh_zip" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
+req("DELETE", f"/api/v1/dosen/proposals/{pp}", dosen5)
 
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

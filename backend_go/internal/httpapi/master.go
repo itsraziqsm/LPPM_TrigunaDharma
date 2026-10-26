@@ -68,9 +68,20 @@ func (s *Server) listMaster(c *Ctx) error {
 		where += " AND (`jenisKegiatan` IS NULL OR `jenisKegiatan` = ?)"
 		args = append(args, jenis)
 	}
-	items, err := queryObjs(c.r.Context(), s.db, "SELECT "+masterColumns+" FROM `MasterData` "+where+" ORDER BY `urutan` ASC, `nama` ASC", args...)
+	order := "`urutan` ASC, `nama` ASC"
+	if kategori == "luaran" {
+		// Luaran prioritas (jurnal, poster) selalu di atas.
+		order = "`jenisLuaran` IN ('jurnal','poster') DESC, " + order
+	}
+	items, err := queryObjs(c.r.Context(), s.db, "SELECT "+masterColumns+" FROM `MasterData` "+where+" ORDER BY "+order, args...)
 	if err != nil {
 		return err
+	}
+	if kategori == "luaran" {
+		for i := range items {
+			j, _ := items[i].Get("jenisLuaran").(string)
+			items[i].Set("prioritas", luaranPrioritas[j])
+		}
 	}
 	return c.ok("Master data fetched", items)
 }

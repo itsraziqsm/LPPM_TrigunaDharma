@@ -28,6 +28,7 @@ API, dikelompokkan per rilis:
 - **Bagian 22** — Detail undangan untuk calon anggota yang belum menerima (W-35).
 - **Bagian 23** — Admin menghapus proposal/laporan yang sudah diajukan dengan izin Ketua (W-34).
 - **Bagian 24** — Peran baru **Ketua STMIK** (`ketua_stmik`) + endpoint pemantauan `/monitoring`.
+- **Bagian 25** — Luaran prioritas **jurnal & poster** (jenis baru `poster`) + admin mengunduh luaran dosen (daftar, CSV, ZIP).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2016,3 +2017,131 @@ Untuk melihat proposal satu dosen: `GET /monitoring/proposals?search=<NIDN>` ata
 dengan tab Proposal (`/monitoring/proposals`) & Dosen (`/monitoring/dosen`), detail via
 `GET /proposals/:id`, Cetak rekap via `GET /export/proposals`), tanpa tombol aksi tulis. Tambahkan juga
 label peran "Ketua STMIK" di tempat yang menampilkan nama peran.
+
+---
+
+## 25. Luaran prioritas (jurnal & poster) + admin mengunduh luaran
+
+### 25.1 Jenis luaran baru `poster` & prioritas
+
+- Jenis luaran (`LuaranKegiatan.jenis`, `POST/PATCH /luaran`) kini juga menerima **`poster`**.
+- **Jurnal dan poster adalah luaran prioritas**: selalu ditampilkan paling atas. Bukan wajib — dosen
+  tetap boleh memilih jenis lain.
+
+**`GET /api/v1/luaran/jenis`** (semua user login) — pakai ini untuk dropdown jenis di editor Target
+Luaran (menggantikan daftar statis `LUARAN_JENIS` di frontend):
+
+```json
+[
+  { "kode": "jurnal", "label": "Artikel jurnal", "prioritas": true },
+  { "kode": "poster", "label": "Poster", "prioritas": true },
+  { "kode": "prosiding", "label": "Prosiding seminar", "prioritas": false },
+  { "kode": "hki", "label": "Hak Kekayaan Intelektual (HKI)", "prioritas": false },
+  { "kode": "buku", "label": "Buku", "prioritas": false },
+  { "kode": "produk", "label": "Produk / teknologi tepat guna", "prioritas": false },
+  { "kode": "media_massa", "label": "Video / publikasi media massa", "prioritas": false },
+  { "kode": "lainnya", "label": "Lainnya", "prioritas": false }
+]
+```
+
+**`GET /api/v1/master/luaran`** (pilihan cepat "Tambah dari daftar luaran"): item berjenis jurnal/poster
+kini **di urutan teratas** dan setiap item luaran punya field baru **`prioritas`** (`true`/`false`).
+Ditambahkan 2 pilihan: "Poster ilmiah (seminar / pameran)" dan "Poster hasil kegiatan pengabdian"
+(khusus pengabdian), `jenisLuaran: "poster"`.
+
+**`GET /api/v1/luaran/stats`**: key baru `poster` (jumlah poster yang dapat diklaim, seperti `jurnal`),
+dan `perJenis` memuat `poster` (urutan: jurnal, poster, prosiding, …).
+
+Saran tampilan: beri badge "Prioritas" pada jurnal & poster, letakkan di atas, atau sarankan dosen
+menambah minimal satu luaran prioritas.
+
+### 25.2 Admin mengunduh luaran dosen
+
+Semua endpoint di bawah **khusus admin** (selain admin → 403 `Forbidden: insufficient permissions`).
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/v1/luaran` | Daftar semua item luaran + proposal + dosen (paginasi) |
+| GET | `/api/v1/luaran/unduh-csv` | Rekap luaran sesuai filter → file **CSV** (buka di Excel) |
+| GET | `/api/v1/luaran/unduh-zip` | Semua **file bukti** sesuai filter + `daftar-luaran.csv` → file **ZIP** |
+| GET | `/api/v1/luaran/:id/bukti` | Satu file bukti (endpoint lama; admin sudah boleh) |
+
+**Filter** (query, semua opsional, berlaku untuk ketiga endpoint):
+
+| Query | Nilai | Arti |
+|---|---|---|
+| `jenis` | `jurnal`, `poster`, `prosiding`, `hki`, `buku`, `produk`, `media_massa`, `lainnya` | jenis luaran |
+| `prioritas` | `true` / `false` | hanya jurnal+poster / selain itu |
+| `status` | `belum` / `tercapai` | status capaian |
+| `dapatDiklaim` | `true` / `false` | tercapai **dan** laporan disetujui |
+| `adaBukti` | `true` / `false` | punya file atau link bukti |
+| `jenisKegiatan` | `penelitian` / `pengabdian` | jenis proposal |
+| `proposalId`, `periodeId`, `tahun` | angka | proposal / periode / tahun periode |
+| `search` | teks | target, judul capaian, judul proposal, nama/NIDN dosen |
+
+Khusus `GET /luaran`: `page` (bawaan 1), `limit` (bawaan 20, maks 100) → `meta {page, limit, total}`.
+Khusus CSV/ZIP: `pemisah=titikkoma` (CSV memakai `;`, cocok untuk Excel berbahasa Indonesia; bawaan koma).
+Urutan selalu: luaran prioritas dulu, lalu yang terakhir diubah. Nilai filter salah → 422.
+
+**Bentuk item `GET /luaran`:**
+
+```json
+{
+  "id": 88,
+  "jenis": "jurnal",
+  "jenisLabel": "Artikel jurnal",
+  "prioritas": true,
+  "target": "Jurnal SINTA 3",
+  "targetTanggal": "2099-12-31T00:00:00.000Z",
+  "status": "tercapai",
+  "judulCapaian": "Artikel di Jurnal X",
+  "keterangan": null,
+  "tercapaiAt": "2026-10-26T00:00:00.000Z",
+  "buktiUrl": "https://jurnal.example/artikel/1",
+  "buktiFile": { "nama": "bukti.pdf", "mime": "application/pdf", "ukuran": 120, "unduhUrl": "/luaran/88/bukti" },
+  "dapatDiklaim": true,
+  "proposal": {
+    "id": 640, "judul": "Proposal dengan luaran", "jenis": "penelitian", "status": "disetujui",
+    "laporanStatus": "disetujui",
+    "periode": { "id": 5, "nama": "Penelitian Semester Ganjil 2025", "tahun": 2025 }
+  },
+  "pengusul": { "id": 13, "name": "Dosen 5", "fullName": "Dr. Dosen 5, M.T", "nidn": "0100000005", "programStudi": "Teknik Informatika" },
+  "createdAt": "...",
+  "updatedAt": "...",
+  "tepatWaktu": true
+}
+```
+
+- `buktiFile` `null` bila tidak ada file (bisa saja hanya `buktiUrl`). `unduhUrl` relatif ke base URL API
+  dan **perlu token** → unduh lewat axios `responseType: 'blob'`.
+- `tepatWaktu`: `true/false` bila tercapai & punya target tanggal, selain itu `null`.
+
+**CSV** (`rekap-luaran-YYYYMMDD.csv`, UTF-8 ber-BOM): kolom ID Luaran, Jenis, Prioritas, Target, Tanggal
+Target, Status, Judul Capaian, Keterangan, Tanggal Tercapai, Tepat Waktu, Link Bukti, File Bukti, Dapat
+Diklaim, ID Proposal, Judul Proposal, Jenis Kegiatan, Status Proposal, Status Laporan, Dosen Pengusul,
+NIDN, Program Studi, Periode, Tahun.
+
+**ZIP** (`luaran-YYYYMMDD.zip`):
+
+```
+daftar-luaran.csv                         ← kolom CSV di atas + "File di ZIP"
+bukti/jurnal/88_Dr_Dosen_5_M.T_bukti.pdf  ← bukti/<jenis>/<id luaran>_<nama dosen>_<nama file asli>
+bukti/poster/91_..._poster.png
+```
+
+Item yang hanya punya link (tanpa file) tetap tercantum di CSV (kolom Link Bukti). Maksimal **1000 item**
+per unduhan CSV/ZIP; lebih dari itu → 400 `"Terlalu banyak luaran (N). Persempit filter, maksimal 1000 per unduhan."`.
+Unduhan CSV/ZIP dicatat di log aktivitas (`luaran.unduh_csv`, `luaran.unduh_zip`).
+
+**Contoh unduh di frontend:**
+
+```js
+const res = await api.get('/luaran/unduh-zip', { params: { prioritas: true, periodeId }, responseType: 'blob' })
+const url = URL.createObjectURL(res.data)
+const a = Object.assign(document.createElement('a'), { href: url, download: 'luaran.zip' })
+a.click(); URL.revokeObjectURL(url)
+```
+
+Saran halaman admin "Luaran Dosen": tabel `GET /luaran` (badge Prioritas, jenis, target, status, dosen,
+proposal/periode, bukti: tombol unduh file / buka link), filter di atas, tombol **Unduh CSV** & **Unduh
+semua bukti (ZIP)** yang memakai filter yang sama.

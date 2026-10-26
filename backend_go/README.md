@@ -158,7 +158,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 705 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # ±730 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -229,7 +229,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 18. Peran baru `ketua_stmik` (migrasi `20261103000000_role_ketua_stmik`): baca semua proposal/laporan,
     dashboard stats, export, dan endpoint pemantauan baru `/api/v1/monitoring` (ringkasan, proposals,
     dosen); tanpa akses tulis. Lihat `new-api.md` bagian 24.
-19. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+19. Luaran: jenis baru `poster`, jurnal & poster diprioritaskan (`GET /luaran/jenis`, urutan & field
+    `prioritas` di `GET /master/luaran`, key `poster` di `/luaran/stats`); admin `GET /luaran`,
+    `/luaran/unduh-csv`, `/luaran/unduh-zip`. Lihat `new-api.md` bagian 25.
+20. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`
