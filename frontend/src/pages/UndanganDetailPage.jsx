@@ -12,6 +12,7 @@ import api from '../api/axios'
 import { simpanBlob } from '../utils/unduhBlob'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL, UNDANGAN_COLOR } from './ProposalDosen/constants'
 import { Fields, Section } from './KegiatanDetailPage'
+import Breadcrumb from '../components/Breadcrumb'
 import { UNDANGAN_STATUS_COLOR, UNDANGAN_STATUS_LABEL, judulUndangan, tanggalPanjang } from './undanganConst'
 
 // ---------------------------------------------------------------------------
@@ -128,10 +129,13 @@ export default function UndanganDetailPage() {
 
   return (
     <div className="page rise space-y-6">
-      <Link to="/undangan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        {judulMenu}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/undangan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          {judulMenu}
+        </Link>
+        <Breadcrumb items={[{ label: judulMenu, to: '/undangan' }, { label: 'Detail' }]} />
+      </div>
 
       {/* Kepala */}
       <header className="card p-6">

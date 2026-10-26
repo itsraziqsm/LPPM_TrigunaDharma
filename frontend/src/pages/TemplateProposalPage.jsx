@@ -3,6 +3,7 @@ import { CheckCircle2, CloudUpload, Download, FileText, Trash2 } from 'lucide-re
 import { templateProposalApi } from '../api/templateProposal'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
+import Breadcrumb from '../components/Breadcrumb'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
@@ -188,9 +189,12 @@ export default function TemplateProposalPage() {
 
   return (
     <div className="page space-y-6">
-      <header>
-        <h1 className="page-title">Template Proposal</h1>
-        <p className="page-desc">Template yang diunduh dosen saat menyusun usulan. Jenis tanpa template sendiri memakai template umum.</p>
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="page-title">Template Proposal</h1>
+          <p className="page-desc">Template yang diunduh dosen saat menyusun usulan. Jenis tanpa template sendiri memakai template umum.</p>
+        </div>
+        <Breadcrumb items={[{ label: 'Template Proposal' }]} />
       </header>
 
       {!jenis && !state.loading && !state.failed ? (

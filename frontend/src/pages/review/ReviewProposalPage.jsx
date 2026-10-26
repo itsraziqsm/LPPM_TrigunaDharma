@@ -10,6 +10,7 @@ import { DokumenTab } from '../ProposalDosen/DokumenTab'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from '../ProposalDosen/constants'
 import LuaranCapaian from '../laporan/LuaranCapaian'
 import FormPenilaian from './FormPenilaian'
+import Breadcrumb from '../../components/Breadcrumb'
 import { cariTugasan } from './cariTugasan'
 
 // ---------------------------------------------------------------------------
@@ -62,10 +63,13 @@ export default function ReviewProposalPage() {
   )
 
   const kembali = (
-    <Link to="/penugasan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
-      <ArrowLeft className="size-4" aria-hidden="true" />
-      Penugasan Review
-    </Link>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link to="/penugasan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Penugasan Review
+      </Link>
+      <Breadcrumb items={[{ label: 'Penugasan Review', to: '/penugasan' }, { label: 'Review Proposal' }]} />
+    </div>
   )
 
   if (state.status === 'loading') {

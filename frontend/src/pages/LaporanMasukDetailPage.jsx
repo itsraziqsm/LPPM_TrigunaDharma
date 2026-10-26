@@ -12,6 +12,7 @@ import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
+import Breadcrumb from '../components/Breadcrumb'
 import BebanReviewer from '../components/BebanReviewer'
 
 // ---------------------------------------------------------------------------
@@ -135,10 +136,13 @@ export default function LaporanMasukDetailPage() {
 
   return (
     <div className="page rise space-y-6">
-      <Link to="/laporan-masuk" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Laporan Kegiatan
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/laporan-masuk" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Laporan Kegiatan
+        </Link>
+        <Breadcrumb items={[{ label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan', to: '/laporan-masuk' }, { label: 'Detail' }]} />
+      </div>
 
       <header className="card p-6">
         <p className="flex flex-wrap items-center gap-2 text-sm text-slate-500">

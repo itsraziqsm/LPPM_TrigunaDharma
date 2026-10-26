@@ -9,6 +9,7 @@ import { DokumenLaporan, InfoTable, StatusBadge } from '../laporan/shared'
 import LuaranCapaian from '../laporan/LuaranCapaian'
 import { rupiah, tanggal } from '../laporan/format'
 import FormPenilaian from './FormPenilaian'
+import Breadcrumb from '../../components/Breadcrumb'
 import { cariTugasan } from './cariTugasan'
 
 // ---------------------------------------------------------------------------
@@ -59,10 +60,13 @@ export default function ReviewLaporanPage() {
   )
 
   const kembali = (
-    <Link to="/penugasan?tab=laporan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
-      <ArrowLeft className="size-4" aria-hidden="true" />
-      Penugasan Review · Laporan
-    </Link>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link to="/penugasan?tab=laporan" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Penugasan Review · Laporan
+      </Link>
+      <Breadcrumb items={[{ label: 'Penugasan Review', to: '/penugasan?tab=laporan' }, { label: 'Review Laporan' }]} />
+    </div>
   )
 
   if (state.status === 'loading') {

@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import { monitoringApi } from '../api/monitoring'
 import { periodeApi } from '../api/periode'
 import UserAvatar from '../components/UserAvatar'
+import Breadcrumb from '../components/Breadcrumb'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
@@ -117,9 +118,12 @@ export default function PemantauanPage() {
 
   return (
     <div className="page space-y-6">
-      <header>
-        <h1 className="page-title">Pemantauan Proposal</h1>
-        <p className="page-desc">Dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="page-title">Pemantauan Proposal</h1>
+          <p className="page-desc">Dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
+        </div>
+        <Breadcrumb items={[{ label: 'Pemantauan Proposal' }]} />
       </header>
 
       <form onSubmit={terapkan} className="card flex flex-col gap-3 p-4 lg:flex-row lg:items-end" aria-label="Saring pemantauan">

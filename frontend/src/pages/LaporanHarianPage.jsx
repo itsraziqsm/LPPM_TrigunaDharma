@@ -7,6 +7,7 @@ import { StatusCard } from './KegiatanPage'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, FolderKanban, Hourglass, Plus, Search, Trash2, X } from 'lucide-react'
+import Breadcrumb from '../components/Breadcrumb'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
@@ -444,7 +445,7 @@ function ProposalDetail({ proposal, onBack }) {
 
   return (
     <div className="page space-y-6">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={onBack}
           className="btn btn-ghost btn-sm -ml-3"
@@ -452,6 +453,13 @@ function ProposalDetail({ proposal, onBack }) {
           <ChevronLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
           Kembali ke Daftar Project
         </button>
+        <Breadcrumb
+          items={[
+            { label: 'Project Saya' },
+            { label: JENIS_LABEL[proposal.jenis] || proposal.jenis, to: `/project/${proposal.jenis}` },
+            { label: 'Laporan Harian' },
+          ]}
+        />
       </div>
 
       {flash ? (

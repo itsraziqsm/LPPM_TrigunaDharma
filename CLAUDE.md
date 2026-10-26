@@ -503,6 +503,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   admin/ketua: proposal → `/proposals?detail=`, laporan → `/laporan-masuk?id=`, user →
   `/users?id=`; mahasiswa: proposal tim (laporan harian). Kolom cari/filter di tiap halaman tetap
   seperti semula.
+- **Breadcrumb wajib di semua halaman semua peran**: komponen bersama `src/components/Breadcrumb.jsx` (`items: [{label, to?}]`,
+  "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
+  rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

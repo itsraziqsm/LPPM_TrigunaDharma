@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Users } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { getRoleNames } from '../utils/roles'
+import Breadcrumb from '../components/Breadcrumb'
 import { UNDANGAN_STATUS_COLOR as STATUS_COLOR, UNDANGAN_STATUS_LABEL as STATUS_LABEL, judulUndangan, tanggalPanjang } from './undanganConst'
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
@@ -189,7 +190,10 @@ export default function UndanganPage() {
 
   return (
     <div className="page space-y-8">
-      <h1 className="page-title">{judul}</h1>
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="page-title">{judul}</h1>
+        <Breadcrumb items={[{ label: judul }]} />
+      </header>
 
       {/* Ringkasan: teks + 3 kotak angka sejajar dalam satu wadah */}
       <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">

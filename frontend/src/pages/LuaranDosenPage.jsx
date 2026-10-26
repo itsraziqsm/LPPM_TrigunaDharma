@@ -5,6 +5,7 @@ import { luaranApi } from '../api/luaran'
 import { periodeApi } from '../api/periode'
 import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
+import Breadcrumb from '../components/Breadcrumb'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
@@ -136,6 +137,7 @@ export default function LuaranDosenPage() {
 
   return (
     <div className="page space-y-6">
+      <Breadcrumb className="flex justify-end" items={[{ label: 'Luaran Dosen' }]} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="page-title">Luaran Dosen</h1>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, CircleCheck, CloudUpload } from 'lucide-react'
+import Breadcrumb from '../components/Breadcrumb'
 import { laporanHarianApi } from '../api/laporanHarian'
 
 // ---------------------------------------------------------------------------
@@ -91,10 +92,20 @@ export default function LaporanHarianInputPage({ jenis }) {
   }
 
   const backLink = (
-    <Link to={kembali} className="btn btn-ghost btn-sm -ml-3">
-      <ChevronLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
-      Kembali ke Riwayat Laporan Harian
-    </Link>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link to={kembali} className="btn btn-ghost btn-sm -ml-3">
+        <ChevronLeft className="size-4" strokeWidth={1.8} aria-hidden="true" />
+        Kembali ke Riwayat Laporan Harian
+      </Link>
+      <Breadcrumb
+        items={[
+          { label: 'Project Saya' },
+          { label: JENIS_LABEL[jenis] || jenis, to: `/project/${jenis}` },
+          ...(proposalId ? [{ label: 'Laporan Harian', to: kembali }] : []),
+          { label: 'Input' },
+        ]}
+      />
+    </div>
   )
 
   if (proposal === undefined) {

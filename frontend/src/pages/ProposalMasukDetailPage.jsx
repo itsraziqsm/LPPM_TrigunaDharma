@@ -15,6 +15,7 @@ import { DokumenTab } from './ProposalDosen/DokumenTab'
 import { LaporanTab } from './ProposalDosen/LaporanTab'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 import { ReviewList } from './laporan/shared'
+import Breadcrumb from '../components/Breadcrumb'
 import LuaranCapaian from './laporan/LuaranCapaian'
 
 // ---------------------------------------------------------------------------
@@ -135,10 +136,13 @@ export default function ProposalMasukDetailPage() {
   }
 
   const kembali = (
-    <Link to="/proposals" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
-      <ArrowLeft className="size-4" aria-hidden="true" />
-      Proposal Kegiatan
-    </Link>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link to="/proposals" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Proposal Kegiatan
+      </Link>
+      <Breadcrumb items={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan', to: '/proposals' }, { label: 'Detail' }]} />
+    </div>
   )
 
   if (state.status === 'loading') {

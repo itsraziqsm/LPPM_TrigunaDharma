@@ -4,6 +4,7 @@ import useAuthStore from '../store/authStore'
 import { getRoleNames, JENIS_LABEL, EMPTY_FORM } from './periode/periodeConstants'
 import { Badge, Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
+import Breadcrumb from '../components/Breadcrumb'
 import { Plus } from 'lucide-react'
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -205,6 +206,7 @@ export default function PeriodePage() {
   return (
     <>
       <div className="page space-y-8">
+        <Breadcrumb className="flex justify-end" items={[{ label: 'Periode' }]} />
         {/* Judul halaman */}
         <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">

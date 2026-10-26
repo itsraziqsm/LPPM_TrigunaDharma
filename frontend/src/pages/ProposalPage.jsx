@@ -8,6 +8,7 @@ import useAuthStore from '../store/authStore'
 import { alertDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import HapusDokumen from '../components/HapusDokumen'
+import Breadcrumb from '../components/Breadcrumb'
 import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
@@ -108,6 +109,7 @@ export default function ProposalPage() {
   return (
     <>
       <div className="page space-y-6">
+        <Breadcrumb className="flex justify-end" items={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan' }]} />
         {/* Judul halaman */}
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">

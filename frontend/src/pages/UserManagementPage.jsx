@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
+import Breadcrumb from '../components/Breadcrumb'
 import UserAvatar from '../components/UserAvatar'
 
 
@@ -915,6 +916,7 @@ export default function UserManagementPage() {
       {/* Area utama daftar */}
       <div ref={listScrollRef} data-scroll-container className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
         <div ref={listContentRef} className="page space-y-6">
+          <Breadcrumb className="flex justify-end" items={[{ label: 'Manajemen User' }]} />
           {/* Judul halaman */}
           <header className="flex flex-col gap-5 @4xl:flex-row @4xl:items-end @4xl:justify-between">
             <div className="max-w-2xl">

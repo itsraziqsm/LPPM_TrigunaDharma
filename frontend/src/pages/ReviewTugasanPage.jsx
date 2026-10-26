@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import LaporanTugasan from './laporan/LaporanTugasan'
 import { reviewerApi } from '../api/reviewer'
+import Breadcrumb from '../components/Breadcrumb'
 import { FileText } from 'lucide-react'
 
 // Penugasan Review: daftar tugasan; detail & form penilaian di halaman sendiri
@@ -153,7 +154,10 @@ export default function ReviewTugasanPage() {
 
   return (
     <div className="page space-y-6">
-      <h1 className="page-title">Penugasan Review</h1>
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="page-title">Penugasan Review</h1>
+        <Breadcrumb items={[{ label: 'Penugasan Review' }]} />
+      </header>
 
       {/* Ringkasan: teks + 3 kotak angka sejajar dalam satu wadah (tata letak sama dengan Undangan Kerja Sama) */}
       <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
