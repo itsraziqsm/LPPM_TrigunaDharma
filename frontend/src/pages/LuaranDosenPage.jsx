@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ExternalLink, FileArchive, FileSpreadsheet, Search } from 'lucide-react'
+import { Download, ExternalLink, FileArchive, FileSpreadsheet, Search, SlidersHorizontal, X } from 'lucide-react'
 import { luaranApi } from '../api/luaran'
 import { periodeApi } from '../api/periode'
 import { alertDialog } from '../utils/dialog'
@@ -15,7 +15,7 @@ import UserAvatar from '../components/UserAvatar'
 // yang sama (GET /luaran/unduh-csv|unduh-zip, maks 1000 item per unduhan).
 // ---------------------------------------------------------------------------
 
-const LIMIT = 20
+const LIMIT = 6
 const KOSONG = { search: '', jenis: '', prioritas: '', status: '', dapatDiklaim: '', adaBukti: '', jenisKegiatan: '', periodeId: '' }
 const JENIS = [
   ['jurnal', 'Artikel jurnal'],
@@ -43,6 +43,24 @@ async function pesanBlob(e, fallback) {
     }
   }
   return e.response?.data?.message || fallback
+}
+
+// Label filter (selain kata kunci) untuk baris "Filter aktif".
+const LABEL_FILTER = {
+  jenis: 'Jenis',
+  prioritas: 'Prioritas',
+  status: 'Status',
+  dapatDiklaim: 'Dapat diklaim',
+  adaBukti: 'Bukti',
+  jenisKegiatan: 'Kegiatan',
+  periodeId: 'Periode',
+}
+const NILAI_FILTER = {
+  prioritas: { true: 'Prioritas', false: 'Selain prioritas' },
+  status: { tercapai: 'Tercapai', belum: 'Belum' },
+  dapatDiklaim: { true: 'Ya', false: 'Tidak' },
+  adaBukti: { true: 'Ada bukti', false: 'Tanpa bukti' },
+  jenisKegiatan: { penelitian: 'Penelitian', pengabdian: 'Pengabdian' },
 }
 
 function bersihkan(f) {
@@ -73,6 +91,7 @@ export default function LuaranDosenPage() {
   const [state, setState] = useState({ loading: true, items: [], total: 0, failed: false })
   const [periodes, setPeriodes] = useState([])
   const [busy, setBusy] = useState(null) // 'csv' | 'zip' | id luaran
+  const [bukaFilter, setBukaFilter] = useState(false)
 
   useEffect(() => {
     periodeApi
@@ -105,6 +124,19 @@ export default function LuaranDosenPage() {
     setPage(1)
   }
   const adaFilter = Object.values(filter).some((v) => v !== '')
+  // Filter aktif = filter terapan selain kata kunci; baris ringkasannya hanya tampil bila ada.
+  const aktif = Object.keys(LABEL_FILTER).filter((k) => filter[k] !== '')
+  const nilaiFilter = (k) =>
+    k === 'jenis'
+      ? JENIS.find(([v]) => v === filter.jenis)?.[1] || filter.jenis
+      : k === 'periodeId'
+        ? periodes.find((p) => String(p.id) === filter.periodeId)?.nama || `#${filter.periodeId}`
+        : NILAI_FILTER[k]?.[filter[k]] || filter[k]
+  const hapusFilter = (k) => {
+    setForm((f) => ({ ...f, [k]: '' }))
+    setFilter((f) => ({ ...f, [k]: '' }))
+    setPage(1)
+  }
 
   const unduh = useCallback(
     async (jenis) => {
@@ -155,56 +187,112 @@ export default function LuaranDosenPage() {
         </div>
       </header>
 
-      <form onSubmit={terapkan} className="card space-y-4 p-5" aria-label="Saring luaran">
-        <div className="flex gap-2">
+      {/* Panel cari: kolom cari · Filter · Cari; panel filter hanya saat dibuka */}
+      <section className="card p-4 sm:p-5" aria-label="Pencarian dan filter luaran">
+        <form role="search" onSubmit={terapkan} className="flex flex-col gap-2 sm:flex-row">
           <label htmlFor="ld-search" className="sr-only">
             Cari
           </label>
-          <input
-            id="ld-search"
-            className="input"
-            value={form.search}
-            onChange={set('search')}
-            placeholder="Cari target, judul capaian, judul proposal, nama/NIDN dosen"
-          />
-          <button type="submit" className="btn btn-primary shrink-0">
-            <Search className="size-4" aria-hidden="true" />
-            Cari
-          </button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Pilih id="ld-jenis" label="Jenis luaran" value={form.jenis} onChange={set('jenis')} options={[['', 'Semua jenis'], ...JENIS]} />
-          <Pilih id="ld-prioritas" label="Prioritas" value={form.prioritas} onChange={set('prioritas')} options={[['', 'Semua'], ['true', 'Prioritas (jurnal & poster)'], ['false', 'Selain prioritas']]} />
-          <Pilih id="ld-status" label="Status capaian" value={form.status} onChange={set('status')} options={[['', 'Semua'], ['tercapai', 'Tercapai'], ['belum', 'Belum']]} />
-          <Pilih id="ld-klaim" label="Dapat diklaim" value={form.dapatDiklaim} onChange={set('dapatDiklaim')} options={[['', 'Semua'], ['true', 'Ya'], ['false', 'Tidak']]} />
-          <Pilih id="ld-bukti" label="Bukti" value={form.adaBukti} onChange={set('adaBukti')} options={[['', 'Semua'], ['true', 'Ada bukti'], ['false', 'Tanpa bukti']]} />
-          <Pilih id="ld-kegiatan" label="Jenis kegiatan" value={form.jenisKegiatan} onChange={set('jenisKegiatan')} options={[['', 'Semua'], ['penelitian', 'Penelitian'], ['pengabdian', 'Pengabdian']]} />
-          <Pilih
-            id="ld-periode"
-            label="Periode"
-            value={form.periodeId}
-            onChange={set('periodeId')}
-            options={[['', 'Semua periode'], ...periodes.map((p) => [String(p.id), `${p.nama}${p.tahun ? ` (${p.tahun})` : ''}`])]}
-          />
-          <div className="flex items-end gap-2">
-            <button type="submit" className="btn btn-secondary flex-1">
-              Terapkan
-            </button>
-            {adaFilter ? (
-              <button type="button" onClick={reset} className="btn btn-ghost">
-                Hapus filter
-              </button>
-            ) : null}
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <input
+              id="ld-search"
+              type="search"
+              className="input pl-9"
+              value={form.search}
+              onChange={set('search')}
+              placeholder="Cari target, judul capaian, judul proposal, nama/NIDN dosen"
+            />
           </div>
-        </div>
-        <p className="text-xs text-slate-500">Unduh CSV/ZIP memakai filter yang sedang diterapkan (maksimal 1000 luaran per unduhan).</p>
-      </form>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              aria-expanded={bukaFilter}
+              aria-controls="ld-filter"
+              onClick={() => setBukaFilter((v) => !v)}
+              className={`btn flex-1 sm:flex-none ${bukaFilter ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden="true" />
+              Filter
+              {aktif.length ? (
+                <span className={`rounded-full px-1.5 text-xs tabular-nums ${bukaFilter ? 'bg-white text-navy-800' : 'bg-navy-800 text-white'}`}>{aktif.length}</span>
+              ) : null}
+            </button>
+            <button type="submit" className="btn btn-primary flex-1 sm:flex-none">
+              Cari
+            </button>
+          </div>
+        </form>
 
-      <section className="card overflow-hidden">
-        <header className="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-          <h2 className="text-base font-semibold text-navy-950">Daftar luaran</h2>
-          <span className="text-sm text-slate-500 tabular-nums">{state.loading ? '…' : `${state.total} luaran`}</span>
+        {bukaFilter ? (
+          <form id="ld-filter" onSubmit={terapkan} className="mt-4 space-y-3 border-t border-slate-100 pt-4" aria-label="Saring luaran">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Pilih id="ld-jenis" label="Jenis luaran" value={form.jenis} onChange={set('jenis')} options={[['', 'Semua jenis'], ...JENIS]} />
+              <Pilih id="ld-prioritas" label="Prioritas" value={form.prioritas} onChange={set('prioritas')} options={[['', 'Semua'], ['true', 'Prioritas (jurnal & poster)'], ['false', 'Selain prioritas']]} />
+              <Pilih id="ld-status" label="Status capaian" value={form.status} onChange={set('status')} options={[['', 'Semua'], ['tercapai', 'Tercapai'], ['belum', 'Belum']]} />
+              <Pilih id="ld-klaim" label="Dapat diklaim" value={form.dapatDiklaim} onChange={set('dapatDiklaim')} options={[['', 'Semua'], ['true', 'Ya'], ['false', 'Tidak']]} />
+              <Pilih id="ld-bukti" label="Bukti" value={form.adaBukti} onChange={set('adaBukti')} options={[['', 'Semua'], ['true', 'Ada bukti'], ['false', 'Tanpa bukti']]} />
+              <Pilih id="ld-kegiatan" label="Jenis kegiatan" value={form.jenisKegiatan} onChange={set('jenisKegiatan')} options={[['', 'Semua'], ['penelitian', 'Penelitian'], ['pengabdian', 'Pengabdian']]} />
+              <Pilih
+                id="ld-periode"
+                label="Periode"
+                value={form.periodeId}
+                onChange={set('periodeId')}
+                options={[['', 'Semua periode'], ...periodes.map((p) => [String(p.id), `${p.nama}${p.tahun ? ` (${p.tahun})` : ''}`])]}
+              />
+              <div className="flex items-end gap-2">
+                <button type="submit" className="btn btn-secondary flex-1">
+                  Terapkan
+                </button>
+                {adaFilter ? (
+                  <button type="button" onClick={reset} className="btn btn-ghost">
+                    Hapus filter
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <p className="text-xs text-slate-500">Unduh CSV/ZIP memakai filter yang sedang diterapkan (maksimal 1000 luaran per unduhan).</p>
+          </form>
+        ) : null}
+
+        {aktif.length ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            Filter aktif:
+            {aktif.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => hapusFilter(k)}
+                aria-label={`Hapus filter ${LABEL_FILTER[k]}`}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700 hover:border-navy-300"
+              >
+                {LABEL_FILTER[k]}: {nilaiFilter(k)}
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            ))}
+            <button type="button" onClick={reset} className="font-medium text-navy-600 hover:text-navy-800">
+              Hapus semua
+            </button>
+          </div>
+        ) : null}
+      </section>
+
+      {/* Desain disamakan dengan tabel Riwayat dosen (KegiatanPage): bingkai navy, kepala gelap */}
+      <section aria-labelledby="daftar-luaran" className="overflow-hidden rounded-2xl border-2 border-navy-800 bg-white shadow-md">
+        <header className="bg-navy-800 px-5 py-5 text-white sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="daftar-luaran" className="font-serif text-2xl font-medium text-white">
+                Daftar luaran
+              </h2>
+              <p className="mt-1 text-sm text-white/75">Target & capaian luaran seluruh kegiatan; prioritas (jurnal & poster) di atas.</p>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white tabular-nums">
+              {state.loading ? '…' : `${state.total} luaran`}
+            </span>
+          </div>
         </header>
+        <div className="space-y-4 p-4 sm:p-5">
         {state.loading ? (
           <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat luaran…</p>
         ) : state.failed ? (
@@ -212,8 +300,8 @@ export default function LuaranDosenPage() {
         ) : state.items.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-slate-500">{adaFilter ? 'Tidak ada luaran yang cocok dengan filter.' : 'Belum ada luaran.'}</p>
         ) : (
-          <div className="table-wrap rounded-none border-0">
-            <table className="table">
+          <div className="table-wrap">
+            <table className="table table-tight">
               <thead>
                 <tr>
                   <th scope="col">Luaran</th>
@@ -286,9 +374,9 @@ export default function LuaranDosenPage() {
           </div>
         )}
         {pages > 1 ? (
-          <footer className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm">
-            <span className="text-slate-500">
-              Halaman {page} dari {pages}
+          <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
+            <span className="tabular-nums">
+              Halaman {page} dari {pages} · {state.total} luaran
             </span>
             <span className="flex gap-2">
               <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
@@ -298,8 +386,9 @@ export default function LuaranDosenPage() {
                 Berikutnya
               </button>
             </span>
-          </footer>
+          </nav>
         ) : null}
+        </div>
       </section>
     </div>
   )
