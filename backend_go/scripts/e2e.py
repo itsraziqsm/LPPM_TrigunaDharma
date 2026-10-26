@@ -999,15 +999,47 @@ expect("template aktif bad jenis", req("GET", "/api/v1/template-proposal/aktif?j
 check("template activity", any(x["action"] == "template.upload" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
 
 # ── W-35 detail undangan (calon anggota yang belum menerima) ──
-b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji detail undangan", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "Teknik Informatika", "kataKunci": ["undangan"], "dokumenUrl": "https://drive.google.com/rahasia", "anggotaIds": [{"userId": dosen3User["id"], "peran": "anggota"}, {"userId": dosen4User["id"]}]})
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji detail undangan", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "Teknik Informatika", "kataKunci": ["undangan"], "dokumenUrl": "https://drive.google.com/rahasia", "anggotaIds": [{"userId": dosen3User["id"], "peran": "anggota"}, {"userId": dosen4User["id"]}, {"userId": mhs2User["id"]}]})
 up = b[1]["data"]["id"]
 req("POST", "/api/v1/luaran", dosen5, {"proposalId": up, "jenis": "jurnal", "target": "Jurnal SINTA 4"})
 inv3 = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", dosen3)[1]["data"] if i["proposal"]["id"] == up][0]
 b = expect("undangan detail", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen3), 200, "Invitation fetched")
 d = b["data"]
 dp = d["proposal"]
-check("undangan detail shape", list(d.keys()) == ["id", "peran", "statusUndangan", "createdAt", "proposal"] and d["statusUndangan"] == "pending" and dp["id"] == up and dp["abstrak"] == abstrak and dp["rumpunIlmu"] == "Teknik Informatika" and dp["kataKunci"] == ["undangan"], d)
-check("undangan detail tanpa data sensitif", "dokumenUrl" not in dp and "catatanRevisi" not in dp and "reviewerTugasan" not in dp and all("email" not in a["user"] and "noHp" not in a["user"] for a in dp["anggota"]) and len(dp["anggota"]) == 2 and dp["pengusul"]["id"] == dosen5User["id"], dp)
+check("undangan detail shape", list(d.keys()) == ["id", "peran", "statusUndangan", "createdAt", "aksesPenuh", "proposal"] and d["aksesPenuh"] is True and d["statusUndangan"] == "pending" and dp["id"] == up and dp["abstrak"] == abstrak and dp["rumpunIlmu"] == "Teknik Informatika" and dp["kataKunci"] == ["undangan"], d)
+check("undangan detail dosen akses penuh", dp["dokumenUrl"] == "https://drive.google.com/rahasia" and dp["dokumenUtama"] is None and len(dp["anggota"]) == 3 and dp["pengusul"]["id"] == dosen5User["id"], dp)
+# mahasiswa yang belum menerima: ringkas, tanpa dokumen & kontak
+invm = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", mhs2)[1]["data"] if i["proposal"]["id"] == up][0]
+dm = req("GET", f"/api/v1/dosen/proposals/invitations/{invm['id']}", mhs2)[1]["data"]
+check("undangan detail mahasiswa ringkas", dm["aksesPenuh"] is False and "dokumenUrl" not in dm["proposal"] and "dokumenUtama" not in dm["proposal"] and all("email" not in a["user"] for a in dm["proposal"]["anggota"]), dm)
+expect("mhs pending tidak bisa buka proposal", req("GET", f"/api/v1/proposals/{up}", mhs2), 403)
+# dosen yang diundang (belum menerima) membaca detail + file proposal, tanpa CRUD
+body, ct = multipart({}, ("file", "proposal.pdf", "application/pdf", PDF))
+expect("pengusul unggah dokumen utama", req("POST", f"/api/v1/proposals/{up}/dokumen-utama", dosen5, raw=body, ctype=ct), 200)
+b = expect("dosen diundang baca proposal", req("GET", f"/api/v1/proposals/{up}", dosen3), 200)
+check("dosen diundang lihat file", b["data"]["dokumenNama"] == "proposal.pdf" and b["data"]["dokumenMime"] == "application/pdf", b["data"])
+st, _, _, content = req("GET", f"/api/v1/proposals/{up}/dokumen-utama", dosen3)
+check("dosen diundang unduh file", st == 200 and content == PDF, st)
+expect("dosen diundang lampiran", req("GET", f"/api/v1/proposals/{up}/dokumen", dosen3), 200)
+expect("dosen diundang luaran", req("GET", f"/api/v1/luaran/proposal/{up}", dosen3), 200)
+dp2 = req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen3)[1]["data"]["proposal"]
+check("undangan detail info file", dp2["dokumenUtama"] == {"nama": "proposal.pdf", "mime": "application/pdf", "ukuran": len(PDF), "unduhUrl": f"/proposals/{up}/dokumen-utama"}, dp2.get("dokumenUtama"))
+RO = "Anggota tim hanya dapat melihat proposal. Perubahan hanya bisa dilakukan oleh ketua pengusul."
+expect("dosen diundang edit", req("PATCH", f"/api/v1/proposals/{up}", dosen3, {"judul": "Diubah anggota"}), 403, RO)
+expect("dosen diundang unggah file", req("POST", f"/api/v1/proposals/{up}/dokumen-utama", dosen3, raw=body, ctype=ct), 403, RO)
+expect("dosen diundang submit", req("POST", f"/api/v1/proposals/{up}/submit", dosen3), 403, RO)
+expect("dosen diundang hapus", req("DELETE", f"/api/v1/proposals/{up}", dosen3), 403, RO)
+body2, ct2 = multipart({"nama": "Lampiran"}, ("file", "l.pdf", "application/pdf", PDF))
+expect("dosen diundang tambah lampiran", req("POST", f"/api/v1/proposals/{up}/dokumen", dosen3, raw=body2, ctype=ct2), 403, RO)
+expect("dosen diundang edit (dosen api)", req("PATCH", f"/api/v1/dosen/proposals/{up}", dosen3, {"judul": "Diubah anggota"}), 500, "Anda tidak memiliki akses ke proposal ini")
+# setelah menerima: tetap hanya baca; setelah menolak: tidak bisa membaca lagi
+req("PATCH", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen3, {"status": "diterima"})
+expect("anggota diterima baca", req("GET", f"/api/v1/proposals/{up}", dosen3), 200)
+expect("anggota diterima edit", req("PATCH", f"/api/v1/proposals/{up}", dosen3, {"judul": "Diubah anggota"}), 403, RO)
+inv4 = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", dosen4)[1]["data"] if i["proposal"]["id"] == up][0]
+req("PATCH", f"/api/v1/dosen/proposals/invitations/{inv4['id']}", dosen4, {"status": "ditolak"})
+expect("undangan ditolak tidak bisa baca", req("GET", f"/api/v1/proposals/{up}", dosen4), 403, "Anda tidak memiliki akses ke proposal ini")
+check("undangan ditolak detail ringkas", req("GET", f"/api/v1/dosen/proposals/invitations/{inv4['id']}", dosen4)[1]["data"]["aksesPenuh"] is False)
 check("undangan detail target luaran", [x["target"] for x in dp["targetLuaran"]] == ["Jurnal SINTA 4"] and dp["tahapan"]["kode"] == "seleksi_usulan", dp.get("targetLuaran"))
 expect("undangan detail orang lain", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen4), 404, "Undangan tidak ditemukan")
 expect("undangan detail missing", req("GET", "/api/v1/dosen/proposals/invitations/999999", dosen3), 404, "Undangan tidak ditemukan")

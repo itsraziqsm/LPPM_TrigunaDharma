@@ -30,6 +30,7 @@ API, dikelompokkan per rilis:
 - **Bagian 24** — Peran baru **Ketua STMIK** (`ketua_stmik`) + endpoint pemantauan `/monitoring`.
 - **Bagian 25** — Luaran prioritas **jurnal & poster** (jenis baru `poster`) + admin mengunduh luaran dosen (daftar, CSV, ZIP).
 - **Bagian 26** — Rumpun ilmu difokuskan ke **bidang komputer** (validasi di proposal & laporan, rumpun ilmu laporan bisa diubah).
+- **Bagian 27** — Dosen yang diundang bisa **membaca seluruh detail & file proposal** (tanpa ubah); semua anggota tim hanya baca.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1827,9 +1828,14 @@ Hanya penerima undangan itu (dosen/mahasiswa); undangan milik orang lain atau ti
 }
 ```
 
-Sengaja **tidak** dikirim: `dokumenUrl` (dokumen utama/lampiran), `catatanRevisi`, `reviewerTugasan`, dan
-email/kontak/No. HP anggota lain. Email pengusul tetap ada (untuk menghubungi pengundang). Menerima/
-menolak tetap lewat `PATCH /dosen/proposals/invitations/:id`.
+> **Diperbarui (bagian 27):** respons kini punya `aksesPenuh`. Untuk **dosen** yang diundang (`pending`) dan
+> anggota yang sudah menerima, `aksesPenuh: true` → proposal dikirim lengkap + `dokumenUtama`. Uraian
+> "tidak dikirim" di bawah hanya berlaku bila `aksesPenuh: false` (mahasiswa yang belum menerima,
+> undangan ditolak).
+
+Bila `aksesPenuh: false`, sengaja **tidak** dikirim: `dokumenUrl` (dokumen utama/lampiran), `catatanRevisi`,
+`reviewerTugasan`, dan email/kontak/No. HP anggota lain. Email pengusul tetap ada (untuk menghubungi
+pengundang). Menerima/menolak tetap lewat `PATCH /dosen/proposals/invitations/:id`.
 
 ---
 
@@ -2220,3 +2226,73 @@ lama dengan rumpun umum tetap aman selama tidak diubah).
 - **Isi Laporan** (`LaporanIsiPage.jsx`, Informasi Laporan): ganti tampilan baca-saja "Rumpun Ilmu" menjadi
   dropdown dari `GET /master/rumpun-ilmu`, nilai awal = `laporan.rumpunIlmu`, kirim `rumpunIlmu` di
   `PATCH /laporan/:id` (ikut Simpan draf).
+
+---
+
+## 27. Dosen yang diundang membaca seluruh proposal (tanpa CRUD)
+
+Dosen yang diundang sebagai anggota oleh dosen pengusul kini bisa **membaca seluruh detail proposal,
+termasuk file proposal**, **sebelum maupun sesudah** menerima undangan — tetapi **tidak bisa mengubah,
+mengunggah, mengajukan, atau menghapus** apa pun.
+
+### Siapa boleh apa
+
+| Pengguna | Baca detail & file | Ubah / unggah / ajukan / hapus |
+|---|---|---|
+| Ketua pengusul | ✅ | ✅ |
+| **Dosen diundang, undangan `pending`** | ✅ **(baru)** | ❌ |
+| Anggota yang sudah menerima (`diterima`, dosen/mahasiswa) | ✅ | ❌ **(baru: sebelumnya bisa)** |
+| Mahasiswa diundang, `pending` | ❌ (hanya ringkasan di detail undangan) | ❌ |
+| Undangan `ditolak` | ❌ | ❌ |
+
+### Endpoint baca yang bisa dipakai dosen yang diundang
+
+| Endpoint | Isi |
+|---|---|
+| `GET /api/v1/proposals/:id` | detail lengkap (abstrak, anggaran, mitra/skema, rumpun, kata kunci, tim, `dokumenNama/Mime/Ukuran`, `dokumenUrl`, dst.) |
+| `GET /api/v1/proposals/:id/dokumen-utama` | **unduh file proposal** (perlu token → `responseType: 'blob'`) |
+| `GET /api/v1/proposals/:id/dokumen` & `GET /proposals/dokumen/:id/download` | dokumen lampiran |
+| `GET /api/v1/proposals/:proposalId/laporan` & `.../laporan/:id/download` | laporan kemajuan/akhir |
+| `GET /api/v1/luaran/proposal/:proposalId` (+ `/luaran/:id/bukti`) | target & capaian luaran |
+| `GET /api/v1/dosen/proposals/invitations/:id` | detail undangan; kini `aksesPenuh` + `proposal.dokumenUtama` |
+
+Detail undangan untuk dosen yang diundang:
+
+```json
+{
+  "id": 685,
+  "peran": "anggota",
+  "statusUndangan": "pending",
+  "createdAt": "2026-10-26T05:07:52.922Z",
+  "aksesPenuh": true,
+  "proposal": {
+    "id": 855, "judul": "...", "abstrak": "...", "dokumenUrl": null, "...": "field proposal lengkap",
+    "anggota": [ { "id": 685, "peran": "anggota", "statusUndangan": "pending", "user": { "id": 11, "name": "...", "fullName": "...", "email": "...", "kontak": null, "noHp": null } } ],
+    "targetLuaran": [ { "id": 7, "jenis": "jurnal", "target": "Jurnal SINTA 4", "targetTanggal": null } ],
+    "dokumenUtama": { "nama": "proposal.pdf", "mime": "application/pdf", "ukuran": 125, "unduhUrl": "/proposals/855/dokumen-utama" }
+  }
+}
+```
+
+`dokumenUtama` `null` bila pengusul belum mengunggah file (bisa jadi hanya `dokumenUrl`). `unduhUrl` relatif ke
+base URL API dan perlu token.
+
+### Penolakan aksi tulis oleh anggota
+
+Semua aksi tulis lewat `/proposals/...` (edit, unggah dokumen utama, tambah/hapus lampiran, laporan
+kemajuan/akhir, ajukan, hapus) → **403**:
+
+```json
+{ "success": false, "message": "Anggota tim hanya dapat melihat proposal. Perubahan hanya bisa dilakukan oleh ketua pengusul." }
+```
+
+Endpoint `/dosen/proposals/:id` (ubah/ajukan/hapus) tetap khusus pengusul (pesan lama, HTTP 500
+`"Anda tidak memiliki akses ke proposal ini"`).
+
+### Untuk frontend
+
+- **Detail Undangan** (`UndanganDetailPage.jsx`): bila `aksesPenuh` → tampilkan info lengkap (bisa langsung
+  dari respons ini atau `GET /proposals/:id`), tim, target luaran, dan tombol **Unduh file proposal**
+  (`dokumenUtama.unduhUrl`), lalu Terima/Tolak. Hapus penanda `ApiPending` W-35 untuk dosen.
+- **Detail Kegiatan** (`KegiatanDetailPage.jsx`) untuk anggota: mode baca saja — sembunyikan tombol
+  Lanjutkan/Ajukan/Hapus/Unggah lampiran/laporan kemajuan untuk non-pengusul (backend menolak 403).

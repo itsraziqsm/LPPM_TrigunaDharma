@@ -291,8 +291,14 @@ func (s *Server) ensureProposalAccess(ctx context.Context, proposalID int64, use
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	if status == "diterima" {
-		return nil
+	// Anggota tim hanya baca: yang sudah menerima undangan, dan dosen yang masih diundang
+	// (pending) agar bisa menilai proposal (termasuk file) sebelum menerima. Ubah/hapus/unggah
+	// hanya ketua pengusul (beda dengan Node yang memberi anggota diterima akses tulis).
+	if status == "diterima" || (status == "pending" && hasAnyRole(user.Roles, "dosen")) {
+		if level == accessRead {
+			return nil
+		}
+		return httpError(http.StatusForbidden, anggotaHanyaBaca)
 	}
 	if level == accessRead {
 		n, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` WHERE `proposalId` = ? AND `reviewerId` = ?", proposalID, user.UserID)
@@ -305,6 +311,8 @@ func (s *Server) ensureProposalAccess(ctx context.Context, proposalID int64, use
 	}
 	return denied
 }
+
+const anggotaHanyaBaca = "Anggota tim hanya dapat melihat proposal. Perubahan hanya bisa dilakukan oleh ketua pengusul."
 
 // insertAnggota mirrors `anggota: { create: [...] }`.
 func (s *Server) insertAnggota(ctx context.Context, tx dbtx, proposalID int64, anggota []any) error {

@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -57,7 +57,7 @@ go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahas
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # ±746 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # ±766 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -120,7 +120,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
-| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ `GET /:id` detail untuk penerima, tanpa dokumen/kontak; + PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
+| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ `GET /:id` detail untuk penerima: `aksesPenuh` → lengkap + `dokumenUtama` untuk dosen diundang/anggota diterima, selain itu ringkas; + PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
@@ -142,6 +142,10 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   - Edit & submit hanya saat `draft`/`revisi`; hapus hanya saat `draft`.
   - Submit lewat `/dosen/proposals/:id/submit` mewajibkan **semua anggota sudah menerima
     undangan** (`ProposalAnggota.statusUndangan`: `pending|diterima|ditolak`).
+  - **Akses anggota tim** (`ensureProposalAccess`): anggota `diterima` dan **dosen** yang masih diundang
+    (`pending`) boleh **membaca** semua detail & file proposal; **semua anggota hanya baca** — aksi tulis
+    `/proposals/...` → 403 "Anggota tim hanya dapat melihat proposal…". Mahasiswa pending & undangan
+    ditolak tidak bisa membaca (detail undangan ringkas, `aksesPenuh: false`).
   - **Komposisi tim** dicek saat submit (kedua route submit, `komposisi_tim.go`; draft bebas), anggota
     selain ketua pengusul, yang menolak tidak dihitung: penelitian dosen min. 0 maks. 5 + mahasiswa
     min. 1 (tanpa maks.), pengabdian dosen min. 1 maks. 5 + mahasiswa min. 1 (tanpa maks.); gagal → 400.
