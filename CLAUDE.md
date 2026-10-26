@@ -359,7 +359,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `components/PermintaanHapusDokumen.jsx` (Proposal Kegiatan: semua; Laporan Kegiatan: laporan) → Setujui & Hapus (password) / Tolak.
 - Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
   `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
-  disaring per jenis → pilih project (`?id=`) → Laporan Harian: tabel **Riwayat Laporan Harian** bergaya Riwayat dosen
+  disaring per jenis; kepala + 3 `StatusCard` (diekspor dari `KegiatanPage`) seperti Status Penelitian dosen: **Total Project**,
+  **Project Selesai** (tahap 4) & **Project Berlangsung** (belum tahap 4, bukan ditolak) — tahapan dari `GET /dosen/proposals/as-member`
+  → pilih project (`?id=`) → Laporan Harian: tabel **Riwayat Laporan Harian** bergaya Riwayat dosen
   (bingkai navy, kepala gelap, `table-tight`, kolom/aksi tetap); tombol **Input Laporan Harian** → halaman satu formulir
   `LaporanHarianInputPage.jsx` (`/project/:jenis/input?id=`, tanpa kolom samping; simpan → kembali dengan `state.flash`;
   modal lama dihapus)), **Riwayat Project** (`/riwayat-project`,

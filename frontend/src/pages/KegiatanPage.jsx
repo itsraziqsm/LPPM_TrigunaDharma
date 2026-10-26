@@ -201,8 +201,8 @@ function MemberSection({ jenis, label, userId }) {
 const dateTime = (v) =>
   v ? new Date(v).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 
-// Kartu angka sesuai desain: ubin ikon, angka besar, label.
-function StatusCard({ icon: Icon, tone, value, label, to }) {
+// Kartu angka sesuai desain: ubin ikon, angka besar, label. Juga dipakai Project Saya (mahasiswa).
+export function StatusCard({ icon: Icon, tone, value, label, to }) {
   const body = (
     <>
       <span className={`grid size-10 place-items-center rounded-lg sm:size-16 sm:rounded-xl ${tone.tile}`}>

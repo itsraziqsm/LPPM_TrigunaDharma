@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../api/axios'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { laporanHarianApi } from '../api/laporanHarian'
+import { proposalDosenApi } from '../api/Proposaldosen'
+import { StatusCard } from './KegiatanPage'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, FolderKanban, Hourglass, Plus, Search, Trash2, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
@@ -604,6 +606,27 @@ export default function LaporanHarianPage({ jenis }) {
   useEffect(() => { fetchProposals() }, [fetchProposals])
 
   const milikJenis = jenis ? proposals.filter(p => p.jenis === jenis) : proposals
+
+  // Tahapan project (tidak ada di daftar laporan harian) dari GET /dosen/proposals/as-member:
+  // Selesai = tahap 4 (pasca pelaksanaan, laporan disetujui); Berlangsung = belum selesai & tidak ditolak.
+  const [tahapan, setTahapan] = useState(null) // Map id → urutan, null = memuat/gagal
+  useEffect(() => {
+    let alive = true
+    proposalDosenApi
+      .getAsMember({ ...(jenis ? { jenis } : {}), limit: 100 })
+      .then((r) => alive && setTahapan(new Map((r.data.data || []).map((p) => [p.id, Number(p.tahapan?.urutan) || 1]))))
+      .catch(() => alive && setTahapan(null))
+    return () => {
+      alive = false
+    }
+  }, [jenis])
+  const ringkasan =
+    loading || !tahapan
+      ? null
+      : {
+          selesai: milikJenis.filter((p) => tahapan.get(p.id) === 4).length,
+          berlangsung: milikJenis.filter((p) => tahapan.get(p.id) !== 4 && p.status !== 'ditolak').length,
+        }
   const selectedId = Number(params.get('id')) || null
   const selected = selectedId ? proposals.find(p => p.id === selectedId) : null
   const setSelected = (p) => setParams(p ? { id: String(p.id) } : {})
@@ -619,26 +642,40 @@ export default function LaporanHarianPage({ jenis }) {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-sm font-medium text-slate-500">Project Saya</p>
+      {/* Kepala & kartu ringkasan sama dengan halaman Status Penelitian/Pengabdian dosen (KegiatanPage) */}
+      <header className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="page-title">{jenisLabel ? `Project ${jenisLabel}` : 'Laporan Harian'}</h1>
           <p className="page-desc">
             Pilih project {jenisLabel ? jenisLabel.toLowerCase() + ' ' : ''}tempat Anda menjadi anggota tim, lalu isi dan kelola laporan harian.
           </p>
         </div>
-
-        <dl className="flex shrink-0 gap-10">
-          <div>
-            <dt className="text-sm text-slate-500">Total Project</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{milikJenis.length}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-slate-500">Hasil Pencarian</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{filtered.length}</dd>
-          </div>
-        </dl>
+        <nav aria-label="Breadcrumb" className="text-sm">
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true" className="text-slate-400">/</li>
+            <li className="text-slate-500">Project Saya</li>
+            {jenisLabel ? (
+              <>
+                <li aria-hidden="true" className="text-slate-400">/</li>
+                <li aria-current="page" className="text-slate-500">{jenisLabel}</li>
+              </>
+            ) : null}
+          </ol>
+        </nav>
       </header>
+
+      <section aria-label="Ringkasan project">
+        <ul className="grid grid-cols-3 gap-2 sm:gap-4">
+          <StatusCard icon={FolderKanban} tone={{ tile: 'bg-navy-50 text-navy-700', text: 'text-navy-700' }} value={loading ? null : milikJenis.length} label="Total Project" />
+          <StatusCard icon={CircleCheck} tone={{ tile: 'bg-green-50 text-green-700', text: 'text-green-700' }} value={ringkasan?.selesai} label="Project Selesai" />
+          <StatusCard icon={Hourglass} tone={{ tile: 'bg-amber-50 text-amber-700', text: 'text-amber-700' }} value={ringkasan?.berlangsung} label="Project Berlangsung" />
+        </ul>
+      </section>
 
       <div>
         <label htmlFor="lh-cari" className="sr-only">
