@@ -500,6 +500,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
 - `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
   `templates/` (`template-proposal.docx`, cadangan bila server belum punya template aktif — tautan Usulan = `components/TemplateProposalLink.jsx`), `legacy/` (sprite Vite, hanya `App.jsx`).
+- **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
+  (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan
+  (frame desain): lencana muncul di tengah → naik → huruf L P P M naik bergiliran → subjudul "Lembaga Penelitian dan
+  Pengabdian kepada Masyarakat" diketik → panel navy menyempit ke panel kiri (`[data-intro="panel"]`; ponsel: memudar),
+  lencana & judul meluncur (FLIP) ke header asli `[data-intro="logo|title"]` (target yang terlihat: panel kiri di desktop,
+  merek ringkas di ponsel; disembunyikan selama terbang) lalu lapisan memudar. Halaman asli tidak berubah. Web Animations API,
+  hanya transform/opacity/clip-path. `LogoLppm` meneruskan props tambahan (`data-intro`).
 - Logo: `src/components/LogoLppm.jsx` (`public/brand/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
   Dharma, juga favicon) dipakai di sidebar, Login/Register, halaman galat, verifikasi email.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;

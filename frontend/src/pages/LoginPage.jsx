@@ -4,6 +4,7 @@ import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
 import { CircleAlert, Eye, EyeOff } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
+import AuthIntro from '../components/AuthIntro'
 
 const EyeIcon = ({ open }) => open
   ? (
@@ -41,11 +42,14 @@ export default function LoginPage() {
 
   return (
     <main ref={scrollRef} data-scroll-container className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
+      {/* Intro sekali per sesi: berakhir tepat di header panel kiri / merek ponsel */}
+      <AuthIntro />
+
       {/* Panel kiri: identitas — navy polos, tanpa dekorasi */}
-      <aside className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
+      <aside data-intro="panel" className="hidden bg-rail text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:p-12" aria-label="Informasi platform">
         <header className="flex items-center gap-3">
-          <LogoLppm className="size-11" />
-          <h1 className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
+          <LogoLppm className="size-11" data-intro="logo" />
+          <h1 data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
         </header>
 
         <section aria-labelledby="platform-title">
@@ -74,8 +78,8 @@ export default function LoginPage() {
         <div className="rise w-full max-w-[22.5rem]">
           {/* Merek ringkas untuk layar kecil */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <LogoLppm className="size-10" />
-            <span className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
+            <LogoLppm className="size-10" data-intro="logo" />
+            <span data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>
 
           <h2 id="login-page-title" className="font-serif text-[2rem] font-medium leading-tight text-navy-950">
