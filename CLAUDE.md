@@ -302,7 +302,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`namaSapaan`), tanggal & peran, muat ulang; **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
   (`PintasanSection`: `model.shortcuts` sebagai baris kartu horizontal **judul saja** (`desc` jadi tooltip) `ShortcutStrip`, digeser
   di ponsel, lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
-  → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (+ umpan aktivitas
+  → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
   **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari

@@ -436,6 +436,10 @@ function CollapsiblePanel({ title, subtitle, count, footer, children }) {
 // Perlu perhatian · daftar utama (+ umpan aktivitas bila ada) | status · panel
 // samping (periode, diminimalkan). Notifikasi terbaru tidak lagi ditampilkan
 // (adapter boleh mengirim feed: null). Kartu angka & pintasan ada di PintasanSection.
+// Informasi › daftar kegiatan terbaru (semua peran): hanya 3 item, sisanya lewat
+// "Lihat selengkapnya" ke halaman daftar peran itu (`list.to`).
+const LIST_MAX = 3
+
 export function DashboardBody({ model }) {
   const { attention, pipeline, list, side, feed } = model
   const pipelineTotal = pipeline.segments.reduce((sum, s) => sum + s.value, 0)
@@ -456,14 +460,14 @@ export function DashboardBody({ model }) {
 
           <Panel
             title={list.title}
-            footer={list.to ? <PanelLink to={list.to}>{list.toLabel}</PanelLink> : null}
+            footer={list.to && !list.unavailable && list.items.length > 0 ? <PanelLink to={list.to}>Lihat selengkapnya</PanelLink> : null}
           >
             {list.unavailable ? (
               <Unavailable />
             ) : list.items.length === 0 ? (
               <EmptyState title={list.emptyTitle} desc={list.emptyDesc} action={list.emptyAction} />
             ) : (
-              <ItemList items={list.items} />
+              <ItemList items={list.items.slice(0, LIST_MAX)} />
             )}
           </Panel>
 
