@@ -312,7 +312,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       .finally(() => setLoadingPeriode(false))
   }, [])
 
-  // Master pilihan (W-22, W-25): rumpun ilmu umum; bidang & luaran per jenis.
+  // Master pilihan (W-22, W-25): rumpun ilmu (bidang komputer, W-39); bidang & luaran per jenis.
   useEffect(() => {
     let alive = true
     const list = (kategori, params) =>
@@ -841,7 +841,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             <AnggotaTable
               rows={anggota}
               idLabel="NIDN / NIM"
-              emptyText="Belum ada anggota. Tambahkan minimal 2 dosen."
+              emptyText="Belum ada anggota. Lihat ketentuan tim di atas."
               onPeran={setPeran}
               onRemove={removeAnggota}
             />

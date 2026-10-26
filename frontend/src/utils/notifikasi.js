@@ -28,9 +28,9 @@ export const TYPE_META = {
   laporan_disetujui: { icon: CircleCheck, tone: 'bg-green-50 text-green-700', label: 'Laporan disetujui' },
   laporan_ditolak: { icon: CircleX, tone: 'bg-red-50 text-red-700', label: 'Laporan ditolak' },
   laporan_revisi: { icon: PencilLine, tone: 'bg-amber-50 text-amber-700', label: 'Laporan perlu revisi' },
-  deletion_request: { icon: Trash2, tone: 'bg-red-50 text-red-700', label: 'Permintaan hapus periode' },
-  deletion_approved: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Hapus periode disetujui' },
-  deletion_cancelled: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Hapus periode dibatalkan' },
+  deletion_request: { icon: Trash2, tone: 'bg-red-50 text-red-700', label: 'Permintaan hapus' },
+  deletion_approved: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan disetujui' },
+  deletion_cancelled: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan ditolak/dibatalkan' },
 }
 export const DEFAULT_META = { icon: Bell, tone: 'bg-slate-100 text-slate-600', label: 'Notifikasi' }
 
@@ -55,6 +55,8 @@ export function pengirimFor(n, related) {
 export function targetFor(n, roles) {
   const primary = roles[0]
   const pengelola = primary === 'admin' || primary === 'ketua_lppm'
+  // Hapus proposal/laporan dengan izin Ketua (W-34): permintaan tampil di Dokumen Masuk › Proposal Kegiatan.
+  if (n.refType === 'DokumenDeletionRequest') return pengelola ? { to: '/proposals', label: 'Buka Dokumen Masuk' } : null
   if (n.refType === 'periode' || n.type?.startsWith('deletion_')) return pengelola ? { to: '/periode', label: 'Buka periode' } : null
   if (n.refType === 'laporan') {
     if (n.type === 'reviewer_ditugaskan') return { to: '/penugasan?tab=laporan', label: 'Buka penugasan' }

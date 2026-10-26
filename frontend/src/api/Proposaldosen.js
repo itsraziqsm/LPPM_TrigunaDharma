@@ -29,6 +29,8 @@ export const proposalDosenApi = {
     delete: (id) => api.delete(`/dosen/proposals/${id}`),
     searchMembers: (q) => api.get('/dosen/proposals/members/search', { params: { q } }),
     getMyInvitations: () => api.get('/dosen/proposals/invitations'),
+    // Detail undangan (W-35/W-41): undangan + proposal (+ aksesPenuh, targetLuaran, dokumenUtama).
+    getInvitation: (id) => api.get(`/dosen/proposals/invitations/${id}`),
     respondInvitation: (id, status) => api.patch(`/dosen/proposals/invitations/${id}`, { status }),
 
     // Upload dokumen utama (PDF/DOCX) — kirim sebagai FormData

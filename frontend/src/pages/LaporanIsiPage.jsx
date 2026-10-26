@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, Info, Save, Trash2, Users } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
 import { LUARAN_JENIS, luaranApi } from '../api/luaran'
+import { masterApi } from '../api/master'
 import useAuthStore from '../store/authStore'
 import { kataKunciError, parseKataKunci } from '../utils/kataKunci'
 import { FieldError, PreviewTable, Required, StepCard, Stepper } from '../components/Wizard'
@@ -20,7 +21,8 @@ import { rupiah } from './laporan/format'
 // Video = bukti (`buktiUrl`) item luaran proposal berjenis jurnal/prosiding dan
 // media massa (PATCH /luaran/:id/capaian) — backend tidak punya field link khusus
 // di laporan. Kata kunci laporan (W-27, terpisah dari proposal) dan metode
-// penelitian (W-28, khusus penelitian) lewat PATCH /laporan/:id.
+// penelitian (W-28, khusus penelitian) lewat PATCH /laporan/:id. Rumpun ilmu laporan (W-39)
+// disalin dari proposal, bisa diubah di sini; pilihan dari GET /master/rumpun-ilmu (bidang komputer).
 // ---------------------------------------------------------------------------
 
 const STEPS = [
@@ -33,10 +35,10 @@ const STEPS = [
 const EDITABLE = ['draft', 'revisi']
 const MAX_FILE = 10 * 1024 * 1024
 const DOC_MIME = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-const FIELDS = ['judul', 'kataKunci', 'metodePenelitian', 'abstrak', 'luaranTercapai', 'ringkasanHasil', 'realisasiAnggaran', 'dokumenUrl']
+const FIELDS = ['judul', 'rumpunIlmu', 'kataKunci', 'metodePenelitian', 'abstrak', 'luaranTercapai', 'ringkasanHasil', 'realisasiAnggaran', 'dokumenUrl']
 const STEP_FIELDS = {
   umum: [],
-  laporan: ['judul', 'kataKunci', 'metodePenelitian', 'abstrak', 'ringkasanHasil', 'luaranTercapai', 'realisasiAnggaran'],
+  laporan: ['judul', 'rumpunIlmu', 'kataKunci', 'metodePenelitian', 'abstrak', 'ringkasanHasil', 'luaranTercapai', 'realisasiAnggaran'],
   dokumen: ['dokumen', 'dokumenUrl', 'links'],
 }
 
@@ -143,6 +145,18 @@ export default function LaporanIsiPage({ jenis }) {
   const [luaranTick, setLuaranTick] = useState(0)
   const topRef = useRef(null)
   const firstStep = useRef(true)
+  const [rumpunList, setRumpunList] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    masterApi
+      .list('rumpun-ilmu')
+      .then((r) => alive && setRumpunList(r.data.data || []))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     if (firstStep.current) {
@@ -398,7 +412,6 @@ export default function LaporanIsiPage({ jenis }) {
                 <Field label="Judul Proposal">{laporan.proposal?.judul || laporan.judul}</Field>
               </div>
               <Field label="Tahun Pelaksanaan">{laporan.periode?.tahun}</Field>
-              <Field label="Rumpun Ilmu">{laporan.rumpunIlmu}</Field>
               <Field label={`Bidang ${label}`}>{laporan.bidang}</Field>
               {jenis === 'pengabdian' ? (
                 <>
@@ -457,6 +470,24 @@ export default function LaporanIsiPage({ jenis }) {
               </label>
               <input id="li-judul" className="input" value={form.judul} onChange={set('judul')} placeholder="Judul laporan Anda" aria-invalid={Boolean(err('judul'))} />
               <FieldError message={err('judul')} />
+            </div>
+            <div>
+              <label htmlFor="li-rumpun" className="label">
+                Rumpun Ilmu
+              </label>
+              <select id="li-rumpun" className="input" value={form.rumpunIlmu} onChange={set('rumpunIlmu')}>
+                <option value="">-- Pilih rumpun ilmu --</option>
+                {rumpunList.map((m) => (
+                  <option key={m.id} value={m.nama}>
+                    {m.nama}
+                  </option>
+                ))}
+                {/* Nilai lama yang sudah tidak aktif di master tetap tampil (hanya bisa diganti). */}
+                {form.rumpunIlmu && !rumpunList.some((m) => m.nama === form.rumpunIlmu) ? (
+                  <option value={form.rumpunIlmu}>{form.rumpunIlmu} (tidak aktif)</option>
+                ) : null}
+              </select>
+              <p className="mt-1.5 text-xs text-slate-500">Disalin dari proposal; ubah bila perlu.</p>
             </div>
             <div>
               <label htmlFor="li-kk" className="label">
@@ -678,6 +709,7 @@ export default function LaporanIsiPage({ jenis }) {
               <PreviewTable
                 rows={[
                   ['Judul Laporan', form.judul || '—'],
+                  ['Rumpun Ilmu', form.rumpunIlmu || '—'],
                   ['Kata Kunci', parseKataKunci(form.kataKunci).join(', ') || '—'],
                   ...(jenis === 'penelitian' ? [['Metode Penelitian', form.metodePenelitian || '—']] : []),
                   ['Abstrak', form.abstrak || '—'],

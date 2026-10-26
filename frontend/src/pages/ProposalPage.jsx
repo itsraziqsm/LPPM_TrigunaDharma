@@ -11,6 +11,7 @@ import { alertDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
+import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
 const isStatusFinal = (status) => status === 'disetujui'
@@ -284,6 +285,9 @@ export default function ProposalPage() {
           </dl>
         </header>
 
+        {/* Ketua: permintaan hapus dokumen dari Admin (W-34), proposal & laporan */}
+        {viewOnly ? null : <PermintaanHapusDokumen onChanged={() => setTick((t) => t + 1)} />}
+
         {/* Dokumen Masuk: periode aktif + filter "Perlu ditangani" (hooks/useDokumenMasuk) */}
         {noPeriode ? (
           <TanpaPeriodeAktif failed={periodeFailed} noun="Proposal" />
@@ -476,6 +480,8 @@ export default function ProposalPage() {
                               <div className="px-2 pt-1">
                                 <HapusDokumen
                                   compact
+                                  tipe="proposal"
+                                  id={p.id}
                                   status={p.status}
                                   noun="proposal"
                                   judul={p.judul}

@@ -1,10 +1,11 @@
 // Aturan komposisi tim proposal (anggota SELAIN ketua pengusul), per jenis kegiatan.
-//   Pengabdian : dosen tepat 2, mahasiswa tepat 1
-//   Penelitian : dosen minimal 2, mahasiswa minimal 0 (bebas)
+//   Penelitian : dosen 0–5, mahasiswa minimal 1 (tanpa batas maksimal)
+//   Pengabdian : dosen 1–5, mahasiswa minimal 1 (tanpa batas maksimal)
+// Sama dengan pengecekan backend saat submit (komposisi_tim.go, new-api.md bagian 18).
 // Ubah di sini bila ketentuan LPPM berubah; dipakai validasi & keterangan wizard Usulan.
 export const ATURAN_TIM = {
-  pengabdian: { dosen: { min: 2, max: 3 }, mahasiswa: { min: 1, max: 2 } },
-  penelitian: { dosen: { min: 2, max: 3 }, mahasiswa: { min: 0, max: 2 } },
+  penelitian: { dosen: { min: 0, max: 5 }, mahasiswa: { min: 1 } },
+  pengabdian: { dosen: { min: 1, max: 5 }, mahasiswa: { min: 1 } },
 }
 
 const LABEL = { dosen: 'dosen', mahasiswa: 'mahasiswa' }

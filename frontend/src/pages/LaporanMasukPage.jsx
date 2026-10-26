@@ -14,6 +14,7 @@ import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
+import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // ---------------------------------------------------------------------------
 // Laporan Masuk (Ketua LPPM / Admin): daftar semua laporan (GET /laporan),
@@ -242,6 +243,8 @@ function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
                     Admin hanya dapat melihat dan menghapus. Penugasan reviewer dan keputusan dilakukan Ketua LPPM.
                   </p>
                   <HapusDokumen
+                    tipe="laporan"
+                    id={laporan.id}
                     status={laporan.status}
                     noun="laporan"
                     judul={laporan.judul}
@@ -360,6 +363,9 @@ export default function LaporanMasukPage() {
           </ol>
         </nav>
       </header>
+
+      {/* Ketua: permintaan hapus laporan dari Admin (W-34) */}
+      {viewOnly ? null : <PermintaanHapusDokumen tipe="laporan" onChanged={refresh} />}
 
       {noPeriode ? (
         <TanpaPeriodeAktif failed={periodeFailed} noun="Laporan" />
