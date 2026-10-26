@@ -74,6 +74,7 @@ export default function BackupPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [sumber, setSumber] = useState('')
+  const [status, setStatus] = useState('') // berjalan|berhasil|gagal; "dihapus" menunggu API (W-43)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [tick, setTick] = useState(0)
@@ -99,7 +100,7 @@ export default function BackupPage() {
     setLoading(true)
     setFailed(false)
     backupApi
-      .getAll({ page, limit: LIMIT, ...(sumber ? { sumber } : {}) })
+      .getAll({ page, limit: LIMIT, ...(sumber ? { sumber } : {}), ...(status ? { status } : {}) })
       .then((r) => {
         if (!alive) return
         setRows(r.data.data || [])
@@ -110,7 +111,7 @@ export default function BackupPage() {
     return () => {
       alive = false
     }
-  }, [page, sumber, tick])
+  }, [page, sumber, status, tick])
 
   // Pantau backup manual yang sedang berjalan (GET /backup/:id tiap 1,5 detik).
   const runningId = running?.id
@@ -316,6 +317,27 @@ export default function BackupPage() {
               <option value="sistem">Sistem (otomatis)</option>
               <option value="admin">Admin (manual)</option>
             </select>
+            <label htmlFor="backup-status" className="sr-only">
+              Status
+            </label>
+            <select
+              id="backup-status"
+              className="input w-44"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(1)
+              }}
+            >
+              <option value="">Semua status</option>
+              <option value="berjalan">Berjalan</option>
+              <option value="berhasil">Berhasil</option>
+              <option value="gagal">Gagal</option>
+              {/* W-43: backend belum bisa menyaring backup yang filenya dihapus */}
+              <option value="dihapus" disabled>
+                Dihapus (API belum ada)
+              </option>
+            </select>
             <button type="button" onClick={refresh} className="btn btn-ghost btn-sm" title="Muat ulang">
               <RefreshCw className="size-4" aria-hidden="true" />
               <span className="sr-only">Muat ulang</span>
@@ -357,7 +379,7 @@ export default function BackupPage() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-slate-500">
-                    Belum ada backup{sumber ? ' untuk pelaku ini' : ''}.
+                    Belum ada backup{sumber || status ? ' yang cocok dengan filter' : ''}.
                   </td>
                 </tr>
               ) : (

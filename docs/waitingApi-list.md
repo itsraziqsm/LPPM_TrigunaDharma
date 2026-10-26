@@ -178,6 +178,18 @@ Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `l
 |---|---|---|---|---|
 | W-42 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
 
+## Backup Data (`frontend/src/pages/BackupPage.jsx`, route `/backup`, Admin)
+
+Data yang **sudah** tersambung: `GET /backup` (filter `sumber`, `status` berjalan/berhasil/gagal), `GET /backup/jadwal`,
+`POST /backup`, `GET /backup/:id`, `GET /backup/:id/download`, `DELETE /backup/:id`. Status **Dihapus** di tabel ditampilkan
+frontend dari `dihapusAt` (backup tetap `status: berhasil` di backend).
+
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-43 | Opsi filter status **Dihapus** di Daftar Backup (sekarang nonaktif, "API belum ada") | Saring backup yang filenya sudah dihapus; sebaliknya "Berhasil" sebaiknya hanya yang filenya masih ada | `GET /backup?status=dihapus` (= `dihapusAt IS NOT NULL`); `status=berhasil` → `dihapusAt IS NULL`. Alternatif: parameter `fileTersedia=true\|false`. Opsional: field turunan `status: "dihapus"` di respons log | Tanpa ini filter "Berhasil" ikut menampilkan backup yang filenya sudah dihapus. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
