@@ -272,7 +272,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal`, `/luaran-dosen` (admin), `/pemantauan` (Ketua STMIK; juga bisa admin/ketua), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
-  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**detail mode reviewer**,
+  halaman — bukan modal; non-reviewer admin/ketua dialihkan ke `/proposals?detail=` / `/laporan-masuk?id=`), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (hanya peran
@@ -415,7 +416,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
   (bawaan Disetujui, klik → `/laporan-masuk?id=`); panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
-  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
+  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). **Penugasan Review** hanya daftar; tombol
+  Mulai/Lanjutkan/Lihat & Nilai membuka halaman detail di `src/pages/review/`: `ReviewProposalPage` (`/proposals/detail/:id`:
+  abstrak, info, mitra, target luaran, lampiran `readOnly`, dokumen utama, tim, riwayat + form) dan `ReviewLaporanPage`
+  (`/laporan-masuk/detail/:id`: isi laporan, dokumen, capaian luaran + form; terkunci bila laporan bukan `review`); form
+  bersama `FormPenilaian.jsx`; `myReview` dicari dari daftar tugasan (`cariTugasan.js`, tanpa endpoint detail tugasan).
+  Notifikasi `reviewer_ditugaskan` menuju halaman detail ini. Buka dokumen utama: `utils/dokumenUtama.js`. Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
 - Foto profil: `src/components/UserAvatar.jsx` dipakai di **semua** tempat yang menampilkan orang (sidebar, profil,

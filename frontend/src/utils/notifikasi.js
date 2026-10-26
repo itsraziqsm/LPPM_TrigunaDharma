@@ -59,14 +59,14 @@ export function targetFor(n, roles) {
   if (n.refType === 'DokumenDeletionRequest') return pengelola ? { to: '/proposals', label: 'Buka Dokumen Masuk' } : null
   if (n.refType === 'periode' || n.type?.startsWith('deletion_')) return pengelola ? { to: '/periode', label: 'Buka periode' } : null
   if (n.refType === 'laporan') {
-    if (n.type === 'reviewer_ditugaskan') return { to: '/penugasan?tab=laporan', label: 'Buka penugasan' }
+    if (n.type === 'reviewer_ditugaskan') return n.refId ? { to: `/laporan-masuk/detail/${n.refId}`, label: 'Buka laporan untuk direview' } : { to: '/penugasan?tab=laporan', label: 'Buka penugasan' }
     if (pengelola) return { to: `/laporan-masuk?id=${n.refId}`, label: 'Kelola laporan' }
     // Pengusul: jenis menyesuaikan otomatis setelah laporan dimuat.
     if (primary === 'dosen' || primary === 'mahasiswa') return { to: `/kegiatan/penelitian/laporan/${n.refId}`, label: 'Buka laporan' }
     return null
   }
   if (n.type === 'reviewer_ditugaskan' && roles.includes('reviewer')) {
-    return { to: '/penugasan', label: 'Buka penugasan' }
+    return n.refType === 'proposal' && n.refId ? { to: `/proposals/detail/${n.refId}`, label: 'Buka proposal untuk direview' } : { to: '/penugasan', label: 'Buka penugasan' }
   }
   if (n.refType === 'proposal') {
     if (pengelola) return { to: `/proposals?detail=${n.refId}`, label: 'Buka proposal' }

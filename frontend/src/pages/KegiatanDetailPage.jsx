@@ -20,6 +20,7 @@ import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
 import { getRoleNames } from '../utils/roles'
 import { alertDialog, confirmDialog } from '../utils/dialog'
+import { bukaDokumenUtama } from '../utils/dokumenUtama'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL, UNDANGAN_COLOR } from './ProposalDosen/constants'
 import { ReviewList } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
@@ -99,24 +100,6 @@ function Tahapan({ tahapan, status }) {
       })}
     </ol>
   )
-}
-
-async function bukaDokumenUtama(id, namaFile) {
-  try {
-    const res = await api.get(`/proposals/${id}/dokumen-utama`, { responseType: 'blob' })
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a')
-    a.href = url
-    a.target = '_blank'
-    a.rel = 'noopener'
-    if (namaFile && !String(res.data.type).includes('pdf')) a.download = namaFile
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  } catch {
-    alertDialog({ title: 'Gagal membuka dokumen', message: 'Dokumen utama tidak dapat dibuka. Coba lagi.' })
-  }
 }
 
 export default function KegiatanDetailPage({ jenis }) {

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useParams } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
@@ -30,6 +30,8 @@ import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
 import LuaranDosenPage from './LuaranDosenPage'
 import PemantauanPage from './PemantauanPage'
+import ReviewProposalPage from './review/ReviewProposalPage'
+import ReviewLaporanPage from './review/ReviewLaporanPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
 import UserAvatar from '../components/UserAvatar'
 
@@ -40,6 +42,13 @@ const ROLE_LABEL = {
   dosen: 'Dosen',
   reviewer: 'Reviewer',
   mahasiswa: 'Mahasiswa',
+}
+
+// /proposals/detail/:id & /laporan-masuk/detail/:id untuk non-reviewer → panel detail
+// lama di Dokumen Masuk (admin/ketua).
+function AlihkanDetail({ ke }) {
+  const { id } = useParams()
+  return <Navigate to={ke(id)} replace />
 }
 
 function getRoleNames(roles) {
@@ -103,6 +112,12 @@ export default function DashboardLayout({ page, jenis }) {
     if (page === 'profil') return <ProfilePage />
     if (page === 'notifikasi') return <NotifikasiPage />
     if (page === 'notifikasi-detail') return <NotifikasiDetailPage key={location.pathname} />
+
+    // Detail mode reviewer (halaman, bukan modal): proposal & laporan yang ditugaskan.
+    if (page === 'review-proposal' || page === 'review-laporan') {
+      if (isReviewer) return page === 'review-proposal' ? <ReviewProposalPage key={location.pathname} /> : <ReviewLaporanPage key={location.pathname} />
+      if (isAdminOrKetua) return <AlihkanDetail ke={page === 'review-proposal' ? (id) => `/proposals?detail=${id}` : (id) => `/laporan-masuk?id=${id}`} />
+    }
 
     // Ketua STMIK (W-37): pemantauan saja — Pemantauan Proposal, Rekap Proposal, dashboard.
     if (primaryRole === 'ketua_stmik') {
