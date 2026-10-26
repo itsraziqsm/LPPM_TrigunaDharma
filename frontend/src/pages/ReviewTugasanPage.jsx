@@ -147,37 +147,34 @@ export default function ReviewTugasanPage() {
   const totalPages = Math.ceil(total / limit)
   const selesai = tugasan.filter(t => t.myReview?.isDone).length
   const belum = tugasan.filter(t => !t.myReview?.isDone).length
+  // Ringkasan tab Laporan dilaporkan oleh LaporanTugasan (onRingkasan).
+  const [ringkasanLaporan, setRingkasanLaporan] = useState(null)
+  const ringkasan = tab === 'laporan' ? ringkasanLaporan : loading ? null : { total, belum, selesai }
 
   return (
     <div className="page space-y-6">
-      {/* Header halaman */}
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Penugasan Review</h1>
-          <p className="page-desc">
-            Proposal yang ditugaskan kepada Anda untuk ditinjau, dinilai, dan diselesaikan proses review-nya.
-            Pilih salah satu untuk melihat detail dan melanjutkan penilaian.
-          </p>
-        </div>
+      <h1 className="page-title">Penugasan Review</h1>
 
-        {/* Ringkasan */}
-        {tab === 'proposal' && !loading && tugasan.length > 0 && (
-          <dl className="grid shrink-0 grid-cols-3 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-10">
-            <div>
-              <dt className="text-sm text-slate-500">Total Penugasan</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{total}</dd>
+      {/* Ringkasan: teks + 3 kotak angka sejajar dalam satu wadah (tata letak sama dengan Undangan Kerja Sama) */}
+      <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <p className="max-w-xl text-base leading-relaxed text-slate-600">
+          {tab === 'laporan'
+            ? 'Laporan kegiatan yang ditugaskan kepada Anda untuk dinilai. Pilih salah satu untuk membuka detail dan mengisi penilaian.'
+            : 'Proposal yang ditugaskan kepada Anda untuk ditinjau, dinilai, dan diselesaikan proses review-nya. Pilih salah satu untuk melihat detail dan melanjutkan penilaian.'}
+        </p>
+        <dl className="grid shrink-0 grid-cols-3 gap-3 lg:w-[30rem]">
+          {[
+            { label: 'Total Penugasan', value: ringkasan?.total },
+            { label: 'Belum Selesai', value: ringkasan?.belum },
+            { label: 'Selesai Direview', value: ringkasan?.selesai },
+          ].map((k) => (
+            <div key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <dt className="text-xs font-medium text-slate-500 sm:text-sm">{k.label}</dt>
+              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{k.value ?? '—'}</dd>
             </div>
-            <div>
-              <dt className="text-sm text-slate-500">Belum Selesai</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{belum}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-500">Selesai Direview</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{selesai}</dd>
-            </div>
-          </dl>
-        )}
-      </header>
+          ))}
+        </dl>
+      </section>
 
       <div role="tablist" aria-label="Jenis tugasan" className="flex gap-7 border-b border-slate-200">
         {[
@@ -200,7 +197,7 @@ export default function ReviewTugasanPage() {
       </div>
 
       {tab === 'laporan' ? (
-        <LaporanTugasan />
+        <LaporanTugasan onRingkasan={setRingkasanLaporan} />
       ) : (
         <>
       {/* Daftar penugasan */}

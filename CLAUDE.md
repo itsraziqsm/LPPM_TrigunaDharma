@@ -427,7 +427,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
   (bawaan Disetujui, klik → `/laporan-masuk?id=`); panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
-  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). **Penugasan Review** hanya daftar; tombol
+  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). **Penugasan Review** hanya daftar (kepala = judul lalu satu kartu ringkasan teks + 3 kotak Total/Belum Selesai/Selesai, sama
+  dengan Undangan; angka per tab, tab Laporan lewat `LaporanTugasan onRingkasan`); tombol
   Mulai/Lanjutkan/Lihat & Nilai membuka halaman detail di `src/pages/review/`: `ReviewProposalPage` (`/proposals/detail/:id`:
   abstrak, info, mitra, target luaran, lampiran `readOnly`, dokumen utama, tim, riwayat + form) dan `ReviewLaporanPage`
   (`/laporan-masuk/detail/:id`: isi laporan, dokumen, capaian luaran + form; terkunci bila laporan bukan `review`); form

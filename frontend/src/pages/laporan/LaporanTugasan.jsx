@@ -9,7 +9,8 @@ import { tanggal } from './format'
 // "Laporan" di halaman Penugasan Review; penilaian di halaman detail
 // /laporan-masuk/detail/:id (pages/review/ReviewLaporanPage.jsx).
 
-export default function LaporanTugasan() {
+// onRingkasan({ total, belum, selesai }) — angka untuk kartu ringkasan Penugasan Review.
+export default function LaporanTugasan({ onRingkasan }) {
   const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -26,15 +27,19 @@ export default function LaporanTugasan() {
       .getTugasan({ page, limit })
       .then((r) => {
         if (!alive) return
-        setRows(r.data.data || [])
-        setTotal(Number(r.data.meta?.total) || 0)
+        const data = r.data.data || []
+        const jumlah = Number(r.data.meta?.total) || 0
+        setRows(data)
+        setTotal(jumlah)
+        const selesai = data.filter((t) => t.myReview?.isDone).length
+        onRingkasan?.({ total: jumlah, belum: data.length - selesai, selesai })
       })
       .catch(() => alive && setFailed(true))
       .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
-  }, [page])
+  }, [page, onRingkasan])
 
   const pages = Math.max(1, Math.ceil(total / limit))
 
