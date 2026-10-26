@@ -61,6 +61,9 @@ export default function AuthIntro() {
     const batal = []
     const anims = []
     let selesai = false
+    // true saat efek dibersihkan (React StrictMode memasang efek dua kali di mode dev, atau
+    // halaman dilepas): animasi dibatalkan → promise .finished ditolak; itu BUKAN akhir intro.
+    let dibatalkan = false
     // Target asli disembunyikan selama salinannya terbang (mencegah judul ganda saat panel memudar di ponsel).
     const tersembunyi = []
     const tampilkanTarget = () => tersembunyi.splice(0).forEach((el) => (el.style.visibility = ''))
@@ -70,7 +73,7 @@ export default function AuthIntro() {
       return a
     }
     const tutup = () => {
-      if (selesai) return
+      if (selesai || dibatalkan) return
       selesai = true
       tampilkanTarget()
       tandaiSelesai()
@@ -94,6 +97,10 @@ export default function AuthIntro() {
       const title = titleRef.current
       const sub = subRef.current
       const huruf = [...title.querySelectorAll('[data-huruf]')]
+      // Mulai dari keadaan bersih (efek bisa dijalankan ulang).
+      sub.style.opacity = '0'
+      sub.firstChild.textContent = '\u200b'
+      titleWrap.style.width = ''
       const vh = window.innerHeight
       const naik = Math.min(130, vh * 0.13)
 
@@ -181,10 +188,16 @@ export default function AuthIntro() {
       tutup()
     }
 
-    jalankan().catch(() => tutup())
+    jalankan().catch((err) => {
+      if (!dibatalkan) {
+        console.warn('AuthIntro dihentikan:', err)
+        tutup()
+      }
+    })
     const lewati = () => lewatiRef.current?.()
     window.addEventListener('keydown', lewati)
     return () => {
+      dibatalkan = true
       window.removeEventListener('keydown', lewati)
       tampilkanTarget()
       batal.forEach((f) => f())
