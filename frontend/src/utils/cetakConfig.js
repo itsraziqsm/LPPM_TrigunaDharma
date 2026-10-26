@@ -1,5 +1,5 @@
 // Konfigurasi dokumen cetak (Cetak Dokumen). Backend belum punya endpoint untuk
-// menyimpan konfigurasi/arsip dokumen (docs/waitingApi-list.md W-32), jadi
+// menyimpan konfigurasi/arsip dokumen (docs/waitingApi-list.md W-42), jadi
 // "SOP Frontend": disimpan di localStorage peramban ini saja.
 const PREFIX = 'cetakDokumen:'
 

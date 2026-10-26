@@ -16,7 +16,7 @@ import CetakBreadcrumb from './CetakBreadcrumb'
 // tombol Konfigurasi (ke halaman konfigurasi masing-masing).
 //   1. Rekapitulasi Proposal → /cetak-dokumen/rekap-proposal (halaman export lama)
 //   2. Surat Tugas           → /cetak-dokumen/surat-tugas
-// Konfigurasi disimpan di peramban (utils/cetakConfig; endpoint W-32 belum ada).
+// Konfigurasi disimpan di peramban (utils/cetakConfig; endpoint W-42 belum ada).
 // ---------------------------------------------------------------------------
 
 const waktu = (iso) =>

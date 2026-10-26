@@ -11,6 +11,7 @@ import { alertDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
+import BebanReviewer from '../components/BebanReviewer'
 import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
@@ -152,19 +153,17 @@ export default function ProposalPage() {
     }
   }, [])
 
+  const selectedId = selected?.id
   const fetchReviewer = useCallback(async () => {
     try {
-      const res = await usersApi.getAll({
-        role: 'reviewer',
-        page: 1,
-        limit: 100,
-      })
+      // Urut beban (W-32): reviewer tanpa tugasan aktif di atas.
+      const res = await usersApi.getKandidatReviewer(selectedId ? { itemId: selectedId } : {})
       setReviewerList(res?.data?.data || [])
     } catch (error) {
       console.error(error)
       setReviewerList([])
     }
-  }, [])
+  }, [selectedId])
 
   useEffect(() => {
     if (showStatusModal && newStatus === 'revisi') {
@@ -1012,6 +1011,9 @@ export default function ProposalPage() {
                                   </p>
                                   <p className="mt-0.5 break-words text-sm text-slate-500">
                                     {r.email}
+                                  </p>
+                                  <p className="mt-1.5">
+                                    <BebanReviewer kandidat={r} />
                                   </p>
                                   {isAssigned && (
                                     <p className="mt-2 text-sm font-medium text-navy-700">

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { UserPlus, X } from 'lucide-react'
-import api from '../api/axios'
 import { laporanApi } from '../api/laporan'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
@@ -14,6 +13,8 @@ import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
+import BebanReviewer from '../components/BebanReviewer'
+import { usersApi } from '../api/users'
 import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // ---------------------------------------------------------------------------
@@ -67,9 +68,10 @@ function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
   const openReviewerPicker = async () => {
     setPicked([])
     try {
-      const r = await api.get('/users', { params: { role: 'reviewer', limit: 100 } })
+      // Urut beban (W-32): tanpa tugasan aktif dulu; pengusul sudah dikeluarkan backend.
+      const r = await usersApi.getKandidatReviewer({ itemId: laporan.id })
       const assigned = new Set((laporan.reviewerTugasan || []).map((t) => t.reviewerId ?? t.reviewer?.id))
-      setReviewers((r.data.data || []).filter((u) => u.id !== laporan.pengusul?.id && !assigned.has(u.id)))
+      setReviewers((r.data.data || []).filter((u) => !u.sudahDitugaskan && u.id !== laporan.pengusul?.id && !assigned.has(u.id)))
     } catch {
       setReviewers([])
     }
@@ -209,6 +211,9 @@ function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
                               />
                               {u.fullName || u.name}
                               <span className="text-xs text-slate-500">{u.email}</span>
+                              <span className="ml-auto">
+                                <BebanReviewer kandidat={u} />
+                              </span>
                             </label>
                           </li>
                         ))}

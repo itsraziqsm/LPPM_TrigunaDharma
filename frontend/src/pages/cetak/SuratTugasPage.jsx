@@ -23,7 +23,7 @@ import { SURAT_TUGAS_KEY, suratTugasData } from './dokumen'
 //   alamat   ← alamat mitra (pengabdian) atau kampus
 // Data: GET /proposals?status=disetujui, GET /laporan, GET /proposals/:id,
 // GET /laporan/:id. Konfigurasi & nomor surat belum punya endpoint → disimpan di
-// peramban (utils/cetakConfig, ApiPending W-32). PDF dibuat di frontend (jspdf).
+// peramban (utils/cetakConfig, ApiPending W-42). PDF dibuat di frontend (jspdf).
 // ---------------------------------------------------------------------------
 
 const KAMPUS = 'Kampus STMIK Triguna Dharma, Jl. A.H. Nasution No. 73 F, Medan'

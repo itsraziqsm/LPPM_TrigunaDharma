@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { labelKandidat } from '../utils/kandidatReviewer'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
 import { ClipboardCheck, X } from 'lucide-react'
@@ -431,35 +432,46 @@ function ReviewerAccess({ user, isKetua, onChanged }) {
 }
 
 // Cabut paksa (Ketua): pilih reviewer baru untuk setiap tugasan belum selesai.
-// Reviewer baru = user berperan reviewer, bukan dosen ini, bukan pengusul item.
+// Pilihan per tugasan dari GET /users/kandidat-reviewer?itemId=&exclude= (urut beban,
+// pengusul item sudah dikeluarkan); nilai awal = rekomendasi backend (disebar merata).
+// "Alihkan otomatis" = force-revoke { otomatis: true } tanpa memilih manual (W-32).
 function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
-  const [reviewers, setReviewers] = useState(null)
-  const [pilih, setPilih] = useState({})
+  const [kandidat, setKandidat] = useState(null) // { [tugasanId]: [...] }
+  const [pilih, setPilih] = useState(() => Object.fromEntries(tugasan.filter((t) => t.rekomendasi?.id).map((t) => [t.id, String(t.rekomendasi.id)])))
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    usersApi
-      .getAll({ role: 'reviewer', status: 'approved', limit: 100 })
-      .then((r) => setReviewers((r.data.data || []).filter((u) => u.id !== user.id)))
-      .catch(() => setReviewers([]))
-  }, [user.id])
+    let alive = true
+    Promise.all(
+      tugasan.map((t) =>
+        usersApi
+          .getKandidatReviewer({ itemId: t.itemId, exclude: user.id })
+          .then((r) => [t.id, (r.data.data || []).filter((k) => !k.sudahDitugaskan && k.id !== t.pengusulId)])
+          .catch(() => [t.id, []]),
+      ),
+    ).then((rows) => alive && setKandidat(Object.fromEntries(rows)))
+    return () => {
+      alive = false
+    }
+  }, [tugasan, user.id])
 
   const lengkap = tugasan.every((t) => pilih[t.id])
 
-  const submit = async () => {
+  const kirim = async (otomatis) => {
     setBusy(true)
     setErr(null)
     try {
-      const pengalihan = tugasan.map((t) => ({ tugasanId: t.id, reviewerBaruId: Number(pilih[t.id]) }))
-      const r = await usersApi.forceRevokeReviewer(user.id, pengalihan)
-      const n = r.data.data?.jumlahDialihkan ?? pengalihan.length
+      const pengalihan = tugasan.filter((t) => pilih[t.id]).map((t) => ({ tugasanId: t.id, reviewerBaruId: Number(pilih[t.id]) }))
+      const r = await usersApi.forceRevokeReviewer(user.id, otomatis ? [] : pengalihan, otomatis)
+      const n = r.data.data?.jumlahDialihkan ?? tugasan.length
       await onDone(r.data.data, `${r.data.message || 'Peran reviewer dicabut paksa'} — ${n} tugasan dialihkan.`)
     } catch (e) {
       setErr(e.response?.data?.message || 'Gagal mencabut paksa.')
       setBusy(false)
     }
   }
+  const submit = () => kirim(false)
 
   return (
     <Modal title="Cabut paksa peran reviewer" onClose={busy ? () => {} : onClose}>
@@ -475,7 +487,7 @@ function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
         ) : null}
         <ul className="max-h-80 space-y-3 overflow-y-auto" data-lenis-prevent>
           {tugasan.map((t) => {
-            const opsi = (reviewers || []).filter((u) => u.id !== t.pengusulId)
+            const opsi = kandidat?.[t.id] || []
             return (
               <li key={t.id} className="rounded-lg border border-slate-200 px-3 py-3">
                 <p className="text-xs text-slate-500">
@@ -489,13 +501,14 @@ function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
                   id={`fr-${t.id}`}
                   className="input mt-2"
                   value={pilih[t.id] || ''}
-                  disabled={reviewers === null}
+                  disabled={kandidat === null}
                   onChange={(e) => setPilih((p) => ({ ...p, [t.id]: e.target.value }))}
                 >
-                  <option value="">{reviewers === null ? 'Memuat reviewer…' : '-- Pilih reviewer baru --'}</option>
+                  <option value="">{kandidat === null ? 'Memuat reviewer…' : '-- Pilih reviewer baru --'}</option>
                   {opsi.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.fullName || u.name} ({u.email})
+                      {labelKandidat(u)}
+                      {t.rekomendasi?.id === u.id ? ' · rekomendasi' : ''}
                     </option>
                   ))}
                 </select>
@@ -506,6 +519,15 @@ function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
         <div className="flex justify-end gap-2">
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={busy}>
             Batal
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => kirim(true)}
+            disabled={busy}
+            title="Setiap tugasan dialihkan ke reviewer rekomendasi (beban paling ringan)"
+          >
+            Alihkan otomatis
           </button>
           <button type="button" className="btn bg-red-600 text-white hover:bg-red-700" onClick={submit} disabled={!lengkap || busy}>
             {busy ? 'Memproses…' : 'Alihkan & cabut reviewer'}

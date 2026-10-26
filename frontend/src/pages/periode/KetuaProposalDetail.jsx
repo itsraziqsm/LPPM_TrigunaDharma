@@ -3,6 +3,8 @@ import api from '../../api/axios'
 import { openDokumenWithAuth, STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, Modal, OverlayPanel, SectionLabel } from './periodeComponents'
 import { ChevronLeft } from 'lucide-react'
+import BebanReviewer from '../../components/BebanReviewer'
+import { usersApi } from '../../api/users'
 import UserAvatar from '../../components/UserAvatar'
 
 // ─── Ketua Proposal Detail ────────────────────────────────────────────────────
@@ -92,7 +94,8 @@ export default function KetuaProposalDetail({ proposalId, onClose, onBack }) {
         setReviewerError(null)
         setReviewerIds(proposal?.reviewerTugasan?.map(r => r.reviewer?.id) || [])
         try {
-            const res = await api.get('/users', { params: { role: 'reviewer', limit: 100 } })
+            // Urut beban (W-32): reviewer tanpa tugasan aktif di atas.
+            const res = await usersApi.getKandidatReviewer({ itemId: proposalId })
             const terlibatIds = new Set([
                 proposal?.pengusul?.id,
                 ...(proposal?.anggota?.map(a => a.user?.id ?? a.userId) ?? []),
@@ -644,6 +647,7 @@ export default function KetuaProposalDetail({ proposalId, onClose, onBack }) {
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-base font-medium text-slate-900">{r.fullName || r.name}</p>
                                                     <p className="break-all text-sm text-slate-500">{r.email}</p>
+                                                    <p className="mt-1.5"><BebanReviewer kandidat={r} /></p>
                                                 </div>
                                             </label>
                                         )

@@ -15,15 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-41 | Dosen yang diundang membaca seluruh proposal + unduh file (Detail Undangan), anggota tim hanya baca (Detail Kegiatan) | `GET /proposals/:id`, `GET /proposals/:id/dokumen-utama`, lampiran, luaran kini terbuka untuk dosen `pending`; `GET /dosen/proposals/invitations/:id` + `aksesPenuh` & `proposal.dokumenUtama`; aksi tulis anggota → 403 (`new-api.md` bagian 27) | Detail Undangan: bila `aksesPenuh`, tampilkan lengkap + tombol unduh (blob), hapus `ApiPending` W-35 untuk dosen. Detail Kegiatan: sembunyikan aksi tulis untuk non-pengusul. |
-| W-40 | Aturan tim terbaru di wizard Usulan (`utils/aturanTim.js`, panel `KomposisiTim`) | Backend (submit): penelitian dosen 0–5 + mahasiswa ≥1; pengabdian dosen 1–5 + mahasiswa ≥1, mahasiswa tanpa batas maksimal; gagal → 400 (`new-api.md` bagian 18) | Ganti `ATURAN_TIM` menjadi `penelitian: { dosen: {min:0,max:5}, mahasiswa: {min:1} }`, `pengabdian: { dosen: {min:1,max:5}, mahasiswa: {min:1} }` (sekarang pengabdian tepat 2+1, penelitian min. 2 dosen). |
-| W-39 | Rumpun Ilmu bidang komputer: dropdown Usulan (otomatis) + **dropdown Rumpun Ilmu di Isi Laporan** (sekarang baca saja) | `GET /master/rumpun-ilmu` (kini hanya bidang komputer); `PATCH /laporan/:id` menerima `rumpunIlmu`; nilai di luar daftar → 400 (`new-api.md` bagian 26) | Nilai awal dropdown laporan = `laporan.rumpunIlmu` (disalin dari proposal); ikut Simpan draf. |
-| W-38 | Luaran prioritas **jurnal & poster** di editor Target Luaran (Usulan) + halaman admin **Luaran Dosen** (lihat & unduh) | Dosen: `GET /luaran/jenis` (jenis + `prioritas`, jenis baru `poster`), `GET /master/luaran` (prioritas di atas, field `prioritas`), `/luaran/stats` + key `poster`. Admin: `GET /luaran` (filter + paginasi), `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip`, `GET /luaran/:id/bukti` (`new-api.md` bagian 25) | Ganti `LUARAN_JENIS` statis dengan `/luaran/jenis`; badge "Prioritas". Unduh CSV/ZIP/bukti = blob (perlu token). Menu admin baru wajib punya `icon`. |
-| W-37 | Peran baru **Ketua STMIK** (`ketua_stmik`): menu, dashboard & halaman Pemantauan Proposal (daftar dosen pengusul, status/tahapan, anggaran), hanya baca | `GET /monitoring/ringkasan`, `GET /monitoring/proposals`, `GET /monitoring/dosen` (filter `periodeId`, `tahun`, `jenis`, `search`, `termasukDraft`); juga baca `GET /proposals[/:id]`, `GET /laporan[/:id]`, `GET /dashboard/stats`, `GET /export/proposals` (`new-api.md` bagian 24) | `DashboardLayout`/`Sidebar` memilih dari `roles[0]`: tambahkan cabang `ketua_stmik` + label peran. Akun uji `ketuastmik@email.com` / `ketuastmik123` (`go run ./cmd/seed-email`). |
-| W-34 | Hapus proposal/laporan yang sudah diajukan oleh Admin dengan izin Ketua (`components/HapusDokumen.jsx`, Dokumen Masuk) | Admin: `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`, `GET .../deletion-request` (permintaan menunggu); Ketua: `GET /dokumen/deletion-request?status=pending`, `POST /dokumen/deletion-request/:requestId/approve` `{ password }` & `/cancel` `{ catatan? }` (`new-api.md` bagian 23) | Prefix approve/cancel = `/dokumen/deletion-request` (sesuai usulan). Status baru 400/403/404/409/422 (bukan 500). Menghapus proposal ikut menghapus laporannya. |
-| W-35 | Detail undangan yang belum diterima (`UndanganDetailPage.jsx`): abstrak, info lengkap, tim | `GET /dosen/proposals/invitations/:id` → undangan + `proposal` (tanpa `dokumenUrl`, `catatanRevisi`, reviewer, kontak anggota) + `targetLuaran` (`new-api.md` bagian 22) | Hanya penerima undangan; lainnya 404. |
-| W-36 | Template proposal yang bisa diganti admin: tautan "Unduh template proposal" di wizard Usulan + halaman admin kelola template | Publik: `GET /template-proposal/aktif?jenis=`, `GET /template-proposal/aktif/unduh?jenis=`; admin: `GET/POST /template-proposal`, `GET /:id/unduh`, `PATCH /:id/aktifkan`, `DELETE /:id` (`new-api.md` bagian 21) | Tautan Usulan: `API_BASE_URL + '/template-proposal/aktif/unduh?jenis=' + jenis`, cadangan file statis bila `/aktif` mengembalikan `data: null`. Admin: menu baru (perlu `icon`). |
-| W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
+| — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
 
@@ -51,6 +43,14 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 | W-27 / W-28 | Isi Laporan → Informasi Laporan: **Kata Kunci** (koma → array `kataKunci`, wajib ≥1, terpisah dari proposal) & **Metode Penelitian** (`metodePenelitian`, khusus penelitian, wajib); ikut Simpan draf, Preview, index laporan, Laporan Masuk, review laporan |
 | W-30 / W-31 | Manajemen User → **Penugasan Review** (`ReviewerAccess`): status (`GET /users/:id/reviewer`: tugasan belum selesai, review selesai), Jadikan/Cabut reviewer untuk Admin & Ketua (`PATCH /users/:id/reviewer`), **Cabut paksa** khusus Ketua (`POST /users/:id/reviewer/force-revoke`, pilih reviewer baru per tugasan; Admin hanya diberi tahu). Menu Penugasan Review = peran `reviewer` saja (`canReview`) |
 | W-33 | Periode (`PeriodePage.jsx`): Admin hanya melihat (Tambah/Ubah disembunyikan; Hapus = "Ajukan ke Ketua LPPM" `POST /periode/:id/deletion-request`, lalu pantau/batalkan); Ketua tambah/ubah, **hapus langsung** `DELETE /periode/:id { password }` (`periodeApi.remove`) dan menyetujui/menolak permintaan admin |
+| W-32 | Prioritas reviewer: dialog Tugaskan Reviewer (Proposal Kegiatan, Laporan Kegiatan, panel Periode) memakai `GET /users/kandidat-reviewer?itemId=` (urut beban, lencana `BebanReviewer`); Cabut paksa: opsi per tugasan dari kandidat (`exclude` = dosen dicabut), nilai awal `rekomendasi`, tombol **Alihkan otomatis** (`otomatis: true`) |
+| W-34 | Admin **Ajukan hapus (izin Ketua)** di Dokumen Masuk (`HapusDokumen`: alasan + password, status menunggu + Batalkan); Ketua: kartu **Permintaan hapus dokumen** (`PermintaanHapusDokumen`) di Proposal Kegiatan (semua) & Laporan Kegiatan (laporan) → Setujui & Hapus (password) / Tolak (catatan); notifikasi `refType: DokumenDeletionRequest` → Dokumen Masuk |
+| W-35 / W-41 | Detail Undangan (`/undangan/:id`) dari `GET /dosen/proposals/invitations/:id`: abstrak, info, mitra, target luaran, tim untuk semua status; dokumen utama **tidak ditampilkan** di halaman ini (keputusan UI). Detail Kegiatan untuk anggota sudah baca saja (aksi tulis hanya pengusul) |
+| W-36 | Tautan "Unduh template proposal" di Usulan (`TemplateProposalLink`: `GET /template-proposal/aktif?jenis=`, cadangan file statis); halaman admin **Template Proposal** (`/template-proposal`: unggah, unduh, aktifkan, hapus versi) |
+| W-37 | Peran **Ketua STMIK**: label peran, opsi peran di Manajemen User, menu (Pemantauan Proposal, Rekap Proposal), dashboard (adapter `stmik`, `GET /monitoring/ringkasan` & `/proposals`), halaman **Pemantauan Proposal** (`/pemantauan`: ringkasan, per status, tab Proposal & Dosen pengusul) |
+| W-38 | Jenis luaran dari `GET /luaran/jenis` (+ `poster`, label "(prioritas)") di editor Target Luaran, badge **Prioritas** di capaian luaran; halaman admin **Luaran Dosen** (`/luaran-dosen`: filter, paginasi, unduh bukti, Unduh CSV (`;`) & ZIP) |
+| W-39 | Dropdown **Rumpun Ilmu** di Isi Laporan → Informasi Laporan (`PATCH /laporan/:id` `rumpunIlmu`, nilai tidak aktif tetap tampil) |
+| W-40 | `ATURAN_TIM` baru: penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (panel `KomposisiTim`) |
 
 ## Dashboard Dosen (`frontend/src/pages/dashboard/DosenScreen.jsx`)
 
@@ -176,23 +176,7 @@ Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `l
 
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
-| W-32 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
-
-## Dokumen Masuk — akses Admin (`ProposalPage.jsx`, `LaporanMasukPage.jsx`, `components/HapusDokumen.jsx`)
-
-Admin hanya **melihat & menghapus** di Dokumen Masuk (penugasan reviewer & keputusan oleh Ketua LPPM).
-Backend hanya mengizinkan hapus berstatus `draft`, sedangkan Dokumen Masuk hanya memuat dokumen yang
-sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan penanda `ApiPending` (W-34).
-
-**API W-34 sudah tersedia** (lihat tabel "API sudah tersedia" di atas, `new-api.md` bagian 23).
-
-## Detail Undangan (`frontend/src/pages/UndanganDetailPage.jsx`, route `/undangan/:id`)
-
-Undangan diterima memakai `GET /proposals/:id` (anggota `diterima` boleh membaca). Undangan **menunggu/ditolak**
-ditolak backend (403), jadi hanya ringkasan dari `GET /dosen/proposals/invitations` (judul, jenis, status,
-anggaran, pengusul, periode); Abstrak & Tim diberi `ApiPending`.
-
-**API W-35 sudah tersedia** (lihat tabel "API sudah tersedia" di atas, `new-api.md` bagian 22).
+| W-42 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

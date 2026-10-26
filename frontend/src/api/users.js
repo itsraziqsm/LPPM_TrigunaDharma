@@ -9,7 +9,11 @@ export const usersApi = {
   getReviewerStatus: (id) => api.get(`/users/${id}/reviewer`),
   setReviewer: (id, isReviewer) => api.patch(`/users/${id}/reviewer`, { isReviewer }),
   // Cabut paksa (khusus Ketua LPPM): pengalihan = [{ tugasanId, reviewerBaruId }]
-  forceRevokeReviewer: (id, pengalihan) => api.post(`/users/${id}/reviewer/force-revoke`, { pengalihan }),
+  // otomatis = true → tugasan yang tidak ada di pengalihan diisi reviewer rekomendasi (W-32)
+  forceRevokeReviewer: (id, pengalihan, otomatis = false) =>
+    api.post(`/users/${id}/reviewer/force-revoke`, otomatis ? { pengalihan, otomatis: true } : { pengalihan }),
+  // Reviewer urut beban (tugasan aktif paling sedikit dulu): { itemId, exclude } → prioritas, sudahDitugaskan (W-32)
+  getKandidatReviewer: (params = {}) => api.get('/users/kandidat-reviewer', { params }),
   deleteUser: (id) => api.delete(`/users/${id}`),
   // Search user by role untuk dropdown (semua authenticated user bisa akses)
   search: (params) => api.get('/users/search', { params }),

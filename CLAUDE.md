@@ -271,7 +271,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal`, `/luaran-dosen` (admin), `/pemantauan` (Ketua STMIK; juga bisa admin/ketua), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
@@ -279,7 +279,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `reviewer`; `hasTugasan` tidak lagi dipakai — backend menolak user tanpa peran reviewer).
   Admin/Ketua mengatur dosen ↔ reviewer di panel detail Manajemen User (`ReviewerAccess`:
   `GET/PATCH /users/:id/reviewer`; masih ada tugasan → Ketua **cabut paksa** lewat
-  `ForceRevokeModal` (`POST .../force-revoke`, pilih reviewer baru per tugasan), Admin diberi tahu;
+  `ForceRevokeModal` (`POST .../force-revoke`, pilih reviewer baru per tugasan dari `GET /users/kandidat-reviewer?itemId=&exclude=`,
+  nilai awal `rekomendasi`, atau **Alihkan otomatis** `otomatis: true`), Admin diberi tahu. Semua dialog Tugaskan Reviewer
+  (Proposal Kegiatan, Laporan Kegiatan, panel Periode) memakai kandidat-reviewer (urut beban) + lencana `components/BebanReviewer.jsx`;
   ubah akun sendiri → roles di store diperbarui). `Sidebar.jsx`
   memakai logika yang sama; ubah keduanya bersamaan.
 - `src/store/authStore.js` (Zustand) — token di `localStorage` (`accessToken`,
@@ -327,18 +329,28 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Kerja Sama (+ Penugasan Review); `/undangan` berjudul "Undangan Kerja Sama" (dosen) / "Undangan Ikut Serta" (mahasiswa), istilah "undangan tim" tidak dipakai lagi.
   `/undangan`: judul lalu satu kartu ringkasan (teks + 3 kotak sejajar Total/Menunggu/Riwayat), tiap kartu undangan punya
   tombol **Lihat kegiatan** di bawah kalimat pengusul → **Detail Undangan** `/undangan/:id` (`UndanganDetailPage.jsx`,
-  konstanta `pages/undanganConst.js`): data dari `GET /dosen/proposals/invitations` (tanpa endpoint detail); undangan
-  diterima → info lengkap `GET /proposals/:id` + "Buka halaman kegiatan"; menunggu/ditolak → ringkasan saja (Abstrak & Tim
-  `ApiPending` W-35, backend 403), Terima/Tolak di kepala. **Dokumen utama tidak ditampilkan** di halaman ini.
+  konstanta `pages/undanganConst.js`): data dari `GET /dosen/proposals/invitations/:id` (`proposalDosenApi.getInvitation`) —
+  abstrak, info kegiatan, mitra, target luaran, tim untuk semua status; Terima/Tolak di kepala, diterima → "Buka halaman
+  kegiatan". **Dokumen utama tidak ditampilkan** di halaman ini walau backend mengirim `dokumenUtama` (keputusan UI).
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
   User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,
-  Cetak Dokumen, Backup Data.
+  Cetak Dokumen, **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi, unduh bukti, Unduh CSV `;` & ZIP),
+  **Template Proposal** (`TemplateProposalPage.jsx`: unggah versi DOCX/PDF per jenis umum/penelitian/pengabdian, unduh,
+  aktifkan, hapus versi riwayat), Backup Data. Unduhan blob lewat `utils/unduhBlob.js` (`simpanBlob`).
+- Menu **Ketua STMIK** (`STMIK_NAV_ITEMS`, peran pertama `ketua_stmik`, hanya baca): Dashboard (adapter
+  `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Pemantauan Proposal**
+  (`PemantauanPage.jsx`, `/pemantauan`: filter periode/jenis/cari/termasuk draft, kartu ringkasan + per status (klik =
+  saring), tab Proposal (`/monitoring/proposals`, urut; baris → Detail Kegiatan baca saja, kembali ke Pemantauan) & Dosen
+  pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Rekap Proposal** (`/cetak-dokumen/rekap-proposal`;
+  `/cetak-dokumen` dialihkan ke sana). Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
 - **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua); Hapus =
   "Ajukan ke Ketua LPPM" (`deletion-request`, pantau/batalkan). **Ketua** di `PeriodePage`: hapus langsung (dialog
   password → `periodeApi.remove` = `DELETE /periode/:id`), permintaan admin yang menunggu → Setujui & Hapus / Tolak; **Dokumen Masuk** lihat &
-  hapus saja (`viewOnly`: tanpa Ubah Status/Tugaskan reviewer/Keputusan; `components/HapusDokumen.jsx` = hapus
-  langsung bila draft, selain itu "Ajukan hapus (izin Ketua)" nonaktif + `ApiPending` W-34).
+  hapus saja (`viewOnly`: tanpa Ubah Status/Tugaskan reviewer/Keputusan; `components/HapusDokumen.jsx` (prop `tipe`, `id`) =
+  hapus langsung bila draft, selain itu **Ajukan hapus (izin Ketua)** → dialog alasan + password (`POST /proposals|laporan/:id/
+  deletion-request`, `api/dokumenHapus.js`), status menunggu + Batalkan). Ketua menyetujui di kartu
+  `components/PermintaanHapusDokumen.jsx` (Proposal Kegiatan: semua; Laporan Kegiatan: laporan) → Setujui & Hapus (password) / Tolak.
 - Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
   `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
   disaring per jenis → pilih project (`?id=`) → Laporan Harian), **Riwayat Project** (`/riwayat-project`,
@@ -362,20 +374,20 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   disetujui/laporan, tugas/petugas (pengusul + anggota)/tanggal (periode)/alamat (mitra atau kampus)
   diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi di `localStorage`
   (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip =
-  ApiPending W-32.
+  ApiPending W-42.
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
   Anggota (dosen & mahasiswa dipisah, `AnggotaSearch fixedRole`) → **Mitra** (nama → field
   `mitra`, wajib; jenis dari `GET /master/jenis-mitra`, alamat, kontak, pernyataan kebutuhan →
   `mitraJenis/Alamat/Kontak/Kebutuhan`) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
-  (item `/luaran`: jenis `LUARAN_JENIS`, target, tanggal target) yang disinkronkan
+  (item `/luaran`: jenis dari `GET /luaran/jenis` (cadangan `LUARAN_JENIS`), **prioritas jurnal & poster** ditandai, target, tanggal target) yang disinkronkan
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
   anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Ketua pengusul (akun yang masuk) tidak bisa menjadi
   anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
-  pengabdian tepat 2 dosen + tepat 1 mahasiswa, penelitian minimal 2 dosen (mahasiswa bebas) — panel
+  penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (sama dengan backend) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
   terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
   semua wajib termasuk Realisasi Anggaran (Link Jurnal/Video = bagian luaran, opsional). Jenis kegiatan tidak bisa diubah (mengikuti
@@ -394,7 +406,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Dokumen & Luaran (file/URL, capaian luaran) → Preview; Simpan draf di tengah, Simpan → kembali
   ke index; Link Jurnal/Video = `buktiUrl` item luaran jurnal/prosiding & media_massa lewat
   `PATCH /luaran/:id/capaian`; Kata Kunci laporan (`kataKunci`, terpisah dari proposal) & Metode
-  Penelitian (`metodePenelitian`, khusus penelitian) wajib di Informasi Laporan; helper
+  Penelitian (`metodePenelitian`, khusus penelitian) wajib di Informasi Laporan; Rumpun Ilmu laporan (dropdown master, terpisah dari proposal) juga di Informasi Laporan; helper
   `src/utils/kataKunci.js` dipakai bersama Usulan), Ketua/Admin di `LaporanMasukPage.jsx`
   (menu "Laporan Masuk"/"Laporan Kegiatan", logika Dokumen Masuk di atas;
   laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
@@ -472,7 +484,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
 - `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
-  `templates/` (`template-proposal.docx`), `legacy/` (sprite Vite, hanya `App.jsx`).
+  `templates/` (`template-proposal.docx`, cadangan bila server belum punya template aktif — tautan Usulan = `components/TemplateProposalLink.jsx`), `legacy/` (sprite Vite, hanya `App.jsx`).
 - Logo: `src/components/LogoLppm.jsx` (`public/brand/logo-lppm.webp`, lencana resmi LPPM STMIK Triguna
   Dharma, juga favicon) dipakai di sidebar, Login/Register, halaman galat, verifikasi email.
 - Ikon: **`lucide-react`** (paket npm, bukan CDN), mis. `import { Plus } from 'lucide-react'`;
