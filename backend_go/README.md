@@ -150,7 +150,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 599 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 626 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -211,7 +211,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 15. Periode: admin hanya melihat; tambah/ubah hanya Ketua; Ketua hapus langsung (`DELETE
     /periode/:id` + password sendiri, baru); admin hapus lewat permintaan yang disetujui Ketua
     (Node: admin ↔ ketua saling menyetujui). Lihat `new-api.md` bagian 20.
-16. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+16. Template proposal `/api/v1/template-proposal` (baru): admin mengunggah/mengaktifkan/menghapus
+    versi (DOCX/PDF, per jenis atau umum, blob di tabel `TemplateProposal`); template aktif & unduhannya
+    publik. Lihat `new-api.md` bagian 21.
+17. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

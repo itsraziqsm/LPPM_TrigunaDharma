@@ -24,6 +24,7 @@ API, dikelompokkan per rilis:
 - **Bagian 18** — Aturan komposisi tim saat proposal diajukan (penelitian / pengabdian).
 - **Bagian 19** — Backup database: otomatis bulanan oleh sistem, manual oleh admin, log + unduh + hapus.
 - **Bagian 20** — Hak akses periode: admin hanya melihat, Ketua tambah/ubah/hapus langsung, admin hapus lewat verifikasi Ketua.
+- **Bagian 21** — Template proposal yang bisa diganti admin (unggah versi baru per tahun, riwayat, unduh publik).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1699,3 +1700,84 @@ mendapat notifikasi `deletion_request` → Ketua `POST /periode/deletion-request
 - Ketua: tombol Hapus → dialog password → `DELETE /periode/:id` (perlu fungsi baru di
   `src/api/periode.js`, mis. `remove: (id, password) => api.delete(`/periode/${id}`, { data: { password } })`);
   daftar permintaan dari admin tetap bisa disetujui/dibatalkan.
+
+---
+
+## 21. Template proposal (diganti admin)
+
+Template yang diunduh dosen di wizard Usulan ("Unduh template proposal") kini disimpan di
+server dan bisa diganti admin tiap tahun tanpa deploy ulang frontend. Setiap unggahan menjadi
+**versi baru yang langsung aktif**; versi lama tetap tersimpan sebagai riwayat dan bisa diaktifkan
+lagi.
+
+- **Jenis**: `penelitian`, `pengabdian`, atau `umum`. Saat dosen meminta template jenis tertentu,
+  backend memberi template aktif jenis itu; bila tidak ada, template aktif `umum`.
+- **File**: DOCX atau PDF, maks 10 MB (dicek juga isi file-nya), disimpan di database.
+- Satu template aktif per jenis.
+
+| Method | Endpoint | Akses | Fungsi |
+|---|---|---|---|
+| GET | `/api/v1/template-proposal/aktif?jenis=penelitian` | **publik** (tanpa token) | Info template aktif; `data: null` bila belum ada |
+| GET | `/api/v1/template-proposal/aktif/unduh?jenis=penelitian` | **publik** | Unduh file template aktif (`attachment`); 404 bila belum ada |
+| GET | `/api/v1/template-proposal` (`?jenis=`) | admin | Semua versi (aktif di atas per jenis) |
+| POST | `/api/v1/template-proposal` | admin | Unggah versi baru (multipart) → langsung aktif |
+| GET | `/api/v1/template-proposal/:id/unduh` | admin | Unduh versi mana pun |
+| PATCH | `/api/v1/template-proposal/:id/aktifkan` | admin | Jadikan versi ini aktif untuk jenisnya |
+| DELETE | `/api/v1/template-proposal/:id` | admin | Hapus versi riwayat (yang aktif tidak bisa → 409) |
+
+`jenis` di endpoint publik opsional (default `umum`); nilai lain → 422.
+
+### Unggah (admin)
+
+`POST /api/v1/template-proposal`, `multipart/form-data`:
+
+| Field | Wajib | Isi |
+|---|---|---|
+| `file` | ya | DOCX/PDF, maks 10 MB |
+| `jenis` | tidak | `umum` (default) / `penelitian` / `pengabdian` |
+| `tahun` | tidak | 2000–2100, mis. `2027` (hanya label) |
+| `keterangan` | tidak | maks 191 karakter, mis. "Template penelitian 2027" |
+
+→ **201** `"Template proposal berhasil diunggah dan diaktifkan"`:
+
+```json
+{
+  "id": 5,
+  "jenis": "penelitian",
+  "tahun": 2027,
+  "keterangan": "Template penelitian 2027",
+  "namaFile": "Template Penelitian 2027.docx",
+  "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "ukuran": 48213,
+  "isAktif": true,
+  "unduhUrl": "/template-proposal/5/unduh",
+  "diunggahOleh": { "id": 1, "name": "Admin LPPM", "fullName": null },
+  "createdAt": "2026-10-26T04:10:12.345Z",
+  "updatedAt": "2026-10-26T04:10:12.345Z"
+}
+```
+
+| Error | Status | Pesan |
+|---|---|---|
+| tanpa file | 400 | `File template tidak ditemukan dalam request (field \`file\`).` |
+| bukan DOCX/PDF | 400 | `Template harus berupa file DOCX atau PDF.` |
+| isi file palsu | 400 | `Isi file bukan DOCX atau PDF yang valid.` |
+| > 10 MB | 400 | `Ukuran template maksimal 10 MB.` |
+| `jenis`/`tahun`/`keterangan` salah | 422 | `{ "errors": { "jenis": ["..."], "tahun": ["..."] } }` |
+
+`unduhUrl` relatif ke base URL API (seperti `fotoUrl`): `API_BASE_URL + unduhUrl`.
+Pada endpoint publik `/aktif`, `unduhUrl` = `/template-proposal/aktif/unduh?jenis=<jenis>&v=<id>`
+(`v` berganti saat template diganti, jadi tidak tertahan cache peramban).
+
+### Untuk frontend
+
+- **Wizard Usulan** (`UsulanPage.jsx`): ganti tautan statis `/templates/template-proposal.docx` menjadi
+  `API_BASE_URL + '/template-proposal/aktif/unduh?jenis=' + jenis` (bisa langsung `<a href>` karena
+  publik). Agar aman bila admin belum mengunggah apa pun: panggil `GET /template-proposal/aktif?jenis=`
+  dulu; bila `data` `null`, pakai file statis lama sebagai cadangan. Nama & tahun template bisa
+  ditampilkan dari `namaFile`/`tahun`/`keterangan`.
+- **Admin** (halaman baru, mis. menu "Template Proposal"): tabel `GET /template-proposal` per jenis
+  (badge Aktif, tahun, keterangan, ukuran, pengunggah, tanggal), tombol **Unggah template baru**
+  (form multipart di atas), **Unduh** (`GET /:id/unduh` sebagai blob, perlu token), **Aktifkan**
+  (`PATCH /:id/aktifkan`, untuk versi lama), **Hapus** (`DELETE /:id`, nonaktif untuk yang aktif).
+- Unggah, aktifkan, dan hapus dicatat di log aktivitas (`template.upload|aktifkan|delete`).

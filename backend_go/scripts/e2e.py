@@ -949,5 +949,47 @@ expect("backup download deleted", req("GET", f"/api/v1/backup/{bk}/download", ad
 expect("backup delete again", req("DELETE", f"/api/v1/backup/{bk}", admin), 409, "File backup sudah dihapus")
 check("backup activity", any(x["action"] == "backup.manual" for x in req("GET", "/api/v1/activity-logs/my?limit=20", admin)[1]["data"]))
 
+# ── template proposal (admin mengganti, dosen mengunduh tanpa token) ──
+def up_template(token, fields, file):
+    raw, ct = multipart(fields, file)
+    return req("POST", "/api/v1/template-proposal", token, raw=raw, ctype=ct)
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+TPL_KEYS = ["id", "jenis", "tahun", "keterangan", "namaFile", "mime", "ukuran", "isAktif", "unduhUrl", "diunggahOleh", "createdAt", "updatedAt"]
+expect("template upload dosen forbidden", up_template(dosen1, {"jenis": "penelitian"}, ("file", "t.docx", DOCX_MIME, DOCX)), 403)
+expect("template upload ketua forbidden", up_template(ketua, {"jenis": "penelitian"}, ("file", "t.docx", DOCX_MIME, DOCX)), 403)
+expect("template upload no file", up_template(admin, {"jenis": "penelitian"}, None), 400, "File template tidak ditemukan dalam request (field `file`).")
+expect("template upload bad type", up_template(admin, {}, ("file", "t.txt", "text/plain", b"halo")), 400, "Template harus berupa file DOCX atau PDF.")
+expect("template upload fake docx", up_template(admin, {}, ("file", "t.docx", DOCX_MIME, b"bukan docx")), 400, "Isi file bukan DOCX atau PDF yang valid.")
+b = expect("template upload bad jenis", up_template(admin, {"jenis": "x", "tahun": "1990"}, ("file", "t.docx", DOCX_MIME, DOCX)), 422)
+check("template 422 fields", set(b["errors"].keys()) == {"jenis", "tahun"}, b)
+b = expect("template upload", up_template(admin, {"jenis": "penelitian", "tahun": "2027", "keterangan": "Template penelitian 2027"}, ("file", "Template Penelitian 2027.docx", DOCX_MIME, DOCX)), 201, "Template proposal berhasil diunggah dan diaktifkan")
+t1 = b["data"]
+check("template shape", list(t1.keys()) == TPL_KEYS and t1["isAktif"] is True and t1["jenis"] == "penelitian" and t1["tahun"] == 2027 and t1["mime"] == DOCX_MIME and t1["diunggahOleh"]["id"] == adminUser["id"], t1)
+b = expect("template aktif publik", req("GET", "/api/v1/template-proposal/aktif?jenis=penelitian"), 200, "Template aktif fetched")
+check("template aktif id", b["data"]["id"] == t1["id"] and b["data"]["unduhUrl"] == f"/template-proposal/aktif/unduh?jenis=penelitian&v={t1['id']}", b["data"])
+st, _, hdrs, content = req("GET", "/api/v1/template-proposal/aktif/unduh?jenis=penelitian")
+check("template unduh publik", st == 200 and content == DOCX and hdrs["Content-Type"] == DOCX_MIME and "attachment" in hdrs["Content-Disposition"] and "Template%20Penelitian%202027.docx" in hdrs["Content-Disposition"], (st, dict(hdrs)))
+b = expect("template upload v2", up_template(admin, {"jenis": "penelitian", "tahun": "2028"}, ("file", "template-2028.pdf", "application/pdf", PDF)), 201)
+t2 = b["data"]
+lst = expect("template list", req("GET", "/api/v1/template-proposal?jenis=penelitian", admin), 200, "Template fetched")["data"]
+aktif = [x["id"] for x in lst if x["isAktif"]]
+check("template satu aktif", aktif == [t2["id"]] and any(x["id"] == t1["id"] and not x["isAktif"] for x in lst), lst[:3])
+expect("template list non-admin", req("GET", "/api/v1/template-proposal", dosen1), 403)
+st, _, _, content = req("GET", f"/api/v1/template-proposal/{t1['id']}/unduh", admin)
+check("template unduh versi lama", st == 200 and content == DOCX, st)
+expect("template unduh versi lama non-admin", req("GET", f"/api/v1/template-proposal/{t1['id']}/unduh", dosen1), 403)
+b = expect("template aktifkan lama", req("PATCH", f"/api/v1/template-proposal/{t1['id']}/aktifkan", admin), 200, "Template proposal diaktifkan")
+check("template lama aktif", b["data"]["isAktif"] is True and req("GET", "/api/v1/template-proposal/aktif?jenis=penelitian")[1]["data"]["id"] == t1["id"], b["data"])
+expect("template hapus aktif", req("DELETE", f"/api/v1/template-proposal/{t1['id']}", admin), 409, "Template yang sedang aktif tidak bisa dihapus. Unggah atau aktifkan template lain terlebih dahulu.")
+expect("template hapus riwayat", req("DELETE", f"/api/v1/template-proposal/{t2['id']}", admin), 200, "Template proposal dihapus")
+expect("template hapus missing", req("DELETE", f"/api/v1/template-proposal/{t2['id']}", admin), 404, "Template tidak ditemukan")
+# jenis tanpa template aktif → jatuh ke template umum
+b = expect("template umum", up_template(admin, {}, ("file", "umum.docx", DOCX_MIME, DOCX)), 201)
+tu = b["data"]
+peng = req("GET", "/api/v1/template-proposal/aktif?jenis=pengabdian")[1]["data"]
+check("template fallback umum", tu["jenis"] == "umum" and peng is not None and (peng["jenis"] == "pengabdian" or peng["id"] == tu["id"]), peng)
+expect("template aktif bad jenis", req("GET", "/api/v1/template-proposal/aktif?jenis=x"), 422)
+check("template activity", any(x["action"] == "template.upload" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
+
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)
