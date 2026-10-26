@@ -143,8 +143,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   - Submit lewat `/dosen/proposals/:id/submit` mewajibkan **semua anggota sudah menerima
     undangan** (`ProposalAnggota.statusUndangan`: `pending|diterima|ditolak`).
   - **Komposisi tim** dicek saat submit (kedua route submit, `komposisi_tim.go`; draft bebas), anggota
-    selain ketua pengusul, yang menolak tidak dihitung: penelitian minimal 2 dosen (mahasiswa
-    opsional), pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400.
+    selain ketua pengusul, yang menolak tidak dihitung: penelitian dosen min. 0 maks. 5 + mahasiswa
+    min. 1 (tanpa maks.), pengabdian dosen min. 1 maks. 5 + mahasiswa min. 1 (tanpa maks.); gagal → 400.
   - Menugaskan reviewer hanya untuk status `diajukan`/`review`, dan otomatis set `review`.
   - Field `tahapan` `{kode,label,urutan}` dihitung (tidak disimpan): belum `disetujui` →
     seleksi_usulan(1); disetujui + laporan tidak ada/draft → pelaksanaan(2); laporan

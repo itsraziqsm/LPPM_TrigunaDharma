@@ -8,20 +8,22 @@ import (
 )
 
 // Aturan komposisi tim proposal (anggota SELAIN ketua pengusul), dicek saat proposal diajukan.
-// Draft boleh disimpan dengan tim belum lengkap. Sama dengan frontend utils/aturanTim.js.
+// Draft boleh disimpan dengan tim belum lengkap. maks 0 = tanpa batas.
 //
-//	Pengabdian : minimal 2 dosen dan minimal 1 mahasiswa
-//	Penelitian : minimal 2 dosen, mahasiswa boleh tidak ada
-var minimalTim = map[string]struct{ dosen, mahasiswa int64 }{
-	"pengabdian": {dosen: 2, mahasiswa: 1},
-	"penelitian": {dosen: 2, mahasiswa: 0},
+//	Penelitian : dosen 0–5, mahasiswa minimal 1 (tanpa batas maksimal)
+//	Pengabdian : dosen 1–5, mahasiswa minimal 1 (tanpa batas maksimal)
+type batasTim struct{ min, maks int64 }
+
+var aturanTim = map[string]struct{ dosen, mahasiswa batasTim }{
+	"penelitian": {dosen: batasTim{0, 5}, mahasiswa: batasTim{1, 0}},
+	"pengabdian": {dosen: batasTim{1, 5}, mahasiswa: batasTim{1, 0}},
 }
 
 // checkKomposisiTim → 400 bila tim proposal belum memenuhi aturan. Anggota yang menolak
 // undangan tidak dihitung. Dosen = user berperan dosen; mahasiswa = berperan mahasiswa tanpa
 // peran dosen.
 func (s *Server) checkKomposisiTim(ctx context.Context, p *proposalRow) error {
-	aturan, ok := minimalTim[p.Jenis]
+	aturan, ok := aturanTim[p.Jenis]
 	if !ok {
 		return nil
 	}
@@ -35,15 +37,19 @@ func (s *Server) checkKomposisiTim(ctx context.Context, p *proposalRow) error {
 	if err != nil {
 		return err
 	}
-	kurang := []string{}
-	if dosen < aturan.dosen {
-		kurang = append(kurang, fmt.Sprintf("minimal %d anggota dosen (sekarang %d)", aturan.dosen, dosen))
+	salah := []string{}
+	cek := func(label string, n int64, b batasTim) {
+		switch {
+		case n < b.min:
+			salah = append(salah, fmt.Sprintf("minimal %d anggota %s (sekarang %d)", b.min, label, n))
+		case b.maks > 0 && n > b.maks:
+			salah = append(salah, fmt.Sprintf("maksimal %d anggota %s (sekarang %d)", b.maks, label, n))
+		}
 	}
-	if mahasiswa < aturan.mahasiswa {
-		kurang = append(kurang, fmt.Sprintf("minimal %d anggota mahasiswa (sekarang %d)", aturan.mahasiswa, mahasiswa))
-	}
-	if len(kurang) > 0 {
-		return httpError(http.StatusBadRequest, "Proposal "+p.Jenis+" belum dapat diajukan: tim wajib memiliki "+strings.Join(kurang, " dan ")+", selain ketua pengusul.")
+	cek("dosen", dosen, aturan.dosen)
+	cek("mahasiswa", mahasiswa, aturan.mahasiswa)
+	if len(salah) > 0 {
+		return httpError(http.StatusBadRequest, "Proposal "+p.Jenis+" belum dapat diajukan: tim wajib memiliki "+strings.Join(salah, " dan ")+", selain ketua pengusul.")
 	}
 	return nil
 }

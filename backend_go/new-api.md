@@ -1531,31 +1531,41 @@ Frontend saat ini tidak menampilkan fitur usulan untuk mahasiswa (menu mahasiswa
 
 ## 18. Aturan komposisi tim proposal
 
+> **Diperbarui** (ketentuan anggota terbaru): batas minimal **dan maksimal** per jenis.
+
 Dicek saat proposal **diajukan** (`POST /dosen/proposals/:id/submit` dan `POST /proposals/:id/submit`).
 Menyimpan draft (POST/PATCH) tetap boleh dengan tim belum lengkap.
 
 | Jenis | Anggota dosen | Anggota mahasiswa |
 |---|---|---|
-| `penelitian` | minimal 2 | boleh 0 |
-| `pengabdian` | minimal 2 | minimal 1 |
+| `penelitian` | min. 0, maks. 5 | min. 1, tanpa batas maksimal |
+| `pengabdian` | min. 1, maks. 5 | min. 1, tanpa batas maksimal |
 
 - Hitungan **tidak termasuk ketua pengusul** (sama dengan keterangan "selain ketua pengusul" di wizard).
 - Dosen = user berperan `dosen`; mahasiswa = user berperan `mahasiswa` tanpa peran `dosen`.
-- Anggota yang **menolak** undangan tidak dihitung. Di `/dosen/proposals/:id/submit` cek undangan
-  (semua harus `diterima`, respons 500 lama) berjalan lebih dulu, baru cek komposisi.
-- Tidak ada batas maksimum dari backend.
+- Anggota yang **menolak** undangan tidak dihitung (yang masih `pending` dihitung). Di
+  `/dosen/proposals/:id/submit` cek undangan (semua harus `diterima`, respons 500 lama) berjalan lebih
+  dulu, baru cek komposisi.
 
-Gagal → **400**:
+Gagal → **400**, pesan menyebut semua yang tidak sesuai:
 
 ```json
-{ "success": false, "message": "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 1) dan minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul." }
+{ "success": false, "message": "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 1 anggota dosen (sekarang 0) dan minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul." }
 ```
 
-Penelitian yang hanya kurang dosen: `"Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 2 anggota dosen (sekarang 0), selain ketua pengusul."`
+Contoh lain:
 
-Catatan FE: `utils/aturanTim.js` saat ini mewajibkan pengabdian **tepat** 2 dosen dan **tepat** 1
-mahasiswa; backend memakai **minimal** (sesuai ketentuan terbaru), jadi FE boleh melonggarkan batas
-maksimumnya.
+- `"Proposal penelitian belum dapat diajukan: tim wajib memiliki minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul."`
+- `"Proposal penelitian belum dapat diajukan: tim wajib memiliki maksimal 5 anggota dosen (sekarang 6), selain ketua pengusul."`
+
+Catatan FE: samakan `src/utils/aturanTim.js` dengan tabel di atas:
+
+```js
+export const ATURAN_TIM = {
+  penelitian: { dosen: { min: 0, max: 5 }, mahasiswa: { min: 1 } },
+  pengabdian: { dosen: { min: 1, max: 5 }, mahasiswa: { min: 1 } },
+}
+```
 
 ---
 

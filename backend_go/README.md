@@ -212,8 +212,8 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 12. Mahasiswa tidak lagi bisa menulis proposal, laporan (kegiatan maupun kemajuan/akhir),
     dokumen lampiran, dan luaran (`403`); tetap bisa undangan tim, `as-member`, membaca proposal
     tempat ia anggota, dan laporan harian. Lihat `new-api.md` bagian 17.
-13. Submit proposal mewajibkan komposisi tim (selain ketua): penelitian minimal 2 dosen,
-    pengabdian minimal 2 dosen + 1 mahasiswa; gagal → 400. Lihat `new-api.md` bagian 18.
+13. Submit proposal mewajibkan komposisi tim (selain ketua): penelitian dosen 0–5 + mahasiswa ≥1,
+    pengabdian dosen 1–5 + mahasiswa ≥1; gagal → 400. Lihat `new-api.md` bagian 18.
 14. Backup database `/api/v1/backup` (admin, baru): otomatis sebulan sekali + manual, log,
     unduh, hapus. Lihat bagian "Backup database" di bawah dan `new-api.md` bagian 19.
 15. Periode: admin hanya melihat; tambah/ubah hanya Ketua; Ketua hapus langsung (`DELETE
