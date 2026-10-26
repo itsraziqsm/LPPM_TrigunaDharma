@@ -60,7 +60,7 @@ const laporanAccessDenied = "Anda tidak memiliki akses ke laporan ini"
 
 func (s *Server) registerLaporanKegiatanRoutes() {
 	g := s.group("/api/v1/laporan", s.authenticate)
-	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(laporanListQuerySchema), s.listLaporanKegiatan)
+	g.get("/", authorize("admin", "ketua_lppm", "ketua_stmik"), s.validateQuery(laporanListQuerySchema), s.listLaporanKegiatan)
 	g.get("/my", authorize("dosen"), s.validateQuery(laporanListQuerySchema), s.myLaporanKegiatan)
 	g.get("/eligible", authorize("dosen"), s.eligibleLaporanProposals)
 	g.get("/tugasan", s.requireReviewerRole, s.validateQuery(reviewerPaginationSchema), s.myLaporanTugasan)
@@ -145,7 +145,7 @@ func (s *Server) ensureLaporanAccess(ctx context.Context, l *laporanRow, user *t
 	if level == accessWrite {
 		return denied
 	}
-	if hasAnyRole(user.Roles, "admin", "ketua_lppm") {
+	if hasAnyRole(user.Roles, "admin", "ketua_lppm", "ketua_stmik") {
 		return nil
 	}
 	n, err := countRows(ctx, s.db,

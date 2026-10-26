@@ -1054,5 +1054,57 @@ check("permintaan laporan ikut selesai", lr["status"] == "approved" and lr["kegi
 check("pengusul notif dihapus", any(x["type"] == "deletion_approved" and x["refId"] == hr2["id"] for x in req("GET", "/api/v1/notifications", dosen5)[1]["data"]))
 check("notif lama proposal dibersihkan", not any(x.get("refType") == "proposal" and x["refId"] == hp for x in req("GET", "/api/v1/notifications?limit=100", dosen5)[1]["data"]))
 
+# ── Ketua STMIK: memantau seluruh proposal (hanya baca) ──
+em = f"stmik{uuid.uuid4().hex[:6]}@lppm.dev"
+sid = req("POST", "/api/v1/auth/register/dosen", body={"email": em, "name": "Ketua STMIK Uji", "password": "password123", "nidn": "56" + uuid.uuid4().hex[:8]})[1]["data"]["id"]
+expect("stmik approve", req("PATCH", f"/api/v1/users/{sid}/status", admin, {"status": "approved"}), 200)
+b = expect("stmik set role", req("PATCH", f"/api/v1/users/{sid}/roles", admin, {"roles": ["ketua_stmik"]}), 200, "Roles assigned")
+check("stmik role", [r["role"]["name"] for r in b["data"]["roles"]] == ["ketua_stmik"], b["data"]["roles"])
+stmik, _, stmikUser = login(em, "password123")
+check("stmik me roles", stmikUser["roles"] == ["ketua_stmik"], stmikUser)
+expect("stmik ketua tidak bisa beri role", req("PATCH", f"/api/v1/users/{sid}/roles", ketua, {"roles": ["ketua_stmik"]}), 403)
+expect("stmik users list forbidden", req("GET", "/api/v1/users", stmik), 403)
+b = expect("stmik proposals list", req("GET", "/api/v1/proposals?limit=5", stmik), 200, "Proposals fetched")
+anyPid = b["data"][0]["id"]
+expect("stmik proposal detail", req("GET", f"/api/v1/proposals/{anyPid}", stmik), 200)
+expect("stmik proposal reviews", req("GET", f"/api/v1/proposals/{anyPid}/reviews", stmik), 200)
+expect("stmik laporan list", req("GET", "/api/v1/laporan?limit=5", stmik), 200)
+anyLap = req("GET", "/api/v1/laporan?limit=1", admin)[1]["data"]
+if anyLap:
+    expect("stmik laporan detail", req("GET", f"/api/v1/laporan/{anyLap[0]['id']}", stmik), 200)
+    expect("stmik laporan status forbidden", req("PATCH", f"/api/v1/laporan/{anyLap[0]['id']}/status", stmik, {"status": "revisi"}), 403)
+expect("stmik dashboard stats", req("GET", "/api/v1/dashboard/stats", stmik), 200)
+expect("stmik export", req("GET", "/api/v1/export/proposals", stmik), 200)
+expect("stmik ubah status forbidden", req("PATCH", f"/api/v1/proposals/{anyPid}/status", stmik, {"status": "revisi"}), 403)
+expect("stmik tugaskan forbidden", req("POST", f"/api/v1/proposals/{anyPid}/reviewers", stmik, {"reviewerIds": [rev1User["id"]]}), 403)
+expect("stmik hapus forbidden", req("DELETE", f"/api/v1/proposals/{anyPid}", stmik), 403)
+expect("stmik edit forbidden", req("PATCH", f"/api/v1/proposals/{anyPid}", stmik, {"judul": "Diubah STMIK"}), 403)
+expect("stmik periode create forbidden", req("POST", "/api/v1/periode", stmik, PERIODE_BARU), 403)
+# pemantauan
+expect("monitoring dosen forbidden", req("GET", "/api/v1/monitoring/ringkasan", dosen1), 403)
+expect("monitoring mhs forbidden", req("GET", "/api/v1/monitoring/proposals", mhs1), 403)
+b = expect("monitoring ringkasan", req("GET", "/api/v1/monitoring/ringkasan", stmik), 200, "Ringkasan pemantauan fetched")
+rk = b["data"]
+check("monitoring ringkasan shape", list(rk.keys()) == ["jumlahProposal", "jumlahDosenPengusul", "totalAnggaran", "anggaranDisetujui", "perStatus", "perJenis"] and list(rk["perStatus"].keys()) == ["diajukan", "review", "revisi", "disetujui", "ditolak"] and list(rk["perJenis"].keys()) == ["penelitian", "pengabdian"] and isinstance(rk["totalAnggaran"], str), rk)
+check("monitoring ringkasan konsisten", rk["jumlahProposal"] == sum(rk["perStatus"].values()) == sum(v["jumlah"] for v in rk["perJenis"].values()), rk)
+b = expect("monitoring ringkasan draft", req("GET", "/api/v1/monitoring/ringkasan?termasukDraft=true", admin), 200)
+check("monitoring draft ikut", "draft" in b["data"]["perStatus"] and b["data"]["jumlahProposal"] >= rk["jumlahProposal"], b["data"]["perStatus"])
+b = expect("monitoring proposals", req("GET", "/api/v1/monitoring/proposals?limit=5&urut=anggaran", stmik), 200, "Proposal pemantauan fetched")
+check("monitoring proposals total", b["meta"]["total"] == rk["jumlahProposal"] and b["meta"]["limit"] == 5, b["meta"])
+mp0 = b["data"][0]
+check("monitoring proposal shape", list(mp0.keys()) == ["id", "judul", "jenis", "status", "tahapan", "anggaran", "submittedAt", "approvedAt", "createdAt", "updatedAt", "pengusul", "periode", "jumlahAnggota", "laporan"] and mp0["status"] != "draft" and list(mp0["pengusul"].keys()) == ["id", "name", "fullName", "nidn", "programStudi"], mp0)
+angg = [float(x["anggaran"]) for x in b["data"] if x["anggaran"] is not None]
+check("monitoring urut anggaran", angg == sorted(angg, reverse=True), angg)
+b = expect("monitoring proposals filter", req("GET", "/api/v1/monitoring/proposals?status=disetujui&jenis=penelitian&limit=100", stmik), 200)
+check("monitoring filter isi", all(x["status"] == "disetujui" and x["jenis"] == "penelitian" for x in b["data"]) and b["meta"]["total"] <= rk["perStatus"]["disetujui"], b["meta"])
+expect("monitoring filter salah", req("GET", "/api/v1/monitoring/proposals?status=x", stmik), 422)
+b = expect("monitoring dosen", req("GET", "/api/v1/monitoring/dosen?limit=100", stmik), 200, "Dosen pengusul fetched")
+check("monitoring dosen total", b["meta"]["total"] == rk["jumlahDosenPengusul"], (b["meta"], rk["jumlahDosenPengusul"]))
+d0 = b["data"][0]
+check("monitoring dosen shape", list(d0.keys()) == ["dosen", "jumlahProposal", "perJenis", "perStatus", "totalAnggaran", "anggaranDisetujui", "terakhirDiajukanAt"] and d0["jumlahProposal"] == sum(d0["perStatus"].values()) and "email" in d0["dosen"], d0)
+check("monitoring dosen1 ada", any(x["dosen"]["id"] == dosen1User["id"] for x in b["data"]), [x["dosen"]["id"] for x in b["data"]][:10])
+b = expect("monitoring dosen cari", req("GET", "/api/v1/monitoring/dosen?search=Dosen%201", ketua), 200)
+check("monitoring dosen cari isi", b["meta"]["total"] >= 1 and any(x["dosen"]["id"] == dosen1User["id"] for x in b["data"]), b["data"][:3])
+
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

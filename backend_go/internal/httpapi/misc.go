@@ -25,7 +25,7 @@ func (s *Server) registerNotificationRoutes() {
 
 func (s *Server) registerDashboardRoutes() {
 	g := s.group("/api/v1/dashboard", s.authenticate)
-	g.get("/stats", authorize("admin", "ketua_lppm"), s.dashboardStats)
+	g.get("/stats", authorize("admin", "ketua_lppm", "ketua_stmik"), s.dashboardStats)
 }
 
 func (s *Server) registerActivityLogRoutes() {
@@ -36,7 +36,7 @@ func (s *Server) registerActivityLogRoutes() {
 
 func (s *Server) registerExportRoutes() {
 	g := s.group("/api/v1/export", s.authenticate)
-	g.get("/proposals", authorize("admin", "ketua_lppm"), s.exportProposals)
+	g.get("/proposals", authorize("admin", "ketua_lppm", "ketua_stmik"), s.exportProposals)
 }
 
 // numberQuery mirrors Number(query.x ?? fallback).

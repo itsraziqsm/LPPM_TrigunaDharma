@@ -90,7 +90,7 @@ func main() {
 
 	fmt.Println("Membuat roles...")
 	roleIDs := map[string]int64{}
-	for _, name := range []string{"admin", "ketua_lppm", "dosen", "reviewer", "mahasiswa"} {
+	for _, name := range []string{"admin", "ketua_lppm", "ketua_stmik", "dosen", "reviewer", "mahasiswa"} {
 		if _, err := db.Exec("INSERT INTO `Role` (`name`,`createdAt`,`updatedAt`) SELECT ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `Role` WHERE `name` = ?)", name, now, now, name); err != nil {
 			log.Fatalf("role %s: %v", name, err)
 		}

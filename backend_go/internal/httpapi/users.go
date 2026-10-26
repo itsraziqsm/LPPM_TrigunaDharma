@@ -14,7 +14,7 @@ import (
 // services/user.service.ts.
 
 var (
-	roleNames   = []string{"admin", "ketua_lppm", "dosen", "reviewer", "mahasiswa"}
+	roleNames   = []string{"admin", "ketua_lppm", "ketua_stmik", "dosen", "reviewer", "mahasiswa"}
 	userStatus  = []string{"pending", "approved", "rejected"}
 	userColumns = "u.`id`,u.`email`,u.`name`,u.`fullName`,u.`status`,u.`nidn`,u.`nim`,u.`prodi`,u.`programStudi`,u.`institusi`,u.`kontak`,u.`noHp`,u.`alamat`,u.`tempatLahir`,u.`tanggalLahir`,u.`createdAt`"
 	// profileColumns: profil milik sendiri (GET/PATCH /users/profile/me) = userColumns +

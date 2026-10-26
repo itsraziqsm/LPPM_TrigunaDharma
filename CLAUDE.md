@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -54,9 +54,10 @@ go run ./cmd/migrate            # terapkan migrasi (-status untuk melihat status
 go run ./cmd/seed               # role + akun demo + periode (opsional)
 go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (status campur; -status=, -dry-run; aman diulang)
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
+go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 667 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 705 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -88,7 +89,11 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
   tidak ada di VIEW).
 
 ### Peran (`Role.name`)
-`admin`, `ketua_lppm` (dulu `ketua_prpm`, sudah dimigrasi), `dosen`, `reviewer`, `mahasiswa`.
+`admin`, `ketua_lppm` (dulu `ketua_prpm`, sudah dimigrasi), `ketua_stmik`, `dosen`, `reviewer`, `mahasiswa`.
+**Ketua STMIK** (`ketua_stmik`, migrasi `20261103000000`): memantau seluruh proposal, **hanya baca** — list/detail
+proposal & laporan (+ review, unduh dokumen), `/dashboard/stats`, `/export/proposals`, dan `/monitoring`
+(ringkasan, proposals, dosen pengusul + status + anggaran); akses baca lewat `ensureProposalAccess`/`ensureLaporanAccess`
+level read. Peran diberikan admin lewat `PATCH /users/:id/roles`.
 User bisa punya banyak peran. Registrasi publik hanya dosen/mahasiswa dengan status
 `pending`; login ditolak sampai admin mengubah status ke `approved` (`pending|approved|rejected`).
 **Mahasiswa tidak mengusulkan proposal**: tugasnya laporan harian; mahasiswa hanya bisa undangan
@@ -128,6 +133,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/activity-logs` | `/my`; list semua (admin, ketua) | |
 | `/export/proposals` | data export | admin, ketua |
 | `/proposals/:id/deletion-request`, `/laporan/:id/deletion-request`, `/dokumen/deletion-request` | admin minta hapus dokumen yang sudah diajukan (`{password, alasan}`, GET = permintaan menunggu); daftar (`?status=&tipe=`); Ketua `/:requestId/approve` (`{password}`, hapus proposal + laporannya) / `/cancel` (admin batal, Ketua tolak) | admin / ketua |
+| `/monitoring` | `/ringkasan`, `/proposals` (`status`, `urut`, paginasi; + `tahapan`, `anggaran`, `laporan`), `/dosen` (dosen pengusul + perStatus/perJenis/anggaran); filter `periodeId`, `tahun`, `jenis`, `search`, `termasukDraft` (bawaan tanpa draft) | ketua_stmik, ketua, admin |
 | `/template-proposal` | `/aktif?jenis=` + `/aktif/unduh?jenis=` (**publik**, jatuh ke `umum`); list, POST multipart (file DOCX/PDF + `jenis`/`tahun`/`keterangan`, langsung aktif), `/:id/unduh`, `/:id/aktifkan`, DELETE `/:id` (aktif → 409) | publik / admin |
 | `/backup` | log (`?sumber=sistem\|admin&status=`), `/jadwal`, POST manual (202, latar; 409 bila ada yang berjalan), `/:id`, `/:id/download` (.sql.gz), DELETE `/:id` (hapus file, log tetap) | admin |
 
@@ -199,7 +205,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   `dibuatOlehId`, status berjalan|berhasil|gagal, `periode` YYYY-MM untuk otomatis, `dihapusAt`).
 
 ### Database (MySQL/MariaDB)
-Tabel: `Role`, `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
+Tabel: `Role` (`name` ENUM admin|ketua_lppm|ketua_stmik|dosen|reviewer|mahasiswa), `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
 `EmailVerificationToken`, `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
 (`kategori` rumpun_ilmu|bidang|luaran|jenis_mitra, `nama` unik per kategori, `jenisKegiatan` NULL = keduanya,
 `jenisLuaran`, `urutan`, `isAktif`), `UserFoto`
@@ -235,7 +241,8 @@ tambah/ubah/hapus langsung, admin hapus lewat persetujuan Ketua.
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,
 `wakil.ketua@lppm.dev/wakil123456` (ketua_lppm+dosen), `reviewerN@lppm.dev/reviewer123`,
 `dosenN@lppm.dev/dosen123456`, `mahasiswaN@lppm.dev/mhs1234567`, plus akun
-`pending.*`/`rejected.*` untuk uji status.
+`pending.*`/`rejected.*` untuk uji status. `cmd/seed-email`: `admin|ketua|ketuastmik|dosen|reviewer|mahasiswa@email.com`
+(password `admin123456`, `ketua123456`, `ketuastmik123`, `dosen123456`, `reviewer123`, `mhs1234567`).
 
 ## Frontend (`frontend/`)
 

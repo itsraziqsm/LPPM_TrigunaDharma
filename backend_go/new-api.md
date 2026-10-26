@@ -27,6 +27,7 @@ API, dikelompokkan per rilis:
 - **Bagian 21** — Template proposal yang bisa diganti admin (unggah versi baru per tahun, riwayat, unduh publik).
 - **Bagian 22** — Detail undangan untuk calon anggota yang belum menerima (W-35).
 - **Bagian 23** — Admin menghapus proposal/laporan yang sudah diajukan dengan izin Ketua (W-34).
+- **Bagian 24** — Peran baru **Ketua STMIK** (`ketua_stmik`) + endpoint pemantauan `/monitoring`.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1897,3 +1898,121 @@ yang membatalkan.
   `GET .../deletion-request` (menunggu → tombol "Batalkan").
 - Ketua: daftar `GET /dokumen/deletion-request?status=pending` (mis. di Dokumen Masuk atau halaman
   notifikasi) dengan Setujui (dialog password) & Tolak (catatan opsional).
+
+---
+
+## 24. Peran Ketua STMIK & pemantauan proposal
+
+Peran baru **`ketua_stmik`** untuk memantau seluruh proposal: dosen yang sudah memasukkan proposal,
+progres/status tiap proposal, dan besaran anggaran. **Hanya baca** — tidak bisa mengubah status,
+menugaskan reviewer, mengelola periode/user, atau mengedit/menghapus dokumen.
+
+- Muncul di `roles` login & `/auth/me` sebagai `"ketua_stmik"`. Admin memberi peran lewat
+  `PATCH /users/:id/roles` (`roles: ["ketua_stmik"]`); filter `GET /users?role=ketua_stmik` juga bisa.
+- Akun contoh: `ketuastmik@email.com` / `ketuastmik123` (dibuat `go run ./cmd/seed-email`, lihat di bawah).
+
+### Endpoint lama yang kini bisa dibaca Ketua STMIK
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /proposals` (filter `periodeId`, `jenis`, `status`, `tahun`, `programStudi`, `search`) | semua proposal |
+| `GET /proposals/:id`, `GET /proposals/:id/reviews`, `GET /proposals/:id/dokumen-utama` | detail, review, unduh dokumen |
+| `GET /laporan`, `GET /laporan/:id`, `GET /laporan/:id/reviews`, `GET /laporan/:id/dokumen` | laporan kegiatan |
+| `GET /dashboard/stats` | statistik yang sama dengan admin/ketua |
+| `GET /export/proposals` | data rekap untuk PDF/Excel |
+| `GET /periode` | (sudah untuk semua user) |
+
+Semua endpoint tulis tetap 403 `"Forbidden: insufficient permissions"`.
+
+### Endpoint pemantauan baru (`/api/v1/monitoring`)
+
+Akses: `ketua_stmik`, `ketua_lppm`, `admin`. Bawaan **hanya proposal yang sudah diajukan** (bukan draft).
+
+Filter bersama (query, semua opsional): `periodeId`, `tahun` (tahun periode), `jenis`
+(`penelitian|pengabdian`), `search` (judul, nama/NIDN pengusul), `termasukDraft=true`. Nilai salah → 422.
+
+#### `GET /monitoring/ringkasan`
+
+```json
+{
+  "jumlahProposal": 42,
+  "jumlahDosenPengusul": 17,
+  "totalAnggaran": "615000000",
+  "anggaranDisetujui": "240000000",
+  "perStatus": { "diajukan": 8, "review": 6, "revisi": 4, "disetujui": 20, "ditolak": 4 },
+  "perJenis": {
+    "penelitian": { "jumlah": 30, "totalAnggaran": "480000000", "anggaranDisetujui": "200000000" },
+    "pengabdian": { "jumlah": 12, "totalAnggaran": "135000000", "anggaranDisetujui": "40000000" }
+  }
+}
+```
+
+Anggaran berupa **string desimal** (sama seperti `anggaran` proposal). `perStatus` memuat `draft` bila
+`termasukDraft=true`.
+
+#### `GET /monitoring/proposals`
+
+Tambahan query: `status`, `urut` (`terbaru` (bawaan) | `anggaran` | `judul` | `pengusul`), `page`, `limit`
+(bawaan 20, maks 100). Respons + `meta {page, limit, total}`:
+
+```json
+{
+  "id": 451,
+  "judul": "Sistem Uji Coba Golang",
+  "jenis": "penelitian",
+  "status": "disetujui",
+  "tahapan": { "kode": "pelaksanaan", "label": "Pelaksanaan Kegiatan", "urutan": 2 },
+  "anggaran": "15000000.5",
+  "submittedAt": "2026-10-25T03:00:00.000Z",
+  "approvedAt": "2026-10-25T03:10:00.000Z",
+  "createdAt": "...",
+  "updatedAt": "...",
+  "pengusul": { "id": 9, "name": "Dosen 1", "fullName": "Dr. Dosen 1, M.T", "nidn": "0100000001", "programStudi": "Teknik Informatika" },
+  "periode": { "id": 5, "nama": "Penelitian Semester Ganjil 2025", "tahun": 2025 },
+  "jumlahAnggota": 3,
+  "laporan": { "id": 470, "status": "draft", "realisasiAnggaran": null }
+}
+```
+
+`tahapan` = progres kegiatan (seleksi usulan → pelaksanaan → seleksi lanjutan → pasca pelaksanaan),
+`laporan` `null` bila belum ada, `jumlahAnggota` = anggota yang sudah menerima undangan.
+
+#### `GET /monitoring/dosen`
+
+Dosen yang sudah memasukkan proposal (sesuai filter), urut jumlah proposal terbanyak. `page`/`limit` +
+`meta` (total = jumlah dosen):
+
+```json
+{
+  "dosen": { "id": 9, "name": "Dosen 1", "fullName": "Dr. Dosen 1, M.T", "email": "dosen1@lppm.dev", "nidn": "0100000001", "programStudi": "Teknik Informatika", "jabatanFungsional": "Lektor" },
+  "jumlahProposal": 3,
+  "perJenis": { "penelitian": 2, "pengabdian": 1 },
+  "perStatus": { "diajukan": 0, "review": 1, "revisi": 0, "disetujui": 2, "ditolak": 0 },
+  "totalAnggaran": "45000000",
+  "anggaranDisetujui": "30000000",
+  "terakhirDiajukanAt": "2026-10-25T03:00:00.000Z"
+}
+```
+
+Untuk melihat proposal satu dosen: `GET /monitoring/proposals?search=<NIDN>` atau `GET /proposals?search=`.
+
+### Akun contoh `@email.com`
+
+`go run ./cmd/seed-email` (setelah `go run ./cmd/migrate`; aman diulang, akun yang sudah ada dilewati):
+
+| Email | Peran | Password |
+|---|---|---|
+| `admin@email.com` | admin | `admin123456` |
+| `ketua@email.com` | ketua_lppm | `ketua123456` |
+| `ketuastmik@email.com` | ketua_stmik | `ketuastmik123` |
+| `dosen@email.com` | dosen | `dosen123456` |
+| `reviewer@email.com` | reviewer | `reviewer123` |
+| `mahasiswa@email.com` | mahasiswa | `mhs1234567` |
+
+### Untuk frontend
+
+`DashboardLayout`/`Sidebar` memilih halaman dari peran pertama: perlu menu & dashboard untuk
+`ketua_stmik` (mis. Dashboard dengan `GET /monitoring/ringkasan`, halaman **Pemantauan Proposal**
+dengan tab Proposal (`/monitoring/proposals`) & Dosen (`/monitoring/dosen`), detail via
+`GET /proposals/:id`, Cetak rekap via `GET /export/proposals`), tanpa tombol aksi tulis. Tambahkan juga
+label peran "Ketua STMIK" di tempat yang menampilkan nama peran.

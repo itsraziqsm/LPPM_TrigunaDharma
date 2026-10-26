@@ -88,6 +88,13 @@ Bila server mati saat jadwal, backup bulan itu dibuat begitu server menyala (dic
 Hanya satu backup berjalan per database (`GET_LOCK`). Log `berjalan` sisa server mati ditandai
 `gagal` saat start. Memulihkan: `gunzip < file.sql.gz | mysql -u <user> -p <database>`.
 
+### Akun contoh @email.com
+
+`go run ./cmd/seed-email` membuat satu akun per peran (aman diulang): `admin@email.com`/`admin123456`,
+`ketua@email.com`/`ketua123456`, `ketuastmik@email.com`/`ketuastmik123`, `dosen@email.com`/`dosen123456`,
+`reviewer@email.com`/`reviewer123`, `mahasiswa@email.com`/`mhs1234567`. Jalankan setelah migrasi; ganti
+password bila dipakai di server sungguhan. Docker: `docker compose exec app /app/seed-email`.
+
 ### Hapus proposal yang pengusulnya mahasiswa
 
 Mahasiswa tidak lagi boleh mengusulkan proposal (tugasnya laporan harian). Untuk membersihkan
@@ -128,6 +135,7 @@ cmd/migrate     runner migrasi (kompatibel _prisma_migrations)
 cmd/seed        seeder role, akun, periode
 cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui
 cmd/hapus-proposal-mahasiswa  hapus proposal yang ketua pengusulnya mahasiswa
+cmd/seed-email    6 akun contoh @email.com, satu per peran (termasuk ketua_stmik)
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
@@ -150,7 +158,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 667 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 705 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -218,7 +226,10 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
     dokumen/kontak. Permintaan hapus dokumen (baru, W-34): admin `POST /proposals|laporan/:id/deletion-request`,
     Ketua `POST /dokumen/deletion-request/:requestId/approve|cancel` (tabel `DokumenDeletionRequest`).
     Lihat `new-api.md` bagian 22–23.
-18. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+18. Peran baru `ketua_stmik` (migrasi `20261103000000_role_ketua_stmik`): baca semua proposal/laporan,
+    dashboard stats, export, dan endpoint pemantauan baru `/api/v1/monitoring` (ringkasan, proposals,
+    dosen); tanpa akses tulis. Lihat `new-api.md` bagian 24.
+19. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

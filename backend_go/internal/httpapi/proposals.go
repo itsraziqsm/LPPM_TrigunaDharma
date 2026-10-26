@@ -66,7 +66,7 @@ var (
 // untuk dosen (+ admin untuk hapus/ubah); mahasiswa cukup laporan harian.
 func (s *Server) registerProposalRoutes() {
 	g := s.group("/api/v1/proposals", s.authenticate)
-	g.get("/", authorize("admin", "ketua_lppm", "reviewer"), s.listProposals)
+	g.get("/", authorize("admin", "ketua_lppm", "ketua_stmik", "reviewer"), s.listProposals)
 	g.get("/my", s.myProposals)
 	g.get("/:id", s.getProposal)
 	g.post("/", authorize("dosen"), validateBody(createProposalSchema), s.createProposal)
@@ -81,7 +81,7 @@ func (s *Server) registerProposalRoutes() {
 
 	g.post("/:proposalId/reviewers", authorize("ketua_lppm", "admin"), validateBody(tugaskanReviewerSchema), s.tugaskanReviewer)
 	g.delete("/:proposalId/reviewers/:reviewerId", authorize("ketua_lppm", "admin"), s.hapusTugasan)
-	g.get("/:proposalId/reviews", authorize("ketua_lppm", "admin", "reviewer"), s.getReviewsByProposal)
+	g.get("/:proposalId/reviews", authorize("ketua_lppm", "ketua_stmik", "admin", "reviewer"), s.getReviewsByProposal)
 	g.post("/:proposalId/reviews", s.requireReviewerRole, validateBody(submitReviewSchema), s.submitReview)
 	g.post("/:proposalId/reviews/finalize", s.requireReviewerRole, s.finalizeReview)
 

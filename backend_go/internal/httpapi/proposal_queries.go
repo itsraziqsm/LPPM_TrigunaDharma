@@ -270,6 +270,10 @@ func (s *Server) ensureProposalAccess(ctx context.Context, proposalID int64, use
 	if hasAnyRole(user.Roles, "admin", "ketua_lppm") {
 		return nil
 	}
+	// Ketua STMIK memantau semua proposal, hanya baca.
+	if level == accessRead && hasAnyRole(user.Roles, "ketua_stmik") {
+		return nil
+	}
 	denied := httpError(http.StatusForbidden, "Anda tidak memiliki akses ke proposal ini")
 	var pengusulID int64
 	err := s.db.QueryRowContext(ctx, "SELECT `pengusulId` FROM `Proposal` WHERE `id` = ?", proposalID).Scan(&pengusulID)
