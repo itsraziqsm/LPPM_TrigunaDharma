@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../api/axios'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { laporanHarianApi } from '../api/laporanHarian'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { ChevronLeft, ChevronRight, CircleCheck, CloudUpload, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, Plus, Search, Trash2, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 
 // ── Konstanta ──────────────────────────────────────────────────────────────
@@ -46,304 +46,6 @@ function Badge({ label, className }) {
     <span className={`badge ${className}`}>
       {label}
     </span>
-  )
-}
-
-function Modal({ title, onClose, children, wide }) {
-  return (
-    <div className="overlay">
-      <section
-        aria-modal="true"
-        role="dialog"
-        aria-label={title}
-        className={`dialog flex max-h-full flex-col ${wide ? 'max-w-4xl' : 'max-w-xl'}`}
-      >
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-6 py-3">
-          <h3 className="line-clamp-2 min-w-0 text-lg font-semibold leading-snug text-navy-950">{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label="Tutup"
-            title="Tutup"
-            className="icon-btn"
-          >
-            <X className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
-          </button>
-        </header>
-        {/* Penggulir tanpa padding agar footer lengket menempel di dasar dialog */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="px-6 py-6">{children}</div>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-// ── Form Laporan Harian ────────────────────────────────────────────────────
-
-function FormLaporan({ proposal, onClose, onSuccess }) {
-  const [form, setForm] = useState({ tanggal: '', kegiatan: '', linkGdrive: '' })
-  const [file, setFile] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const fileRef = useRef()
-
-  const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
-
-  const handleFile = (e) => {
-    const f = e.target.files[0]
-    if (!f) { setFile(null); return }
-    const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    if (!allowed.includes(f.type)) {
-      setError('Hanya file PDF atau DOCX yang diizinkan.')
-      setFile(null)
-      fileRef.current.value = ''
-      return
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      setError('Ukuran file maksimal 10 MB.')
-      setFile(null)
-      fileRef.current.value = ''
-      return
-    }
-    setError('')
-    setFile(f)
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.tanggal || !form.kegiatan.trim()) {
-      setError('Tanggal dan kegiatan wajib diisi.')
-      return
-    }
-    setError('')
-    setLoading(true)
-    try {
-      const fd = new FormData()
-      fd.append('tanggal', form.tanggal)
-      fd.append('kegiatan', form.kegiatan.trim())
-      if (form.linkGdrive.trim()) fd.append('linkGdrive', form.linkGdrive.trim())
-      if (file) fd.append('file', file)
-      await laporanHarianApi.create(proposal.id, fd)
-      onSuccess()
-      onClose()
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Gagal menyimpan laporan.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Modal title={`Input Laporan Harian — ${proposal.judul}`} onClose={onClose} wide>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-700" role="alert">
-            {error}
-          </div>
-        )}
-
-        {/* Layout form dibuat dua tingkat: informasi inti lebih dulu, lampiran sesudahnya */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <section className="card overflow-hidden">
-              <header className="border-b border-slate-200 px-5 py-4">
-                <h4 className="text-base font-semibold text-navy-950">Informasi Kegiatan</h4>
-                <p className="mt-0.5 text-sm leading-relaxed text-slate-500">
-                  Isi tanggal pelaksanaan dan uraian kegiatan harian dengan jelas.
-                </p>
-              </header>
-
-              <div className="space-y-5 px-5 py-5">
-                <div>
-                  <label htmlFor="lh-tanggal" className="label">
-                    Tanggal <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    id="lh-tanggal"
-                    type="date"
-                    name="tanggal"
-                    value={form.tanggal}
-                    onChange={handleChange}
-                    required
-                    className="input"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="lh-kegiatan" className="label">
-                    Kegiatan <span className="text-red-600">*</span>
-                  </label>
-                  <textarea
-                    id="lh-kegiatan"
-                    name="kegiatan"
-                    value={form.kegiatan}
-                    onChange={handleChange}
-                    rows={6}
-                    required
-                    placeholder="Deskripsikan kegiatan yang dilakukan hari ini..."
-                    className="input resize-none leading-relaxed"
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section className="card overflow-hidden">
-              <header className="border-b border-slate-200 px-5 py-4">
-                <h4 className="text-base font-semibold text-navy-950">Dokumentasi Tambahan</h4>
-                <p className="mt-0.5 text-sm leading-relaxed text-slate-500">
-                  Lampirkan dokumen pendukung atau tautan Google Drive bila tersedia.
-                </p>
-              </header>
-
-              <div className="space-y-5 px-5 py-5">
-                <div>
-                  <span className="label">
-                    Upload Laporan Harian (PDF / DOCX)
-                  </span>
-                  <div className="overflow-hidden rounded-xl border border-dashed border-slate-300 bg-slate-50/60 focus-within:border-navy-500 focus-within:ring-4 focus-within:ring-navy-600/15">
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={handleFile}
-                      className="sr-only"
-                      id="file-upload"
-                    />
-
-                    {file ? (
-                      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-green-50 text-green-700">
-                            <CircleCheck className="size-5" strokeWidth={1.8} aria-hidden="true" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-base font-medium text-slate-900">{file.name}</p>
-                            <p className="mt-0.5 text-sm text-slate-500">
-                              Ukuran file: {fmtSize(file.size)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label
-                            htmlFor="file-upload"
-                            className="btn btn-secondary btn-sm cursor-pointer"
-                          >
-                            Ganti File
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => { setFile(null); fileRef.current.value = '' }}
-                            className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50 hover:text-red-800"
-                          >
-                            Hapus File
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label
-                        htmlFor="file-upload"
-                        className="flex cursor-pointer flex-col items-center px-6 py-8 text-center transition-colors hover:bg-navy-50/60"
-                      >
-                        <span className="grid size-11 place-items-center rounded-full bg-navy-50 text-navy-700">
-                          <CloudUpload className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                        </span>
-                        <span className="mt-3 text-base font-semibold text-slate-800">
-                          Pilih dokumen laporan harian
-                        </span>
-                        <span className="mt-1 text-sm text-slate-500">
-                          Klik area ini untuk memilih file dari perangkat Anda.
-                        </span>
-                        <span className="mt-1 text-sm text-slate-400">
-                          Format PDF atau DOCX, ukuran maksimal 10 MB.
-                        </span>
-                        <span className="btn btn-secondary btn-sm mt-4">
-                          Pilih File
-                        </span>
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="lh-link" className="label">
-                    Link Google Drive (Poster / Video)
-                  </label>
-                  <input
-                    id="lh-link"
-                    type="url"
-                    name="linkGdrive"
-                    value={form.linkGdrive}
-                    onChange={handleChange}
-                    placeholder="https://drive.google.com/..."
-                    className="input"
-                  />
-                  <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-                    Opsional, gunakan untuk melampirkan poster atau video pendukung.
-                  </p>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <aside className="space-y-6">
-            <section className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <h4 className="text-base font-semibold text-navy-950">Ringkasan Proposal</h4>
-              <dl className="mt-4 space-y-4">
-                <div>
-                  <dt className="text-sm text-slate-500">Judul Proposal</dt>
-                  <dd className="mt-0.5 text-base leading-relaxed text-slate-900">{proposal.judul}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm text-slate-500">Jenis</dt>
-                  <dd className="mt-0.5 text-base text-slate-900">{JENIS_LABEL[proposal.jenis] || proposal.jenis}</dd>
-                </div>
-                {proposal.pengusul && (
-                  <div>
-                    <dt className="text-sm text-slate-500">Pengusul</dt>
-                    <dd className="mt-0.5 text-base text-slate-900">
-                      {proposal.pengusul.fullName || proposal.pengusul.name}
-                    </dd>
-                  </div>
-                )}
-                {proposal.peran && (
-                  <div>
-                    <dt className="text-sm text-slate-500">Peran Anda</dt>
-                    <dd className="mt-0.5 text-base capitalize text-slate-900">{proposal.peran}</dd>
-                  </div>
-                )}
-              </dl>
-            </section>
-
-            <section className="px-1">
-              <h4 className="text-base font-semibold text-navy-950">Panduan Singkat</h4>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-600 marker:text-slate-400">
-                <li>Isi laporan sesuai tanggal kegiatan yang benar.</li>
-                <li>Gunakan uraian kegiatan yang singkat namun jelas.</li>
-                <li>Lampirkan dokumen bila dibutuhkan untuk evaluasi.</li>
-              </ul>
-            </section>
-          </aside>
-        </div>
-
-        <footer className="sticky bottom-0 -mx-6 -mb-6 flex flex-col-reverse gap-2.5 border-t border-slate-200 bg-white px-6 py-4 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary"
-          >
-            Batal
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-primary"
-          >
-            {loading ? 'Menyimpan...' : 'Simpan Laporan'}
-          </button>
-        </footer>
-      </form>
-    </Modal>
   )
 }
 
@@ -456,19 +158,19 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
     <section className="space-y-4">
       <div className="hidden lg:block">
         <div className="table-wrap">
-          <table className="table">
+          <table className="table table-tight">
             <thead>
               <tr>
-                <th>Tanggal</th>
-                <th>Kegiatan</th>
-                <th>Dokumen</th>
-                <th>Link GDrive</th>
-                <th>Aksi</th>
+                <th scope="col">Tanggal</th>
+                <th scope="col">Kegiatan</th>
+                <th scope="col">Dokumen</th>
+                <th scope="col">Link GDrive</th>
+                <th scope="col">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {laporan.map((l) => (
-                <tr key={l.id}>
+                <tr key={l.id} className="transition-colors hover:bg-navy-50/60">
                   <td className="whitespace-nowrap align-top font-medium text-slate-900">
                     {fmtDate(l.tanggal)}
                   </td>
@@ -705,8 +407,10 @@ function ProposalCard({ proposal, onClick }) {
 function ProposalDetail({ proposal, onBack }) {
   const [laporan, setLaporan] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  // Pesan dari halaman Input Laporan Harian (location.state.flash), bisa ditutup.
+  const location = useLocation()
+  const [flash, setFlash] = useState(location.state?.flash || '')
   const [error, setError] = useState('')
 
   const fetchLaporan = useCallback(async () => {
@@ -748,6 +452,18 @@ function ProposalDetail({ proposal, onBack }) {
         </button>
       </div>
 
+      {flash ? (
+        <div role="status" className="flex items-start justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <span className="flex items-center gap-2">
+            <CircleCheck className="size-4 shrink-0" aria-hidden="true" />
+            {flash}
+          </span>
+          <button type="button" onClick={() => setFlash('')} className="icon-btn -my-1 size-7 text-green-800" aria-label="Tutup pesan">
+            <X className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
+
       {/* Ringkasan utama proposal untuk memberi konteks sebelum melihat tabel */}
       <section className="card p-6">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
@@ -780,13 +496,10 @@ function ProposalDetail({ proposal, onBack }) {
           </div>
 
           <div className="shrink-0">
-            <button
-              onClick={() => setShowForm(true)}
-              className="btn btn-primary"
-            >
+            <Link to={`/project/${proposal.jenis}/input?id=${proposal.id}`} className="btn btn-primary">
               <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
               Input Laporan Harian
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -814,15 +527,27 @@ function ProposalDetail({ proposal, onBack }) {
         </dl>
       </section>
 
-      <section className="card overflow-hidden">
-        <header className="border-b border-slate-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-navy-950">Riwayat Laporan Harian</h2>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Daftar laporan yang telah diinput untuk proposal ini.
-          </p>
+      {/* Desain disamakan dengan tabel Riwayat dosen (KegiatanPage): bingkai navy, kepala gelap */}
+      <section aria-labelledby="riwayat-laporan-harian" className="overflow-hidden rounded-2xl border-2 border-navy-800 bg-white shadow-md">
+        <header className="bg-navy-800 px-5 py-5 text-white sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="riwayat-laporan-harian" className="font-serif text-2xl font-medium text-white">
+                Riwayat Laporan Harian
+              </h2>
+              <p className="mt-1 text-sm text-white/75">
+                Daftar laporan yang telah diinput untuk proposal ini.
+              </p>
+            </div>
+            {!loading ? (
+              <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white tabular-nums">
+                {laporan.length} entri
+              </span>
+            ) : null}
+          </div>
         </header>
 
-        <div className="px-6 py-6">
+        <div className="p-4 sm:p-5">
           {error && (
             <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
               {error}
@@ -847,13 +572,6 @@ function ProposalDetail({ proposal, onBack }) {
         </div>
       </section>
 
-      {showForm && (
-        <FormLaporan
-          proposal={proposal}
-          onClose={() => setShowForm(false)}
-          onSuccess={fetchLaporan}
-        />
-      )}
     </div>
   )
 }

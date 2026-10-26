@@ -273,7 +273,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal`, `/luaran-dosen` (admin), `/pemantauan` (Ketua STMIK; juga bisa admin/ketua), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
-  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
@@ -359,7 +359,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `components/PermintaanHapusDokumen.jsx` (Proposal Kegiatan: semua; Laporan Kegiatan: laporan) → Setujui & Hapus (password) / Tolak.
 - Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
   `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
-  disaring per jenis → pilih project (`?id=`) → Laporan Harian), **Riwayat Project** (`/riwayat-project`,
+  disaring per jenis → pilih project (`?id=`) → Laporan Harian: tabel **Riwayat Laporan Harian** bergaya Riwayat dosen
+  (bingkai navy, kepala gelap, `table-tight`, kolom/aksi tetap); tombol **Input Laporan Harian** → halaman satu formulir
+  `LaporanHarianInputPage.jsx` (`/project/:jenis/input?id=`, tanpa kolom samping; simpan → kembali dengan `state.flash`;
+  modal lama dihapus)), **Riwayat Project** (`/riwayat-project`,
   `RiwayatProjectPage.jsx`; dulu menu "Periode" — diganti karena rancu dengan fitur Periode admin/ketua, `/periode` untuk
   mahasiswa dialihkan ke sini): project yang diikuti dikelompokkan per periode (hanya periode dari project tsb., digabung
   `GET /periode` untuk tanggal/status); klik project → `/project/:jenis?id=`),

@@ -31,6 +31,8 @@ const router = createBrowserRouter([
       { path: '/laporan-harian', element: <DashboardLayout page="laporan-harian" /> },
       { path: '/project/penelitian', element: <DashboardLayout page="project" jenis="penelitian" /> },
       { path: '/project/pengabdian', element: <DashboardLayout page="project" jenis="pengabdian" /> },
+      { path: '/project/penelitian/input', element: <DashboardLayout page="laporan-harian-input" jenis="penelitian" /> },
+      { path: '/project/pengabdian/input', element: <DashboardLayout page="laporan-harian-input" jenis="pengabdian" /> },
       { path: '/profil', element: <DashboardLayout page="profil" /> },
       { path: '/notifikasi', element: <DashboardLayout page="notifikasi" /> },
       { path: '/notifikasi/:id', element: <DashboardLayout page="notifikasi-detail" /> },

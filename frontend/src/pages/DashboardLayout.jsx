@@ -35,6 +35,7 @@ import ProposalMasukDetailPage from './ProposalMasukDetailPage'
 import LaporanMasukDetailPage from './LaporanMasukDetailPage'
 import ReviewLaporanPage from './review/ReviewLaporanPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
+import LaporanHarianInputPage from './LaporanHarianInputPage'
 import UserAvatar from '../components/UserAvatar'
 
 const ROLE_LABEL = {
@@ -147,6 +148,8 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan-harian') return <LaporanHarianPage />
       // Project Saya per jenis → pilih project → Laporan Harian
       if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
+      // Input Laporan Harian: halaman satu formulir (?id=<proposalId>)
+      if (page === 'laporan-harian-input') return <LaporanHarianInputPage key={location.search} jenis={jenis} />
       if (page === 'riwayat-project') return <RiwayatProjectPage />
       // Menu lama "Periode" mahasiswa → Riwayat Project.
       if (page === 'periode') return <Navigate to="/riwayat-project" replace />
