@@ -48,7 +48,11 @@ const HALAMAN = {
     { to: '/undangan', title: 'Undangan Ikut Serta', kata: 'undangan tim anggota' },
     { to: '/laporan-harian', title: 'Laporan Harian (semua project)', kata: 'kegiatan harian' },
   ],
-  admin: [{ to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' }],
+  admin: [
+    { to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' },
+    { to: '/template-proposal', title: 'Template Proposal', kata: 'format dokumen unggah docx' },
+    { to: '/luaran-dosen', title: 'Luaran Dosen', kata: 'jurnal poster bukti unduh csv zip' },
+  ],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
 }
 

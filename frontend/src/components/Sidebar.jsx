@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { Award, BadgeDollarSign, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -53,6 +53,16 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
       <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/luaran-dosen', label: 'Luaran Dosen', icon: (
+      <Award className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/template-proposal', label: 'Template Proposal', icon: (
+      <FileCog className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {

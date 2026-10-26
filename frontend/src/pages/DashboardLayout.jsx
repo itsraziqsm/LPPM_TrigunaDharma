@@ -27,6 +27,8 @@ import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
+import TemplateProposalPage from './TemplateProposalPage'
+import LuaranDosenPage from './LuaranDosenPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
 import UserAvatar from '../components/UserAvatar'
 
@@ -109,6 +111,8 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'surat-tugas') return <SuratTugasPage />
       if (page === 'laporan-masuk') return <LaporanMasukPage />
       if (page === 'backup' && primaryRole === 'admin') return <BackupPage />
+      if (page === 'template-proposal' && primaryRole === 'admin') return <TemplateProposalPage />
+      if (page === 'luaran-dosen' && primaryRole === 'admin') return <LuaranDosenPage />
       return <DashboardHome role={primaryRole} isReviewer={isReviewer} />
     }
 

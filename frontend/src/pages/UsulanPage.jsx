@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { periodeApi } from '../api/periode'
-import { LUARAN_JENIS, luaranApi } from '../api/luaran'
+import { LUARAN_JENIS, LUARAN_JENIS_LIST, luaranApi } from '../api/luaran'
 import { masterApi } from '../api/master'
 import { kataKunciError, parseKataKunci } from '../utils/kataKunci'
 import { ATURAN_TIM, aturanTeks, hitungTim, pelanggaranTim, timPenuh } from '../utils/aturanTim'
@@ -25,6 +25,7 @@ import { alertDialog } from '../utils/dialog'
 import useAuthStore from '../store/authStore'
 import { AnggotaSearch } from './ProposalDosen/AnggotaSearch'
 import { JENIS_LABEL, PERAN_OPTIONS } from './ProposalDosen/constants'
+import TemplateProposalLink from '../components/TemplateProposalLink'
 import { FieldError, PreviewTable, Required, StepCard, Stepper } from '../components/Wizard'
 
 // ---------------------------------------------------------------------------
@@ -270,6 +271,19 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     kataKunci: '',
   })
   const [master, setMaster] = useState({ rumpun: [], bidang: [], luaran: [], jenisMitra: [] })
+  // Jenis luaran resmi + prioritas (W-38, GET /luaran/jenis); cadangan daftar statis.
+  const [jenisLuaran, setJenisLuaran] = useState(LUARAN_JENIS_LIST)
+  useEffect(() => {
+    let alive = true
+    luaranApi
+      .jenis()
+      .then((r) => alive && Array.isArray(r.data.data) && r.data.data.length && setJenisLuaran(r.data.data))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+  const labelLuaran = (k) => jenisLuaran.find((j) => j.kode === k)?.label || LUARAN_JENIS[k] || k
   const [anggota, setAnggota] = useState([])
   const [luaranItems, setLuaranItems] = useState([])
   const [luaranOrig, setLuaranOrig] = useState([])
@@ -1003,9 +1017,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <FieldError message={err('dokumen') || (file ? errors.dokumen : null)} />
               <p className="mt-1.5 text-xs text-slate-500">
                 Belum punya format?{' '}
-                <a href="/templates/template-proposal.docx" download="Template_Proposal.docx" className="font-semibold text-navy-700 hover:text-navy-900">
-                  Unduh template proposal
-                </a>
+                <TemplateProposalLink jenis={form.jenis} />
               </p>
             </div>
 
@@ -1013,6 +1025,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
               <legend className="label">Target Luaran</legend>
               <p className="-mt-0.5 mb-3 text-xs text-slate-500">
                 Opsional. Capaian tiap target diisi saat menyusun laporan dan dihitung sebagai luaran yang dapat diklaim.
+                Luaran <strong className="font-semibold text-slate-700">prioritas: jurnal &amp; poster</strong> — disarankan minimal satu.
               </p>
               {luaranItems.length > 0 ? (
                 <ul className="space-y-3">
@@ -1023,9 +1036,10 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                           Jenis
                         </label>
                         <select id={`ul-jenis-${item.key}`} className="input" value={item.jenis} onChange={(e) => setLuaran(item.key, 'jenis', e.target.value)}>
-                          {Object.entries(LUARAN_JENIS).map(([v, l]) => (
-                            <option key={v} value={v}>
-                              {l}
+                          {jenisLuaran.map((j) => (
+                            <option key={j.kode} value={j.kode}>
+                              {j.label}
+                              {j.prioritas ? ' (prioritas)' : ''}
                             </option>
                           ))}
                         </select>
@@ -1085,6 +1099,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                     {master.luaran.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.nama}
+                        {m.prioritas ? ' (prioritas)' : ''}
                       </option>
                     ))}
                   </select>
@@ -1181,7 +1196,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                       <ul key="l" className="list-disc space-y-0.5 pl-4">
                         {luaranItems.map((i) => (
                           <li key={i.key}>
-                            {LUARAN_JENIS[i.jenis]}: {i.target || '—'}
+                            {labelLuaran(i.jenis)}: {i.target || '—'}
                             {i.targetTanggal ? ` (target ${i.targetTanggal})` : ''}
                           </li>
                         ))}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Download, Pencil } from 'lucide-react'
-import { LUARAN_JENIS, luaranApi } from '../../api/luaran'
+import { LUARAN_JENIS, LUARAN_PRIORITAS, luaranApi } from '../../api/luaran'
 import { hari } from './format'
 
 // Daftar item luaran proposal (GET /luaran/proposal/:proposalId) beserta
@@ -209,7 +209,10 @@ export default function LuaranCapaian({ proposalId, editable = false, onSaved })
           <li key={item.id} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500">{LUARAN_JENIS[item.jenis] || item.jenis}</p>
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                  {LUARAN_JENIS[item.jenis] || item.jenis}
+                  {LUARAN_PRIORITAS.includes(item.jenis) ? <span className="badge badge-warning">Prioritas</span> : null}
+                </p>
                 <p className="font-semibold text-slate-900">{item.target}</p>
                 {item.targetTanggal ? <p className="text-xs text-slate-500">Target: {hari(item.targetTanggal)}</p> : null}
               </div>
