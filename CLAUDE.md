@@ -365,7 +365,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   modal lama dihapus)), **Riwayat Project** (`/riwayat-project`,
   `RiwayatProjectPage.jsx`; dulu menu "Periode" — diganti karena rancu dengan fitur Periode admin/ketua, `/periode` untuk
   mahasiswa dialihkan ke sini): project yang diikuti dikelompokkan per periode (hanya periode dari project tsb., digabung
-  `GET /periode` untuk tanggal/status); klik project → `/project/:jenis?id=`),
+  `GET /periode` untuk tanggal/status); tiap periode = **dropdown** (buka/tutup, jumlah project; bawaan periode aktif terbuka,
+  lama tertutup; status diingat di `localStorage.riwayatProjectBuka`); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +

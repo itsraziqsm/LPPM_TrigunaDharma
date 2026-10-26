@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarDays, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronRight } from 'lucide-react'
 import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
 
@@ -10,8 +10,20 @@ import { laporanHarianApi } from '../api/laporanHarian'
 // tempat mahasiswa menjadi anggota tim `diterima`. Project dari
 // GET /mahasiswa/laporan-harian/proposals (berisi periode {id,nama,tahun}); tanggal &
 // status aktif periode dari GET /periode (boleh untuk semua user login). Klik project →
-// Project Saya › Laporan Harian (/project/:jenis?id=).
+// Project Saya › Laporan Harian (/project/:jenis?id=). Tiap periode = dropdown (buka/tutup);
+// status buka/tutup diingat per periode di localStorage (`riwayatProjectBuka`); bawaan:
+// periode aktif terbuka, periode lama tertutup.
 // ---------------------------------------------------------------------------
+
+const KUNCI_BUKA = 'riwayatProjectBuka'
+
+function bacaBuka() {
+  try {
+    return JSON.parse(localStorage.getItem(KUNCI_BUKA) || '{}') || {}
+  } catch {
+    return {}
+  }
+}
 
 const JENIS_LABEL = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
 const STATUS_LABEL = { draft: 'Draft', diajukan: 'Diajukan', review: 'Review', revisi: 'Revisi', disetujui: 'Disetujui', ditolak: 'Ditolak' }
@@ -28,6 +40,19 @@ const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit
 export default function RiwayatProjectPage() {
   const [data, setData] = useState(null) // [{ periode, projects }]
   const [error, setError] = useState('')
+  const [buka, setBuka] = useState(bacaBuka) // { [periodeId]: true|false } yang pernah diubah pengguna
+  const terbuka = (periode) => buka[periode.id] ?? Boolean(periode.isAktif)
+  const toggle = useCallback((periode) => {
+    setBuka((prev) => {
+      const next = { ...prev, [periode.id]: !(prev[periode.id] ?? Boolean(periode.isAktif)) }
+      try {
+        localStorage.setItem(KUNCI_BUKA, JSON.stringify(next))
+      } catch {
+        /* abaikan */
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -97,25 +122,37 @@ export default function RiwayatProjectPage() {
         <ul className="space-y-4">
           {data.map(({ periode, projects }) => (
             <li key={periode.id} className="card overflow-hidden">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
-                <div className="flex min-w-0 items-start gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                    <CalendarDays className="size-5" aria-hidden="true" />
+              <h2>
+                <button
+                  type="button"
+                  onClick={() => toggle(periode)}
+                  aria-expanded={terbuka(periode)}
+                  aria-controls={`periode-${periode.id}`}
+                  className={`flex w-full flex-wrap items-start justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-slate-50 ${terbuka(periode) ? 'border-b border-slate-200' : ''}`}
+                >
+                  <span className="flex min-w-0 items-start gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
+                      <CalendarDays className="size-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-lg font-semibold text-navy-950">{periode.nama}</span>
+                      <span className="block text-sm text-slate-500">
+                        {[JENIS_LABEL[periode.jenis], periode.tahun ? `Tahun ${periode.tahun}` : null, periode.tanggalMulai ? `${hari(periode.tanggalMulai)} – ${hari(periode.tanggalSelesai)}` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </span>
                   </span>
-                  <div className="min-w-0">
-                    <h2 className="text-lg font-semibold text-navy-950">{periode.nama}</h2>
-                    <p className="text-sm text-slate-500">
-                      {[JENIS_LABEL[periode.jenis], periode.tahun ? `Tahun ${periode.tahun}` : null, periode.tanggalMulai ? `${hari(periode.tanggalMulai)} – ${hari(periode.tanggalSelesai)}` : null]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </div>
-                </div>
-                {periode.isAktif !== undefined ? (
-                  <span className={`badge ${periode.isAktif ? 'badge-success' : 'badge-neutral'}`}>{periode.isAktif ? 'Aktif' : 'Nonaktif'}</span>
-                ) : null}
-              </div>
-              <ul className="divide-y divide-slate-100">
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm font-medium text-slate-600 tabular-nums">{projects.length} project</span>
+                    {periode.isAktif !== undefined ? (
+                      <span className={`badge ${periode.isAktif ? 'badge-success' : 'badge-neutral'}`}>{periode.isAktif ? 'Aktif' : 'Nonaktif'}</span>
+                    ) : null}
+                    <ChevronDown className={`size-5 text-slate-400 transition-transform ${terbuka(periode) ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </span>
+                </button>
+              </h2>
+              <ul id={`periode-${periode.id}`} hidden={!terbuka(periode)} className="divide-y divide-slate-100">
                 {projects.map((p) => (
                   <li key={p.id}>
                     <Link
