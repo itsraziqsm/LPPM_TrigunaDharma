@@ -16,6 +16,7 @@ import { LaporanTab } from './ProposalDosen/LaporanTab'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 import { ReviewList } from './laporan/shared'
 import Breadcrumb from '../components/Breadcrumb'
+import useJejakMenu from '../hooks/useJejakMenu'
 import LuaranCapaian from './laporan/LuaranCapaian'
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ export default function ProposalMasukDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const viewOnly = getRoleNames(useAuthStore((s) => s.user)?.roles)[0] === 'admin'
+  const induk = useJejakMenu('akademik')
   const [state, setState] = useState({ status: 'loading', detail: null })
   const [tick, setTick] = useState(0)
   const reload = useCallback(() => setTick((t) => t + 1), [])
@@ -141,7 +143,7 @@ export default function ProposalMasukDetailPage() {
         <ArrowLeft className="size-4" aria-hidden="true" />
         Proposal Kegiatan
       </Link>
-      <Breadcrumb items={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan', to: '/proposals' }, { label: 'Detail' }]} />
+      <Breadcrumb items={[...induk, { label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan', to: '/proposals' }, { label: 'Detail' }]} />
     </div>
   )
 

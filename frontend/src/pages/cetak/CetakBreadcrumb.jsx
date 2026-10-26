@@ -1,30 +1,8 @@
-import { Link } from 'react-router-dom'
+import Breadcrumb from '../../components/Breadcrumb'
+import useJejakMenu from '../../hooks/useJejakMenu'
 
-// Breadcrumb halaman konfigurasi di menu Cetak Dokumen.
+// Breadcrumb halaman di menu Cetak Dokumen (Admin: di bawah Dokumentasi).
 export default function CetakBreadcrumb({ last }) {
-  return (
-    <nav aria-label="Breadcrumb" className="text-sm">
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-            Home
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li>
-          <Link to="/cetak-dokumen" className="font-medium text-navy-600 hover:text-navy-800">
-            Cetak Dokumen
-          </Link>
-        </li>
-        {last ? (
-          <>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">
-              {last}
-            </li>
-          </>
-        ) : null}
-      </ol>
-    </nav>
-  )
+  const induk = useJejakMenu('dokumentasi')
+  return <Breadcrumb items={[...induk, last ? { label: 'Cetak Dokumen', to: '/cetak-dokumen' } : { label: 'Cetak Dokumen' }, ...(last ? [{ label: last }] : [])]} />
 }

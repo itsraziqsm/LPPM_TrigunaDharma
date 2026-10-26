@@ -50,6 +50,8 @@ const router = createBrowserRouter([
       { path: '/pemantauan', element: <DashboardLayout page="pemantauan" /> },
       { path: '/cetak-dokumen/rekap-proposal', element: <DashboardLayout page="export" /> },
       { path: '/cetak-dokumen/surat-tugas', element: <DashboardLayout page="surat-tugas" /> },
+      { path: '/cetak-dokumen/tabel-pengguna', element: <DashboardLayout page="cetak-pengguna" /> },
+      { path: '/cetak-dokumen/luaran-dosen', element: <DashboardLayout page="cetak-luaran" /> },
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian', element: <DashboardLayout page="kegiatan" jenis="pengabdian" /> },
       { path: '/kegiatan/penelitian/detail/:id', element: <DashboardLayout page="kegiatan-detail" jenis="penelitian" /> },

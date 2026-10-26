@@ -4,7 +4,8 @@ import useAuthStore from '../store/authStore'
 import { getRoleNames, JENIS_LABEL, EMPTY_FORM } from './periode/periodeConstants'
 import { Badge, Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
+import useJejakMenu from '../hooks/useJejakMenu'
 import { Plus } from 'lucide-react'
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ export default function PeriodePage() {
   const { user } = useAuthStore()
   const roleNames = getRoleNames(user?.roles)
   const isAdmin = roleNames.includes('admin')
+  const induk = useJejakMenu('akademik')
   const isKetua = roleNames.includes('ketua_lppm')
   const canManage = isAdmin || isKetua
   // Hak akses periode (new-api.md bagian 20): Ketua tambah/ubah/hapus langsung
@@ -206,52 +208,42 @@ export default function PeriodePage() {
   return (
     <>
       <div className="page space-y-8">
-        <Breadcrumb className="flex justify-end" items={[{ label: 'Periode' }]} />
-        {/* Judul halaman */}
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-2xl">
-            <h1 className="page-title">Periode Penelitian &amp; Pengabdian</h1>
-            <p className="page-desc">
-              Kelola daftar periode secara terstruktur untuk mendukung proses pengajuan,
-              evaluasi, dan pemantauan kegiatan penelitian maupun pengabdian.
-            </p>
-            {!canEdit && canManage ? (
-              <p className="mt-2 text-sm text-slate-500">
-                Akses Admin: lihat saja. Tombol Hapus mengajukan permintaan penghapusan yang harus disetujui Ketua LPPM.
-              </p>
-            ) : null}
-          </div>
-          {canEdit && (
-            <div className="flex shrink-0 items-start sm:justify-end">
+        {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
+        <KepalaMasuk
+          judul="Periode Penelitian & Pengabdian"
+          crumbs={[...induk, { label: 'Periode' }]}
+          desc={
+            <>
+              Kelola daftar periode secara terstruktur untuk mendukung proses pengajuan, evaluasi, dan pemantauan kegiatan
+              penelitian maupun pengabdian.
+              {!canEdit && canManage ? (
+                <span className="mt-2 block text-sm text-slate-500">
+                  Akses Admin: lihat saja. Tombol Hapus mengajukan permintaan penghapusan yang harus disetujui Ketua LPPM.
+                </span>
+              ) : null}
+            </>
+          }
+          aksi={
+            canEdit ? (
               <button onClick={openCreate} className="btn btn-primary">
                 <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
                 Tambah Periode
               </button>
-            </div>
-          )}
-        </header>
-
-        {/* Ringkasan: satu strip */}
-        <section aria-label="Ringkasan periode" className="card overflow-hidden">
-          <div className="grid grid-cols-1 gap-px bg-slate-200 md:grid-cols-3">
-            <article className="bg-white px-6 py-5">
-              <p className="text-sm text-slate-500">Total Periode</p>
-              <p className="mt-2.5 font-serif text-[2.25rem] font-medium leading-none tracking-tight text-navy-950 tabular-nums">{periodes.length}</p>
-            </article>
-            <article className="bg-white px-6 py-5">
-              <p className="text-sm text-slate-500">Periode Aktif</p>
-              <p className="mt-2.5 font-serif text-[2.25rem] font-medium leading-none tracking-tight text-navy-950 tabular-nums">
-                {periodes.filter((p) => p.isAktif).length}
-              </p>
-            </article>
-            <article className="bg-white px-6 py-5">
-              <p className="text-sm text-slate-500">Periode Dipilih</p>
-              <p className="mt-2.5 text-lg font-semibold leading-snug text-navy-950">
-                {activePeriode ? activePeriode.nama : 'Belum ada periode yang dibuka'}
-              </p>
-            </article>
-          </div>
-        </section>
+            ) : null
+          }
+          stats={[
+            { label: 'Total Periode', value: periodes.length },
+            { label: 'Periode Aktif', value: periodes.filter((p) => p.isAktif).length },
+            {
+              label: 'Periode Dipilih',
+              value: (
+                <span className="block truncate font-sans text-base font-semibold" title={activePeriode?.nama || undefined}>
+                  {activePeriode ? activePeriode.nama : '—'}
+                </span>
+              ),
+            },
+          ]}
+        />
 
         {/* Daftar Periode */}
         <section className="card overflow-hidden">

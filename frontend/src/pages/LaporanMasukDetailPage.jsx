@@ -13,6 +13,7 @@ import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
 import Breadcrumb from '../components/Breadcrumb'
+import useJejakMenu from '../hooks/useJejakMenu'
 import BebanReviewer from '../components/BebanReviewer'
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ export default function LaporanMasukDetailPage() {
   const navigate = useNavigate()
   // Admin (peran pertama): lihat & hapus saja; Ketua mengelola reviewer & keputusan.
   const viewOnly = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
+  const induk = useJejakMenu('akademik')
   const onClose = () => navigate('/laporan-masuk')
   const onChanged = () => {}
   const [laporan, setLaporan] = useState(null)
@@ -141,7 +143,7 @@ export default function LaporanMasukDetailPage() {
           <ArrowLeft className="size-4" aria-hidden="true" />
           Laporan Kegiatan
         </Link>
-        <Breadcrumb items={[{ label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan', to: '/laporan-masuk' }, { label: 'Detail' }]} />
+        <Breadcrumb items={[...induk, { label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan', to: '/laporan-masuk' }, { label: 'Detail' }]} />
       </div>
 
       <header className="card p-6">

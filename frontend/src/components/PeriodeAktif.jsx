@@ -5,7 +5,7 @@ import { FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import Breadcrumb from './Breadcrumb'
 
 // Blok bersama Dokumen Masuk (Proposal & Laporan Kegiatan, lihat hooks/useDokumenMasuk):
-//   KepalaMasuk      — judul + breadcrumb, lalu kartu ringkasan (teks + 3 kotak angka; gaya Undangan)
+//   KepalaMasuk      — judul + breadcrumb, lalu kartu ringkasan (teks [+ aksi] + 3 kotak angka; gaya Undangan)
 //   PeriodeAktif     — kartu periode aktif selebar halaman + jumlah perlu ditangani (klik = saring)
 //   TanpaPeriodeAktif— keadaan kosong bila tidak ada periode aktif
 //   CariFilterMasuk  — kolom cari + tombol Filter; panel filter (status, jenis) hanya tampil saat dibuka
@@ -77,7 +77,7 @@ export function TanpaPeriodeAktif({ failed, noun }) {
   )
 }
 
-export function KepalaMasuk({ judul, desc, crumbs, stats }) {
+export function KepalaMasuk({ judul, desc, crumbs, stats, aksi = null }) {
   return (
     <>
       <header className="flex flex-wrap items-baseline justify-between gap-3">
@@ -85,7 +85,10 @@ export function KepalaMasuk({ judul, desc, crumbs, stats }) {
         <Breadcrumb items={crumbs} />
       </header>
       <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
-        <p className="max-w-xl text-base leading-relaxed text-slate-600">{desc}</p>
+        <div className="max-w-xl space-y-3">
+          <p className="text-base leading-relaxed text-slate-600">{desc}</p>
+          {aksi}
+        </div>
         <dl className="grid shrink-0 grid-cols-3 gap-3 lg:w-[30rem]">
           {stats.map((k) => (
             <div key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">

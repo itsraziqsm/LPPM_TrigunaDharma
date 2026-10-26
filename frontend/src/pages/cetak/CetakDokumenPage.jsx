@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { CircleCheck, CircleDashed, FileSpreadsheet, FileSignature, Printer, Settings2 } from 'lucide-react'
+import { Award, CircleCheck, Download, CircleDashed, FileSpreadsheet, FileSignature, Printer, Settings2, Users } from 'lucide-react'
 import { exportApi } from '../../api/export'
 import ApiPending from '../../components/ApiPending'
 import { exportToPDF } from '../../utils/exportPDF'
 import { alertDialog } from '../../utils/dialog'
 import { loadCetakConfig } from '../../utils/cetakConfig'
 import { suratTugasPDF } from '../../utils/suratTugasPDF'
-import { REKAP_KEY, SURAT_TUGAS_KEY, rekapRingkas, suratTugasData } from './dokumen'
+import useAuthStore from '../../store/authStore'
+import { getRoleNames } from '../../utils/roles'
+import { LUARAN_KEY, PENGGUNA_KEY, REKAP_KEY, SURAT_TUGAS_KEY, luaranRingkas, penggunaRingkas, rekapRingkas, suratTugasData } from './dokumen'
+import { ambilPengguna, penggunaPDF } from './cetakPengguna'
+import { pesanBlob, unduhLuaran } from './cetakLuaran'
 import CetakBreadcrumb from './CetakBreadcrumb'
 
 // ---------------------------------------------------------------------------
@@ -16,6 +20,8 @@ import CetakBreadcrumb from './CetakBreadcrumb'
 // tombol Konfigurasi (ke halaman konfigurasi masing-masing).
 //   1. Rekapitulasi Proposal → /cetak-dokumen/rekap-proposal (halaman export lama)
 //   2. Surat Tugas           → /cetak-dokumen/surat-tugas
+//   3. Tabel Pengguna        → /cetak-dokumen/tabel-pengguna (semua / pilih peran)
+//   4. Luaran Dosen (admin)  → /cetak-dokumen/luaran-dosen (ZIP bukti &/atau CSV + filter)
 // Konfigurasi disimpan di peramban (utils/cetakConfig; endpoint W-42 belum ada).
 // ---------------------------------------------------------------------------
 
@@ -36,7 +42,7 @@ function StatusBadge({ ready, readyText, emptyText }) {
   )
 }
 
-function DokumenCard({ icon: Icon, title, desc, status, detail, configureTo, onPrint, printing, printDisabled, printHint }) {
+function DokumenCard({ icon: Icon, title, desc, status, detail, configureTo, onPrint, printing, printDisabled, printHint, printLabel = 'Cetak', PrintIcon = Printer }) {
   return (
     <li className="card flex flex-col">
       <div className="flex items-start gap-4 px-6 pt-6">
@@ -62,8 +68,8 @@ function DokumenCard({ icon: Icon, title, desc, status, detail, configureTo, onP
       </dl>
       <div className="mt-auto flex flex-wrap items-center gap-2 px-6 pb-6 pt-5">
         <button type="button" onClick={onPrint} disabled={printing || printDisabled} className="btn btn-primary" title={printHint}>
-          {printing ? <span className="spinner" aria-hidden="true" /> : <Printer className="size-4" aria-hidden="true" />}
-          {printing ? 'Menyiapkan…' : 'Cetak'}
+          {printing ? <span className="spinner" aria-hidden="true" /> : <PrintIcon className="size-4" aria-hidden="true" />}
+          {printing ? 'Menyiapkan…' : printLabel}
         </button>
         <Link to={configureTo} className="btn btn-secondary">
           <Settings2 className="size-4" aria-hidden="true" />
@@ -80,7 +86,38 @@ export default function CetakDokumenPage() {
   const [flash] = useState(() => location.state?.flash || null)
   const [rekap] = useState(() => loadCetakConfig(REKAP_KEY))
   const [surat] = useState(() => loadCetakConfig(SURAT_TUGAS_KEY))
+  const [pengguna] = useState(() => loadCetakConfig(PENGGUNA_KEY))
+  const [luaran] = useState(() => loadCetakConfig(LUARAN_KEY))
   const [printing, setPrinting] = useState('')
+  // Luaran Dosen (GET /luaran/unduh-*) hanya untuk admin.
+  const isAdmin = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
+
+  const cetakPengguna = async () => {
+    setPrinting('pengguna')
+    try {
+      const users = await ambilPengguna(pengguna)
+      if (!users.length) {
+        alertDialog({ tone: 'info', title: 'Tidak ada data', message: 'Tidak ada pengguna dengan peran terpilih.' })
+        return
+      }
+      penggunaPDF(users, penggunaRingkas(pengguna))
+    } catch {
+      alertDialog({ title: 'Gagal mencetak tabel pengguna', message: 'Data pengguna tidak dapat dimuat. Coba lagi.' })
+    } finally {
+      setPrinting('')
+    }
+  }
+
+  const cetakLuaran = async () => {
+    setPrinting('luaran')
+    try {
+      await unduhLuaran(luaran)
+    } catch (e) {
+      alertDialog({ title: 'Unduhan gagal', message: await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.') })
+    } finally {
+      setPrinting('')
+    }
+  }
 
   const cetakRekap = async () => {
     setPrinting('rekap')
@@ -120,7 +157,7 @@ export default function CetakDokumenPage() {
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
           <h1 className="page-title">Cetak Dokumen</h1>
-          <p className="page-desc">Atur konfigurasi tiap dokumen, lalu cetak sebagai PDF.</p>
+          <p className="page-desc">Atur konfigurasi tiap dokumen, lalu cetak sebagai PDF atau unduh filenya.</p>
         </div>
         <CetakBreadcrumb />
       </header>
@@ -154,6 +191,30 @@ export default function CetakDokumenPage() {
           printDisabled={!surat}
           printHint={!surat ? 'Konfigurasi surat tugas dulu (pilih kegiatan, tugas, tanggal, tempat).' : undefined}
         />
+        <DokumenCard
+          icon={Users}
+          title="Cetak Tabel Pengguna"
+          desc="Daftar pengguna (nama, email, NIDN/NIM, peran, status, prodi, kontak) sebagai PDF."
+          status={<StatusBadge ready={Boolean(pengguna)} readyText={`Dikonfigurasi · ${waktu(pengguna?.savedAt)}`} emptyText="Bawaan (semua peran)" />}
+          detail={penggunaRingkas(pengguna)}
+          configureTo="/cetak-dokumen/tabel-pengguna"
+          onPrint={cetakPengguna}
+          printing={printing === 'pengguna'}
+        />
+        {isAdmin ? (
+          <DokumenCard
+            icon={Award}
+            title="Luaran Dosen"
+            desc="Unduh semua bukti luaran (ZIP) dan/atau rekap CSV, maksimal 1000 luaran per unduhan."
+            status={<StatusBadge ready={Boolean(luaran)} readyText={`Dikonfigurasi · ${waktu(luaran?.savedAt)}`} emptyText="Bawaan (ZIP + CSV, semua luaran)" />}
+            detail={luaranRingkas(luaran)}
+            configureTo="/cetak-dokumen/luaran-dosen"
+            onPrint={cetakLuaran}
+            printing={printing === 'luaran'}
+            printLabel="Unduh"
+            PrintIcon={Download}
+          />
+        ) : null}
       </ul>
 
       <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">

@@ -26,6 +26,8 @@ import NotifikasiDetailPage from './NotifikasiDetailPage'
 import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
+import CetakPenggunaPage from './cetak/CetakPenggunaPage'
+import CetakLuaranPage from './cetak/CetakLuaranPage'
 import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
 import LuaranDosenPage from './LuaranDosenPage'
@@ -132,6 +134,8 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'cetak-dokumen') return <CetakDokumenPage />
       if (page === 'export') return <ExportPage />
       if (page === 'surat-tugas') return <SuratTugasPage />
+      if (page === 'cetak-pengguna') return <CetakPenggunaPage />
+      if (page === 'cetak-luaran' && primaryRole === 'admin') return <CetakLuaranPage />
       if (page === 'laporan-masuk') return <LaporanMasukPage />
       if (page === 'backup' && primaryRole === 'admin') return <BackupPage />
       if (page === 'template-proposal' && primaryRole === 'admin') return <TemplateProposalPage />

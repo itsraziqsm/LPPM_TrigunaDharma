@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { laporanApi } from '../api/laporan'
+import useJejakMenu from '../hooks/useJejakMenu'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import { CariFilterMasuk, KepalaMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { JENIS_LABEL } from './ProposalDosen/constants'
@@ -25,6 +26,7 @@ const fetchLaporan = (params) => laporanApi.getAll(params)
 export default function LaporanMasukPage() {
   // Admin (peran pertama): lihat & hapus saja; Ketua mengelola reviewer & keputusan.
   const viewOnly = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
+  const induk = useJejakMenu('akademik')
   // Tautan lama ?id=<id> (notifikasi, panel Periode) → halaman detail.
   const [params] = useSearchParams()
   const openId = params.get('id')
@@ -64,7 +66,7 @@ export default function LaporanMasukPage() {
             ? 'Laporan dari periode aktif. Akses Admin: lihat dan hapus; penugasan reviewer dan keputusan oleh Ketua LPPM.'
             : 'Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.'
         }
-        crumbs={[{ label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan' }]}
+        crumbs={[...induk, { label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan' }]}
         stats={[
           { label: 'Total Laporan', value: loading ? '—' : total },
           { label: 'Halaman Aktif', value: page },

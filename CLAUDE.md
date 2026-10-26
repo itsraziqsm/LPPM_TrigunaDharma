@@ -343,7 +343,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   User, **Cetak Dokumen**. Sidebar mendukung **3 tingkat** (`NavGroup` rekursif, `daunMenu` = tautan daun untuk rail ciut).
   Admin `ADMIN_NAV_ITEMS`: Dashboard · **Akademik** (Dokumen Masuk (`DOKUMEN_MASUK`) › Proposal/Laporan Kegiatan, Luaran
   `/luaran-dosen`, Periode) · **Pengguna** (`/users`, `UserManagementPage` judul "Manajemen Pengguna": kepala `KepalaMasuk` + panel cari kolom cari · Filter (Peran, Status akun) · Cari, "Filter aktif" hanya bila ada) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
-  Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti, Unduh CSV `;` & ZIP;
+  Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti per item; tombol Unduh CSV & ZIP
+  dipindah ke Cetak Dokumen → Luaran Dosen;
   panel cari = kolom cari · tombol Filter (membuka panel 7 filter) · Cari, baris "Filter aktif" hanya bila ada filter; tabel
   Daftar luaran bergaya Riwayat dosen (bingkai navy, kepala gelap)),
   **Manajemen Template** (dulu Template Proposal; `TemplateProposalPage.jsx`: unggah versi DOCX/PDF per jenis umum/penelitian/pengabdian, unduh,
@@ -354,6 +355,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   saring), tab Proposal (`/monitoring/proposals`, urut; baris → Detail Kegiatan baca saja, kembali ke Pemantauan) & Dosen
   pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Rekap Proposal** (`/cetak-dokumen/rekap-proposal`;
   `/cetak-dokumen` dialihkan ke sana). Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
+- **Periode** (`PeriodePage`): kepala `KepalaMasuk` (prop `aksi` = tombol Tambah Periode untuk Ketua; kotak Total, Aktif, Dipilih).
 - **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua); Hapus =
   "Ajukan ke Ketua LPPM" (`deletion-request`, pantau/batalkan). **Ketua** di `PeriodePage`: hapus langsung (dialog
   password → `periodeApi.remove` = `DELETE /periode/:id`), permintaan admin yang menunggu → Setujui & Hapus / Tolak; **Dokumen Masuk** lihat &
@@ -397,7 +399,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   disetujui/laporan, tugas/petugas (pengusul + anggota)/tanggal (periode)/alamat (mitra atau kampus)
   diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi di `localStorage`
   (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip =
-  ApiPending W-42.
+  ApiPending W-42. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
+  peran → `GET /users` semua halaman (per peran, digabung) → PDF `pages/cetak/cetakPengguna.js`. (4) **Luaran Dosen** (admin;
+  `CetakLuaranPage`, `/cetak-dokumen/luaran-dosen`): keluaran ZIP bukti &/atau CSV (≥ 1) + filter Luaran Dosen kecuali jenis
+  luaran & prioritas → `GET /luaran/unduh-zip|unduh-csv` (`pages/cetak/cetakLuaran.js`). Kunci & ringkasan di `pages/cetak/dokumen.js`.
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
   Anggota → Dokumen → Preview untuk buat/ubah proposal (menggantikan `ProposalFormModal`, sudah
   dihapus). **Pengabdian** punya desain sendiri (5 langkah, `stepsFor(jenis)`): Identitas →
@@ -511,7 +516,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   seperti semula.
 - **Breadcrumb wajib di semua halaman semua peran**: komponen bersama `src/components/Breadcrumb.jsx` (`items: [{label, to?}]`,
   "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
-  rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya.
+  rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti
+  pohon sidebar peran pertama: `hooks/useJejakMenu.js` (`'akademik'|'dokumentasi'`) menambah induk Admin (Akademik › Dokumen
+  Masuk/Luaran/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template); Ketua tetap tanpa induk itu. Halaman Cetak memakai `CetakBreadcrumb`.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

@@ -1,18 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ExternalLink, FileArchive, FileSpreadsheet, Search, SlidersHorizontal, X } from 'lucide-react'
+import { Download, ExternalLink, Search, SlidersHorizontal, X } from 'lucide-react'
 import { luaranApi } from '../api/luaran'
 import { periodeApi } from '../api/periode'
 import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
+import { pesanBlob } from './cetak/cetakLuaran'
 import Breadcrumb from '../components/Breadcrumb'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
 // Luaran Dosen (admin, /luaran-dosen) — W-38, new-api.md bagian 25.2.
 // Tabel GET /luaran (filter + paginasi; prioritas jurnal & poster di atas), unduh satu
-// bukti (GET /luaran/:id/bukti, blob), Unduh CSV & Unduh semua bukti (ZIP) dengan filter
-// yang sama (GET /luaran/unduh-csv|unduh-zip, maks 1000 item per unduhan).
+// bukti (GET /luaran/:id/bukti, blob). Unduh CSV & semua bukti (ZIP) dipindah ke Cetak Dokumen
+// → Luaran Dosen (pages/cetak/CetakLuaranPage).
 // ---------------------------------------------------------------------------
 
 const LIMIT = 6
@@ -30,20 +31,6 @@ const JENIS = [
 const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 const nama = (u) => u?.fullName || u?.name || '—'
 
-// Galat respons blob (CSV/ZIP) → teks pesan.
-async function pesanBlob(e, fallback) {
-  const data = e.response?.data
-  if (data instanceof Blob) {
-    try {
-      const j = JSON.parse(await data.text())
-      if (j.errors) return Object.values(j.errors).flat().join(' ')
-      return j.message || fallback
-    } catch {
-      return fallback
-    }
-  }
-  return e.response?.data?.message || fallback
-}
 
 // Label filter (selain kata kunci) untuk baris "Filter aktif".
 const LABEL_FILTER = {
@@ -90,7 +77,7 @@ export default function LuaranDosenPage() {
   const [page, setPage] = useState(1)
   const [state, setState] = useState({ loading: true, items: [], total: 0, failed: false })
   const [periodes, setPeriodes] = useState([])
-  const [busy, setBusy] = useState(null) // 'csv' | 'zip' | id luaran
+  const [busy, setBusy] = useState(null) // id luaran yang buktinya sedang diunduh
   const [bukaFilter, setBukaFilter] = useState(false)
 
   useEffect(() => {
@@ -138,22 +125,6 @@ export default function LuaranDosenPage() {
     setPage(1)
   }
 
-  const unduh = useCallback(
-    async (jenis) => {
-      setBusy(jenis)
-      try {
-        const params = { ...bersihkan(filter), ...(jenis === 'csv' ? { pemisah: 'titikkoma' } : {}) }
-        const res = jenis === 'csv' ? await luaranApi.unduhCsv(params) : await luaranApi.unduhZip(params)
-        simpanBlob(res, jenis === 'csv' ? 'rekap-luaran.csv' : 'luaran.zip')
-      } catch (e) {
-        alertDialog({ title: 'Unduhan gagal', message: await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.') })
-      } finally {
-        setBusy(null)
-      }
-    },
-    [filter],
-  )
-
   const unduhBukti = async (item) => {
     setBusy(item.id)
     try {
@@ -169,21 +140,11 @@ export default function LuaranDosenPage() {
 
   return (
     <div className="page space-y-6">
-      <Breadcrumb className="flex justify-end" items={[{ label: 'Akademik' }, { label: 'Luaran Dosen' }]} />
+      <Breadcrumb className="flex justify-end" items={[{ label: 'Akademik' }, { label: 'Luaran' }]} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="page-title">Luaran Dosen</h1>
           <p className="page-desc">Semua target & capaian luaran kegiatan. Luaran prioritas (jurnal & poster) selalu di atas.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => unduh('csv')} disabled={busy === 'csv'} className="btn btn-secondary">
-            <FileSpreadsheet className="size-4" aria-hidden="true" />
-            {busy === 'csv' ? 'Menyiapkan…' : 'Unduh CSV'}
-          </button>
-          <button type="button" onClick={() => unduh('zip')} disabled={busy === 'zip'} className="btn btn-primary">
-            <FileArchive className="size-4" aria-hidden="true" />
-            {busy === 'zip' ? 'Menyiapkan…' : 'Unduh semua bukti (ZIP)'}
-          </button>
         </div>
       </header>
 
@@ -251,7 +212,6 @@ export default function LuaranDosenPage() {
                 ) : null}
               </div>
             </div>
-            <p className="text-xs text-slate-500">Unduh CSV/ZIP memakai filter yang sedang diterapkan (maksimal 1000 luaran per unduhan).</p>
           </form>
         ) : null}
 

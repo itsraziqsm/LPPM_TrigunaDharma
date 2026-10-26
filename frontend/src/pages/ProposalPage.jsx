@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { proposalApi } from '../api/proposal'
+import useJejakMenu from '../hooks/useJejakMenu'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import { CariFilterMasuk, KepalaMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { API_BASE_URL } from '../api/axios'
@@ -68,6 +69,7 @@ export default function ProposalPage() {
   const { user } = useAuthStore()
   // Admin (peran pertama): lihat & hapus saja; ubah status/penugasan oleh Ketua LPPM.
   const viewOnly = getRoleNames(user?.roles)[0] === 'admin'
+  const induk = useJejakMenu('akademik')
 
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
@@ -106,7 +108,7 @@ export default function ProposalPage() {
         <KepalaMasuk
           judul="Monitoring Proposal Kewirausahaan"
           desc="Kelola proposal penelitian dan pengabdian secara terstruktur, pantau status evaluasi, serta tinjau progres dokumen, reviewer, dan laporan dalam satu halaman kerja."
-          crumbs={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan' }]}
+          crumbs={[...induk, { label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan' }]}
           stats={[
             { label: 'Total Proposal', value: loading ? '—' : total },
             { label: 'Halaman Aktif', value: page },
