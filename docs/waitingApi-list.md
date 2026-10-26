@@ -15,6 +15,8 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
+| W-34 | Hapus proposal/laporan yang sudah diajukan oleh Admin dengan izin Ketua (`components/HapusDokumen.jsx`, Dokumen Masuk) | Admin: `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`, `GET .../deletion-request` (permintaan menunggu); Ketua: `GET /dokumen/deletion-request?status=pending`, `POST /dokumen/deletion-request/:requestId/approve` `{ password }` & `/cancel` `{ catatan? }` (`new-api.md` bagian 23) | Prefix approve/cancel = `/dokumen/deletion-request` (sesuai usulan). Status baru 400/403/404/409/422 (bukan 500). Menghapus proposal ikut menghapus laporannya. |
+| W-35 | Detail undangan yang belum diterima (`UndanganDetailPage.jsx`): abstrak, info lengkap, tim | `GET /dosen/proposals/invitations/:id` → undangan + `proposal` (tanpa `dokumenUrl`, `catatanRevisi`, reviewer, kontak anggota) + `targetLuaran` (`new-api.md` bagian 22) | Hanya penerima undangan; lainnya 404. |
 | W-36 | Template proposal yang bisa diganti admin: tautan "Unduh template proposal" di wizard Usulan + halaman admin kelola template | Publik: `GET /template-proposal/aktif?jenis=`, `GET /template-proposal/aktif/unduh?jenis=`; admin: `GET/POST /template-proposal`, `GET /:id/unduh`, `PATCH /:id/aktifkan`, `DELETE /:id` (`new-api.md` bagian 21) | Tautan Usulan: `API_BASE_URL + '/template-proposal/aktif/unduh?jenis=' + jenis`, cadangan file statis bila `/aktif` mengembalikan `data: null`. Admin: menu baru (perlu `icon`). |
 | W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
 
@@ -177,9 +179,7 @@ Admin hanya **melihat & menghapus** di Dokumen Masuk (penugasan reviewer & keput
 Backend hanya mengizinkan hapus berstatus `draft`, sedangkan Dokumen Masuk hanya memuat dokumen yang
 sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan penanda `ApiPending` (W-34).
 
-| ID | Elemen | Kebutuhan | Usulan endpoint | Catatan |
-|---|---|---|---|---|
-| W-34 | Hapus proposal/laporan yang sudah diajukan oleh Admin **dengan izin** | Permintaan hapus oleh Admin, disetujui Ketua LPPM dengan password (pola hapus periode 2 langkah), notifikasi ke Ketua & pengusul, catat ActivityLog | `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`; `POST /dokumen/deletion-request/:requestId/approve` `{ password }` (Ketua) & `/cancel`; `GET .../deletion-request` (status permintaan) | Draft tetap bisa dihapus langsung lewat `DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada). |
+**API W-34 sudah tersedia** (lihat tabel "API sudah tersedia" di atas, `new-api.md` bagian 23).
 
 ## Detail Undangan (`frontend/src/pages/UndanganDetailPage.jsx`, route `/undangan/:id`)
 
@@ -187,9 +187,7 @@ Undangan diterima memakai `GET /proposals/:id` (anggota `diterima` boleh membaca
 ditolak backend (403), jadi hanya ringkasan dari `GET /dosen/proposals/invitations` (judul, jenis, status,
 anggaran, pengusul, periode); Abstrak & Tim diberi `ApiPending`.
 
-| ID | Elemen | Kebutuhan | Usulan endpoint | Catatan |
-|---|---|---|---|---|
-| W-35 | Abstrak, informasi lengkap (rumpun ilmu, bidang, skema/mitra, kata kunci, luaran) & **tim** kegiatan untuk undangan yang **belum diterima** | Calon anggota bisa menilai kegiatan sebelum menerima | `GET /dosen/proposals/invitations/:id` → undangan + `proposal` ringkas (tanpa dokumen utama/lampiran), hanya untuk penerima undangan | Dokumen utama memang tidak ditampilkan di halaman ini. |
+**API W-35 sudah tersedia** (lihat tabel "API sudah tersedia" di atas, `new-api.md` bagian 22).
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

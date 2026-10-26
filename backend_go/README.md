@@ -150,7 +150,7 @@ scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
 
 ```bash
 go test ./...                                 # unit test (tanpa database)
-python3 scripts/e2e.py http://localhost:3000  # 626 pengecekan end-to-end
+python3 scripts/e2e.py http://localhost:3000  # 667 pengecekan end-to-end
 ```
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
@@ -214,7 +214,11 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 16. Template proposal `/api/v1/template-proposal` (baru): admin mengunggah/mengaktifkan/menghapus
     versi (DOCX/PDF, per jenis atau umum, blob di tabel `TemplateProposal`); template aktif & unduhannya
     publik. Lihat `new-api.md` bagian 21.
-17. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+17. `GET /dosen/proposals/invitations/:id` (baru, W-35): detail undangan untuk penerimanya, tanpa
+    dokumen/kontak. Permintaan hapus dokumen (baru, W-34): admin `POST /proposals|laporan/:id/deletion-request`,
+    Ketua `POST /dokumen/deletion-request/:requestId/approve|cancel` (tabel `DokumenDeletionRequest`).
+    Lihat `new-api.md` bagian 22–23.
+18. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

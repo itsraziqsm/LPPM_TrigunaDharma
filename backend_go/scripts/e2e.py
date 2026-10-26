@@ -991,5 +991,68 @@ check("template fallback umum", tu["jenis"] == "umum" and peng is not None and (
 expect("template aktif bad jenis", req("GET", "/api/v1/template-proposal/aktif?jenis=x"), 422)
 check("template activity", any(x["action"] == "template.upload" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
 
+# ── W-35 detail undangan (calon anggota yang belum menerima) ──
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji detail undangan", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "Ilmu Teknik", "kataKunci": ["undangan"], "dokumenUrl": "https://drive.google.com/rahasia", "anggotaIds": [{"userId": dosen3User["id"], "peran": "anggota"}, {"userId": dosen4User["id"]}]})
+up = b[1]["data"]["id"]
+req("POST", "/api/v1/luaran", dosen5, {"proposalId": up, "jenis": "jurnal", "target": "Jurnal SINTA 4"})
+inv3 = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", dosen3)[1]["data"] if i["proposal"]["id"] == up][0]
+b = expect("undangan detail", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen3), 200, "Invitation fetched")
+d = b["data"]
+dp = d["proposal"]
+check("undangan detail shape", list(d.keys()) == ["id", "peran", "statusUndangan", "createdAt", "proposal"] and d["statusUndangan"] == "pending" and dp["id"] == up and dp["abstrak"] == abstrak and dp["rumpunIlmu"] == "Ilmu Teknik" and dp["kataKunci"] == ["undangan"], d)
+check("undangan detail tanpa data sensitif", "dokumenUrl" not in dp and "catatanRevisi" not in dp and "reviewerTugasan" not in dp and all("email" not in a["user"] and "noHp" not in a["user"] for a in dp["anggota"]) and len(dp["anggota"]) == 2 and dp["pengusul"]["id"] == dosen5User["id"], dp)
+check("undangan detail target luaran", [x["target"] for x in dp["targetLuaran"]] == ["Jurnal SINTA 4"] and dp["tahapan"]["kode"] == "seleksi_usulan", dp.get("targetLuaran"))
+expect("undangan detail orang lain", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen4), 404, "Undangan tidak ditemukan")
+expect("undangan detail missing", req("GET", "/api/v1/dosen/proposals/invitations/999999", dosen3), 404, "Undangan tidak ditemukan")
+expect("undangan detail admin forbidden", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", admin), 403)
+req("DELETE", f"/api/v1/dosen/proposals/{up}", dosen5)
+
+# ── W-34 hapus proposal/laporan yang sudah diajukan: admin minta, Ketua setujui ──
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji hapus dengan izin", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
+hp = b[1]["data"]["id"]
+lengkapi_tim(hp, dosen5, "penelitian")
+expect("hp submit", req("POST", f"/api/v1/dosen/proposals/{hp}/submit", dosen5), 200)
+expect("hapus req ketua forbidden", req("POST", f"/api/v1/proposals/{hp}/deletion-request", ketua, {"password": "ketua123456", "alasan": "duplikat"}), 403)
+expect("hapus req dosen forbidden", req("POST", f"/api/v1/proposals/{hp}/deletion-request", dosen5, {"password": "dosen123456", "alasan": "duplikat"}), 403)
+expect("hapus req tanpa alasan", req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "admin123456"}), 422)
+expect("hapus req tanpa password", req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"alasan": "Proposal duplikat"}), 400, "Password wajib diisi")
+expect("hapus req password salah", req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "x", "alasan": "Proposal duplikat"}), 400, "Password salah")
+expect("hapus req laporan route salah", req("POST", f"/api/v1/laporan/{hp}/deletion-request", admin, {"password": "admin123456", "alasan": "Proposal duplikat"}), 404, "Laporan tidak ditemukan")
+b = expect("hapus req", req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "admin123456", "alasan": "Proposal duplikat"}), 201, "Permintaan penghapusan dikirim ke Ketua LPPM")
+hr = b["data"]
+check("hapus req shape", list(hr.keys()) == ["id", "tipe", "kegiatanId", "jenis", "judul", "status", "alasan", "catatan", "requester", "approver", "pengusul", "decidedAt", "createdAt", "updatedAt"] and hr["status"] == "pending" and hr["kegiatanId"] == hp and hr["pengusul"]["id"] == dosen5User["id"], hr)
+expect("hapus req dobel", req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "admin123456", "alasan": "Proposal duplikat"}), 409)
+b = expect("hapus pending", req("GET", f"/api/v1/proposals/{hp}/deletion-request", ketua), 200)
+check("hapus pending id", b["data"]["id"] == hr["id"], b)
+check("ketua notif hapus", any(x["type"] == "deletion_request" and x["refType"] == "DokumenDeletionRequest" and x["refId"] == hr["id"] for x in req("GET", "/api/v1/notifications", ketua)[1]["data"]))
+b = expect("hapus list ketua", req("GET", "/api/v1/dokumen/deletion-request?status=pending", ketua), 200)
+check("hapus list isi", any(x["id"] == hr["id"] for x in b["data"]), b["data"][:2])
+expect("hapus approve admin forbidden", req("POST", f"/api/v1/dokumen/deletion-request/{hr['id']}/approve", admin, {"password": "admin123456"}), 403)
+expect("hapus approve password salah", req("POST", f"/api/v1/dokumen/deletion-request/{hr['id']}/approve", ketua, {"password": "x"}), 400, "Password salah")
+expect("hapus cancel orang lain", req("POST", f"/api/v1/dokumen/deletion-request/{hr['id']}/cancel", dosen5), 403)
+b = expect("hapus tolak ketua", req("POST", f"/api/v1/dokumen/deletion-request/{hr['id']}/cancel", ketua, {"catatan": "Masih diperlukan"}), 200, "Permintaan penghapusan ditolak")
+check("hapus ditolak", b["data"]["status"] == "rejected" and b["data"]["catatan"] == "Masih diperlukan", b["data"])
+expect("hapus approve sudah diproses", req("POST", f"/api/v1/dokumen/deletion-request/{hr['id']}/approve", ketua, {"password": "ketua123456"}), 409, "Permintaan penghapusan sudah diproses")
+check("admin notif ditolak", any(x["type"] == "deletion_cancelled" and x["refId"] == hr["id"] for x in req("GET", "/api/v1/notifications", admin)[1]["data"]))
+# admin membatalkan sendiri
+b = req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "admin123456", "alasan": "Coba lagi"})[1]
+expect("hapus batal admin", req("POST", f"/api/v1/dokumen/deletion-request/{b['data']['id']}/cancel", admin), 200, "Permintaan penghapusan dibatalkan")
+# proposal disetujui + laporan → hapus proposal ikut menghapus laporan
+expect("hp approve status", req("PATCH", f"/api/v1/proposals/{hp}/status", ketua, {"status": "disetujui"}), 200)
+hl = req("POST", "/api/v1/laporan", dosen5, {"proposalId": hp})[1]["data"]["id"]
+b = expect("hapus req laporan", req("POST", f"/api/v1/laporan/{hl}/deletion-request", admin, {"password": "admin123456", "alasan": "Laporan salah unggah"}), 201)
+lapReq = b["data"]["id"]
+check("hapus req laporan tipe", b["data"]["tipe"] == "laporan", b["data"])
+expect("hapus pending laporan", req("GET", f"/api/v1/laporan/{hl}/deletion-request", admin), 200, "Permintaan penghapusan fetched")
+hr2 = req("POST", f"/api/v1/proposals/{hp}/deletion-request", admin, {"password": "admin123456", "alasan": "Proposal duplikat"})[1]["data"]
+b = expect("hapus approve", req("POST", f"/api/v1/dokumen/deletion-request/{hr2['id']}/approve", ketua, {"password": "ketua123456"}), 200, "Proposal berhasil dihapus")
+check("hapus approved", b["data"]["status"] == "approved" and b["data"]["kegiatanId"] is None and b["data"]["approver"]["name"] and b["data"]["judul"] == "Proposal untuk uji hapus dengan izin", b["data"])
+expect("proposal terhapus", req("GET", f"/api/v1/proposals/{hp}", admin), 500, "Proposal tidak ditemukan")
+expect("laporan ikut terhapus", req("GET", f"/api/v1/laporan/{hl}", admin), 404)
+lr = [x for x in req("GET", "/api/v1/dokumen/deletion-request", ketua)[1]["data"] if x["id"] == lapReq][0]
+check("permintaan laporan ikut selesai", lr["status"] == "approved" and lr["kegiatanId"] is None, lr)
+check("pengusul notif dihapus", any(x["type"] == "deletion_approved" and x["refId"] == hr2["id"] for x in req("GET", "/api/v1/notifications", dosen5)[1]["data"]))
+check("notif lama proposal dibersihkan", not any(x.get("refType") == "proposal" and x["refId"] == hp for x in req("GET", "/api/v1/notifications?limit=100", dosen5)[1]["data"]))
+
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

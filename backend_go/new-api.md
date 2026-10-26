@@ -25,6 +25,8 @@ API, dikelompokkan per rilis:
 - **Bagian 19** — Backup database: otomatis bulanan oleh sistem, manual oleh admin, log + unduh + hapus.
 - **Bagian 20** — Hak akses periode: admin hanya melihat, Ketua tambah/ubah/hapus langsung, admin hapus lewat verifikasi Ketua.
 - **Bagian 21** — Template proposal yang bisa diganti admin (unggah versi baru per tahun, riwayat, unduh publik).
+- **Bagian 22** — Detail undangan untuk calon anggota yang belum menerima (W-35).
+- **Bagian 23** — Admin menghapus proposal/laporan yang sudah diajukan dengan izin Ketua (W-34).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -1781,3 +1783,117 @@ Pada endpoint publik `/aktif`, `unduhUrl` = `/template-proposal/aktif/unduh?jeni
   (form multipart di atas), **Unduh** (`GET /:id/unduh` sebagai blob, perlu token), **Aktifkan**
   (`PATCH /:id/aktifkan`, untuk versi lama), **Hapus** (`DELETE /:id`, nonaktif untuk yang aktif).
 - Unggah, aktifkan, dan hapus dicatat di log aktivitas (`template.upload|aktifkan|delete`).
+
+---
+
+## 22. Detail undangan (W-35)
+
+Calon anggota bisa melihat isi kegiatan **sebelum** menerima undangan.
+
+`GET /api/v1/dosen/proposals/invitations/:id` — `:id` = id undangan (dari `GET /dosen/proposals/invitations`).
+Hanya penerima undangan itu (dosen/mahasiswa); undangan milik orang lain atau tidak ada → **404**
+`"Undangan tidak ditemukan"`. Bisa dipakai untuk status `pending`, `diterima`, maupun `ditolak`.
+
+```json
+{
+  "id": 403,
+  "peran": "anggota",
+  "statusUndangan": "pending",
+  "createdAt": "2026-10-26T04:18:58.086Z",
+  "proposal": {
+    "id": 621, "tipe": "proposal", "judul": "...", "abstrak": "...", "jenis": "penelitian", "status": "draft",
+    "anggaran": null, "luaran": null, "skema": null, "mitra": null, "mitraJenis": null, "mitraAlamat": null,
+    "mitraKontak": null, "mitraKebutuhan": null, "rumpunIlmu": "Ilmu Teknik", "bidang": null, "kataKunci": ["undangan"],
+    "submittedAt": null, "approvedAt": null, "createdAt": "...", "updatedAt": "...",
+    "tahapan": { "kode": "seleksi_usulan", "label": "Seleksi Usulan", "urutan": 1 },
+    "pengusul": { "id": 9, "name": "...", "fullName": "...", "email": "...", "nidn": "...", "programStudi": "..." },
+    "periode": { "id": 1, "nama": "...", "tahun": 2026, "jenis": "penelitian" },
+    "anggota": [ { "id": 403, "peran": "anggota", "statusUndangan": "pending", "user": { "id": 11, "name": "...", "fullName": "..." } } ],
+    "targetLuaran": [ { "id": 7, "jenis": "jurnal", "target": "Jurnal SINTA 4", "targetTanggal": null } ]
+  }
+}
+```
+
+Sengaja **tidak** dikirim: `dokumenUrl` (dokumen utama/lampiran), `catatanRevisi`, `reviewerTugasan`, dan
+email/kontak/No. HP anggota lain. Email pengusul tetap ada (untuk menghubungi pengundang). Menerima/
+menolak tetap lewat `PATCH /dosen/proposals/invitations/:id`.
+
+---
+
+## 23. Hapus proposal/laporan yang sudah diajukan dengan izin Ketua (W-34)
+
+Admin tidak bisa langsung menghapus dokumen yang sudah diajukan. Admin mengirim **permintaan**,
+Ketua LPPM menyetujui dengan password → dokumen terhapus. Draft tetap dihapus langsung lewat
+`DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada).
+
+| Method | Endpoint | Akses | Fungsi |
+|---|---|---|---|
+| POST | `/api/v1/proposals/:id/deletion-request` | admin | Minta hapus proposal `{ password, alasan }` |
+| POST | `/api/v1/laporan/:id/deletion-request` | admin | Minta hapus laporan `{ password, alasan }` |
+| GET | `/api/v1/proposals/:id/deletion-request`, `/api/v1/laporan/:id/deletion-request` | admin, ketua | Permintaan yang **menunggu** untuk dokumen itu (`data: null` bila tidak ada) |
+| GET | `/api/v1/dokumen/deletion-request` (`?status=pending\|approved\|rejected\|cancelled&tipe=proposal\|laporan`) | admin, ketua | Daftar permintaan (yang menunggu di atas, maks 200) |
+| POST | `/api/v1/dokumen/deletion-request/:requestId/approve` | ketua | Setujui `{ password }` → dokumen dihapus |
+| POST | `/api/v1/dokumen/deletion-request/:requestId/cancel` | admin peminta / ketua | Admin = **batal** (`cancelled`), Ketua = **tolak** (`rejected`); body opsional `{ catatan }` |
+
+`alasan` wajib 5–1000 karakter. Satu dokumen hanya boleh punya satu permintaan yang menunggu.
+
+### Bentuk permintaan
+
+```json
+{
+  "id": 12,
+  "tipe": "proposal",
+  "kegiatanId": 640,
+  "jenis": "penelitian",
+  "judul": "Proposal untuk uji hapus dengan izin",
+  "status": "pending",
+  "alasan": "Proposal duplikat",
+  "catatan": null,
+  "requester": { "id": 1, "name": "Admin LPPM", "fullName": null },
+  "approver": null,
+  "pengusul": { "id": 9, "name": "Dosen 5", "fullName": "Dr. Dosen 5, M.T" },
+  "decidedAt": null,
+  "createdAt": "2026-10-26T04:19:01.000Z",
+  "updatedAt": "2026-10-26T04:19:01.000Z"
+}
+```
+
+`judul`, `jenis`, dan `pengusul` disalin saat permintaan dibuat, jadi riwayat tetap terbaca setelah
+dokumen terhapus (`kegiatanId` menjadi `null`). `approver` = Ketua yang menyetujui/menolak, atau admin
+yang membatalkan.
+
+### Yang terjadi saat disetujui
+
+- Proposal dihapus beserta **laporannya** dan semua relasi (anggota, tugasan, review, laporan
+  kemajuan/akhir, dokumen, laporan harian, luaran). Menghapus laporan hanya menghapus laporan itu.
+- Notifikasi lama yang merujuk dokumen itu dibersihkan; permintaan lain yang menunggu untuk dokumen
+  yang sama/laporannya ikut ditandai `approved`.
+- Pengusul & admin peminta mendapat notifikasi `deletion_approved` (dengan alasan), dicatat di log aktivitas.
+
+### Notifikasi (`refType: "DokumenDeletionRequest"`, `refId` = id permintaan)
+
+| Kejadian | Penerima | `type` |
+|---|---|---|
+| admin membuat permintaan | semua Ketua LPPM | `deletion_request` |
+| Ketua menyetujui | pengusul + admin peminta | `deletion_approved` |
+| Ketua menolak | admin peminta (+ catatan) | `deletion_cancelled` |
+
+### Error
+
+| Kondisi | Status | Pesan |
+|---|---|---|
+| bukan admin (minta) / bukan ketua (setujui) | 403 | `Forbidden: insufficient permissions` |
+| dokumen tidak ada / salah route (id laporan di `/proposals`) | 404 | `Proposal tidak ditemukan` / `Laporan tidak ditemukan` |
+| alasan kosong/terlalu pendek | 422 | `{ "errors": { "alasan": ["Alasan wajib diisi (5–1000 karakter)"] } }` |
+| tanpa password / password salah | 400 | `Password wajib diisi` / `Password salah` |
+| sudah ada permintaan menunggu | 409 | `Sudah ada permintaan penghapusan yang menunggu persetujuan Ketua LPPM` |
+| permintaan sudah diproses | 409 | `Permintaan penghapusan sudah diproses` |
+| batal oleh admin lain | 403 | `Hanya admin peminta atau Ketua LPPM yang dapat membatalkan permintaan ini` |
+
+### Untuk frontend
+
+- `components/HapusDokumen.jsx`: aktifkan "Ajukan hapus (izin Ketua)" → dialog password + alasan →
+  `POST /proposals/:id/deletion-request` atau `/laporan/:id/deletion-request`; tampilkan status dari
+  `GET .../deletion-request` (menunggu → tombol "Batalkan").
+- Ketua: daftar `GET /dokumen/deletion-request?status=pending` (mis. di Dokumen Masuk atau halaman
+  notifikasi) dengan Setujui (dialog password) & Tolak (catatan opsional).

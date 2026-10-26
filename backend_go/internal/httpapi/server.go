@@ -104,6 +104,7 @@ func (s *Server) registerRoutes() {
 	s.registerExportRoutes()
 	s.registerBackupRoutes()           // baru, tidak ada di Node
 	s.registerTemplateProposalRoutes() // baru, tidak ada di Node
+	s.registerDokumenHapusRoutes()     // baru, tidak ada di Node
 }
 
 // nowMs returns the current time truncated to milliseconds, like JS Date.

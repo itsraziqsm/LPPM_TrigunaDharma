@@ -30,6 +30,7 @@ func (s *Server) registerProposalDosenRoutes() {
 	g.get("/as-member", s.dosenProposalsAsMember) // baru (W-16), tidak ada di Node
 	g.get("/members/search", dosen, s.dosenSearchMembers)
 	g.get("/invitations", s.dosenInvitations)
+	g.get("/invitations/:id", s.dosenInvitationDetail) // baru (W-35)
 	g.patch("/invitations/:id", s.dosenRespondInvitation)
 	g.get("/", dosen, s.dosenProposals)
 	g.post("/", dosen, validateBody(createProposalSchema), s.dosenCreateProposal)

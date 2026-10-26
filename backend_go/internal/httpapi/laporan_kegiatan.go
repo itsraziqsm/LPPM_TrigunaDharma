@@ -69,6 +69,8 @@ func (s *Server) registerLaporanKegiatanRoutes() {
 	g.patch("/:id", authorize("dosen"), validateBody(updateLaporanKegiatanSchema), s.updateLaporanKegiatan)
 	g.post("/:id/submit", authorize("dosen"), s.submitLaporanKegiatan)
 	g.delete("/:id", authorize("dosen", "admin"), s.deleteLaporanKegiatan)
+	g.get("/:id/deletion-request", authorize("admin", "ketua_lppm"), s.pendingDokumenHapus("laporan")) // baru (W-34)
+	g.post("/:id/deletion-request", authorize("admin"), s.requestDokumenHapus("laporan"))              // baru (W-34)
 	g.post("/:id/dokumen", authorize("dosen"), multerSingle("file"), s.uploadLaporanKegiatanDokumen)
 	g.get("/:id/dokumen", s.downloadLaporanKegiatanDokumen)
 	g.patch("/:id/status", authorize("ketua_lppm", "admin"), validateBody(updateStatusProposalSchema), s.updateLaporanKegiatanStatus)

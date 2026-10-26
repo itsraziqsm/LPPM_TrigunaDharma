@@ -74,6 +74,8 @@ func (s *Server) registerProposalRoutes() {
 	g.post("/:id/submit", authorize("dosen"), s.submitProposal)
 	g.patch("/:id/status", authorize("ketua_lppm", "admin"), validateBody(updateStatusProposalSchema), s.updateProposalStatus)
 	g.delete("/:id", authorize("dosen", "admin"), s.deleteProposal)
+	g.get("/:id/deletion-request", authorize("admin", "ketua_lppm"), s.pendingDokumenHapus("proposal")) // baru (W-34)
+	g.post("/:id/deletion-request", authorize("admin"), s.requestDokumenHapus("proposal"))              // baru (W-34)
 	g.post("/:id/dokumen-utama", authorize("dosen"), multerSingle("file"), s.uploadProposalDokumen)
 	g.get("/:id/dokumen-utama", s.downloadProposalDokumen)
 

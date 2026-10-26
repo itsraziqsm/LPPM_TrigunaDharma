@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -56,7 +56,7 @@ go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (statu
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # 626 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # 667 cek E2E; HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -115,7 +115,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
-| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
+| `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ `GET /:id` detail untuk penerima, tanpa dokumen/kontak; + PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
@@ -127,6 +127,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua) | |
 | `/export/proposals` | data export | admin, ketua |
+| `/proposals/:id/deletion-request`, `/laporan/:id/deletion-request`, `/dokumen/deletion-request` | admin minta hapus dokumen yang sudah diajukan (`{password, alasan}`, GET = permintaan menunggu); daftar (`?status=&tipe=`); Ketua `/:requestId/approve` (`{password}`, hapus proposal + laporannya) / `/cancel` (admin batal, Ketua tolak) | admin / ketua |
 | `/template-proposal` | `/aktif?jenis=` + `/aktif/unduh?jenis=` (**publik**, jatuh ke `umum`); list, POST multipart (file DOCX/PDF + `jenis`/`tahun`/`keterangan`, langsung aktif), `/:id/unduh`, `/:id/aktifkan`, DELETE `/:id` (aktif → 409) | publik / admin |
 | `/backup` | log (`?sumber=sistem\|admin&status=`), `/jadwal`, POST manual (202, latar; 409 bila ada yang berjalan), `/:id`, `/:id/download` (.sql.gz), DELETE `/:id` (hapus file, log tetap) | admin |
 
@@ -210,7 +211,9 @@ ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
 `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
-`Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `BackupLog`, `TemplateProposal` (versi template
+`Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `DokumenDeletionRequest` (permintaan hapus proposal/laporan:
+`kegiatanId` SET NULL setelah terhapus, salinan `judul`/`jenis`/`pengusulId`, `alasan`, `catatan`, status
+pending|approved|rejected|cancelled), `BackupLog`, `TemplateProposal` (versi template
 proposal: `jenis` umum|penelitian|pengabdian, `tahun`, blob, `isAktif` satu per jenis), `_prisma_migrations`.
 VIEW (baca saja): `Proposal`, `Laporan`. Kolom `proposalId` di tabel relasi ber-FK ke
 `Kegiatan.id`; id proposal & laporan unik bersama sehingga URL `/proposals/:id` tidak berubah.
