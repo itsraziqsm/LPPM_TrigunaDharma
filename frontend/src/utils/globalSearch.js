@@ -105,8 +105,8 @@ export async function cariGlobal(q, ctx) {
     const [prop, lap, usr] = await Promise.all([safe(proposalApi.getAll(params)), safe(laporanApi.getAll(params)), safe(usersApi.getAll(params))])
     const nama = (x) => x.pengusul?.fullName || x.pengusul?.name
     data = [
-      ...daftar(prop).map((p) => kegiatanItem(p, 'Proposal', `/proposals?detail=${p.id}`, nama(p))),
-      ...daftar(lap).map((l) => kegiatanItem(l, 'Laporan', `/laporan-masuk?id=${l.id}`, nama(l))),
+      ...daftar(prop).map((p) => kegiatanItem(p, 'Proposal', `/proposals/detail/${p.id}`, nama(p))),
+      ...daftar(lap).map((l) => kegiatanItem(l, 'Laporan', `/laporan-masuk/detail/${l.id}`, nama(l))),
       ...daftar(usr).map((u) => ({
         key: `user-${u.id}`,
         group: 'User',

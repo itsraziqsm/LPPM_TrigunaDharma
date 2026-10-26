@@ -3,17 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel } from './periodeComponents'
-import KetuaProposalDetail from './KetuaProposalDetail'
-import AdminProposalDetail from './AdminProposalDetail'
 import { ChevronRight } from 'lucide-react'
 
 // ─── Proposal Panel (list) — centered overlay ─────────────────────────────────
 // Tab Proposal (GET /proposals?periodeId=) dan Laporan (GET /laporan?periodeId=,
 // bawaan status Disetujui): tempat melihat kegiatan periode lama yang sudah
-// diterima — Laporan Masuk hanya memuat periode aktif. Klik laporan membuka
-// panelnya di /laporan-masuk?id=.
+// diterima — Laporan Masuk hanya memuat periode aktif. Klik membuka halaman detail
+// /proposals/detail/:id atau /laporan-masuk/detail/:id (bukan modal).
 
-export default function ProposalPanel({ periode, isKetua, onClose }) {
+export default function ProposalPanel({ periode, onClose }) {
     const [proposals, setProposals] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -26,7 +24,6 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
     const navigate = useNavigate()
     const isLaporan = tipe === 'laporan'
     const noun = isLaporan ? 'laporan' : 'proposal'
-    const [selectedProposal, setSelectedProposal] = useState(null)
     const debounceRef = useRef(null)
 
     useEffect(() => {
@@ -66,30 +63,6 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
     }
 
     const totalPages = Math.ceil((meta.total || 0) / (meta.limit || 10))
-
-    if (selectedProposal !== null) {
-        if (isKetua) {
-            return (
-                <KetuaProposalDetail
-                    key={selectedProposal}
-                    proposalId={selectedProposal}
-                    onClose={onClose}
-                    onBack={() => setSelectedProposal(null)}
-                />
-            )
-        } else {
-            const found = proposals.find(p => p.id === selectedProposal)
-            if (found) {
-                return (
-                    <AdminProposalDetail
-                        proposal={found}
-                        onClose={onClose}
-                        onBack={() => setSelectedProposal(null)}
-                    />
-                )
-            }
-        }
-    }
 
     return (
         <OverlayPanel onClose={onClose} size="xl">
@@ -176,7 +149,7 @@ export default function ProposalPanel({ periode, isKetua, onClose }) {
                         {proposals.map((p) => (
                             <article
                                 key={p.id}
-                                onClick={() => (isLaporan ? navigate(`/laporan-masuk?id=${p.id}`) : setSelectedProposal(p.id))}
+                                onClick={() => navigate(isLaporan ? `/laporan-masuk/detail/${p.id}` : `/proposals/detail/${p.id}`)}
                                 className="group cursor-pointer px-6 py-4 transition-colors duration-150 hover:bg-slate-50"
                             >
                                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-6">

@@ -1,317 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { UserPlus, X } from 'lucide-react'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { laporanApi } from '../api/laporan'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
-import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
-import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
-import LuaranCapaian from './laporan/LuaranCapaian'
-import { rupiah, tanggal } from './laporan/format'
-import { confirmDialog } from '../utils/dialog'
+import { JENIS_LABEL } from './ProposalDosen/constants'
+import { StatusBadge } from './laporan/shared'
+import { tanggal } from './laporan/format'
 import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
-import UserAvatar from '../components/UserAvatar'
-import HapusDokumen from '../components/HapusDokumen'
-import BebanReviewer from '../components/BebanReviewer'
-import { usersApi } from '../api/users'
 import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // ---------------------------------------------------------------------------
-// Laporan Masuk (Ketua LPPM / Admin): daftar semua laporan (GET /laporan),
-// detail di panel (GET /laporan/:id), tugaskan/hapus reviewer, dan keputusan
-// status (PATCH /laporan/:id/status). ?id=… membuka detail langsung (tautan
-// dari notifikasi laporan_diajukan).
+// Laporan Masuk (Ketua LPPM / Admin): daftar laporan (GET /laporan). Detail, penugasan
+// reviewer & keputusan di halaman /laporan-masuk/detail/:id (LaporanMasukDetailPage);
+// tautan lama ?id=… dialihkan ke sana.
 // ---------------------------------------------------------------------------
 
 const LIMIT = 10
-const KEPUTUSAN = ['review', 'revisi', 'disetujui', 'ditolak']
-
-function errorText(e, fallback) {
-  const errs = e.response?.data?.errors
-  if (errs) return Object.values(errs).flat().join(' ')
-  return e.response?.data?.message || fallback
-}
-
-// viewOnly (Admin): lihat saja + hapus dengan izin; tugaskan reviewer & keputusan = Ketua.
-function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
-  const [laporan, setLaporan] = useState(null)
-  const [error, setError] = useState('')
-  const [msg, setMsg] = useState(null)
-  const [busy, setBusy] = useState(false)
-  const [status, setStatus] = useState('')
-  const [catatan, setCatatan] = useState('')
-  const [reviewers, setReviewers] = useState(null)
-  const [picked, setPicked] = useState([])
-  const [tick, setTick] = useState(0)
-
-  useEffect(() => {
-    let alive = true
-    laporanApi
-      .getById(id)
-      .then((r) => {
-        if (!alive) return
-        setLaporan(r.data.data)
-        setCatatan(r.data.data.catatanRevisi || '')
-      })
-      .catch((e) => alive && setError(errorText(e, 'Laporan gagal dimuat.')))
-    return () => {
-      alive = false
-    }
-  }, [id, tick])
-
-  const reload = () => {
-    setTick((t) => t + 1)
-    onChanged()
-  }
-
-  const openReviewerPicker = async () => {
-    setPicked([])
-    try {
-      // Urut beban (W-32): tanpa tugasan aktif dulu; pengusul sudah dikeluarkan backend.
-      const r = await usersApi.getKandidatReviewer({ itemId: laporan.id })
-      const assigned = new Set((laporan.reviewerTugasan || []).map((t) => t.reviewerId ?? t.reviewer?.id))
-      setReviewers((r.data.data || []).filter((u) => !u.sudahDitugaskan && u.id !== laporan.pengusul?.id && !assigned.has(u.id)))
-    } catch {
-      setReviewers([])
-    }
-  }
-
-  const assign = async () => {
-    if (picked.length === 0) return
-    setBusy(true)
-    setMsg(null)
-    try {
-      await laporanApi.assignReviewers(laporan.id, picked)
-      setReviewers(null)
-      setMsg({ type: 'success', text: 'Reviewer ditugaskan. Status laporan menjadi Review.' })
-      reload()
-    } catch (e) {
-      setMsg({ type: 'error', text: errorText(e, 'Gagal menugaskan reviewer.') })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const unassign = async (reviewerId) => {
-    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus tugasan reviewer?', message: 'Reviewer ini tidak lagi ditugaskan menilai laporan.', confirmText: 'Ya, hapus' }))) return
-    setBusy(true)
-    try {
-      await laporanApi.removeReviewer(laporan.id, reviewerId)
-      reload()
-    } catch (e) {
-      setMsg({ type: 'error', text: errorText(e, 'Gagal menghapus tugasan.') })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const decide = async (e) => {
-    e.preventDefault()
-    if (!status) return
-    if ((status === 'revisi' || status === 'ditolak') && !catatan.trim()) {
-      setMsg({ type: 'error', text: 'Tuliskan catatan untuk keputusan revisi/ditolak.' })
-      return
-    }
-    setBusy(true)
-    setMsg(null)
-    try {
-      await laporanApi.updateStatus(laporan.id, { status, ...(status !== 'review' && catatan.trim() ? { catatanRevisi: catatan.trim() } : {}) })
-      setMsg({ type: 'success', text: `Status laporan diubah menjadi ${STATUS_LABEL[status]}.` })
-      setStatus('')
-      reload()
-    } catch (err) {
-      setMsg({ type: 'error', text: errorText(err, 'Gagal mengubah status.') })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const canAssign = !viewOnly && laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
-  // Laporan yang sudah disetujui berstatus final: status tidak bisa diubah lagi.
-  const canDecide = !viewOnly && laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
-
-  return (
-    <div className="overlay" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <section role="dialog" aria-modal="true" aria-label="Detail laporan" className="dialog flex max-h-full max-w-4xl flex-col">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
-          <div className="min-w-0">
-            <p className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-              Laporan {JENIS_LABEL[laporan?.jenis] || ''} {laporan ? <StatusBadge status={laporan.status} /> : null}
-            </p>
-            <h2 className="mt-1 break-words text-lg font-semibold text-navy-950">{laporan?.judul || 'Memuat…'}</h2>
-          </div>
-          <button type="button" onClick={onClose} className="icon-btn" aria-label="Tutup">
-            <X className="size-[18px]" aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5" data-lenis-prevent>
-          {error ? <Message msg={{ type: 'error', text: error }} /> : null}
-          <Message msg={msg} />
-          {!laporan ? (
-            !error ? <span className="spinner mx-auto block text-navy-600" aria-hidden="true" /> : null
-          ) : (
-            <>
-              <InfoTable
-                rows={[
-                  ['Pengusul', `${laporan.pengusul?.fullName || laporan.pengusul?.name || '—'}${laporan.pengusul?.nidn ? ` · NIDN ${laporan.pengusul.nidn}` : ''}`],
-                  ['Periode', laporan.periode?.nama],
-                  ['Diajukan', tanggal(laporan.submittedAt)],
-                  ['Kata kunci', (laporan.kataKunci || []).join(', ') || '—'],
-                  ...(laporan.jenis === 'penelitian' ? [['Metode penelitian', laporan.metodePenelitian || '—']] : []),
-                  ['Target luaran', laporan.luaran || '—'],
-                  ['Luaran tercapai', laporan.luaranTercapai || '—'],
-                  ['Ringkasan hasil', laporan.ringkasanHasil || '—'],
-                  ['Anggaran / realisasi', `${rupiah(laporan.anggaran)} / ${rupiah(laporan.realisasiAnggaran)}`],
-                  ['Dokumen', <DokumenLaporan key="d" laporan={laporan} />],
-                ]}
-              />
-
-              <section className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-navy-950">Reviewer</h3>
-                  {canAssign ? (
-                    <button type="button" onClick={openReviewerPicker} className="btn btn-secondary btn-sm" disabled={busy}>
-                      <UserPlus className="size-4" aria-hidden="true" />
-                      Tugaskan reviewer
-                    </button>
-                  ) : null}
-                </div>
-                {(laporan.reviewerTugasan || []).length === 0 ? (
-                  <p className="text-sm text-slate-500">Belum ada reviewer.</p>
-                ) : (
-                  <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
-                    {laporan.reviewerTugasan.map((t) => (
-                      <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                        <span className="flex min-w-0 items-center gap-2"><UserAvatar user={t.reviewer || { id: t.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" /><span className="truncate">{t.reviewer?.fullName || t.reviewer?.name}</span></span>
-                        {viewOnly ? null : (
-                          <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
-                            Hapus
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {reviewers ? (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    {reviewers.length === 0 ? (
-                      <p className="text-sm text-slate-500">Tidak ada reviewer lain yang tersedia.</p>
-                    ) : (
-                      <ul className="max-h-56 space-y-1 overflow-y-auto">
-                        {reviewers.map((u) => (
-                          <li key={u.id}>
-                            <label className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-white">
-                              <input
-                                type="checkbox"
-                                className="accent-navy-700"
-                                checked={picked.includes(u.id)}
-                                onChange={(e) => setPicked((p) => (e.target.checked ? [...p, u.id] : p.filter((x) => x !== u.id)))}
-                              />
-                              {u.fullName || u.name}
-                              <span className="text-xs text-slate-500">{u.email}</span>
-                              <span className="ml-auto">
-                                <BebanReviewer kandidat={u} />
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" onClick={assign} disabled={busy || picked.length === 0} className="btn btn-primary btn-sm">
-                        Tugaskan ({picked.length})
-                      </button>
-                      <button type="button" onClick={() => setReviewers(null)} className="btn btn-ghost btn-sm">
-                        Batal
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-base font-semibold text-navy-950">Capaian luaran</h3>
-                <LuaranCapaian proposalId={laporan.proposalId} />
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-base font-semibold text-navy-950">Hasil review</h3>
-                <ReviewList reviews={laporan.reviews} />
-              </section>
-
-              {viewOnly ? (
-                <section className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-base font-semibold text-navy-950">Akses Admin</h3>
-                  <p className="text-sm text-slate-600">
-                    Admin hanya dapat melihat dan menghapus. Penugasan reviewer dan keputusan dilakukan Ketua LPPM.
-                  </p>
-                  <HapusDokumen
-                    tipe="laporan"
-                    id={laporan.id}
-                    status={laporan.status}
-                    noun="laporan"
-                    judul={laporan.judul}
-                    onDelete={async () => {
-                      await laporanApi.remove(laporan.id)
-                      onChanged()
-                      onClose()
-                    }}
-                  />
-                </section>
-              ) : null}
-
-              {canDecide ? (
-                <form onSubmit={decide} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-                  <h3 className="text-base font-semibold text-navy-950">Keputusan</h3>
-                  <div className="grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
-                    <div>
-                      <label htmlFor="lm-status" className="label">
-                        Ubah status ke
-                      </label>
-                      <select id="lm-status" className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
-                        <option value="">-- Pilih --</option>
-                        {KEPUTUSAN.filter((s) => s !== laporan.status).map((s) => (
-                          <option key={s} value={s}>
-                            {STATUS_LABEL[s]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="lm-catatan" className="label">
-                        Catatan untuk pengusul
-                      </label>
-                      <textarea
-                        id="lm-catatan"
-                        rows={3}
-                        className="input resize-y"
-                        value={catatan}
-                        onChange={(e) => setCatatan(e.target.value)}
-                        disabled={status === 'review'}
-                        placeholder="Wajib untuk revisi/ditolak"
-                      />
-                    </div>
-                  </div>
-                  <button type="submit" className="btn btn-primary" disabled={busy || !status}>
-                    Simpan keputusan
-                  </button>
-                </form>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  {laporan.status === 'disetujui'
-                    ? 'Laporan sudah disetujui. Status final dan tidak dapat diubah lagi.'
-                    : 'Laporan masih draft dan belum diajukan pengusul.'}
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-    </div>
-  )
-}
 
 // Laporan Masuk = Dokumen Masuk › Laporan Kegiatan: hanya periode aktif, bawaan
 // "Perlu ditangani" (logika bersama di hooks/useDokumenMasuk.js).
@@ -320,7 +25,8 @@ const fetchLaporan = (params) => laporanApi.getAll(params)
 export default function LaporanMasukPage() {
   // Admin (peran pertama): lihat & hapus saja; Ketua mengelola reviewer & keputusan.
   const viewOnly = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
-  const [params, setParams] = useSearchParams()
+  // Tautan lama ?id=<id> (notifikasi, panel Periode) → halaman detail.
+  const [params] = useSearchParams()
   const openId = params.get('id')
   const [periodeId, setPeriodeId] = useState('') // '' = semua periode aktif
   const [page, setPage] = useState(1)
@@ -339,11 +45,14 @@ export default function LaporanMasukPage() {
   })
 
   const refresh = useCallback(() => setTick((t) => t + 1), [])
-  const open = (id) => setParams(id ? { id: String(id) } : {})
+  const navigate = useNavigate()
+  const open = (id) => navigate(`/laporan-masuk/detail/${id}`)
   const total = all.length
   const pages = Math.max(1, Math.ceil(total / LIMIT))
   const rows = all.slice((page - 1) * LIMIT, page * LIMIT)
   const filterLabel = FILTERS_MASUK.find((f) => f.key === filter).label
+
+  if (openId) return <Navigate to={`/laporan-masuk/detail/${openId}`} replace />
 
   return (
     <div className="page space-y-6">
@@ -513,7 +222,6 @@ export default function LaporanMasukPage() {
         <p className="text-xs text-amber-700">Lebih dari {FETCH_LIMIT} laporan cocok di satu periode; persempit dengan pencarian atau filter.</p>
       ) : null}
 
-      {openId ? <DetailPanel key={openId} id={openId} viewOnly={viewOnly} onClose={() => open(null)} onChanged={refresh} /> : null}
     </div>
   )
 }

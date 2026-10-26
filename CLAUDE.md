@@ -272,8 +272,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal`, `/luaran-dosen` (admin), `/pemantauan` (Ketua STMIK; juga bisa admin/ketua), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
-  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**detail mode reviewer**,
-  halaman — bukan modal; non-reviewer admin/ketua dialihkan ke `/proposals?detail=` / `/laporan-masuk?id=`), `/profil`.
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
+  `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
+  `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (hanya peran
@@ -366,7 +367,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
   jumlah perlu ditangani, klik = saring), filter bawaan "Perlu ditangani" (`diajukan`+`review`), Revisi/Disetujui/
   Ditolak/Semua (tanpa draft); data per periode × status (limit 100) digabung & dipaginasi di peramban. Dokumen
-  periode lama → Periode → panel periode tab Proposal/Laporan.
+  periode lama → Periode → panel periode tab Proposal/Laporan (klik → halaman detail; `KetuaProposalDetail`/
+  `AdminProposalDetail` dihapus). **Detail = halaman, bukan modal**: `ProposalMasukDetailPage.jsx` (`/proposals/detail/:id`:
+  abstrak, info, mitra, luaran, hasil review, lampiran & laporan `readOnly`, dokumen utama, reviewer (Tugaskan dari
+  kandidat-reviewer saat diajukan/review, hapus), tim, riwayat, **Keputusan** (`#keputusan`, tombol "Ubah Status" di daftar;
+  revisi/ditolak wajib catatan, disetujui final); Admin: kartu Akses Admin + `HapusDokumen`) dan `LaporanMasukDetailPage.jsx`
+  (`/laporan-masuk/detail/:id`, isi panel lama). Notifikasi & pencarian global pengelola menuju halaman ini.
 - **Backup Data** (`src/pages/BackupPage.jsx`, `/backup`, admin; `src/api/backup.js`, new-api.md bagian 19): kartu
   "Backup sekarang" (`POST /backup` 202 → pantau `GET /backup/:id` tiap 1,5 dtk; info jadwal `GET /backup/jadwal`),
   lalu tabel **Daftar Backup** (`GET /backup`, filter pelaku `sumber`) dengan kolom "Dilakukan oleh" (Sistem /

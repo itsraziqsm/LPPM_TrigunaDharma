@@ -250,7 +250,7 @@ export default function LuaranDosenPage() {
                     </td>
                     <td className="min-w-48">
                       {l.proposal ? (
-                        <Link to={`/proposals?detail=${l.proposal.id}`} className="block font-medium text-navy-700 hover:text-navy-900">
+                        <Link to={`/proposals/detail/${l.proposal.id}`} className="block font-medium text-navy-700 hover:text-navy-900">
                           {l.proposal.judul}
                         </Link>
                       ) : (
