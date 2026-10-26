@@ -15,7 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-35 | Template proposal yang bisa diganti admin: tautan "Unduh template proposal" di wizard Usulan + halaman admin kelola template | Publik: `GET /template-proposal/aktif?jenis=`, `GET /template-proposal/aktif/unduh?jenis=`; admin: `GET/POST /template-proposal`, `GET /:id/unduh`, `PATCH /:id/aktifkan`, `DELETE /:id` (`new-api.md` bagian 21) | Tautan Usulan: `API_BASE_URL + '/template-proposal/aktif/unduh?jenis=' + jenis`, cadangan file statis bila `/aktif` mengembalikan `data: null`. Admin: menu baru (perlu `icon`). |
+| W-36 | Template proposal yang bisa diganti admin: tautan "Unduh template proposal" di wizard Usulan + halaman admin kelola template | Publik: `GET /template-proposal/aktif?jenis=`, `GET /template-proposal/aktif/unduh?jenis=`; admin: `GET/POST /template-proposal`, `GET /:id/unduh`, `PATCH /:id/aktifkan`, `DELETE /:id` (`new-api.md` bagian 21) | Tautan Usulan: `API_BASE_URL + '/template-proposal/aktif/unduh?jenis=' + jenis`, cadangan file statis bila `/aktif` mengembalikan `data: null`. Admin: menu baru (perlu `icon`). |
 | W-32 | Prioritas reviewer tanpa tugasan aktif: dropdown reviewer pengganti (cabut paksa) dan dialog Tugaskan Reviewer (proposal & laporan) | `GET /users/kandidat-reviewer?itemId=&exclude=` (urut beban, `prioritas`, `sudahDitugaskan`); `rekomendasi` per tugasan di `GET /users/:id/reviewer`; `otomatis: true` di `POST /users/:id/reviewer/force-revoke` | Nilai awal dropdown = `rekomendasi.id`; tampilkan badge untuk `prioritas`; tombol opsional "Alihkan otomatis". |
 
 ### Sudah disambungkan
