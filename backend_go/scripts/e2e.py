@@ -696,14 +696,14 @@ check("master inactive hidden", all(x["id"] != mid for x in req("GET", "/api/v1/
 check("master semua", any(x["id"] == mid for x in req("GET", "/api/v1/master/bidang?semua=true", admin)[1]["data"]))
 expect("master wrong kategori id", req("PATCH", f"/api/v1/master/luaran/{mid}", admin, {"urutan": 1}), 404, "Master data tidak ditemukan")
 expect("master delete", req("DELETE", f"/api/v1/master/bidang/{mid}", admin), 200, "Master data berhasil dihapus")
-b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal rumpun dan kata kunci", "abstrak": abstrak, "jenis": "penelitian", "rumpunIlmu": "Ilmu Teknik", "bidang": "Teknologi Informasi dan Komunikasi", "kataKunci": [" sistem informasi ", "IoT", "iot", ""]})
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal rumpun dan kata kunci", "abstrak": abstrak, "jenis": "penelitian", "rumpunIlmu": "Teknik Informatika", "bidang": "Teknologi Informasi dan Komunikasi", "kataKunci": [" sistem informasi ", "IoT", "iot", ""]})
 expect("create with kata kunci", b, 201)
 kp = b[1]["data"]
-check("kata kunci saved", kp["rumpunIlmu"] == "Ilmu Teknik" and kp["bidang"] == "Teknologi Informasi dan Komunikasi" and kp["kataKunci"] == ["sistem informasi", "IoT"], kp)
+check("kata kunci saved", kp["rumpunIlmu"] == "Teknik Informatika" and kp["bidang"] == "Teknologi Informasi dan Komunikasi" and kp["kataKunci"] == ["sistem informasi", "IoT"], kp)
 expect("kata kunci too many", req("PATCH", f"/api/v1/dosen/proposals/{kp['id']}", dosen5, {"kataKunci": [f"k{i}" for i in range(11)]}), 422)
 expect("kata kunci not array", req("PATCH", f"/api/v1/dosen/proposals/{kp['id']}", dosen5, {"kataKunci": "a,b"}), 422)
 b = expect("kata kunci clear", req("PATCH", f"/api/v1/dosen/proposals/{kp['id']}", dosen5, {"kataKunci": []}), 200)
-check("kata kunci empty array", b["data"]["kataKunci"] == [] and b["data"]["rumpunIlmu"] == "Ilmu Teknik", b["data"])
+check("kata kunci empty array", b["data"]["kataKunci"] == [] and b["data"]["rumpunIlmu"] == "Teknik Informatika", b["data"])
 b = req("GET", f"/api/v1/proposals/{pid}", dosen1)[1]["data"]
 check("anggota user kontak", list(b["anggota"][0]["user"].keys()) == ["id", "name", "fullName", "email", "kontak", "noHp"] and "alamat" not in b["anggota"][0]["user"], b["anggota"][0])
 expect("delete kata kunci proposal", req("DELETE", f"/api/v1/dosen/proposals/{kp['id']}", dosen5), 200)
@@ -994,14 +994,14 @@ expect("template aktif bad jenis", req("GET", "/api/v1/template-proposal/aktif?j
 check("template activity", any(x["action"] == "template.upload" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
 
 # ── W-35 detail undangan (calon anggota yang belum menerima) ──
-b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji detail undangan", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "Ilmu Teknik", "kataKunci": ["undangan"], "dokumenUrl": "https://drive.google.com/rahasia", "anggotaIds": [{"userId": dosen3User["id"], "peran": "anggota"}, {"userId": dosen4User["id"]}]})
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji detail undangan", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "Teknik Informatika", "kataKunci": ["undangan"], "dokumenUrl": "https://drive.google.com/rahasia", "anggotaIds": [{"userId": dosen3User["id"], "peran": "anggota"}, {"userId": dosen4User["id"]}]})
 up = b[1]["data"]["id"]
 req("POST", "/api/v1/luaran", dosen5, {"proposalId": up, "jenis": "jurnal", "target": "Jurnal SINTA 4"})
 inv3 = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", dosen3)[1]["data"] if i["proposal"]["id"] == up][0]
 b = expect("undangan detail", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen3), 200, "Invitation fetched")
 d = b["data"]
 dp = d["proposal"]
-check("undangan detail shape", list(d.keys()) == ["id", "peran", "statusUndangan", "createdAt", "proposal"] and d["statusUndangan"] == "pending" and dp["id"] == up and dp["abstrak"] == abstrak and dp["rumpunIlmu"] == "Ilmu Teknik" and dp["kataKunci"] == ["undangan"], d)
+check("undangan detail shape", list(d.keys()) == ["id", "peran", "statusUndangan", "createdAt", "proposal"] and d["statusUndangan"] == "pending" and dp["id"] == up and dp["abstrak"] == abstrak and dp["rumpunIlmu"] == "Teknik Informatika" and dp["kataKunci"] == ["undangan"], d)
 check("undangan detail tanpa data sensitif", "dokumenUrl" not in dp and "catatanRevisi" not in dp and "reviewerTugasan" not in dp and all("email" not in a["user"] and "noHp" not in a["user"] for a in dp["anggota"]) and len(dp["anggota"]) == 2 and dp["pengusul"]["id"] == dosen5User["id"], dp)
 check("undangan detail target luaran", [x["target"] for x in dp["targetLuaran"]] == ["Jurnal SINTA 4"] and dp["tahapan"]["kode"] == "seleksi_usulan", dp.get("targetLuaran"))
 expect("undangan detail orang lain", req("GET", f"/api/v1/dosen/proposals/invitations/{inv3['id']}", dosen4), 404, "Undangan tidak ditemukan")
@@ -1152,6 +1152,30 @@ check("admin unduh zip tanpa file", st == 200 and _zf.ZipFile(io.BytesIO(content
 expect("admin unduh zip dosen forbidden", req("GET", "/api/v1/luaran/unduh-zip", dosen5), 403)
 check("admin unduh activity", any(x["action"] == "luaran.unduh_zip" for x in req("GET", "/api/v1/activity-logs/my?limit=30", admin)[1]["data"]))
 req("DELETE", f"/api/v1/dosen/proposals/{pp}", dosen5)
+
+# ── rumpun ilmu difokuskan ke bidang komputer ──
+b = expect("rumpun ilmu komputer", req("GET", "/api/v1/master/rumpun-ilmu", dosen5), 200, "Master data fetched")
+rn = [x["nama"] for x in b["data"]]
+check("rumpun ilmu hanya komputer", rn[:4] == ["Ilmu Komputer", "Teknik Informatika", "Sistem Informasi", "Sistem Komputer"] and "Ilmu Kedokteran" not in rn and "Ilmu Teknik" not in rn and len(rn) >= 12, rn)
+b = req("GET", "/api/v1/master/rumpun-ilmu?semua=true", admin)[1]["data"]
+check("rumpun ilmu lama nonaktif", any(x["nama"] == "Ilmu Kedokteran" and x["isAktif"] is False for x in b), [x["nama"] for x in b][:5])
+expect("proposal rumpun di luar komputer", req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal rumpun salah", "abstrak": abstrak, "jenis": "penelitian", "rumpunIlmu": "Ilmu Kedokteran"}), 400, 'Rumpun ilmu "Ilmu Kedokteran" tidak tersedia. Pilih dari daftar rumpun ilmu bidang komputer (GET /master/rumpun-ilmu).')
+b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal rumpun komputer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen, "rumpunIlmu": "  Sistem Informasi "})
+rp = b[1]["data"]
+check("proposal rumpun dirapikan", b[0] == 201 and rp["rumpunIlmu"] == "Sistem Informasi", b)
+expect("proposal patch rumpun salah", req("PATCH", f"/api/v1/dosen/proposals/{rp['id']}", dosen5, {"rumpunIlmu": "Ilmu Hewani"}), 400)
+expect("proposal patch rumpun salah (proposals)", req("PATCH", f"/api/v1/proposals/{rp['id']}", dosen5, {"rumpunIlmu": "Ilmu Hewani"}), 400)
+b = expect("proposal patch rumpun kosong", req("PATCH", f"/api/v1/dosen/proposals/{rp['id']}", dosen5, {"rumpunIlmu": ""}), 200)
+check("proposal rumpun dikosongkan", b["data"]["rumpunIlmu"] is None, b["data"])
+req("PATCH", f"/api/v1/dosen/proposals/{rp['id']}", dosen5, {"rumpunIlmu": "Sistem Informasi"})
+expect("rp disetujui", req("PATCH", f"/api/v1/proposals/{rp['id']}/status", ketua, {"status": "disetujui"}), 200)
+expect("laporan rumpun salah", req("POST", "/api/v1/laporan", dosen5, {"proposalId": rp["id"], "rumpunIlmu": "Ilmu Ekonomi"}), 400)
+b = expect("laporan salin rumpun", req("POST", "/api/v1/laporan", dosen5, {"proposalId": rp["id"]}), 201)
+rl = b["data"]
+check("laporan rumpun dari proposal", rl["rumpunIlmu"] == "Sistem Informasi", rl)
+b = expect("laporan ubah rumpun", req("PATCH", f"/api/v1/laporan/{rl['id']}", dosen5, {"rumpunIlmu": "Kecerdasan Buatan dan Sains Data"}), 200)
+check("laporan rumpun berubah", b["data"]["rumpunIlmu"] == "Kecerdasan Buatan dan Sains Data" and req("GET", f"/api/v1/proposals/{rp['id']}", dosen5)[1]["data"]["rumpunIlmu"] == "Sistem Informasi", b["data"]["rumpunIlmu"])
+expect("laporan ubah rumpun salah", req("PATCH", f"/api/v1/laporan/{rl['id']}", dosen5, {"rumpunIlmu": "Ilmu Tanaman"}), 400)
 
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

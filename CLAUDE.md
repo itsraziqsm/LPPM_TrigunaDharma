@@ -19,7 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -57,7 +57,7 @@ go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahas
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
-python3 scripts/e2e.py http://localhost:3000   # ±730 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
+python3 scripts/e2e.py http://localhost:3000   # ±746 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
 
@@ -149,7 +149,10 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   - Field `tahapan` `{kode,label,urutan}` dihitung (tidak disimpan): belum `disetujui` →
     seleksi_usulan(1); disetujui + laporan tidak ada/draft → pelaksanaan(2); laporan
     diajukan/review/revisi/ditolak → seleksi_lanjutan(3); laporan disetujui → pasca_pelaksanaan(4).
-  - `rumpunIlmu`, `bidang` (teks bebas, pilihan dari `MasterData`), `kataKunci` (array maks
+  - `rumpunIlmu` **wajib nama aktif di master `rumpun_ilmu`** (kini hanya bidang komputer: Ilmu Komputer,
+    Teknik Informatika, Sistem Informasi, dst.; 12 rumpun umum DIKTI dinonaktifkan) — dicek `checkRumpunIlmu`
+    (`rumpun_ilmu.go`) saat dikirim di proposal & laporan, 400 bila tidak, `""` = kosong; laporan bisa
+    mengubah `rumpunIlmu` sendiri. `bidang` (teks bebas, pilihan dari `MasterData`), `kataKunci` (array maks
     10 × 50 karakter, disimpan JSON di TEXT, respons selalu array).
   - `skema` hanya untuk penelitian, `mitra` + detail mitra (`mitraJenis`, `mitraAlamat`,
     `mitraKontak`, `mitraKebutuhan`) hanya untuk pengabdian (400 jika salah jenis; detail mitra

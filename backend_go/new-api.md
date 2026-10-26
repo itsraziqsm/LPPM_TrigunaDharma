@@ -29,6 +29,7 @@ API, dikelompokkan per rilis:
 - **Bagian 23** — Admin menghapus proposal/laporan yang sudah diajukan dengan izin Ketua (W-34).
 - **Bagian 24** — Peran baru **Ketua STMIK** (`ketua_stmik`) + endpoint pemantauan `/monitoring`.
 - **Bagian 25** — Luaran prioritas **jurnal & poster** (jenis baru `poster`) + admin mengunduh luaran dosen (daftar, CSV, ZIP).
+- **Bagian 26** — Rumpun ilmu difokuskan ke **bidang komputer** (validasi di proposal & laporan, rumpun ilmu laporan bisa diubah).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2145,3 +2146,67 @@ a.click(); URL.revokeObjectURL(url)
 Saran halaman admin "Luaran Dosen": tabel `GET /luaran` (badge Prioritas, jenis, target, status, dosen,
 proposal/periode, bukti: tombol unduh file / buka link), filter di atas, tombol **Unduh CSV** & **Unduh
 semua bukti (ZIP)** yang memakai filter yang sama.
+
+---
+
+## 26. Rumpun ilmu bidang komputer
+
+Pilihan **rumpun ilmu** kini hanya bidang komputer (sesuai STMIK). 12 rumpun ilmu umum DIKTI
+(MIPA, Kedokteran, Ekonomi, dll.) **dinonaktifkan** — tidak dihapus, jadi proposal lama yang sudah
+memakainya tetap tampil apa adanya.
+
+### Daftar pilihan
+
+`GET /api/v1/master/rumpun-ilmu` (login; endpoint sama seperti sebelumnya) sekarang mengembalikan:
+
+| urutan | nama |
+|---|---|
+| 1 | Ilmu Komputer |
+| 2 | Teknik Informatika |
+| 3 | Sistem Informasi |
+| 4 | Sistem Komputer |
+| 5 | Teknik Komputer |
+| 6 | Manajemen Informatika |
+| 7 | Teknologi Informasi |
+| 8 | Rekayasa Perangkat Lunak |
+| 9 | Jaringan Komputer dan Keamanan Siber |
+| 10 | Kecerdasan Buatan dan Sains Data |
+| 11 | Sistem Tertanam dan Internet of Things (IoT) |
+| 12 | Multimedia dan Teknologi Game |
+
+Bentuk item tidak berubah: `{ id, nama, jenisKegiatan, jenisLuaran, urutan, isAktif, createdAt, updatedAt }`.
+Admin tetap bisa menambah/mengubah/menonaktifkan lewat `POST/PATCH/DELETE /master/rumpun-ilmu`
+(`?semua=true` menampilkan yang nonaktif juga).
+
+### Validasi (baru)
+
+`rumpunIlmu` **harus salah satu nama aktif** di daftar di atas (spasi di awal/akhir dirapikan) saat
+dikirim ke:
+
+- `POST/PATCH /dosen/proposals[/:id]` dan `POST/PATCH /proposals[/:id]`
+- `POST /laporan` dan `PATCH /laporan/:id`
+
+Selain itu → **400**:
+
+```json
+{ "success": false, "message": "Rumpun ilmu \"Ilmu Kedokteran\" tidak tersedia. Pilih dari daftar rumpun ilmu bidang komputer (GET /master/rumpun-ilmu)." }
+```
+
+`rumpunIlmu: ""` → dikosongkan (`null`). Tidak mengirim `rumpunIlmu` → nilai lama tidak disentuh (data
+lama dengan rumpun umum tetap aman selama tidak diubah).
+
+### Rumpun ilmu di laporan (Isi Laporan)
+
+- Saat laporan dibuat, `rumpunIlmu` **disalin dari proposal** (seperti sebelumnya); `POST /laporan` kini
+  juga boleh membawa `rumpunIlmu` sendiri.
+- **Baru:** `PATCH /laporan/:id` menerima `rumpunIlmu` (saat laporan draft/revisi) — bisa diubah
+  terpisah dari proposal, sama seperti `kataKunci`. Proposal asal tidak ikut berubah.
+
+### Untuk frontend
+
+- Wizard **Usulan** (langkah Identitas) sudah memakai `GET /master/rumpun-ilmu` → otomatis hanya bidang
+  komputer. Bila proposal lama punya nilai di luar daftar, tampilkan nilainya sebagai teks dan minta
+  dosen memilih ulang bila ingin mengubah.
+- **Isi Laporan** (`LaporanIsiPage.jsx`, Informasi Laporan): ganti tampilan baca-saja "Rumpun Ilmu" menjadi
+  dropdown dari `GET /master/rumpun-ilmu`, nilai awal = `laporan.rumpunIlmu`, kirim `rumpunIlmu` di
+  `PATCH /laporan/:id` (ikut Simpan draf).

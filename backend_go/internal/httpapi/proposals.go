@@ -307,6 +307,9 @@ func (s *Server) insertProposal(ctx context.Context, body map[string]any, pengus
 	if err := checkJenisFields(body, jenis); err != nil {
 		return 0, err
 	}
+	if err := s.checkRumpunIlmu(ctx, s.db, body); err != nil {
+		return 0, err
+	}
 	cols, args := proposalWriteFields(body)
 	now := s.nowMs()
 	cols = append(cols, "status", "pengusulId", "createdAt", "updatedAt")
@@ -343,6 +346,9 @@ func (s *Server) applyProposalUpdate(ctx context.Context, id int64, body map[str
 				jenis = k.Jenis
 			}
 			if err := checkJenisFields(body, jenis); err != nil {
+				return err
+			}
+			if err := s.checkRumpunIlmu(ctx, tx, body); err != nil {
 				return err
 			}
 			if err := s.moveKegiatanJenis(ctx, tx, k, jenis); err != nil {
