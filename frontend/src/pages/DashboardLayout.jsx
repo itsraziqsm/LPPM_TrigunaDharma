@@ -9,6 +9,7 @@ import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
 import ProposalPage from './ProposalPage'
 import UndanganPage from './UndanganPage'
+import UndanganDetailPage from './UndanganDetailPage'
 import ReviewTugasanPage from './ReviewTugasanPage'
 import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
@@ -116,6 +117,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
+      if (page === 'undangan-detail') return <UndanganDetailPage key={location.pathname} />
       if (page === 'laporan-harian') return <LaporanHarianPage />
       // Project Saya per jenis → pilih project → Laporan Harian
       if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
@@ -134,6 +136,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
+      if (page === 'undangan-detail') return <UndanganDetailPage key={location.pathname} />
       // Dosen yang punya tugasan bisa akses halaman penugasan
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="dosen" isReviewer={isReviewer} />

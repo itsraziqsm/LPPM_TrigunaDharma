@@ -39,7 +39,7 @@ const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit
 const rupiah = (v) => (v || v === 0 ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 const nama = (u) => u?.fullName || u?.name || '—'
 
-function Section({ icon: Icon, title, action, children }) {
+export function Section({ icon: Icon, title, action, children }) {
   return (
     <section className="card overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3.5">
@@ -54,7 +54,7 @@ function Section({ icon: Icon, title, action, children }) {
   )
 }
 
-function Fields({ items }) {
+export function Fields({ items }) {
   return (
     <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
       {items

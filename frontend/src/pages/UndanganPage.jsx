@@ -1,25 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { refreshInvitationBadge } from '../components/Sidebar'
-import { Users } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Users } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { getRoleNames } from '../utils/roles'
+import { UNDANGAN_STATUS_COLOR as STATUS_COLOR, UNDANGAN_STATUS_LABEL as STATUS_LABEL, judulUndangan, tanggalPanjang } from './undanganConst'
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
 const JENIS_LABEL = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
-
-const STATUS_COLOR = {
-  pending: 'badge-warning',
-  diterima: 'badge-success',
-  ditolak: 'badge-danger',
-}
-
-const STATUS_LABEL = {
-  pending: 'Menunggu Respons',
-  diterima: 'Diterima',
-  ditolak: 'Ditolak',
-}
 
 // ── Komponen kecil ────────────────────────────────────────────────────────────
 
@@ -83,6 +73,11 @@ function UndanganCard({ undangan: u, onRespond, responding }) {
                 </span>
               )}
             </p>
+            {/* Detail undangan = informasi kegiatan terkait (/undangan/:id) */}
+            <Link to={`/undangan/${u.id}`} className="btn btn-secondary btn-sm mt-4">
+              Lihat kegiatan
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
           </header>
 
           <dl className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
@@ -96,11 +91,7 @@ function UndanganCard({ undangan: u, onRespond, responding }) {
             <div>
               <dt className="text-sm text-slate-500">Tanggal Diterima</dt>
               <dd className="mt-0.5 text-base font-semibold text-slate-900">
-                {new Date(u.createdAt).toLocaleDateString('id-ID', {
-                  day: '2-digit',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+                {tanggalPanjang(u.createdAt)}
               </dd>
             </div>
           </dl>
@@ -192,38 +183,32 @@ export default function UndanganPage() {
     }
   }
 
-  // Dosen: "Undangan Kerja Sama"; mahasiswa: "Undangan Ikut Serta".
-  const judul = getRoleNames(user?.roles)[0] === 'mahasiswa' ? 'Undangan Ikut Serta' : 'Undangan Kerja Sama'
+  const judul = judulUndangan(getRoleNames(user?.roles)[0])
   const pending = undangan.filter(u => u.statusUndangan === 'pending')
   const riwayat = undangan.filter(u => u.statusUndangan !== 'pending')
 
   return (
     <div className="page space-y-8">
-      {/* Judul halaman */}
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <h1 className="page-title">{judul}</h1>
-          <p className="page-desc">
-            Tinjau, terima, atau tolak undangan sebagai anggota tim proposal secara jelas
-            dan terstruktur.
-          </p>
-        </div>
+      <h1 className="page-title">{judul}</h1>
 
-        <dl className="flex shrink-0 gap-10">
-          <div>
-            <dt className="text-sm text-slate-500">Total Undangan</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{undangan.length}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-slate-500">Menunggu Respons</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{pending.length}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-slate-500">Riwayat Keputusan</dt>
-            <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{riwayat.length}</dd>
-          </div>
+      {/* Ringkasan: teks + 3 kotak angka sejajar dalam satu wadah */}
+      <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
+        <p className="max-w-xl text-base leading-relaxed text-slate-600">
+          Tinjau, terima, atau tolak undangan sebagai anggota tim proposal secara jelas dan terstruktur.
+        </p>
+        <dl className="grid shrink-0 grid-cols-3 gap-3 lg:w-[30rem]">
+          {[
+            { label: 'Total Undangan', value: undangan.length },
+            { label: 'Menunggu Respons', value: pending.length },
+            { label: 'Riwayat Keputusan', value: riwayat.length },
+          ].map((k) => (
+            <div key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <dt className="text-xs font-medium text-slate-500 sm:text-sm">{k.label}</dt>
+              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{loading ? '—' : k.value}</dd>
+            </div>
+          ))}
         </dl>
-      </header>
+      </section>
 
       {loading ? (
         <section className="card px-6 py-16 text-center">

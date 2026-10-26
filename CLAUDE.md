@@ -250,7 +250,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
@@ -304,6 +304,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Riwayat waktu). Dosen pengusul `GET /dosen/proposals/:id`; anggota tim (dosen/mahasiswa) & admin/ketua
   `GET /proposals/:id` (baca saja). Jenis di URL disesuaikan dengan proposal (notifikasi tanpa jenis). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
   dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Kerja Sama (+ Penugasan Review); `/undangan` berjudul "Undangan Kerja Sama" (dosen) / "Undangan Ikut Serta" (mahasiswa), istilah "undangan tim" tidak dipakai lagi.
+  `/undangan`: judul lalu satu kartu ringkasan (teks + 3 kotak sejajar Total/Menunggu/Riwayat), tiap kartu undangan punya
+  tombol **Lihat kegiatan** di bawah kalimat pengusul → **Detail Undangan** `/undangan/:id` (`UndanganDetailPage.jsx`,
+  konstanta `pages/undanganConst.js`): data dari `GET /dosen/proposals/invitations` (tanpa endpoint detail); undangan
+  diterima → info lengkap `GET /proposals/:id` + "Buka halaman kegiatan"; menunggu/ditolak → ringkasan saja (Abstrak & Tim
+  `ApiPending` W-35, backend 403), Terima/Tolak di kepala. **Dokumen utama tidak ditampilkan** di halaman ini.
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
   User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,
