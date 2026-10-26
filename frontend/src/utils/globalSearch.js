@@ -54,6 +54,11 @@ const HALAMAN = {
     { to: '/luaran-dosen', title: 'Luaran Dosen', kata: 'jurnal poster bukti unduh csv zip' },
   ],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
+  ketua_stmik: [
+    { to: '/pemantauan', title: 'Pemantauan Proposal', kata: 'monitoring anggaran progres' },
+    { to: '/pemantauan?tab=dosen', title: 'Dosen Pengusul', kata: 'monitoring dosen rekap' },
+    { to: '/cetak-dokumen/rekap-proposal', title: 'Rekap Proposal', kata: 'cetak export pdf' },
+  ],
 }
 
 export function konteksPencarian(roleNames, isReviewer) {
@@ -112,6 +117,9 @@ export async function cariGlobal(q, ctx) {
         badgeClass: { approved: 'badge-success', pending: 'badge-warning', rejected: 'badge-danger' }[u.status],
       })),
     ]
+  } else if (ctx.peran === 'ketua_stmik') {
+    const prop = await safe(proposalApi.getAll(params))
+    data = daftar(prop).map((p) => kegiatanItem(p, 'Proposal', `/kegiatan/${p.jenis}/detail/${p.id}`, p.pengusul?.fullName || p.pengusul?.name))
   } else if (ctx.peran === 'mahasiswa') {
     const res = await safe(laporanHarianApi.getMyProposals())
     data = daftar(res)

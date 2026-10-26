@@ -176,8 +176,9 @@ export default function KegiatanDetailPage({ jenis }) {
     }
   }, [sebagaiPengusul, detail])
 
-  const kembali = isDosen || roles[0] === 'mahasiswa' ? `/kegiatan/${jenis}` : '/proposals'
-  const kembaliLabel = roles[0] === 'mahasiswa' ? null : isDosen ? `Status ${JENIS_LABEL[jenis]}` : 'Proposal Kegiatan'
+  const isStmik = roles[0] === 'ketua_stmik'
+  const kembali = isDosen || roles[0] === 'mahasiswa' ? `/kegiatan/${jenis}` : isStmik ? '/pemantauan' : '/proposals'
+  const kembaliLabel = roles[0] === 'mahasiswa' ? null : isDosen ? `Status ${JENIS_LABEL[jenis]}` : isStmik ? 'Pemantauan Proposal' : 'Proposal Kegiatan'
 
   if (state.status !== 'ready') {
     return (

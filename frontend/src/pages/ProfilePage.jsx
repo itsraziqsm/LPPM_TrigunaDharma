@@ -19,6 +19,7 @@ import { confirmDialog } from '../utils/dialog'
 const ROLE_LABEL = {
   admin: 'Admin',
   ketua_lppm: 'Ketua LPPM',
+  ketua_stmik: 'Ketua STMIK',
   dosen: 'Dosen',
   reviewer: 'Reviewer',
   mahasiswa: 'Mahasiswa',

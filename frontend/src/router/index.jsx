@@ -43,6 +43,7 @@ const router = createBrowserRouter([
       { path: '/backup', element: <DashboardLayout page="backup" /> },
       { path: '/template-proposal', element: <DashboardLayout page="template-proposal" /> },
       { path: '/luaran-dosen', element: <DashboardLayout page="luaran-dosen" /> },
+      { path: '/pemantauan', element: <DashboardLayout page="pemantauan" /> },
       { path: '/cetak-dokumen/rekap-proposal', element: <DashboardLayout page="export" /> },
       { path: '/cetak-dokumen/surat-tugas', element: <DashboardLayout page="surat-tugas" /> },
       { path: '/kegiatan/penelitian', element: <DashboardLayout page="kegiatan" jenis="penelitian" /> },

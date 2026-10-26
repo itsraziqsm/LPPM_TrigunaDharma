@@ -11,11 +11,11 @@ import UserAvatar from '../components/UserAvatar'
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const FILTER_ROLE_OPTIONS = ['dosen', 'reviewer', 'mahasiswa']
-const ALL_ROLE_OPTIONS = ['admin', 'ketua_lppm', 'dosen', 'reviewer', 'mahasiswa']
+const ALL_ROLE_OPTIONS = ['admin', 'ketua_lppm', 'ketua_stmik', 'dosen', 'reviewer', 'mahasiswa']
 const STATUS_OPTIONS = ['pending', 'approved', 'rejected']
 
 const ROLE_LABEL = {
-  admin: 'Admin', ketua_lppm: 'Ketua LPPM', dosen: 'Dosen',
+  admin: 'Admin', ketua_lppm: 'Ketua LPPM', ketua_stmik: 'Ketua STMIK', dosen: 'Dosen',
   reviewer: 'Reviewer', mahasiswa: 'Mahasiswa',
 }
 // Status memakai lencana bertitik; peran memakai penanda netral (tanpa titik)
@@ -33,6 +33,7 @@ const STATUS_HINT = {
 const ROLE_COLOR = {
   admin: 'badge-tag',
   ketua_lppm: 'badge-tag',
+  ketua_stmik: 'badge-tag',
   dosen: 'badge-tag',
   reviewer: 'badge-tag',
   mahasiswa: 'badge-tag',
@@ -55,7 +56,7 @@ function formatDate(val) {
 
 // Determine primary role for display purposes
 function getPrimaryRole(roleNames) {
-  const order = ['admin', 'ketua_lppm', 'dosen', 'reviewer', 'mahasiswa']
+  const order = ['admin', 'ketua_lppm', 'ketua_stmik', 'dosen', 'reviewer', 'mahasiswa']
   for (const r of order) {
     if (roleNames.includes(r)) return r
   }
@@ -225,6 +226,18 @@ function ProfileKetuaPRPM({ user }) {
 }
 
 
+function ProfileKetuaStmik({ user }) {
+  return (
+    <Section title="Informasi Jabatan">
+      <p className="py-2.5 text-base leading-relaxed text-slate-600">
+        Ketua STMIK memantau seluruh proposal, progres kegiatan, dan anggaran (hanya baca).
+      </p>
+      <InfoRow label="Email" value={user.email} />
+      <InfoRow label="Kontak" value={user.kontak || user.noHp} />
+    </Section>
+  )
+}
+
 // Render the right profile section based on primary role
 function RoleProfile({ primaryRole, user }) {
   switch (primaryRole) {
@@ -233,6 +246,7 @@ function RoleProfile({ primaryRole, user }) {
     case 'reviewer': return <ProfileReviewer user={user} />
     case 'admin': return <ProfileAdmin user={user} />
     case 'ketua_lppm': return <ProfileKetuaPRPM user={user} />
+    case 'ketua_stmik': return <ProfileKetuaStmik user={user} />
     default: return <ProfileDosen user={user} />
   }
 }

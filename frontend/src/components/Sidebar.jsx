@@ -6,12 +6,13 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { Award, BadgeDollarSign, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { Award, BadgeDollarSign, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
   admin: 'Admin',
   ketua_lppm: 'Ketua LPPM',
+  ketua_stmik: 'Ketua STMIK',
   dosen: 'Dosen',
   reviewer: 'Reviewer',
   mahasiswa: 'Mahasiswa',
@@ -68,6 +69,20 @@ const ADMIN_NAV_ITEMS = [
   {
     path: '/backup', label: 'Backup Data', icon: (
       <DatabaseBackup className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+]
+
+// Ketua STMIK (W-37): hanya pemantauan — Pemantauan Proposal & Rekap Proposal.
+const STMIK_NAV_ITEMS = [
+  {
+    path: '/pemantauan', label: 'Pemantauan Proposal', icon: (
+      <ChartNoAxesColumn className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
+    path: '/cetak-dokumen/rekap-proposal', label: 'Rekap Proposal', icon: (
+      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
 ]
@@ -331,6 +346,7 @@ export default function Sidebar() {
   const allNavItems = [
     ...NAV_ITEMS,
     ...(primaryRole === 'ketua_lppm' ? KETUA_NAV_ITEMS : primaryRole === 'admin' ? ADMIN_NAV_ITEMS : []),
+    ...(primaryRole === 'ketua_stmik' ? STMIK_NAV_ITEMS : []),
     ...(isDosen ? DOSEN_NAV_ITEMS : []),
     ...(isMahasiswa ? MAHASISWA_NAV_ITEMS : []),
     ...(isReviewer ? REVIEWER_NAV_ITEMS : []),

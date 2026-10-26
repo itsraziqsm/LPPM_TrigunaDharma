@@ -29,12 +29,14 @@ import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
 import LuaranDosenPage from './LuaranDosenPage'
+import PemantauanPage from './PemantauanPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
 import UserAvatar from '../components/UserAvatar'
 
 const ROLE_LABEL = {
   admin: 'Admin',
   ketua_lppm: 'Ketua LPPM',
+  ketua_stmik: 'Ketua STMIK',
   dosen: 'Dosen',
   reviewer: 'Reviewer',
   mahasiswa: 'Mahasiswa',
@@ -102,7 +104,16 @@ export default function DashboardLayout({ page, jenis }) {
     if (page === 'notifikasi') return <NotifikasiPage />
     if (page === 'notifikasi-detail') return <NotifikasiDetailPage key={location.pathname} />
 
+    // Ketua STMIK (W-37): pemantauan saja — Pemantauan Proposal, Rekap Proposal, dashboard.
+    if (primaryRole === 'ketua_stmik') {
+      if (page === 'pemantauan') return <PemantauanPage />
+      if (page === 'export') return <ExportPage />
+      if (page === 'cetak-dokumen') return <Navigate to="/cetak-dokumen/rekap-proposal" replace />
+      return <DashboardHome role="ketua_stmik" isReviewer={false} />
+    }
+
     if (isAdminOrKetua) {
+      if (page === 'pemantauan') return <PemantauanPage />
       if (page === 'periode') return <PeriodePage />
       if (page === 'proposals') return <ProposalPage />
       if (page === 'users') return <UserManagementPage />
