@@ -371,7 +371,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   lama tertutup; status diingat di `localStorage.riwayatProjectBuka`); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
-  logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
+  logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx` (`KepalaMasuk` = judul + breadcrumb lalu kartu
+  ringkasan teks + 3 kotak gaya Undangan; `CariFilterMasuk` = kolom cari + tombol **Filter** yang membuka panel Status & Jenis
+  kegiatan, panel tersembunyi bawaan): hanya periode aktif (kartu selebar halaman +
   jumlah perlu ditangani, klik = saring), filter bawaan "Perlu ditangani" (`diajukan`+`review`), Revisi/Disetujui/
   Ditolak/Semua (tanpa draft); data per periode × status (limit 100) digabung & dipaginasi di peramban. Dokumen
   periode lama → Periode → panel periode tab Proposal/Laporan (klik → halaman detail; `KetuaProposalDetail`/

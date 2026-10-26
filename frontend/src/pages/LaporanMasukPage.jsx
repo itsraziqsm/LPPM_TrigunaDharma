@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { laporanApi } from '../api/laporan'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
-import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
+import { CariFilterMasuk, KepalaMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { JENIS_LABEL } from './ProposalDosen/constants'
 import { StatusBadge } from './laporan/shared'
 import { tanggal } from './laporan/format'
@@ -56,27 +56,21 @@ export default function LaporanMasukPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h1 className="page-title">Laporan Masuk</h1>
-          <p className="page-desc">
-            {viewOnly
-              ? 'Laporan dari periode aktif. Akses Admin: lihat dan hapus; penugasan reviewer dan keputusan oleh Ketua LPPM.'
-              : 'Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.'}
-          </p>
-        </div>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Laporan Masuk</li>
-          </ol>
-        </nav>
-      </header>
+      {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
+      <KepalaMasuk
+        judul="Laporan Masuk"
+        desc={
+          viewOnly
+            ? 'Laporan dari periode aktif. Akses Admin: lihat dan hapus; penugasan reviewer dan keputusan oleh Ketua LPPM.'
+            : 'Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.'
+        }
+        crumbs={[{ label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan' }]}
+        stats={[
+          { label: 'Total Laporan', value: loading ? '—' : total },
+          { label: 'Halaman Aktif', value: page },
+          { label: 'Total Halaman', value: pages },
+        ]}
+      />
 
       {/* Ketua: permintaan hapus laporan dari Admin (W-34) */}
       {viewOnly ? null : <PermintaanHapusDokumen tipe="laporan" onChanged={refresh} />}
@@ -96,48 +90,26 @@ export default function LaporanMasukPage() {
         />
       )}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <FilterMasuk
-          value={filter}
-          onChange={(key) => {
-            setFilter(key)
-            setPage(1)
-          }}
-        />
-        <form
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault()
-            setPage(1)
-            setQuery(search.trim())
-          }}
-          className="flex gap-2"
-        >
-          <label htmlFor="lm-jenis" className="sr-only">
-            Jenis
-          </label>
-          <select
-            id="lm-jenis"
-            className="input w-40"
-            value={jenis}
-            onChange={(e) => {
-              setJenis(e.target.value)
-              setPage(1)
-            }}
-          >
-            <option value="">Semua jenis</option>
-            <option value="penelitian">Penelitian</option>
-            <option value="pengabdian">Pengabdian</option>
-          </select>
-          <label htmlFor="lm-cari" className="sr-only">
-            Cari judul
-          </label>
-          <input id="lm-cari" type="search" className="input w-56" placeholder="Cari judul atau abstrak" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <button type="submit" className="btn btn-secondary">
-            Cari
-          </button>
-        </form>
-      </div>
+      <CariFilterMasuk
+        id="laporan"
+        search={search}
+        onSearch={setSearch}
+        onSubmit={() => {
+          setPage(1)
+          setQuery(search.trim())
+        }}
+        placeholder="Cari judul atau abstrak laporan"
+        filter={filter}
+        onFilter={(key) => {
+          setFilter(key)
+          setPage(1)
+        }}
+        jenis={jenis}
+        onJenis={(v) => {
+          setJenis(v)
+          setPage(1)
+        }}
+      />
 
       <div className="table-wrap">
         <table className="table table-tight">

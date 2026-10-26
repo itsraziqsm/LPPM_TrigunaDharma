@@ -2,13 +2,12 @@ import { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { proposalApi } from '../api/proposal'
 import useDokumenMasuk, { FETCH_LIMIT, FILTERS_MASUK } from '../hooks/useDokumenMasuk'
-import { FilterMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
+import { CariFilterMasuk, KepalaMasuk, PeriodeAktif, TanpaPeriodeAktif } from '../components/PeriodeAktif'
 import { API_BASE_URL } from '../api/axios'
 import useAuthStore from '../store/authStore'
 import { alertDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import HapusDokumen from '../components/HapusDokumen'
-import Breadcrumb from '../components/Breadcrumb'
 import PermintaanHapusDokumen from '../components/PermintaanHapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
@@ -98,49 +97,22 @@ export default function ProposalPage() {
   const linkedId = Number(searchParams.get('detail')) || null
   const bukaDetail = (pid, hash = '') => navigate(`/proposals/detail/${pid}${hash}`)
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault()
-    setPage(1)
-    setQuery(search.trim())
-  }
-
   if (linkedId) return <Navigate to={`/proposals/detail/${linkedId}`} replace />
 
   return (
     <>
       <div className="page space-y-6">
-        <Breadcrumb className="flex justify-end" items={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan' }]} />
-        {/* Judul halaman */}
-        <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <h1 className="page-title">Monitoring Proposal Kewirausahaan</h1>
-            <p className="page-desc">
-              Kelola proposal penelitian dan pengabdian secara terstruktur,
-              pantau status evaluasi, serta tinjau progres dokumen, reviewer,
-              dan laporan dalam satu halaman kerja.
-            </p>
-            {user?.role && (
-              <p className="mt-3 text-sm text-slate-500">
-                Peran: <span className="font-medium text-slate-700">{user.role}</span>
-              </p>
-            )}
-          </div>
-
-          <dl className="flex shrink-0 gap-10">
-            <div>
-              <dt className="text-sm text-slate-500">Total Proposal</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{total}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-500">Halaman Aktif</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{page}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-slate-500">Total Halaman</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{totalPages}</dd>
-            </div>
-          </dl>
-        </header>
+        {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
+        <KepalaMasuk
+          judul="Monitoring Proposal Kewirausahaan"
+          desc="Kelola proposal penelitian dan pengabdian secara terstruktur, pantau status evaluasi, serta tinjau progres dokumen, reviewer, dan laporan dalam satu halaman kerja."
+          crumbs={[{ label: 'Dokumen Masuk' }, { label: 'Proposal Kegiatan' }]}
+          stats={[
+            { label: 'Total Proposal', value: loading ? '—' : total },
+            { label: 'Halaman Aktif', value: page },
+            { label: 'Total Halaman', value: totalPages },
+          ]}
+        />
 
         {/* Ketua: permintaan hapus dokumen dari Admin (W-34), proposal & laporan */}
         {viewOnly ? null : <PermintaanHapusDokumen onChanged={() => setTick((t) => t + 1)} />}
@@ -160,64 +132,26 @@ export default function ProposalPage() {
             }}
           />
         )}
-        <FilterMasuk
-          value={filter}
-          onChange={(key) => {
+        <CariFilterMasuk
+          id="proposal"
+          search={search}
+          onSearch={setSearch}
+          onSubmit={() => {
+            setPage(1)
+            setQuery(search.trim())
+          }}
+          placeholder="Cari judul proposal, ketua, atau email"
+          filter={filter}
+          onFilter={(key) => {
             setFilter(key)
             setPage(1)
           }}
+          jenis={jenis}
+          onJenis={(v) => {
+            setJenis(v)
+            setPage(1)
+          }}
         />
-
-        {/* Pencarian dan filter */}
-        <section className="card px-6 py-5" aria-labelledby="filter-proposal-title">
-          <h2 id="filter-proposal-title" className="sr-only">Pencarian dan Filter</h2>
-
-          <form onSubmit={handleSearchSubmit}>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-              <div className="lg:col-span-6">
-                <label htmlFor="search" className="label">
-                  Kata Kunci Proposal
-                </label>
-                <input
-                  id="search"
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari judul proposal, ketua, atau email"
-                  className="input"
-                />
-              </div>
-
-              <div className="lg:col-span-3">
-                <label htmlFor="jenis" className="label">
-                  Jenis Proposal
-                </label>
-                <select
-                  id="jenis"
-                  value={jenis}
-                  onChange={(e) => {
-                    setJenis(e.target.value)
-                    setPage(1)
-                  }}
-                  className="input"
-                >
-                  <option value="">Semua jenis</option>
-                  {Object.entries(JENIS_LABEL).map(([key, label]) => (
-                    <option key={key} value={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-end lg:col-span-3">
-                <button type="submit" className="btn btn-primary w-full">
-                  Cari Proposal
-                </button>
-              </div>
-            </div>
-          </form>
-        </section>
 
         {/* Tabel data utama */}
         <section className="card overflow-hidden">
