@@ -20,6 +20,7 @@ const STATUS = {
   berjalan: { label: 'Berjalan', cls: 'badge-review' },
   berhasil: { label: 'Berhasil', cls: 'badge-success' },
   gagal: { label: 'Gagal', cls: 'badge-danger' },
+  dihapus: { label: 'Dihapus', cls: 'badge-neutral' },
 }
 
 const waktu = (v) =>
@@ -361,7 +362,8 @@ export default function BackupPage() {
                 </tr>
               ) : (
                 rows.map((log) => {
-                  const st = STATUS[log.status] || { label: log.status, cls: 'badge-neutral' }
+                  // Backup berhasil yang filenya sudah dihapus (dihapusAt) tampil berstatus "Dihapus".
+                  const st = log.dihapusAt ? STATUS.dihapus : STATUS[log.status] || { label: log.status, cls: 'badge-neutral' }
                   return (
                     <tr key={log.id}>
                       <td className="whitespace-nowrap pl-6 tabular-nums">{waktu(log.mulaiAt)}</td>
@@ -373,14 +375,23 @@ export default function BackupPage() {
                         {log.status === 'gagal' && log.pesanError ? (
                           <span className="mt-1 block max-w-[14rem] text-xs text-red-700">{log.pesanError}</span>
                         ) : null}
-                      </td>
-                      <td className="max-w-[16rem]">
-                        {log.namaFile ? <span className="block truncate font-mono text-xs text-slate-700" title={log.namaFile}>{log.namaFile}</span> : '—'}
                         {log.dihapusAt ? (
-                          <span className="mt-0.5 block text-xs text-slate-500">
-                            File dihapus {waktu(log.dihapusAt)}
+                          <span className="mt-1 block max-w-[14rem] text-xs text-slate-500">
+                            {waktu(log.dihapusAt)}
                             {log.dihapusOleh ? ` oleh ${nama(log.dihapusOleh)}` : ''}
                           </span>
+                        ) : null}
+                      </td>
+                      <td className="max-w-[16rem]">
+                        {log.namaFile ? (
+                          <span className={`block truncate font-mono text-xs ${log.dihapusAt ? 'text-slate-400 line-through' : 'text-slate-700'}`} title={log.namaFile}>
+                            {log.namaFile}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                        {log.dihapusAt ? (
+                          <span className="mt-0.5 block text-xs text-slate-500">File tidak tersedia lagi</span>
                         ) : log.ukuran != null ? (
                           <span className="mt-0.5 block text-xs text-slate-500">{ukuran(log.ukuran)}</span>
                         ) : null}

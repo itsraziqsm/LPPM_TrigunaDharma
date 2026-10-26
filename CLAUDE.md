@@ -389,7 +389,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Backup Data** (`src/pages/BackupPage.jsx`, `/backup`, admin; `src/api/backup.js`, new-api.md bagian 19): kartu
   "Backup sekarang" (`POST /backup` 202 → pantau `GET /backup/:id` tiap 1,5 dtk; info jadwal `GET /backup/jadwal`),
   lalu tabel **Daftar Backup** (`GET /backup`, filter pelaku `sumber`) dengan kolom "Dilakukan oleh" (Sistem /
-  nama admin), status, file + ukuran (atau "dihapus oleh"), isi, durasi, Unduh (blob `.sql.gz`) & Hapus file.
+  nama admin), status (Berjalan/Berhasil/Gagal, **Dihapus** bila `dihapusAt` terisi + waktu & penghapus), file + ukuran (dicoret bila dihapus), isi, durasi, Unduh (blob `.sql.gz`) & Hapus file.
 - **Cetak Dokumen** (`src/pages/cetak/`, admin & ketua): `CetakDokumenPage` = wadah kartu dokumen
   (status konfigurasi, Cetak, Konfigurasi). (1) **Export Rekapitulasi Proposal** → konfigurasi =
   `ExportPage.jsx` lama (`/cetak-dokumen/rekap-proposal`, + "Simpan konfigurasi" filter); Cetak =
