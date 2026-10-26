@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { notificationApi } from '../api/notification'
 import { Bell, X } from 'lucide-react'
 import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
@@ -10,6 +10,7 @@ const DROPDOWN_WIDTH = 320
 
 export default function NotificationBell() {
     const [open, setOpen] = useState(false)
+    const navigate = useNavigate()
     const [notifications, setNotifications] = useState([])
     const [unread, setUnread] = useState(0)
     const [loading, setLoading] = useState(false)
@@ -78,6 +79,12 @@ export default function NotificationBell() {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    const bukaDetail = (n) => {
+        setOpen(false)
+        if (!n.isRead) handleMarkRead(n.id)
+        navigate(`/notifikasi/${n.id}`, { state: { notif: { ...n, isRead: true } } })
+    }
+
     const handleMarkRead = async (id) => {
         await notificationApi.markRead(id)
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
@@ -132,7 +139,15 @@ export default function NotificationBell() {
                         notifications.map((n) => (
                             <div
                                 key={n.id}
-                                onClick={() => !n.isRead && handleMarkRead(n.id)}
+                                role="link"
+                                tabIndex={0}
+                                onClick={() => bukaDetail(n)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        bukaDetail(n)
+                                    }
+                                }}
                                 className={`group flex cursor-pointer items-start gap-3 border-b border-slate-100 px-4 py-3 transition-colors last:border-0 hover:bg-slate-50 ${!n.isRead ? 'bg-navy-50/70' : ''}`}
                             >
                                 <span className={`mt-1.5 size-2 shrink-0 rounded-full ${!n.isRead ? 'bg-navy-600' : 'bg-transparent'}`} />

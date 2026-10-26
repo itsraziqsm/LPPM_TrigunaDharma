@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ADAPTERS } from './adapters'
 import { DashboardBody, DashboardSkeleton, LoadError, Notice } from './components'
 import { HaloHeader, KpiToneCards, PintasanSection } from './HaloLayout'
 import { ROLE_LABEL } from './format'
@@ -24,8 +23,7 @@ export default function DashboardScreen({
   const [openedAt] = useState(() => new Date())
   const now = updatedAt || openedAt
 
-  const name = user?.name || user?.fullName || ROLE_LABEL[role] || ''
-  const actions = ADAPTERS[adapterKey]?.actions ?? []
+  const name = user?.fullName || user?.name || ROLE_LABEL[role] || ''
 
   // Urutan bagian: Halo → Pintasan (pintasan + kartu angka) → Informasi.
   let body
@@ -47,8 +45,6 @@ export default function DashboardScreen({
         now={now}
         name={name}
         roleLabel={ROLE_LABEL[role]}
-        summary={model?.summary}
-        actions={actions}
         loading={loading}
         refreshing={refreshing}
         updatedAt={updatedAt}

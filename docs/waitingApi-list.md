@@ -180,6 +180,16 @@ sudah diajukan. Tombol "Ajukan hapus (izin Ketua)" ditampilkan nonaktif dengan p
 |---|---|---|---|---|
 | W-34 | Hapus proposal/laporan yang sudah diajukan oleh Admin **dengan izin** | Permintaan hapus oleh Admin, disetujui Ketua LPPM dengan password (pola hapus periode 2 langkah), notifikasi ke Ketua & pengusul, catat ActivityLog | `POST /proposals/:id/deletion-request`, `POST /laporan/:id/deletion-request` `{ password, alasan }`; `POST /dokumen/deletion-request/:requestId/approve` `{ password }` (Ketua) & `/cancel`; `GET .../deletion-request` (status permintaan) | Draft tetap bisa dihapus langsung lewat `DELETE /proposals/:id` / `DELETE /laporan/:id` (sudah ada). |
 
+## Detail Undangan (`frontend/src/pages/UndanganDetailPage.jsx`, route `/undangan/:id`)
+
+Undangan diterima memakai `GET /proposals/:id` (anggota `diterima` boleh membaca). Undangan **menunggu/ditolak**
+ditolak backend (403), jadi hanya ringkasan dari `GET /dosen/proposals/invitations` (judul, jenis, status,
+anggaran, pengusul, periode); Abstrak & Tim diberi `ApiPending`.
+
+| ID | Elemen | Kebutuhan | Usulan endpoint | Catatan |
+|---|---|---|---|---|
+| W-35 | Abstrak, informasi lengkap (rumpun ilmu, bidang, skema/mitra, kata kunci, luaran) & **tim** kegiatan untuk undangan yang **belum diterima** | Calon anggota bisa menilai kegiatan sebelum menerima | `GET /dosen/proposals/invitations/:id` → undangan + `proposal` ringkas (tanpa dokumen utama/lampiran), hanya untuk penerima undangan | Dokumen utama memang tidak ditampilkan di halaman ini. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

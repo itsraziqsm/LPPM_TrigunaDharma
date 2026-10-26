@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { BadgeDollarSign, FileCheck2, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -102,14 +102,14 @@ const DOSEN_NAV_ITEMS = [
     )
   },
   {
-    path: '/undangan', label: 'Undangan Tim', badge: true, icon: (
+    path: '/undangan', label: 'Undangan Kerja Sama', badge: true, icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),
   },
 ]
 
 // Mahasiswa: Dashboard, Project Saya (Penelitian/Pengabdian → pilih project → Laporan
-// Harian), Periode (hanya periode yang memuat project-nya), Undangan Ikut Serta.
+// Harian), Riwayat Project (dikelompokkan per periode), Undangan Ikut Serta.
 const MAHASISWA_NAV_ITEMS = [
   {
     path: '/project', label: 'Project Saya', icon: (
@@ -121,8 +121,8 @@ const MAHASISWA_NAV_ITEMS = [
     ],
   },
   {
-    path: '/periode', label: 'Periode', icon: (
-      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/riwayat-project', label: 'Riwayat Project', icon: (
+      <History className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {

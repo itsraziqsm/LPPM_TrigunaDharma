@@ -42,7 +42,7 @@ export async function load({ withReviewerDigest }) {
     proposals: req('Proposal diikuti', () =>
       laporanHarianApi.getMyProposals().then((r) => r.data.data || []),
     ),
-    invitations: req('Undangan tim', () =>
+    invitations: req('Undangan ikut serta', () =>
       proposalDosenApi
         .getMyInvitations()
         .then((r) => (r.data.data || []).filter((i) => i.statusUndangan === 'pending')),
@@ -84,7 +84,7 @@ export async function load({ withReviewerDigest }) {
   // ── Perlu perhatian ───────────────────────────────────────────────────────
   const attention = []
 
-  attention.push(...invitationAttention(invitations))
+  attention.push(...invitationAttention(invitations, 'undangan ikut serta'))
 
   if (digest) attention.push(...tugasanAttention(digest))
 
@@ -167,7 +167,7 @@ export async function load({ withReviewerDigest }) {
 
       attention: {
         items: sortedAttention,
-        emptyDesc: 'Tidak ada undangan tim yang menunggu respons Anda.',
+        emptyDesc: 'Tidak ada undangan ikut serta yang menunggu respons Anda.',
       },
 
       pipeline: {

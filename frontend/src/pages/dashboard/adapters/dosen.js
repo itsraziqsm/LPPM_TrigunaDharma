@@ -27,7 +27,7 @@ import {
 } from './shared'
 
 export const actions = [
-  { to: '/undangan', label: 'Undangan tim', variant: 'secondary' },
+  { to: '/undangan', label: 'Undangan kerja sama', variant: 'secondary' },
   { to: '/kegiatan/penelitian/usulan', label: 'Buat proposal baru', variant: 'primary' },
 ]
 
@@ -37,7 +37,7 @@ export async function load({ withReviewerDigest }) {
     proposals: req('Proposal terbaru', () =>
       proposalDosenApi.getAll({ limit: 6 }).then((r) => r.data.data || []),
     ),
-    invitations: req('Undangan tim', () =>
+    invitations: req('Undangan kerja sama', () =>
       proposalDosenApi
         .getMyInvitations()
         .then((r) => (r.data.data || []).filter((i) => i.statusUndangan === 'pending')),
@@ -247,7 +247,7 @@ export async function load({ withReviewerDigest }) {
         },
         {
           to: '/undangan',
-          label: 'Undangan tim',
+          label: 'Undangan kerja sama',
           desc: data.invitations
             ? invitations.length > 0
               ? `${invitations.length} menunggu respons.`

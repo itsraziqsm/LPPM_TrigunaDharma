@@ -2,10 +2,12 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import api from '../../api/axios'
 import { Search, X } from 'lucide-react'
+import UserAvatar from '../../components/UserAvatar'
 
 // ── Komponen Pencarian Anggota ─────────────────────────────────────────────────
 // fixedRole: 'dosen' | 'mahasiswa' → pencarian dikunci ke satu peran (filter peran disembunyikan).
-export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggota tim', desc, placeholder }) {
+// ketuaId: id ketua pengusul → tampil nonaktif "Ketua kegiatan" (tidak bisa jadi anggota).
+export function AnggotaSearch({ onAdd, addedIds, ketuaId, fixedRole, title = 'Cari anggota tim', desc, placeholder }) {
     const [query, setQuery] = useState('')
     const [role, setRole] = useState(fixedRole || '')
     const [results, setResults] = useState([])
@@ -103,7 +105,8 @@ export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggot
 
             <div className="max-h-80 overflow-y-auto">
                 {results.length > 0 ? results.map(u => {
-                    const alreadyAdded = addedIds.includes(u.id)
+                    const isKetua = ketuaId != null && u.id === ketuaId
+                    const alreadyAdded = isKetua || addedIds.includes(u.id)
                     const roleNames = u.roles?.map(r => r.role?.name).filter(Boolean) || []
                     const isMahasiswa = roleNames.includes('mahasiswa')
                     const roleLabel = isMahasiswa ? 'Mahasiswa' : 'Dosen'
@@ -118,9 +121,7 @@ export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggot
                                 : 'cursor-pointer hover:bg-navy-50/60'
                                 }`}
                         >
-                            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-navy-100 text-sm font-semibold text-navy-800">
-                                {(u.fullName || u.name || '?').charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatar user={u} className="size-9 text-sm" fallbackClassName="bg-navy-100 text-navy-800" />
 
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-base font-semibold text-slate-900">{u.fullName || u.name}</p>
@@ -134,7 +135,7 @@ export function AnggotaSearch({ onAdd, addedIds, fixedRole, title = 'Cari anggot
                             <div className="shrink-0">
                                 {alreadyAdded ? (
                                     <span className="badge badge-neutral">
-                                        Sudah ditambahkan
+                                        {isKetua ? 'Ketua kegiatan' : 'Sudah ditambahkan'}
                                     </span>
                                 ) : (
                                     <span className="badge badge-tag">

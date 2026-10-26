@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
@@ -9,6 +9,7 @@ import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
 import ProposalPage from './ProposalPage'
 import UndanganPage from './UndanganPage'
+import UndanganDetailPage from './UndanganDetailPage'
 import ReviewTugasanPage from './ReviewTugasanPage'
 import LaporanHarianPage from './LaporanHarianPage'
 import ProfilePage from './ProfilePage'
@@ -21,11 +22,13 @@ import LaporanPage from './LaporanPage'
 import LaporanIsiPage from './LaporanIsiPage'
 import LaporanMasukPage from './LaporanMasukPage'
 import NotifikasiPage from './NotifikasiPage'
+import NotifikasiDetailPage from './NotifikasiDetailPage'
 import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import BackupPage from './BackupPage'
-import MahasiswaPeriodePage from './MahasiswaPeriodePage'
+import RiwayatProjectPage from './RiwayatProjectPage'
+import UserAvatar from '../components/UserAvatar'
 
 const ROLE_LABEL = {
   admin: 'Admin',
@@ -95,6 +98,7 @@ export default function DashboardLayout({ page, jenis }) {
     if (page === 'kegiatan-detail') return <KegiatanDetailPage jenis={jenis} />
     if (page === 'profil') return <ProfilePage />
     if (page === 'notifikasi') return <NotifikasiPage />
+    if (page === 'notifikasi-detail') return <NotifikasiDetailPage key={location.pathname} />
 
     if (isAdminOrKetua) {
       if (page === 'periode') return <PeriodePage />
@@ -113,10 +117,13 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
+      if (page === 'undangan-detail') return <UndanganDetailPage key={location.pathname} />
       if (page === 'laporan-harian') return <LaporanHarianPage />
       // Project Saya per jenis → pilih project → Laporan Harian
       if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
-      if (page === 'periode') return <MahasiswaPeriodePage />
+      if (page === 'riwayat-project') return <RiwayatProjectPage />
+      // Menu lama "Periode" mahasiswa → Riwayat Project.
+      if (page === 'periode') return <Navigate to="/riwayat-project" replace />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="mahasiswa" isReviewer={isReviewer} />
     }
@@ -129,6 +136,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
       if (page === 'undangan') return <UndanganPage />
+      if (page === 'undangan-detail') return <UndanganDetailPage key={location.pathname} />
       // Dosen yang punya tugasan bisa akses halaman penugasan
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="dosen" isReviewer={isReviewer} />
@@ -153,9 +161,7 @@ export default function DashboardLayout({ page, jenis }) {
           </header>
 
           <div className="flex items-start gap-4 px-6 py-6">
-            <div className="grid size-12 shrink-0 place-items-center rounded-full bg-navy-800 font-serif text-xl text-white">
-              {user.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
+            <UserAvatar user={user} className="size-12 text-xl" fallbackClassName="bg-navy-800 font-serif font-normal text-white" />
 
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-500">Selamat datang</p>

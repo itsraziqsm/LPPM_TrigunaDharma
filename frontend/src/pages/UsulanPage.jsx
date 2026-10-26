@@ -411,6 +411,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
   const addAnggota = (kind) => (u) => {
+    // Ketua pengusul (akun yang sedang masuk) tidak boleh menjadi anggota timnya sendiri.
+    if (u.id === user?.id) {
+      alertDialog({ tone: 'warning', title: 'Tidak dapat ditambahkan', message: 'Anda adalah ketua kegiatan ini, jadi tidak perlu ditambahkan sebagai anggota.' })
+      return
+    }
     const k = kind || kindOf(u)
     if (timPenuh(form.jenis, anggota, k)) {
       alertDialog({
@@ -799,6 +804,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 placeholder="Ketik nama dosen"
                 onAdd={addAnggota('dosen')}
                 addedIds={anggota.map((a) => a.id)}
+                ketuaId={user?.id}
               />
             </StepCard>
             <AnggotaTable
@@ -815,6 +821,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                 placeholder="Ketik nama mahasiswa"
                 onAdd={addAnggota('mahasiswa')}
                 addedIds={anggota.map((a) => a.id)}
+                ketuaId={user?.id}
               />
             </StepCard>
             <AnggotaTable
@@ -828,7 +835,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         ) : (
           <>
             <StepCard title="B. Anggota Tim" desc="Cari dan pilih dosen atau mahasiswa. Mereka menerima undangan untuk menyetujui keterlibatan.">
-              <AnggotaSearch onAdd={addAnggota(null)} addedIds={anggota.map((a) => a.id)} />
+              <AnggotaSearch onAdd={addAnggota(null)} addedIds={anggota.map((a) => a.id)}
+                ketuaId={user?.id} />
             </StepCard>
             <AnggotaTable
               rows={anggota}

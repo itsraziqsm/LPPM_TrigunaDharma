@@ -110,7 +110,7 @@ function MemberSection({ jenis, label, userId }) {
         <p className="mt-0.5 text-sm text-slate-500">
           {label} milik dosen lain yang undangannya sudah Anda terima. Undangan yang menunggu respons ada di{' '}
           <Link to="/undangan" className="font-semibold text-navy-700 hover:text-navy-900">
-            Undangan Tim
+            Undangan Kerja Sama
           </Link>
           .
         </p>

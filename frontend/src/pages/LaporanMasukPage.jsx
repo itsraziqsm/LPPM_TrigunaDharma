@@ -12,6 +12,7 @@ import { rupiah, tanggal } from './laporan/format'
 import { confirmDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
+import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
 
 // ---------------------------------------------------------------------------
@@ -180,7 +181,7 @@ function DetailPanel({ id, onClose, onChanged, viewOnly = false }) {
                   <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
                     {laporan.reviewerTugasan.map((t) => (
                       <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                        <span>{t.reviewer?.fullName || t.reviewer?.name}</span>
+                        <span className="flex min-w-0 items-center gap-2"><UserAvatar user={t.reviewer || { id: t.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" /><span className="truncate">{t.reviewer?.fullName || t.reviewer?.name}</span></span>
                         {viewOnly ? null : (
                           <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
                             Hapus

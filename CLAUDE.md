@@ -250,8 +250,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` (semua peran), `/undangan`
-  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup` (admin), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
 - `src/pages/DashboardLayout.jsx` — pemilihan halaman berdasarkan **peran pertama**
   (`roles[0]`) + `isReviewer` = `canReview(user)` di `src/utils/roles.js` (hanya peran
@@ -272,8 +272,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `adapters/` (`pengelola`, `dosen`, `mahasiswa`, `reviewer`, `shared`). Status Inggris &
   Indonesia dipetakan ke satu kunci.
   **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`) dengan **urutan bagian Beranda
-  yang sama**: 1. **Halo** (`HaloHeader`: judul + breadcrumb, "Halo {nama}!", tanggal & peran, ringkasan, aksi, muat
-  ulang) → 2. **Pintasan** (`PintasanSection`: `model.shortcuts` sebagai baris kartu horizontal `ShortcutStrip`, digeser
+  yang sama**: 1. **Halo** (`HaloHeader`: judul + breadcrumb, "Halo {nama}!" — `fullName` tanpa gelar depan/belakang
+  (`namaSapaan`), tanggal & peran, muat ulang; **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
+  (`PintasanSection`: `model.shortcuts` sebagai baris kartu horizontal **judul saja** (`desc` jadi tooltip) `ShortcutStrip`, digeser
   di ponsel, lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
@@ -302,7 +303,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   capaian luaran, Hasil review; pengusul: Dokumen lampiran & Laporan kemajuan/akhir) dan samping (Tim, Dokumen utama,
   Riwayat waktu). Dosen pengusul `GET /dosen/proposals/:id`; anggota tim (dosen/mahasiswa) & admin/ketua
   `GET /proposals/:id` (baca saja). Jenis di URL disesuaikan dengan proposal (notifikasi tanpa jenis). Halaman ini menggantikan "Proposal Saya" (`ProposalDosenPage`,
-  dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Tim (+ Penugasan Review).
+  dihapus): menu dosen = Dashboard, Kegiatan, Luaran, Undangan Kerja Sama (+ Penugasan Review); `/undangan` berjudul "Undangan Kerja Sama" (dosen) / "Undangan Ikut Serta" (mahasiswa), istilah "undangan tim" tidak dipakai lagi.
+  `/undangan`: judul lalu satu kartu ringkasan (teks + 3 kotak sejajar Total/Menunggu/Riwayat), tiap kartu undangan punya
+  tombol **Lihat kegiatan** di bawah kalimat pengusul → **Detail Undangan** `/undangan/:id` (`UndanganDetailPage.jsx`,
+  konstanta `pages/undanganConst.js`): data dari `GET /dosen/proposals/invitations` (tanpa endpoint detail); undangan
+  diterima → info lengkap `GET /proposals/:id` + "Buka halaman kegiatan"; menunggu/ditolak → ringkasan saja (Abstrak & Tim
+  `ApiPending` W-35, backend 403), Terima/Tolak di kepala. **Dokumen utama tidak ditampilkan** di halaman ini.
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
   User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,
@@ -314,8 +320,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   langsung bila draft, selain itu "Ajukan hapus (izin Ketua)" nonaktif + `ApiPending` W-34).
 - Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
   `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
-  disaring per jenis → pilih project (`?id=`) → Laporan Harian), **Periode** (`MahasiswaPeriodePage.jsx`: hanya periode
-  dari project yang diikuti, digabung dengan `GET /periode` untuk tanggal/status; klik project → `/project/:jenis?id=`),
+  disaring per jenis → pilih project (`?id=`) → Laporan Harian), **Riwayat Project** (`/riwayat-project`,
+  `RiwayatProjectPage.jsx`; dulu menu "Periode" — diganti karena rancu dengan fitur Periode admin/ketua, `/periode` untuk
+  mahasiswa dialihkan ke sini): project yang diikuti dikelompokkan per periode (hanya periode dari project tsb., digabung
+  `GET /periode` untuk tanggal/status); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx`: hanya periode aktif (kartu +
@@ -344,7 +352,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Ketua pengusul (akun yang masuk) tidak bisa menjadi
+  anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
   pengabdian tepat 2 dosen + tepat 1 mahasiswa, penelitian minimal 2 dosen (mahasiswa bebas) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
   terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
@@ -373,7 +382,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).
-- Foto profil: `src/components/UserAvatar.jsx` (`API_BASE_URL + user.fotoUrl`, fallback inisial).
+- Foto profil: `src/components/UserAvatar.jsx` dipakai di **semua** tempat yang menampilkan orang (sidebar, profil,
+  Manajemen User, tim & reviewer di Detail Kegiatan/Dokumen Masuk/panel Periode, hasil cari anggota, review laporan,
+  Profil Dosen). Sumber: `user.fotoUrl` bila field ada di respons (null = tanpa foto), selain itu `GET /users/:id/foto`
+  (publik) dari `user.id`/`userId`; gagal (404) → inisial, URL gagal diingat selama sesi. Daftar orang baru wajib memakainya.
 - Sidebar bisa diciutkan di desktop (≥1024px) lewat **Ctrl/⌘ + B** atau tombol "Sembunyikan
   menu"; saat ciut tampil logo (bukan tombol) + rail ikon akses cepat untuk semua
   menu (anak grup Kegiatan tampil sebagai ikon sendiri, label lewat tooltip), lonceng, profil,
@@ -397,6 +409,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Login/Register di `<main>`, Manajemen User di area daftarnya. Halaman baru yang punya wadah
   gulir sendiri wajib memanggil `useLenis`. Elemen bergulir bersarang tetap jalan
   (`allowNestedScroll`); pakai `data-lenis-prevent` untuk pengecualian.
+- **Detail Notifikasi** (`NotifikasiDetailPage.jsx`, `/notifikasi/:id`): dibuka dari item lonceng (klik/Enter) dan
+  judul/"Lihat detail" di `/notifikasi`; notifikasi dari state navigasi atau `GET /notifications` (tanpa endpoint
+  detail, dicari ≤ 5 × 100), ditandai dibaca saat dibuka; isi: ikon + label jenis, judul, pesan, tombol halaman
+  terkait (`targetFor`), kartu data terkait (proposal/laporan/periode via `GET /proposals|laporan|periode/:id`:
+  judul, status, pengusul, periode, tanggal, catatan revisi), panel Informasi (Dari = `pengirimFor`, karena backend
+  tidak menyimpan pengirim; tanggal & waktu WIB), Hapus. Helper bersama di `src/utils/notifikasi.js`
+  (`TYPE_META`, `targetFor`, `pengirimFor`).
 - `/notifikasi` (`NotifikasiPage.jsx`): daftar per rentang waktu, filter Semua/Belum dibaca,
   tandai dibaca/semua, hapus, muat lebih banyak, tautan ke halaman terkait sesuai peran
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.

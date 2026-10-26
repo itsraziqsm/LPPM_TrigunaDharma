@@ -29,8 +29,18 @@ export function SectionTitle({ id, children }) {
 const show = (value) => (value === null || value === undefined ? '—' : value)
 
 // ── Kepala halaman ──────────────────────────────────────────────────────────
-export function HaloHeader({ now, name, roleLabel, summary, actions = [], loading, refreshing, updatedAt, onReload }) {
-  const firstName = String(name || '').split(/[\s,]+/)[0] || name
+// Nama untuk sapaan: buang gelar di belakang koma ("…, M.Kom") dan gelar di depan
+// ("Dr.", "Prof.", "Ir.", "H.", …) agar tidak tersisa "Halo Dr.!".
+const GELAR_DEPAN = /^(prof|dr|drs|dra|ir|h|hj|kh|ns|apt|st|tn|ny)\.?$/i
+function namaSapaan(name) {
+  const tanpaGelarBelakang = String(name || '').split(',')[0].trim()
+  const kata = tanpaGelarBelakang.split(/\s+/).filter(Boolean)
+  while (kata.length > 1 && (GELAR_DEPAN.test(kata[0]) || kata[0].endsWith('.'))) kata.shift()
+  return kata.join(' ') || String(name || '')
+}
+
+export function HaloHeader({ now, name, roleLabel, loading, refreshing, updatedAt, onReload }) {
+  const sapaan = namaSapaan(name)
   return (
     <header className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -54,34 +64,16 @@ export function HaloHeader({ now, name, roleLabel, summary, actions = [], loadin
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 max-w-2xl">
-          <p className="text-[2rem] font-bold leading-tight text-navy-950">
-            <span aria-hidden="true">👋 </span>Halo {firstName}!
+          <p className="break-words text-[2rem] font-bold leading-tight text-navy-950">
+            <span aria-hidden="true">👋 </span>Halo {sapaan}!
           </p>
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
             <span>{formatLongDate(now)}</span>
             {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
           </p>
-          {loading ? (
-            <div className="mt-3 h-5 w-full max-w-md animate-pulse rounded bg-slate-200/70" aria-hidden="true" />
-          ) : summary ? (
-            <p className="page-desc text-slate-600">{summary}</p>
-          ) : null}
         </div>
 
         <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
-          {actions.length > 0 ? (
-            <nav aria-label="Aksi utama" className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row">
-              {actions.map((action) => (
-                <Link
-                  key={action.label}
-                  to={action.to}
-                  className={`btn ${action.variant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
           <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
             {updatedAt ? <span>Diperbarui pukul {formatClock(updatedAt)}</span> : null}
             <button type="button" onClick={onReload} disabled={loading || refreshing} className="btn btn-ghost btn-sm">

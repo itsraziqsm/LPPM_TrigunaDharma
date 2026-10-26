@@ -243,8 +243,9 @@ export function personName(person) {
   return person?.fullName || person?.name || '—'
 }
 
-// Undangan tim yang belum direspons (dosen dan mahasiswa memakai bentuk yang sama).
-export function invitationAttention(invitations) {
+// Undangan yang belum direspons (dosen dan mahasiswa memakai bentuk yang sama).
+// label: 'undangan kerja sama' (dosen) | 'undangan ikut serta' (mahasiswa).
+export function invitationAttention(invitations, label = 'undangan kerja sama') {
   if (invitations.length === 0) return []
 
   const first = invitations[0]
@@ -256,7 +257,7 @@ export function invitationAttention(invitations) {
     {
       key: 'undangan',
       tone: 'warning',
-      title: `${invitations.length} undangan tim menunggu respons`,
+      title: `${invitations.length} ${label} menunggu respons`,
       detail: title ? sentence(`“${title}”${from ? ` dari ${from}` : ''}${more}`) : null,
       to: '/undangan',
       cta: 'Tinjau undangan',

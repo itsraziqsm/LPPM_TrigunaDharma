@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { laporanApi } from '../../api/laporan'
+import UserAvatar from '../../components/UserAvatar'
 import { STATUS_COLOR, STATUS_LABEL } from '../ProposalDosen/constants'
 
 // Blok tampilan bersama untuk halaman laporan (dosen, Ketua/Admin, reviewer).
@@ -85,7 +86,7 @@ export function ReviewList({ reviews, onlyDone = false }) {
       {list.map((r) => (
         <li key={r.id} className="rounded-lg border border-slate-200 bg-white px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold text-slate-900">{r.reviewer?.fullName || r.reviewer?.name || 'Reviewer'}</p>
+            <p className="flex items-center gap-2 font-semibold text-slate-900"><UserAvatar user={r.reviewer || { id: r.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />{r.reviewer?.fullName || r.reviewer?.name || 'Reviewer'}</p>
             <span className={`badge ${r.isDone ? 'badge-success' : 'badge-warning'}`}>{r.isDone ? 'Selesai' : 'Draft review'}</span>
           </div>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">

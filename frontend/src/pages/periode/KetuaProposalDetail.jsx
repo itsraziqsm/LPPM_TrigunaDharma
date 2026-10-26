@@ -3,6 +3,7 @@ import api from '../../api/axios'
 import { openDokumenWithAuth, STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, Modal, OverlayPanel, SectionLabel } from './periodeComponents'
 import { ChevronLeft } from 'lucide-react'
+import UserAvatar from '../../components/UserAvatar'
 
 // ─── Ketua Proposal Detail ────────────────────────────────────────────────────
 
@@ -253,11 +254,7 @@ export default function KetuaProposalDetail({ proposalId, onClose, onBack }) {
                                 <article>
                                     <SectionLabel>Ketua Pengusul</SectionLabel>
                                     <div className="flex items-start gap-4">
-                                        <div className="grid size-11 shrink-0 place-items-center rounded-full bg-navy-800">
-                                            <span className="text-base font-semibold text-white">
-                                                {(ketua?.name || ketua?.fullName || '?').charAt(0).toUpperCase()}
-                                            </span>
-                                        </div>
+                                        <UserAvatar user={ketua} className="size-11 text-base" fallbackClassName="bg-navy-800 text-white" />
                                         <div className="min-w-0">
                                             <p className="text-base font-semibold text-slate-900">
                                                 {ketua?.fullName || ketua?.name || '—'}
@@ -302,11 +299,7 @@ export default function KetuaProposalDetail({ proposalId, onClose, onBack }) {
                                         {anggota.map((a) => (
                                             <article key={a.id} className="border-b border-slate-100 py-3 last:border-b-0 md:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
                                                 <div className="flex items-center gap-3.5">
-                                                    <div className="grid size-9 shrink-0 place-items-center rounded-full bg-navy-50">
-                                                        <span className="text-sm font-semibold text-navy-700">
-                                                            {(a.user?.name || '?').charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
+                                                    <UserAvatar user={a.user} className="size-9 text-sm" fallbackClassName="bg-navy-50 text-navy-700" />
                                                     <div className="min-w-0">
                                                         <p className="text-base font-medium text-slate-900">
                                                             {a.user?.fullName || a.user?.name || '—'}
@@ -356,11 +349,7 @@ export default function KetuaProposalDetail({ proposalId, onClose, onBack }) {
                                         {reviewerTugasan.map((rt) => (
                                             <article key={rt.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="flex items-center gap-3.5">
-                                                    <div className="grid size-9 shrink-0 place-items-center rounded-full bg-navy-50">
-                                                        <span className="text-sm font-semibold text-navy-700">
-                                                            {(rt.reviewer?.name || '?').charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
+                                                    <UserAvatar user={rt.reviewer || { id: rt.reviewerId }} className="size-9 text-sm" fallbackClassName="bg-navy-50 text-navy-700" />
                                                     <p className="text-base font-medium text-slate-900">
                                                         {rt.reviewer?.fullName || rt.reviewer?.name || '—'}
                                                     </p>

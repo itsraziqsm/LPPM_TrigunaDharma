@@ -9,6 +9,7 @@ import useAuthStore from '../store/authStore'
 import { X } from 'lucide-react'
 import { alertDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
+import UserAvatar from '../components/UserAvatar'
 import HapusDokumen from '../components/HapusDokumen'
 
 // Proposal yang sudah disetujui berstatus final: Ketua/Admin tidak bisa mengubahnya lagi.
@@ -687,7 +688,8 @@ export default function ProposalPage() {
                     <div className="mt-2 divide-y divide-slate-100">
                       {detail.reviewerTugasan.map((rt, idx) => (
                         <div key={idx} className="py-3">
-                          <p className="text-base font-medium text-slate-900">
+                          <p className="flex items-center gap-2 text-base font-medium text-slate-900">
+                            <UserAvatar user={rt.reviewer || { id: rt.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                             {rt.reviewer?.fullName || rt.reviewer?.name}
                           </p>
                           <p className="mt-0.5 text-sm text-slate-500">
@@ -720,7 +722,8 @@ export default function ProposalPage() {
                           key={idx}
                           className="rounded-lg border border-slate-200 p-4"
                         >
-                          <p className="text-base font-medium text-slate-900">
+                          <p className="flex items-center gap-2 text-base font-medium text-slate-900">
+                            <UserAvatar user={rv.reviewer || { id: rv.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                             {rv.reviewer?.fullName || rv.reviewer?.name || 'Reviewer'}
                           </p>
                           <p
@@ -1076,7 +1079,8 @@ export default function ProposalPage() {
                             key={idx}
                             className="rounded-lg border border-slate-200 p-4"
                           >
-                            <p className="text-base font-medium text-slate-900">
+                            <p className="flex items-center gap-2 text-base font-medium text-slate-900">
+                              <UserAvatar user={rv.reviewer || { id: rv.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                               {rv.reviewer?.fullName ||
                                 rv.reviewer?.name ||
                                 'Reviewer'}
