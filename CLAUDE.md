@@ -330,8 +330,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/undangan`: judul lalu satu kartu ringkasan (teks + 3 kotak sejajar Total/Menunggu/Riwayat), tiap kartu undangan punya
   tombol **Lihat kegiatan** di bawah kalimat pengusul → **Detail Undangan** `/undangan/:id` (`UndanganDetailPage.jsx`,
   konstanta `pages/undanganConst.js`): data dari `GET /dosen/proposals/invitations/:id` (`proposalDosenApi.getInvitation`) —
-  abstrak, info kegiatan, mitra, target luaran, tim untuk semua status; Terima/Tolak di kepala, diterima → "Buka halaman
-  kegiatan". **Dokumen utama tidak ditampilkan** di halaman ini walau backend mengirim `dokumenUtama` (keputusan UI).
+  abstrak, info kegiatan, mitra, target luaran, tim untuk semua status; Terima/Tolak di kepala. **Dosen yang diundang
+  (`aksesPenuh`) dan anggota yang menerima = akses baca penuh**: kartu Dokumen utama + "Unduh file proposal"
+  (`dokumenUtama.unduhUrl`, blob) dan "Lihat seluruh informasi kegiatan" → Detail Kegiatan. Di Detail Kegiatan non-pengusul
+  (anggota, dosen diundang, pengelola) melihat Dokumen lampiran & Laporan kemajuan/akhir mode `readOnly` (tanpa
+  tambah/unggah/hapus) + dokumen utama; dosen dengan undangan `pending` mendapat banner "Tanggapi undangan" → `/undangan/:id`.
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
   User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,

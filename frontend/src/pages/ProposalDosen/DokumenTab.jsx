@@ -295,10 +295,11 @@ function DokumenCard({ dokumen, canDelete, onDelete }) {
 }
 
 // ── Main Tab Component ─────────────────────────────────────────────────────────
-export function DokumenTab({ proposalId, dokumenLampiran = [], status, onRefresh }) {
+// readOnly: anggota tim / dosen yang diundang — hanya lihat & unduh (tanpa tambah/hapus).
+export function DokumenTab({ proposalId, dokumenLampiran = [], status, onRefresh, readOnly = false }) {
     const [showForm, setShowForm] = useState(false)
 
-    const canUpload = ['draft', 'revisi', 'diajukan', 'disetujui'].includes(status)
+    const canUpload = !readOnly && ['draft', 'revisi', 'diajukan', 'disetujui'].includes(status)
 
     const handleDelete = async (id) => {
         await api.delete(`/proposals/dokumen/${id}`)
@@ -337,7 +338,7 @@ export function DokumenTab({ proposalId, dokumenLampiran = [], status, onRefresh
                 />
             )}
 
-            {!canUpload && (
+            {!canUpload && !readOnly && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3.5">
                     <p className="text-base font-semibold text-amber-900">Penambahan dokumen tidak tersedia</p>
                     <p className="mt-1 text-sm leading-relaxed text-amber-800">
@@ -349,7 +350,7 @@ export function DokumenTab({ proposalId, dokumenLampiran = [], status, onRefresh
             {dokumenLampiran.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 px-5 py-10 text-center">
                     <p className="text-base font-medium text-slate-700">Belum ada dokumen lampiran</p>
-                    <p className="mt-1 text-sm text-slate-500">Unggah dokumen pendukung agar informasi proposal lebih lengkap.</p>
+                    {readOnly ? null : <p className="mt-1 text-sm text-slate-500">Unggah dokumen pendukung agar informasi proposal lebih lengkap.</p>}
                 </div>
             ) : (
                 <div className="space-y-3">

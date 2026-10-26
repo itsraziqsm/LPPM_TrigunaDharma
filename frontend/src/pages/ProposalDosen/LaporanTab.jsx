@@ -313,10 +313,11 @@ function LaporanCard({ laporan, canDelete, onDelete }) {
 }
 
 // ── Main Tab Component ─────────────────────────────────────────────────────────
-export function LaporanTab({ proposalId, laporan = [], status, onRefresh }) {
+// readOnly: anggota tim / dosen yang diundang — hanya lihat & unduh (tanpa unggah/hapus).
+export function LaporanTab({ proposalId, laporan = [], status, onRefresh, readOnly = false }) {
     const [showForm, setShowForm] = useState(false)
 
-    const canUpload = status === 'disetujui'
+    const canUpload = !readOnly && status === 'disetujui'
 
     const handleDelete = async (id) => {
         await api.delete(`/proposals/laporan/${id}`)
@@ -330,7 +331,7 @@ export function LaporanTab({ proposalId, laporan = [], status, onRefresh }) {
 
     return (
         <section className="space-y-4">
-            {!canUpload && (
+            {!canUpload && !readOnly && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3.5">
                     <p className="text-base font-semibold text-amber-900">Unggah laporan belum tersedia</p>
                     <p className="mt-1 text-sm leading-relaxed text-amber-800">

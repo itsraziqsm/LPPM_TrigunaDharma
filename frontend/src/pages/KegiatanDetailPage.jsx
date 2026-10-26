@@ -207,6 +207,8 @@ export default function KegiatanDetailPage({ jenis }) {
   const bisaUbah = sebagaiPengusul && (detail.status === 'draft' || detail.status === 'revisi')
   const anggota = detail.anggota || []
   const belumSetuju = anggota.filter((a) => a.statusUndangan !== 'diterima')
+  // Dosen yang diundang (belum menjawab) boleh membaca seluruh kegiatan (W-41); tautkan ke undangannya.
+  const undanganSaya = sebagaiPengusul ? null : anggota.find((a) => (a.user?.id ?? a.userId) === user?.id && a.statusUndangan === 'pending')
   const isPengabdian = detail.jenis === 'pengabdian'
 
   const ajukan = async () => {
@@ -322,6 +324,17 @@ export default function KegiatanDetailPage({ jenis }) {
             <p className="mt-1 whitespace-pre-line text-sm text-amber-900">{detail.catatanRevisi}</p>
           </div>
         ) : null}
+        {undanganSaya ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-navy-100 bg-navy-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-navy-900">
+              Anda diundang sebagai <span className="font-semibold capitalize">{undanganSaya.peran || 'anggota'}</span> kegiatan ini. Seluruh
+              informasi dan dokumen bisa dibaca sebelum Anda menjawab undangan.
+            </p>
+            <Link to={`/undangan/${undanganSaya.id}`} className="btn btn-primary btn-sm shrink-0">
+              Tanggapi undangan
+            </Link>
+          </div>
+        ) : null}
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -383,17 +396,20 @@ export default function KegiatanDetailPage({ jenis }) {
             <ReviewList reviews={detail.reviews} onlyDone={!sebagaiPengusul && roles[0] === 'mahasiswa'} />
           </Section>
 
-          {sebagaiPengusul ? (
-            <>
-              <Section icon={FileText} title="Dokumen lampiran">
-                <DokumenTab proposalId={detail.id} dokumenLampiran={detail.dokumenLampiran || []} status={detail.status} onRefresh={reload} />
-              </Section>
-              {detail.status === 'disetujui' ? (
-                <Section icon={FileText} title="Laporan kemajuan & akhir">
-                  <LaporanTab proposalId={detail.id} laporan={detail.laporan || []} status={detail.status} onRefresh={reload} />
-                </Section>
-              ) : null}
-            </>
+          {/* Pengusul: kelola. Anggota tim, dosen yang diundang & pengelola: lihat/unduh saja (backend menolak tulis). */}
+          <Section icon={FileText} title="Dokumen lampiran">
+            <DokumenTab
+              proposalId={detail.id}
+              dokumenLampiran={detail.dokumenLampiran || []}
+              status={detail.status}
+              onRefresh={reload}
+              readOnly={!sebagaiPengusul}
+            />
+          </Section>
+          {detail.status === 'disetujui' ? (
+            <Section icon={FileText} title="Laporan kemajuan & akhir">
+              <LaporanTab proposalId={detail.id} laporan={detail.laporan || []} status={detail.status} onRefresh={reload} readOnly={!sebagaiPengusul} />
+            </Section>
           ) : null}
         </div>
 

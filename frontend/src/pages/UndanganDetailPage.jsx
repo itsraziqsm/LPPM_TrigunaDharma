@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, ClipboardList, FileText, Handshake, Mail, Tag, Target, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ClipboardList, Download, FileText, Handshake, Mail, Tag, Target, Users } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { LUARAN_JENIS } from '../api/luaran'
 import { refreshInvitationBadge } from '../components/Sidebar'
 import UserAvatar from '../components/UserAvatar'
 import useAuthStore from '../store/authStore'
 import { getRoleNames } from '../utils/roles'
-import { confirmDialog } from '../utils/dialog'
+import { alertDialog, confirmDialog } from '../utils/dialog'
+import api from '../api/axios'
+import { simpanBlob } from '../utils/unduhBlob'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL, UNDANGAN_COLOR } from './ProposalDosen/constants'
 import { Fields, Section } from './KegiatanDetailPage'
 import { UNDANGAN_STATUS_COLOR, UNDANGAN_STATUS_LABEL, judulUndangan, tanggalPanjang } from './undanganConst'
@@ -16,8 +18,9 @@ import { UNDANGAN_STATUS_COLOR, UNDANGAN_STATUS_LABEL, judulUndangan, tanggalPan
 // Detail Undangan (/undangan/:id) — informasi kegiatan terkait undangan.
 // Data: GET /dosen/proposals/invitations/:id (W-35/W-41) → undangan + proposal (abstrak,
 // info kegiatan, tim, targetLuaran). `aksesPenuh` false (mahasiswa belum menerima, undangan
-// ditolak) → kontak anggota lain tidak dikirim. Dokumen utama sengaja tidak ditampilkan
-// di halaman ini (permintaan pemilik proyek), walau backend mengirim `dokumenUtama`.
+// ditolak) → kontak anggota lain tidak dikirim. `aksesPenuh` true (dosen yang diundang, anggota
+// yang menerima) → akses baca penuh: unduh file proposal (`dokumenUtama.unduhUrl`, blob) dan
+// tautan ke Detail Kegiatan (lampiran, laporan, luaran, review) — W-41, tanpa aksi tulis.
 // ---------------------------------------------------------------------------
 
 const rupiah = (v) => (v || v === 0 ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
@@ -111,6 +114,17 @@ export default function UndanganDetailPage() {
   const anggota = d.anggota || []
   const targetLuaran = d.targetLuaran || []
   const jenisLuaran = (k) => LUARAN_JENIS[k] || k
+  const aksesPenuh = Boolean(u.aksesPenuh) || u.statusUndangan === 'diterima'
+  const dok = d.dokumenUtama
+
+  const unduhProposal = async () => {
+    try {
+      // unduhUrl relatif ke base URL API dan perlu token → lewat axios (blob)
+      simpanBlob(await api.get(dok.unduhUrl, { responseType: 'blob' }), dok.nama || 'proposal')
+    } catch {
+      alertDialog({ title: 'Gagal mengunduh', message: 'File proposal tidak dapat diunduh. Coba lagi.' })
+    }
+  }
 
   return (
     <div className="page rise space-y-6">
@@ -150,13 +164,23 @@ export default function UndanganDetailPage() {
                 {responding ? 'Memproses...' : 'Terima Undangan'}
               </button>
             </div>
-          ) : u.statusUndangan === 'diterima' && jenis ? (
-            <Link to={`/kegiatan/${jenis}/detail/${d.id}`} className="btn btn-secondary btn-sm">
-              Buka halaman kegiatan
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
           ) : null}
         </div>
+        {aksesPenuh && jenis ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-4 py-3">
+            <p className="mr-auto text-sm text-slate-600">Akses baca penuh: seluruh informasi & dokumen kegiatan (tanpa mengubah).</p>
+            {dok?.unduhUrl ? (
+              <button type="button" onClick={unduhProposal} className="btn btn-secondary btn-sm">
+                <Download className="size-4" aria-hidden="true" />
+                Unduh file proposal
+              </button>
+            ) : null}
+            <Link to={`/kegiatan/${jenis}/detail/${d.id}`} className="btn btn-primary btn-sm">
+              Lihat seluruh informasi kegiatan
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+        ) : null}
         {msg ? (
           <p className={`mt-3 text-sm font-medium ${msg.ok ? 'text-green-700' : 'text-red-600'}`} role="status">
             {msg.text}
@@ -244,6 +268,27 @@ export default function UndanganDetailPage() {
               ]}
             />
           </Section>
+
+          {aksesPenuh ? (
+            <Section icon={FileText} title="Dokumen utama">
+              {dok ? (
+                <div className="space-y-3">
+                  <p className="break-words text-sm font-medium text-slate-900">{dok.nama}</p>
+                  {dok.ukuran ? <p className="text-xs text-slate-500">{(dok.ukuran / 1024).toFixed(1)} KB</p> : null}
+                  <button type="button" onClick={unduhProposal} className="btn btn-secondary btn-sm w-full">
+                    <Download className="size-4" aria-hidden="true" />
+                    Unduh file proposal
+                  </button>
+                </div>
+              ) : d.dokumenUrl ? (
+                <a href={d.dokumenUrl} target="_blank" rel="noreferrer" className="break-all text-sm font-medium text-navy-700 hover:text-navy-900">
+                  {d.dokumenUrl}
+                </a>
+              ) : (
+                <p className="text-sm text-slate-500">Pengusul belum mengunggah file proposal.</p>
+              )}
+            </Section>
+          ) : null}
 
           <Section icon={Users} title={`Tim (${anggota.length + 1} orang)`}>
             <ul className="space-y-3">
