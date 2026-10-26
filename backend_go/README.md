@@ -88,6 +88,24 @@ Bila server mati saat jadwal, backup bulan itu dibuat begitu server menyala (dic
 Hanya satu backup berjalan per database (`GET_LOCK`). Log `berjalan` sisa server mati ditandai
 `gagal` saat start. Memulihkan: `gunzip < file.sql.gz | mysql -u <user> -p <database>`.
 
+### Seed proposal & laporan semua status
+
+```bash
+go run ./cmd/seed-proposal            # buat (yang sudah ada dilewati, aman diulang)
+go run ./cmd/seed-proposal -dry-run   # rencana saja
+go run ./cmd/seed-proposal -reset     # hapus data seed ini (berdasarkan judul) lalu buat ulang
+```
+
+Jalankan setelah `migrate` dan `seed`. **dosen1@lppm.dev** dan **dosen2@lppm.dev** masing-masing mendapat 17
+proposal: penelitian draft, diajukan, review, revisi, ditolak, disetujui (tanpa laporan, laporan draft,
+laporan diajukan, laporan review) dan pengabdian draft, diajukan, review, revisi, ditolak, disetujui
+(laporan revisi, laporan ditolak, laporan disetujui). dosen3–dosen5 mendapat 3 proposal (draft, diajukan,
+pengabdian selesai); draft dosen3 mengundang dosen1 & dosen2 (undangan menunggu), dosen1/dosen2 saling menjadi
+anggota (diterima) di proposal yang disetujui. Data lengkap: periode, anggaran, rumpun ilmu komputer, bidang,
+kata kunci, skema/mitra, tim sesuai aturan komposisi, file PDF dokumen utama/laporan (yang sudah diajukan),
+target luaran jurnal & poster (tercapai bila laporan diajukan), reviewer + review, notifikasi.
+Docker: `docker compose exec app /app/seed-proposal`.
+
 ### Akun contoh @email.com
 
 `go run ./cmd/seed-email` membuat satu akun per peran (aman diulang): `admin@email.com`/`admin123456`,
@@ -136,6 +154,7 @@ cmd/seed        seeder role, akun, periode
 cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui
 cmd/hapus-proposal-mahasiswa  hapus proposal yang ketua pengusulnya mahasiswa
 cmd/seed-email    6 akun contoh @email.com, satu per peran (termasuk ketua_stmik)
+cmd/seed-proposal proposal & laporan contoh semua status (fokus dosen1 & dosen2)
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
