@@ -50,7 +50,7 @@ const HALAMAN = {
   ],
   admin: [
     { to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' },
-    { to: '/template-proposal', title: 'Template Proposal', kata: 'format dokumen unggah docx' },
+    { to: '/template-proposal', title: 'Manajemen Template', kata: 'template proposal format dokumen unggah docx' },
     { to: '/luaran-dosen', title: 'Luaran Dosen', kata: 'jurnal poster bukti unduh csv zip' },
   ],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],

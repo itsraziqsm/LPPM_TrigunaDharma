@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { Award, BadgeDollarSign, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -37,34 +37,32 @@ const DOKUMEN_MASUK = {
   ],
 }
 
-// Admin: Dokumen Masuk (lihat & hapus), Periode (lihat saja + hapus dengan izin), User,
-// Cetak Dokumen, Backup Data.
+// Admin (sidebar mendukung 3 tingkat): Akademik (Dokumen Masuk › Proposal/Laporan Kegiatan,
+// Luaran, Periode), Pengguna, Dokumentasi (Manajemen Template, Cetak Dokumen), Backup Data.
 const ADMIN_NAV_ITEMS = [
-  DOKUMEN_MASUK,
   {
-    path: '/periode', label: 'Periode', icon: (
-      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
+    path: '/akademik', label: 'Akademik', icon: (
+      <GraduationCap className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    ),
+    children: [
+      DOKUMEN_MASUK,
+      { path: '/luaran-dosen', label: 'Luaran', icon: <Award className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/periode', label: 'Periode', icon: <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    ],
   },
   {
-    path: '/users', label: 'User', icon: (
+    path: '/users', label: 'Pengguna', icon: (
       <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {
-    path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
-      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/luaran-dosen', label: 'Luaran Dosen', icon: (
-      <Award className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/template-proposal', label: 'Template Proposal', icon: (
-      <FileCog className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
+    path: '/dokumentasi', label: 'Dokumentasi', icon: (
+      <BookOpen className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    ),
+    children: [
+      { path: '/template-proposal', label: 'Manajemen Template', icon: <FileCog className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    ],
   },
   {
     path: '/backup', label: 'Backup Data', icon: (
@@ -178,15 +176,20 @@ const navLinkClass = ({ isActive }) =>
       : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
   }`
 
-function NavGroup({ item, onNavigate }) {
+// Semua tautan daun (tanpa children) dari pohon menu — dipakai rail ciut & cek grup aktif.
+const daunMenu = (items) => items.flatMap((it) => (it.children ? daunMenu(it.children) : [it]))
+
+// Grup menu bertingkat (rekursif, hingga 3 tingkat): tingkat 1 dengan ikon, tingkat
+// berikutnya hanya label dengan garis kiri bertingkat.
+function NavGroup({ item, onNavigate, depth = 0 }) {
   const { pathname } = useLocation()
-  const childActive = item.children.some((c) => pathname.startsWith(c.path))
+  const childActive = daunMenu(item.children).some((c) => pathname.startsWith(c.path))
   // Pilihan manual berlaku di halaman tempat ia dibuat; saat pindah halaman
   // grup otomatis terbuka bila anaknya aktif (Sidebar tidak dipasang ulang
   // antar-route karena DashboardLayout tetap komponen yang sama).
   const [manual, setManual] = useState({ path: null, open: false })
   const expanded = manual.path === pathname ? manual.open : childActive || manual.open
-  const listId = `nav-group-${item.label.toLowerCase()}`
+  const listId = `nav-group-${item.path.replace(/\W+/g, '-')}`
 
   return (
     <div>
@@ -199,17 +202,21 @@ function NavGroup({ item, onNavigate }) {
           childActive ? 'text-navy-950' : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
         }`}
       >
-        <span className="shrink-0">{item.icon}</span>
+        {depth === 0 ? <span className="shrink-0">{item.icon}</span> : null}
         <span className="flex-1 truncate text-left">{item.label}</span>
         <ChevronRight className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} strokeWidth={1.8} aria-hidden="true" />
       </button>
       {expanded ? (
-        <div id={listId} className="ml-[1.3rem] flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2">
-          {item.children.map((child) => (
-            <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
-              <span className="flex-1 truncate">{child.label}</span>
-            </NavLink>
-          ))}
+        <div id={listId} className={`${depth === 0 ? 'ml-[1.3rem]' : 'ml-3'} flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2`}>
+          {item.children.map((child) =>
+            child.children ? (
+              <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} />
+            ) : (
+              <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
+                <span className="flex-1 truncate">{child.label}</span>
+              </NavLink>
+            ),
+          )}
         </div>
       ) : null}
     </div>
@@ -446,8 +453,7 @@ export default function Sidebar() {
         {collapsed ? (
           <>
             <nav aria-label="Navigasi utama" className="hidden min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto pt-12 lg:flex">
-              {allNavItems
-                .flatMap((item) => (item.children ? item.children : [item]))
+              {daunMenu(allNavItems)
                 .map((item) => (
                   <NavLink
                     key={item.path}

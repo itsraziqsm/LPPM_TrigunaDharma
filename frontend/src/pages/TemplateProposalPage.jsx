@@ -191,10 +191,10 @@ export default function TemplateProposalPage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="page-title">Template Proposal</h1>
+          <h1 className="page-title">Manajemen Template</h1>
           <p className="page-desc">Template yang diunduh dosen saat menyusun usulan. Jenis tanpa template sendiri memakai template umum.</p>
         </div>
-        <Breadcrumb items={[{ label: 'Template Proposal' }]} />
+        <Breadcrumb items={[{ label: 'Dokumentasi' }, { label: 'Manajemen Template' }]} />
       </header>
 
       {!jenis && !state.loading && !state.failed ? (

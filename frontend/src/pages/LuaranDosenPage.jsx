@@ -169,7 +169,7 @@ export default function LuaranDosenPage() {
 
   return (
     <div className="page space-y-6">
-      <Breadcrumb className="flex justify-end" items={[{ label: 'Luaran Dosen' }]} />
+      <Breadcrumb className="flex justify-end" items={[{ label: 'Akademik' }, { label: 'Luaran Dosen' }]} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="page-title">Luaran Dosen</h1>

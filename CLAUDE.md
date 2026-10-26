@@ -340,11 +340,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   tambah/unggah/hapus) + dokumen utama; dosen dengan undangan `pending` mendapat banner "Tanggapi undangan" → `/undangan/:id`.
 - Menu **Ketua LPPM** (`KETUA_NAV_ITEMS` di `Sidebar.jsx`, peran pertama `ketua_lppm`): Dashboard,
   grup **Dokumen Masuk** (Proposal Kegiatan `/proposals`, Laporan Kegiatan `/laporan-masuk`), Periode,
-  User, **Cetak Dokumen**. Admin `ADMIN_NAV_ITEMS`: grup Dokumen Masuk yang sama (`DOKUMEN_MASUK`), Periode, User,
-  Cetak Dokumen, **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti, Unduh CSV `;` & ZIP;
+  User, **Cetak Dokumen**. Sidebar mendukung **3 tingkat** (`NavGroup` rekursif, `daunMenu` = tautan daun untuk rail ciut).
+  Admin `ADMIN_NAV_ITEMS`: Dashboard · **Akademik** (Dokumen Masuk (`DOKUMEN_MASUK`) › Proposal/Laporan Kegiatan, Luaran
+  `/luaran-dosen`, Periode) · **Pengguna** (`/users`) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
+  Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti, Unduh CSV `;` & ZIP;
   panel cari = kolom cari · tombol Filter (membuka panel 7 filter) · Cari, baris "Filter aktif" hanya bila ada filter; tabel
   Daftar luaran bergaya Riwayat dosen (bingkai navy, kepala gelap)),
-  **Template Proposal** (`TemplateProposalPage.jsx`: unggah versi DOCX/PDF per jenis umum/penelitian/pengabdian, unduh,
+  **Manajemen Template** (dulu Template Proposal; `TemplateProposalPage.jsx`: unggah versi DOCX/PDF per jenis umum/penelitian/pengabdian, unduh,
   aktifkan, hapus versi riwayat), Backup Data. Unduhan blob lewat `utils/unduhBlob.js` (`simpanBlob`).
 - Menu **Ketua STMIK** (`STMIK_NAV_ITEMS`, peran pertama `ketua_stmik`, hanya baca): Dashboard (adapter
   `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Pemantauan Proposal**
