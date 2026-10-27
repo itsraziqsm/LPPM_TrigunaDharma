@@ -120,6 +120,11 @@ const DOSEN_NAV_ITEMS = [
     ],
   },
   {
+    path: '/periode', label: 'Periode', icon: (
+      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    )
+  },
+  {
     path: '/luaran', label: 'Luaran', icon: (
       <BadgeDollarSign className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )

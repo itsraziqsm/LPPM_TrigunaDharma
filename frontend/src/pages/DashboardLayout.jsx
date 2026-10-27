@@ -27,6 +27,7 @@ import { canReview } from '../utils/roles'
 import CetakDokumenPage from './cetak/CetakDokumenPage'
 import SuratTugasPage from './cetak/SuratTugasPage'
 import CetakPenggunaPage from './cetak/CetakPenggunaPage'
+import PeriodeDosenPage from './PeriodeDosenPage'
 import CetakLuaranPage from './cetak/CetakLuaranPage'
 import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
@@ -165,6 +166,7 @@ export default function DashboardLayout({ page, jenis }) {
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'luaran') return <LuaranPage />
+      if (page === 'periode') return <PeriodeDosenPage />
       if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />

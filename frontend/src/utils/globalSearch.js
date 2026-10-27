@@ -34,6 +34,7 @@ const HALAMAN = {
   dosen: [
     { to: '/kegiatan/penelitian', title: 'Status Penelitian', kata: 'kegiatan riwayat' },
     { to: '/kegiatan/pengabdian', title: 'Status Pengabdian', kata: 'kegiatan riwayat' },
+    { to: '/periode', title: 'Periode', kata: 'folder tahun semester kegiatan' },
     { to: '/kegiatan/penelitian/usulan', title: 'Usulkan Proposal Penelitian', kata: 'baru buat' },
     { to: '/kegiatan/pengabdian/usulan', title: 'Usulkan Proposal Pengabdian', kata: 'baru buat' },
     { to: '/kegiatan/penelitian/laporan/baru', title: 'Kirim Laporan Penelitian', kata: 'baru buat' },

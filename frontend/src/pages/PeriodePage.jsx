@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { periodeApi } from '../api/periode'
 import useAuthStore from '../store/authStore'
-import { getRoleNames, JENIS_LABEL, EMPTY_FORM } from './periode/periodeConstants'
-import { Badge, Modal } from './periode/periodeComponents'
+import { getRoleNames, EMPTY_FORM } from './periode/periodeConstants'
+import { Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
 import { KepalaMasuk } from '../components/PeriodeAktif'
 import useJejakMenu from '../hooks/useJejakMenu'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { proposalApi } from '../api/proposal'
+import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,24 @@ export default function PeriodePage() {
   }, [])
 
   useEffect(() => { fetchPeriodes() }, [fetchPeriodes])
+
+  // Jumlah kegiatan (proposal) per periode: GET /proposals?periodeId=&limit=1 → meta.total.
+  const [jumlah, setJumlah] = useState({})
+  useEffect(() => {
+    if (!periodes.length) return undefined
+    let alive = true
+    Promise.all(
+      periodes.map((p) =>
+        proposalApi
+          .getAll({ periodeId: p.id, page: 1, limit: 1 })
+          .then((r) => [p.id, Number(r.data.meta?.total) || 0])
+          .catch(() => [p.id, null]),
+      ),
+    ).then((pairs) => alive && setJumlah(Object.fromEntries(pairs)))
+    return () => {
+      alive = false
+    }
+  }, [periodes])
 
   // ── Modal helpers ──────────────────────────────────────────────────────────
 
@@ -245,144 +265,58 @@ export default function PeriodePage() {
           ]}
         />
 
-        {/* Daftar Periode */}
-        <section className="card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
-            <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-navy-950">Daftar Periode</h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Pilih satu periode untuk melihat panel proposal, atau gunakan aksi di sisi kanan untuk mengelola data.
-                </p>
-              </div>
-              <div className="text-sm text-slate-400">Klik satu baris untuk membuka detail periode</div>
-            </div>
+        {/* Daftar Periode: folder per periode, dikelompokkan per tahun (components/FolderPeriode) */}
+        <section aria-labelledby="daftar-periode" className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="daftar-periode" className="text-lg font-semibold text-navy-950">Daftar Periode</h2>
+            <p className="text-sm text-slate-500">Buka folder untuk melihat proposal &amp; laporan periode itu.</p>
           </div>
-
           {loading ? (
-            <div className="px-6 py-14 text-center">
+            <div className="card px-6 py-14 text-center">
               <p className="flex items-center justify-center gap-3 text-base text-slate-500">
                 <span className="spinner text-navy-600" aria-hidden="true" />
                 Memuat data periode...
               </p>
             </div>
           ) : error ? (
-            <div className="px-6 py-14 text-center">
+            <div className="card px-6 py-14 text-center">
               <p className="text-base text-red-600">{error}</p>
             </div>
           ) : periodes.length === 0 ? (
-            <div className="px-6 py-14 text-center">
+            <div className="card px-6 py-14 text-center">
               <p className="text-base text-slate-500">Belum ada periode yang tersedia.</p>
             </div>
           ) : (
-            <>
-              <div className="hidden border-b border-slate-200 bg-slate-50 px-6 py-3 md:grid md:grid-cols-12 md:gap-4">
-                <span className="col-span-4 text-xs font-semibold text-slate-500">Periode</span>
-                <span className="col-span-2 text-xs font-semibold text-slate-500">Jenis</span>
-                <span className="col-span-2 text-xs font-semibold text-slate-500">Tahun</span>
-                <span className="col-span-2 text-xs font-semibold text-slate-500">Status</span>
-                <span className="col-span-2 text-right text-xs font-semibold text-slate-500">Tindakan</span>
-              </div>
-
-              <div className="divide-y divide-slate-100">
-                {periodes.map((p) => {
-                  const isActive = activePeriode?.id === p.id
-                  return (
-                    <article
-                      key={p.id}
-                      onClick={() => setActivePeriode((prev) => (prev?.id === p.id ? null : p))}
-                      className={`cursor-pointer px-6 py-4 transition-colors duration-150 ${isActive ? 'bg-navy-50' : 'hover:bg-slate-50'}`}
-                    >
-                      {/* Desktop */}
-                      <div className="hidden md:grid md:grid-cols-12 md:items-center md:gap-4">
-                        <div className="col-span-4">
-                          <p className="text-base font-semibold leading-snug text-slate-900">{p.nama}</p>
-                          <p className="mt-0.5 text-sm text-slate-500 tabular-nums">
-                            {p.tanggalMulai?.slice(0, 10)} — {p.tanggalSelesai?.slice(0, 10)}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <Badge
-                            label={JENIS_LABEL[p.jenis] || p.jenis}
-                            className="badge-neutral"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-base text-slate-700 tabular-nums">{p.tahun}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <Badge
-                            label={p.isAktif ? 'Aktif' : 'Nonaktif'}
-                            className={p.isAktif ? 'badge-success' : 'badge-neutral'}
-                          />
-                        </div>
-                        <div className="col-span-2 flex items-center justify-end gap-1">
-                          {canManage && (
+            <GrupTahun periodes={periodes} kunci="periodeTahunBuka">
+              {(isi) => (
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {isi.map((p) => (
+                    <li key={p.id}>
+                      <FolderPeriode
+                        periode={p}
+                        jumlah={jumlah[p.id]}
+                        terpilih={activePeriode?.id === p.id}
+                        onClick={() => setActivePeriode((prev) => (prev?.id === p.id ? null : p))}
+                        aksi={
+                          canManage ? (
                             <>
-                              {canEdit && (
-                                <button
-                                  onClick={(e) => openEdit(p, e)}
-                                  className="btn btn-ghost btn-sm"
-                                >
-                                  Edit
+                              {canEdit ? (
+                                <button type="button" onClick={(e) => openEdit(p, e)} aria-label={`Ubah ${p.nama}`} title="Ubah periode" className="grid size-8 place-items-center rounded-lg bg-white/80 text-slate-700 hover:bg-white">
+                                  <Pencil className="size-4" aria-hidden="true" />
                                 </button>
-                              )}
-                              <button
-                                onClick={(e) => openDelete(p, e)}
-                                className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50 hover:text-red-800"
-                              >
-                                Hapus
+                              ) : null}
+                              <button type="button" onClick={(e) => openDelete(p, e)} aria-label={`Hapus ${p.nama}`} title={canEdit ? 'Hapus periode' : 'Ajukan hapus ke Ketua LPPM'} className="grid size-8 place-items-center rounded-lg bg-white/80 text-red-700 hover:bg-white">
+                                <Trash2 className="size-4" aria-hidden="true" />
                               </button>
                             </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Mobile */}
-                      <div className="space-y-3 md:hidden">
-                        <div className="space-y-1.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <h3 className="text-base font-semibold leading-snug text-slate-900">{p.nama}</h3>
-                            <Badge
-                              label={p.isAktif ? 'Aktif' : 'Nonaktif'}
-                              className={p.isAktif ? 'badge-success' : 'badge-neutral'}
-                            />
-                          </div>
-                          <p className="text-sm text-slate-500 tabular-nums">
-                            {p.tanggalMulai?.slice(0, 10)} — {p.tanggalSelesai?.slice(0, 10)}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge
-                            label={JENIS_LABEL[p.jenis] || p.jenis}
-                            className="badge-neutral"
-                          />
-                          <span className="text-sm text-slate-600">Tahun {p.tahun}</span>
-                        </div>
-                        {canManage && (
-                          <div className="flex flex-col gap-2 sm:flex-row">
-                            {canEdit && (
-                              <button
-                                onClick={(e) => openEdit(p, e)}
-                                className="btn btn-secondary btn-sm"
-                              >
-                                Edit Periode
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => openDelete(p, e)}
-                              className="btn btn-danger btn-sm"
-                            >
-                              Hapus Periode
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            </>
+                          ) : null
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </GrupTahun>
           )}
         </section>
       </div>
