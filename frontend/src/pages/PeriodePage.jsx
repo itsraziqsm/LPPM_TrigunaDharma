@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { periodeApi } from '../api/periode'
 import useAuthStore from '../store/authStore'
-import { getRoleNames, EMPTY_FORM } from './periode/periodeConstants'
-import { Modal } from './periode/periodeComponents'
+import { getRoleNames, EMPTY_FORM, JENIS_LABEL } from './periode/periodeConstants'
+import { Badge, Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
 import { KepalaMasuk } from '../components/PeriodeAktif'
 import useJejakMenu from '../hooks/useJejakMenu'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import Breadcrumb from '../components/Breadcrumb'
 import { proposalApi } from '../api/proposal'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 
@@ -23,11 +25,14 @@ export default function PeriodePage() {
   // (DELETE /periode/:id + password sendiri) dan menyetujui permintaan hapus admin;
   // Admin hanya melihat, hapus lewat permintaan yang disetujui Ketua.
   const canEdit = isKetua
+  // /periode/detail/:id = Detail Periode (info, Pengaturan: Ubah/Hapus, kegiatan periode).
+  const { id: detailParam } = useParams()
+  const detailId = detailParam ? Number(detailParam) : null
+  const navigate = useNavigate()
 
   const [periodes, setPeriodes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [activePeriode, setActivePeriode] = useState(null)
 
   const [modal, setModal] = useState(null) // null | 'create' | 'edit' | 'delete'
   const [selected, setSelected] = useState(null)
@@ -182,8 +187,8 @@ export default function PeriodePage() {
     setSubmitting(true)
     try {
       await periodeApi.approveDelete(pendingRequest.id, deletePassword)
-      if (activePeriode?.id === selected.id) setActivePeriode(null)
       await fetchPeriodes(); closeModal()
+      if (detailId) navigate('/periode', { replace: true })
     } catch (err) {
       const msg = err.response?.data?.message || 'Terjadi kesalahan'
       if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('salah')) {
@@ -201,8 +206,8 @@ export default function PeriodePage() {
     setSubmitting(true)
     try {
       await periodeApi.remove(selected.id, deletePassword)
-      if (activePeriode?.id === selected.id) setActivePeriode(null)
       await fetchPeriodes(); closeModal()
+      if (detailId) navigate('/periode', { replace: true })
     } catch (err) {
       const msg = err.response?.data?.message || 'Terjadi kesalahan'
       if (msg.toLowerCase().includes('password')) {
@@ -225,111 +230,173 @@ export default function PeriodePage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  return (
-    <>
-      <div className="page space-y-8">
-        {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
-        <KepalaMasuk
-          judul="Periode Penelitian & Pengabdian"
-          crumbs={[...induk, { label: 'Periode' }]}
-          desc={
-            <>
-              Kelola daftar periode secara terstruktur untuk mendukung proses pengajuan, evaluasi, dan pemantauan kegiatan
-              penelitian maupun pengabdian.
-              {!canEdit && canManage ? (
-                <span className="mt-2 block text-sm text-slate-500">
-                  Akses Admin: lihat saja. Tombol Hapus mengajukan permintaan penghapusan yang harus disetujui Ketua LPPM.
-                </span>
-              ) : null}
-            </>
-          }
-          aksi={
-            canEdit ? (
-              <button onClick={openCreate} className="btn btn-primary">
-                <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                Tambah Periode
-              </button>
-            ) : null
-          }
-          stats={[
-            { label: 'Total Periode', value: periodes.length },
-            { label: 'Periode Aktif', value: periodes.filter((p) => p.isAktif).length },
-            {
-              label: 'Periode Dipilih',
-              value: (
-                <span className="block truncate font-sans text-base font-semibold" title={activePeriode?.nama || undefined}>
-                  {activePeriode ? activePeriode.nama : '—'}
-                </span>
-              ),
-            },
-          ]}
-        />
+  const tanggal = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '—')
+  const detail = detailId ? periodes.find((p) => p.id === detailId) : null
 
-        {/* Daftar Periode: folder per periode, dikelompokkan per tahun (components/FolderPeriode) */}
-        <section aria-labelledby="daftar-periode" className="space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="daftar-periode" className="text-lg font-semibold text-navy-950">Daftar Periode</h2>
-            <p className="text-sm text-slate-500">Buka folder untuk melihat proposal &amp; laporan periode itu.</p>
+  const daftar = (
+    <>
+      {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
+      <KepalaMasuk
+        judul="Periode Penelitian & Pengabdian"
+        crumbs={[...induk, { label: 'Periode' }]}
+        desc={
+          <>
+            Kelola daftar periode secara terstruktur untuk mendukung proses pengajuan, evaluasi, dan pemantauan kegiatan
+            penelitian maupun pengabdian.
+            {!canEdit && canManage ? (
+              <span className="mt-2 block text-sm text-slate-500">
+                Akses Admin: lihat saja. Penghapusan diajukan dari detail periode dan harus disetujui Ketua LPPM.
+              </span>
+            ) : null}
+          </>
+        }
+        aksi={
+          canEdit ? (
+            <button onClick={openCreate} className="btn btn-primary">
+              <Plus className="size-4" strokeWidth={1.8} aria-hidden="true" />
+              Tambah Periode
+            </button>
+          ) : null
+        }
+        stats={[
+          { label: 'Total Periode', value: periodes.length },
+          { label: 'Periode Aktif', value: periodes.filter((p) => p.isAktif).length },
+          { label: 'Total Kegiatan', value: Object.values(jumlah).reduce((n, v) => n + (Number(v) || 0), 0) },
+        ]}
+      />
+
+      {/* Daftar Periode: folder per periode, dikelompokkan per tahun (components/FolderPeriode) */}
+      <section aria-labelledby="daftar-periode" className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="daftar-periode" className="text-lg font-semibold text-navy-950">Daftar Periode</h2>
+          <p className="text-sm text-slate-500">Buka folder untuk melihat detail, kegiatan, dan pengaturan periode.</p>
+        </div>
+        {loading ? (
+          <div className="card px-6 py-14 text-center">
+            <p className="flex items-center justify-center gap-3 text-base text-slate-500">
+              <span className="spinner text-navy-600" aria-hidden="true" />
+              Memuat data periode...
+            </p>
           </div>
-          {loading ? (
-            <div className="card px-6 py-14 text-center">
-              <p className="flex items-center justify-center gap-3 text-base text-slate-500">
-                <span className="spinner text-navy-600" aria-hidden="true" />
-                Memuat data periode...
-              </p>
-            </div>
-          ) : error ? (
-            <div className="card px-6 py-14 text-center">
-              <p className="text-base text-red-600">{error}</p>
-            </div>
-          ) : periodes.length === 0 ? (
-            <div className="card px-6 py-14 text-center">
-              <p className="text-base text-slate-500">Belum ada periode yang tersedia.</p>
-            </div>
-          ) : (
-            <GrupTahun periodes={periodes} kunci="periodeTahunBuka">
-              {(isi) => (
-                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {isi.map((p) => (
-                    <li key={p.id}>
-                      <FolderPeriode
-                        periode={p}
-                        jumlah={jumlah[p.id]}
-                        terpilih={activePeriode?.id === p.id}
-                        onClick={() => setActivePeriode((prev) => (prev?.id === p.id ? null : p))}
-                        aksi={
-                          canManage ? (
-                            <>
-                              {canEdit ? (
-                                <button type="button" onClick={(e) => openEdit(p, e)} aria-label={`Ubah ${p.nama}`} title="Ubah periode" className="grid size-8 place-items-center rounded-lg bg-white/80 text-slate-700 hover:bg-white">
-                                  <Pencil className="size-4" aria-hidden="true" />
-                                </button>
-                              ) : null}
-                              <button type="button" onClick={(e) => openDelete(p, e)} aria-label={`Hapus ${p.nama}`} title={canEdit ? 'Hapus periode' : 'Ajukan hapus ke Ketua LPPM'} className="grid size-8 place-items-center rounded-lg bg-white/80 text-red-700 hover:bg-white">
-                                <Trash2 className="size-4" aria-hidden="true" />
-                              </button>
-                            </>
-                          ) : null
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </GrupTahun>
-          )}
-        </section>
+        ) : error ? (
+          <div className="card px-6 py-14 text-center">
+            <p className="text-base text-red-600">{error}</p>
+          </div>
+        ) : periodes.length === 0 ? (
+          <div className="card px-6 py-14 text-center">
+            <p className="text-base text-slate-500">Belum ada periode yang tersedia.</p>
+          </div>
+        ) : (
+          <GrupTahun periodes={periodes} kunci="periodeTahunBuka">
+            {(isi) => (
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {isi.map((p) => (
+                  <li key={p.id}>
+                    <FolderPeriode periode={p} jumlah={jumlah[p.id]} onClick={() => navigate(`/periode/detail/${p.id}`)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GrupTahun>
+        )}
+      </section>
+    </>
+  )
+
+  // Detail Periode: info, Pengaturan (Ubah = Ketua; Hapus = Ketua langsung / Admin ajukan), kegiatan periode.
+  const halamanDetail = (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to="/periode" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Periode
+        </Link>
+        <Breadcrumb items={[...induk, { label: 'Periode', to: '/periode' }, { label: detail?.nama || 'Detail' }]} />
       </div>
 
-      {/* Proposal Panel */}
-      {activePeriode && (
-        <ProposalPanel
-          key={activePeriode.id}
-          periode={activePeriode}
-          isKetua={isKetua}
-          onClose={() => setActivePeriode(null)}
-        />
+      {loading ? (
+        <div className="card px-6 py-14 text-center">
+          <p className="flex items-center justify-center gap-3 text-base text-slate-500">
+            <span className="spinner text-navy-600" aria-hidden="true" />
+            Memuat periode...
+          </p>
+        </div>
+      ) : !detail ? (
+        <div className="card px-6 py-14 text-center">
+          <p className="text-base text-slate-600">Periode tidak ditemukan atau sudah dihapus.</p>
+          <Link to="/periode" className="btn btn-secondary btn-sm mt-4">
+            Kembali ke daftar periode
+          </Link>
+        </div>
+      ) : (
+        <>
+          <section className="card p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge label={JENIS_LABEL[detail.jenis] || detail.jenis} className="badge-tag" />
+              <Badge label={detail.isAktif ? 'Aktif' : 'Nonaktif'} className={detail.isAktif ? 'badge-success' : 'badge-neutral'} />
+            </div>
+            <h1 className="page-title mt-3">{detail.nama}</h1>
+            <dl className="mt-5 grid gap-3 sm:grid-cols-4">
+              {[
+                ['Tahun', detail.tahun],
+                ['Tanggal mulai', tanggal(detail.tanggalMulai)],
+                ['Tanggal selesai', tanggal(detail.tanggalSelesai)],
+                ['Jumlah kegiatan', jumlah[detail.id] ?? '…'],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <dt className="text-xs font-medium text-slate-500 sm:text-sm">{k}</dt>
+                  <dd className="mt-1 font-medium text-navy-950 tabular-nums">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          {canManage ? (
+            <section aria-labelledby="pengaturan-periode" className="card">
+              <header className="border-b border-slate-200 px-6 py-4">
+                <h2 id="pengaturan-periode" className="text-lg font-semibold text-navy-950">Pengaturan</h2>
+                <p className="text-sm text-slate-500">
+                  {canEdit ? 'Ubah data periode atau hapus periode (wajib password).' : 'Akses Admin: hapus diajukan ke Ketua LPPM dan berlaku setelah disetujui.'}
+                </p>
+              </header>
+              <div className="divide-y divide-slate-100">
+                {canEdit ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                    <div>
+                      <p className="font-medium text-slate-900">Ubah periode</p>
+                      <p className="text-sm text-slate-500">Nama, tahun, jenis, tanggal, dan status aktif.</p>
+                    </div>
+                    <button type="button" onClick={(e) => openEdit(detail, e)} className="btn btn-secondary">
+                      <Pencil className="size-4" aria-hidden="true" />
+                      Ubah
+                    </button>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                  <div>
+                    <p className="font-medium text-red-700">Hapus periode</p>
+                    <p className="text-sm text-slate-500">
+                      {canEdit ? 'Periode beserta datanya dihapus permanen.' : 'Ajukan permintaan hapus; pantau atau batalkan selama menunggu.'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={(e) => openDelete(detail, e)} className="btn btn-danger">
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {canEdit ? 'Hapus' : 'Ajukan hapus'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          <ProposalPanel key={detail.id} periode={detail} inline />
+        </>
       )}
+    </>
+  )
+
+  return (
+    <>
+      <div className="page space-y-8">{detailId ? halamanDetail : daftar}</div>
 
       {/* Create / Edit Modal */}
       {canEdit && (modal === 'create' || modal === 'edit') && (

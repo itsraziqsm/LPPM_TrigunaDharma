@@ -4,8 +4,8 @@ import { ChevronRight } from 'lucide-react'
 // ---------------------------------------------------------------------------
 // Periode sebagai "folder" (tema terang; Admin, Ketua LPPM, Dosen):
 //   FolderPeriode — kartu folder: bidang atas berwarna (navy = penelitian, brass = pengabdian),
-//                   lembar putih bertab berisi judul periode + jumlah kegiatan. `aksi` (opsional)
-//                   = tombol kecil di bidang atas (mis. Ubah/Hapus untuk pengelola).
+//                   lembar putih bertab berisi judul periode + jumlah kegiatan saja (Ubah/Hapus ada di
+//                   halaman Detail Periode → Pengaturan).
 //   GrupTahun     — dropdown per TAHUN (bukan per semester) berisi folder-folder periode;
 //                   buka/tutup diingat di localStorage (`kunci`), bawaan: tahun terbaru terbuka.
 // Tanpa gradien (aturan desain Navy Akademik).
@@ -16,10 +16,9 @@ const TONE = {
   pengabdian: 'bg-brass-300',
 }
 
-export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, aksi = null }) {
+export function FolderPeriode({ periode, jumlah, terpilih = false, onClick }) {
   const tone = TONE[periode.jenis] || 'bg-slate-200'
   return (
-    <div className="relative">
       <button
         type="button"
         onClick={onClick}
@@ -50,8 +49,6 @@ export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, aksi
           </span>
         </span>
       </button>
-      {aksi ? <div className="absolute right-3 top-3 flex gap-1">{aksi}</div> : null}
-    </div>
   )
 }
 

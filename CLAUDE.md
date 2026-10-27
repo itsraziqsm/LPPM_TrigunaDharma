@@ -268,7 +268,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 ### Arsitektur
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` publik
   (`VerifyEmailPage.jsx`, tanpa guard) dan `PrivateRoute`; semua
-  halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`,
+  halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`, `/periode/detail/:id` (admin/ketua),
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
@@ -358,8 +358,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Periode** (`PeriodePage`): kepala `KepalaMasuk` (prop `aksi` = tombol Tambah Periode untuk Ketua; kotak Total, Aktif, Dipilih).
   Daftar periode = **folder** (`components/FolderPeriode.jsx`: `FolderPeriode` tema terang — bidang atas navy (penelitian) /
   brass (pengabdian), lembar bertab berisi **judul + jumlah kegiatan** saja; `GrupTahun` = dropdown **per tahun**, diingat di
-  localStorage, bawaan tahun terbaru terbuka). Admin/Ketua: jumlah = `GET /proposals?periodeId=&limit=1` → `meta.total`, ikon
-  Ubah/Hapus di bidang atas, klik folder → panel periode. **Dosen** punya menu **Periode** (`/periode` → `PeriodeDosenPage`):
+  localStorage, bawaan tahun terbaru terbuka). Admin/Ketua: jumlah = `GET /proposals?periodeId=&limit=1` → `meta.total`; folder
+  tanpa tombol, klik → **Detail Periode** `/periode/detail/:id` (`PeriodePage` dengan param `id`): info (jenis, status, tahun,
+  tanggal, jumlah kegiatan), kartu **Pengaturan** (Ubah = Ketua; Hapus = Ketua langsung / Admin "Ajukan hapus"; modal yang sama,
+  setelah terhapus kembali ke `/periode`), lalu Kegiatan Periode (`ProposalPanel inline`, tab Proposal/Laporan). **Dosen** punya menu **Periode** (`/periode` → `PeriodeDosenPage`):
   jumlah = kegiatan sendiri (ketua: `/dosen/proposals` semua halaman; anggota: `as-member`) per periode, klik folder → daftar
   kegiatannya → Detail Kegiatan.
 - **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua); Hapus =

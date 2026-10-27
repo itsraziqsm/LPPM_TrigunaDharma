@@ -5,13 +5,17 @@ import { STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel } from './periodeComponents'
 import { ChevronRight } from 'lucide-react'
 
+function InlineWadah({ children }) {
+    return <section className="card flex flex-col overflow-hidden">{children}</section>
+}
+
 // ─── Proposal Panel (list) — centered overlay ─────────────────────────────────
 // Tab Proposal (GET /proposals?periodeId=) dan Laporan (GET /laporan?periodeId=,
 // bawaan status Disetujui): tempat melihat kegiatan periode lama yang sudah
 // diterima — Laporan Masuk hanya memuat periode aktif. Klik membuka halaman detail
 // /proposals/detail/:id atau /laporan-masuk/detail/:id (bukan modal).
 
-export default function ProposalPanel({ periode, onClose }) {
+export default function ProposalPanel({ periode, onClose, inline = false }) {
     const [proposals, setProposals] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -64,20 +68,29 @@ export default function ProposalPanel({ periode, onClose }) {
 
     const totalPages = Math.ceil((meta.total || 0) / (meta.limit || 10))
 
+    // inline = bagian halaman Detail Periode (/periode/detail/:id), selain itu overlay.
+    const Wadah = inline ? InlineWadah : OverlayPanel
+
     return (
-        <OverlayPanel onClose={onClose} size="xl">
+        <Wadah onClose={onClose} size="xl">
             {/* Header daftar proposal */}
             <header className="border-b border-slate-200 px-6 py-5">
                 <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                        <p className="text-sm text-slate-500">Kegiatan Periode</p>
-                        <h1 className="mt-1 text-2xl text-navy-950">{periode.nama}</h1>
+                        {inline ? (
+                            <h2 className="text-lg font-semibold text-navy-950">Kegiatan Periode</h2>
+                        ) : (
+                            <>
+                                <p className="text-sm text-slate-500">Kegiatan Periode</p>
+                                <h1 className="mt-1 text-2xl text-navy-950">{periode.nama}</h1>
+                            </>
+                        )}
                         <p className="mt-1.5 text-base text-slate-500">
                             Total {noun}{statusFilter ? ` (${(STATUS_LABEL[statusFilter] || statusFilter).toLowerCase()})` : ''} pada periode ini: <span className="font-semibold text-slate-700">{meta.total}</span>
                         </p>
                     </div>
 
-                    <CloseButton onClick={onClose} label="Tutup Panel" />
+                    {inline ? null : <CloseButton onClick={onClose} label="Tutup Panel" />}
                 </div>
                 <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-6">
                     {[['proposal', 'Proposal'], ['laporan', 'Laporan']].map(([key, label]) => (
@@ -218,6 +231,6 @@ export default function ProposalPanel({ periode, onClose }) {
                     </div>
                 </footer>
             )}
-        </OverlayPanel>
+        </Wadah>
     )
 }

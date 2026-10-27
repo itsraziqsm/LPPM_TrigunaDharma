@@ -44,6 +44,7 @@ const router = createBrowserRouter([
       { path: '/kegiatan/penelitian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="penelitian" /> },
       { path: '/kegiatan/pengabdian/laporan/:id/isi', element: <DashboardLayout page="laporan-isi" jenis="pengabdian" /> },
       { path: '/cetak-dokumen', element: <DashboardLayout page="cetak-dokumen" /> },
+      { path: '/periode/detail/:id', element: <DashboardLayout page="periode-detail" /> },
       { path: '/backup', element: <DashboardLayout page="backup" /> },
       { path: '/template-proposal', element: <DashboardLayout page="template-proposal" /> },
       { path: '/luaran-dosen', element: <DashboardLayout page="luaran-dosen" /> },

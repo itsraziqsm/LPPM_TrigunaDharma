@@ -130,6 +130,7 @@ export default function DashboardLayout({ page, jenis }) {
     if (isAdminOrKetua) {
       if (page === 'pemantauan') return <PemantauanPage />
       if (page === 'periode') return <PeriodePage />
+      if (page === 'periode-detail') return <PeriodePage key={location.pathname} />
       if (page === 'proposals') return <ProposalPage />
       if (page === 'users') return <UserManagementPage />
       if (page === 'cetak-dokumen') return <CetakDokumenPage />
@@ -167,6 +168,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'luaran') return <LuaranPage />
       if (page === 'periode') return <PeriodeDosenPage />
+      if (page === 'periode-detail') return <Navigate to="/periode" replace />
       if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />
