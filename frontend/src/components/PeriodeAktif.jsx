@@ -84,20 +84,23 @@ export function KepalaMasuk({ judul, desc, crumbs, stats, aksi = null }) {
         <h1 className="page-title">{judul}</h1>
         <Breadcrumb items={crumbs} />
       </header>
-      <section className="card flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-xl space-y-3">
-          <p className="text-base leading-relaxed text-slate-600">{desc}</p>
-          {aksi}
-        </div>
-        <dl className="grid shrink-0 grid-cols-3 gap-3 lg:w-[30rem]">
-          {stats.map((k) => (
-            <div key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <dt className="text-xs font-medium text-slate-500 sm:text-sm">{k.label}</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{k.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      {/* Container query (bukan lebar layar): di Pengguna area daftar menyempit saat panel detail terbuka. */}
+      <div className="@container">
+        <section className="card flex flex-col gap-5 p-5 @4xl:flex-row @4xl:items-center @4xl:justify-between">
+          <div className="max-w-xl space-y-3">
+            <p className="text-base leading-relaxed text-slate-600">{desc}</p>
+            {aksi}
+          </div>
+          <dl className="grid min-w-0 shrink-0 grid-cols-1 gap-3 @md:grid-cols-3 @4xl:w-[30rem]">
+            {stats.map((k) => (
+              <div key={k.label} className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <dt className="text-xs font-medium text-slate-500 @lg:text-sm">{k.label}</dt>
+                <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{k.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
     </>
   )
 }
