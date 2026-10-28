@@ -3,10 +3,11 @@ import { API_BASE_URL } from '../api/axios'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { laporanHarianApi } from '../api/laporanHarian'
 import { proposalDosenApi } from '../api/Proposaldosen'
+import PanelCari from '../components/PanelCari'
 import { StatusCard } from './KegiatanPage'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, FolderKanban, Hourglass, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleCheck, Download, ExternalLink, FileText, FolderKanban, Hourglass, Plus, Trash2, X } from 'lucide-react'
 import Breadcrumb from '../components/Breadcrumb'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 
@@ -685,22 +686,8 @@ export default function LaporanHarianPage({ jenis }) {
         </ul>
       </section>
 
-      <div>
-        <label htmlFor="lh-cari" className="sr-only">
-          Cari Proposal
-        </label>
-        <div className="relative max-w-xl">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
-          <input
-            id="lh-cari"
-            type="text"
-            placeholder="Cari judul project atau nama dosen pengusul..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="input pl-10"
-          />
-        </div>
-      </div>
+      {/* Panel cari standar (components/PanelCari); pencarian langsung saat mengetik */}
+      <PanelCari id="lh" value={search} onChange={setSearch} onSubmit={() => {}} placeholder="Cari judul project atau nama dosen pengusul" />
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, ExternalLink, Search, SlidersHorizontal, X } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
 import { luaranApi } from '../api/luaran'
 import { periodeApi } from '../api/periode'
 import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
 import { pesanBlob } from './cetak/cetakLuaran'
 import Breadcrumb from '../components/Breadcrumb'
+import PanelCari from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
@@ -78,7 +79,6 @@ export default function LuaranDosenPage() {
   const [state, setState] = useState({ loading: true, items: [], total: 0, failed: false })
   const [periodes, setPeriodes] = useState([])
   const [busy, setBusy] = useState(null) // id luaran yang buktinya sedang diunduh
-  const [bukaFilter, setBukaFilter] = useState(false)
 
   useEffect(() => {
     periodeApi
@@ -148,94 +148,44 @@ export default function LuaranDosenPage() {
         </div>
       </header>
 
-      {/* Panel cari: kolom cari · Filter · Cari; panel filter hanya saat dibuka */}
-      <section className="card p-4 sm:p-5" aria-label="Pencarian dan filter luaran">
-        <form role="search" onSubmit={terapkan} className="flex flex-col gap-2 sm:flex-row">
-          <label htmlFor="ld-search" className="sr-only">
-            Cari
-          </label>
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-            <input
-              id="ld-search"
-              type="search"
-              className="input pl-9"
-              value={form.search}
-              onChange={set('search')}
-              placeholder="Cari target, judul capaian, judul proposal, nama/NIDN dosen"
+      {/* Panel cari standar (components/PanelCari): cari · Filter (7 filter, Terapkan) · Cari */}
+      <PanelCari
+        id="ld"
+        value={form.search}
+        onChange={(v) => setForm((f) => ({ ...f, search: v }))}
+        onSubmit={terapkan}
+        placeholder="Cari target, judul capaian, judul proposal, nama/NIDN dosen"
+        aktif={aktif.map((k) => ({ key: k, label: `${LABEL_FILTER[k]}: ${nilaiFilter(k)}`, onRemove: () => hapusFilter(k) }))}
+        onReset={reset}
+      >
+        <form onSubmit={terapkan} className="space-y-3" aria-label="Saring luaran">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Pilih id="ld-jenis" label="Jenis luaran" value={form.jenis} onChange={set('jenis')} options={[['', 'Semua jenis'], ...JENIS]} />
+            <Pilih id="ld-prioritas" label="Prioritas" value={form.prioritas} onChange={set('prioritas')} options={[['', 'Semua'], ['true', 'Prioritas (jurnal & poster)'], ['false', 'Selain prioritas']]} />
+            <Pilih id="ld-status" label="Status capaian" value={form.status} onChange={set('status')} options={[['', 'Semua'], ['tercapai', 'Tercapai'], ['belum', 'Belum']]} />
+            <Pilih id="ld-klaim" label="Dapat diklaim" value={form.dapatDiklaim} onChange={set('dapatDiklaim')} options={[['', 'Semua'], ['true', 'Ya'], ['false', 'Tidak']]} />
+            <Pilih id="ld-bukti" label="Bukti" value={form.adaBukti} onChange={set('adaBukti')} options={[['', 'Semua'], ['true', 'Ada bukti'], ['false', 'Tanpa bukti']]} />
+            <Pilih id="ld-kegiatan" label="Jenis kegiatan" value={form.jenisKegiatan} onChange={set('jenisKegiatan')} options={[['', 'Semua'], ['penelitian', 'Penelitian'], ['pengabdian', 'Pengabdian']]} />
+            <Pilih
+              id="ld-periode"
+              label="Periode"
+              value={form.periodeId}
+              onChange={set('periodeId')}
+              options={[['', 'Semua periode'], ...periodes.map((p) => [String(p.id), `${p.nama}${p.tahun ? ` (${p.tahun})` : ''}`])]}
             />
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              aria-expanded={bukaFilter}
-              aria-controls="ld-filter"
-              onClick={() => setBukaFilter((v) => !v)}
-              className={`btn flex-1 sm:flex-none ${bukaFilter ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              <SlidersHorizontal className="size-4" aria-hidden="true" />
-              Filter
-              {aktif.length ? (
-                <span className={`rounded-full px-1.5 text-xs tabular-nums ${bukaFilter ? 'bg-white text-navy-800' : 'bg-navy-800 text-white'}`}>{aktif.length}</span>
+            <div className="flex items-end gap-2">
+              <button type="submit" className="btn btn-secondary flex-1">
+                Terapkan
+              </button>
+              {adaFilter ? (
+                <button type="button" onClick={reset} className="btn btn-ghost">
+                  Hapus filter
+                </button>
               ) : null}
-            </button>
-            <button type="submit" className="btn btn-primary flex-1 sm:flex-none">
-              Cari
-            </button>
+            </div>
           </div>
         </form>
-
-        {bukaFilter ? (
-          <form id="ld-filter" onSubmit={terapkan} className="mt-4 space-y-3 border-t border-slate-100 pt-4" aria-label="Saring luaran">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Pilih id="ld-jenis" label="Jenis luaran" value={form.jenis} onChange={set('jenis')} options={[['', 'Semua jenis'], ...JENIS]} />
-              <Pilih id="ld-prioritas" label="Prioritas" value={form.prioritas} onChange={set('prioritas')} options={[['', 'Semua'], ['true', 'Prioritas (jurnal & poster)'], ['false', 'Selain prioritas']]} />
-              <Pilih id="ld-status" label="Status capaian" value={form.status} onChange={set('status')} options={[['', 'Semua'], ['tercapai', 'Tercapai'], ['belum', 'Belum']]} />
-              <Pilih id="ld-klaim" label="Dapat diklaim" value={form.dapatDiklaim} onChange={set('dapatDiklaim')} options={[['', 'Semua'], ['true', 'Ya'], ['false', 'Tidak']]} />
-              <Pilih id="ld-bukti" label="Bukti" value={form.adaBukti} onChange={set('adaBukti')} options={[['', 'Semua'], ['true', 'Ada bukti'], ['false', 'Tanpa bukti']]} />
-              <Pilih id="ld-kegiatan" label="Jenis kegiatan" value={form.jenisKegiatan} onChange={set('jenisKegiatan')} options={[['', 'Semua'], ['penelitian', 'Penelitian'], ['pengabdian', 'Pengabdian']]} />
-              <Pilih
-                id="ld-periode"
-                label="Periode"
-                value={form.periodeId}
-                onChange={set('periodeId')}
-                options={[['', 'Semua periode'], ...periodes.map((p) => [String(p.id), `${p.nama}${p.tahun ? ` (${p.tahun})` : ''}`])]}
-              />
-              <div className="flex items-end gap-2">
-                <button type="submit" className="btn btn-secondary flex-1">
-                  Terapkan
-                </button>
-                {adaFilter ? (
-                  <button type="button" onClick={reset} className="btn btn-ghost">
-                    Hapus filter
-                  </button>
-                ) : null}
-              </div>
-            </div>
-          </form>
-        ) : null}
-
-        {aktif.length ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-            Filter aktif:
-            {aktif.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => hapusFilter(k)}
-                aria-label={`Hapus filter ${LABEL_FILTER[k]}`}
-                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700 hover:border-navy-300"
-              >
-                {LABEL_FILTER[k]}: {nilaiFilter(k)}
-                <X className="size-3" aria-hidden="true" />
-              </button>
-            ))}
-            <button type="button" onClick={reset} className="font-medium text-navy-600 hover:text-navy-800">
-              Hapus semua
-            </button>
-          </div>
-        ) : null}
-      </section>
+      </PanelCari>
 
       {/* Desain disamakan dengan tabel Riwayat dosen (KegiatanPage): bingkai navy, kepala gelap */}
       <section aria-labelledby="daftar-luaran" className="overflow-hidden rounded-2xl border-2 border-navy-800 bg-white shadow-md">

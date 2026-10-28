@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, ChevronRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Search, Trash2, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Trash2 } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import { laporanApi } from '../api/laporan'
 import useAuthStore from '../store/authStore'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
+import PanelCari, { PilihanFilter } from '../components/PanelCari'
 
 // ---------------------------------------------------------------------------
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
@@ -347,7 +348,6 @@ export default function KegiatanPage({ jenis }) {
     counts && tipe !== 'laporan' && counts.draft + counts.revisi > 0
       ? { total: counts.draft + counts.revisi, status: counts.revisi > 0 ? 'revisi' : 'draft' }
       : null
-  const filterAktif = Boolean(status || query || search.trim())
   const clearFilter = () => {
     setStatus('')
     setSearch('')
@@ -445,61 +445,30 @@ export default function KegiatanPage({ jenis }) {
         </header>
 
         <div className="space-y-4 p-4 sm:p-5">
-          {/* Satu baris: kata kunci · filter status · Cari · Hapus filter (hanya bila ada filter) */}
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault()
+          {/* Panel cari standar (components/PanelCari): cari · Filter (status) · Cari; "Filter aktif" bila ada */}
+          <PanelCari
+            id="kegiatan"
+            bare
+            value={search}
+            onChange={setSearch}
+            onSubmit={() => {
               setPage(1)
               setQuery(search.trim())
             }}
-            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+            placeholder={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
+            aktif={status ? [{ key: 'status', label: `Status: ${STATUS_LABEL[status]}`, onRemove: () => { setStatus(''); setPage(1) } }] : []}
+            onReset={clearFilter}
           >
-            <div className="relative min-w-0 flex-1">
-              <label htmlFor="cari-kegiatan" className="sr-only">
-                Cari judul atau abstrak
-              </label>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-              <input
-                id="cari-kegiatan"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Cari judul atau abstrak ${isLaporan ? 'laporan' : 'proposal'}`}
-                className="input pl-9"
-              />
-            </div>
-            <label htmlFor="filter-status" className="sr-only">
-              Filter status
-            </label>
-            <select
-              id="filter-status"
+            <PilihanFilter
+              label="Status"
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value)
+              onChange={(v) => {
+                setStatus(v)
                 setPage(1)
               }}
-              className="input sm:w-56"
-            >
-              <option value="">Semua status</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                  {counts && !isLaporan ? ` (${counts[s]})` : ''}
-                </option>
-              ))}
-            </select>
-            <button type="submit" className="btn btn-primary shrink-0">
-              <Search className="size-4" aria-hidden="true" />
-              Cari
-            </button>
-            {filterAktif ? (
-              <button type="button" onClick={clearFilter} className="btn btn-ghost shrink-0 text-slate-600">
-                <X className="size-4" aria-hidden="true" />
-                Hapus filter
-              </button>
-            ) : null}
-          </form>
+              items={[['', 'Semua status'], ...STATUSES.map((st) => [st, `${STATUS_LABEL[st]}${counts && !isLaporan ? ` (${counts[st]})` : ''}`])]}
+            />
+          </PanelCari>
 
         <div className="table-wrap">
           <table className="table table-tight">

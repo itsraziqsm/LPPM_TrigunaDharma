@@ -3,10 +3,11 @@ import { useSearchParams } from 'react-router-dom'
 import { labelKandidat } from '../utils/kandidatReviewer'
 import { usersApi } from '../api/users'
 import useAuthStore from '../store/authStore'
-import { ClipboardCheck, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
 import { KepalaMasuk } from '../components/PeriodeAktif'
+import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
 
@@ -42,29 +43,6 @@ const ROLE_COLOR = {
   mahasiswa: 'badge-tag',
 }
 
-// Tombol pilihan filter (panel Filter): satu nilai aktif per grup.
-function PilihFilter({ label, items, value, onChange }) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium text-slate-700">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {items.map(([v, l]) => (
-          <button
-            key={v || 'semua'}
-            type="button"
-            aria-pressed={value === v}
-            onClick={() => onChange(v)}
-            className={`inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
-              value === v ? 'border-navy-800 bg-navy-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -848,8 +826,6 @@ export default function UserManagementPage() {
   const [detailUser, setDetailUser] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
 
-  const [bukaFilter, setBukaFilter] = useState(false)
-
   const debounceRef = useRef(null)
   const handleSearchInput = (val) => {
     setSearchInput(val)
@@ -890,7 +866,6 @@ export default function UserManagementPage() {
     setSearch(searchInput.trim())
     setPage(1)
   }
-  const jumlahFilter = (filterRole ? 1 : 0) + (filterStatus ? 1 : 0)
 
   const openDetail = async (u) => {
     if (selected === u.id) { setSelected(null); setDetailUser(null); return }
@@ -961,92 +936,28 @@ export default function UserManagementPage() {
             ]}
           />
 
-          {/* Panel cari: kolom cari · Filter · Cari; panel filter hanya saat dibuka */}
-          <section className="card p-4 sm:p-5" aria-label="Pencarian dan filter pengguna">
-            <form
-              role="search"
-              onSubmit={(e) => {
-                e.preventDefault()
-                cariSekarang()
-              }}
-              className="flex flex-col gap-2 @lg:flex-row"
-            >
-              <label htmlFor="user-cari" className="sr-only">Cari nama atau email</label>
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-                <input
-                  id="user-cari"
-                  type="search"
-                  placeholder="Cari nama atau email"
-                  value={searchInput}
-                  onChange={(e) => handleSearchInput(e.target.value)}
-                  className="input pl-9"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  aria-expanded={bukaFilter}
-                  aria-controls="user-filter"
-                  onClick={() => setBukaFilter((v) => !v)}
-                  className={`btn flex-1 @lg:flex-none ${bukaFilter ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  <SlidersHorizontal className="size-4" aria-hidden="true" />
-                  Filter
-                  {jumlahFilter ? (
-                    <span className={`rounded-full px-1.5 text-xs tabular-nums ${bukaFilter ? 'bg-white text-navy-800' : 'bg-navy-800 text-white'}`}>{jumlahFilter}</span>
-                  ) : null}
-                </button>
-                <button type="submit" className="btn btn-primary flex-1 @lg:flex-none">Cari</button>
-              </div>
-            </form>
-
-            {bukaFilter ? (
-              <div id="user-filter" className="mt-4 grid gap-4 border-t border-slate-100 pt-4 @2xl:grid-cols-2">
-                <PilihFilter
-                  label="Peran"
-                  value={filterRole}
-                  onChange={handleFilterRole}
-                  items={[['', 'Semua peran'], ...FILTER_ROLE_OPTIONS.map((r) => [r, ROLE_LABEL[r]])]}
-                />
-                <PilihFilter
-                  label="Status akun"
-                  value={filterStatus}
-                  onChange={handleFilterStatus}
-                  items={[['', 'Semua status'], ...STATUS_OPTIONS.map((st) => [st, STATUS_LABEL[st]])]}
-                />
-              </div>
-            ) : null}
-
-            {jumlahFilter ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                Filter aktif:
-                {filterRole ? (
-                  <button type="button" onClick={() => handleFilterRole('')} aria-label="Hapus filter peran" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700 hover:border-navy-300">
-                    Peran: {ROLE_LABEL[filterRole]}
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
-                ) : null}
-                {filterStatus ? (
-                  <button type="button" onClick={() => handleFilterStatus('')} aria-label="Hapus filter status" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700 hover:border-navy-300">
-                    Status: {STATUS_LABEL[filterStatus]}
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilterRole('')
-                    setFilterStatus('')
-                    setPage(1)
-                  }}
-                  className="font-medium text-navy-600 hover:text-navy-800"
-                >
-                  Hapus semua
-                </button>
-              </div>
-            ) : null}
-          </section>
+          {/* Panel cari standar (components/PanelCari): cari · Filter (peran, status) · Cari */}
+          <PanelCari
+            id="user"
+            value={searchInput}
+            onChange={handleSearchInput}
+            onSubmit={cariSekarang}
+            placeholder="Cari nama atau email"
+            aktif={[
+              filterRole ? { key: 'peran', label: `Peran: ${ROLE_LABEL[filterRole]}`, onRemove: () => handleFilterRole('') } : null,
+              filterStatus ? { key: 'status', label: `Status: ${STATUS_LABEL[filterStatus]}`, onRemove: () => handleFilterStatus('') } : null,
+            ].filter(Boolean)}
+            onReset={() => {
+              setFilterRole('')
+              setFilterStatus('')
+              setPage(1)
+            }}
+          >
+            <div className="grid gap-4 @2xl:grid-cols-2">
+              <PilihanFilter label="Peran" value={filterRole} onChange={handleFilterRole} items={[['', 'Semua peran'], ...FILTER_ROLE_OPTIONS.map((r) => [r, ROLE_LABEL[r]])]} />
+              <PilihanFilter label="Status akun" value={filterStatus} onChange={handleFilterStatus} items={[['', 'Semua status'], ...STATUS_OPTIONS.map((st) => [st, STATUS_LABEL[st]])]} />
+            </div>
+          </PanelCari>
 
           {/* Tabel user */}
           <section className="card overflow-hidden">

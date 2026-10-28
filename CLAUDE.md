@@ -316,8 +316,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `src/pages/KegiatanPage.jsx` (prop `jenis`, di-`key` per jenis) = halaman **Status
   Penelitian/Pengabdian**: kartu Proposal Aktif/Diterima & Laporan Diterima (ringkas di ponsel),
   lalu **Riwayat** yang disorot (kartu berbingkai navy, header gelap, pintasan "N proposal perlu
-  dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; satu baris cari ·
-  filter status (select) · Cari · "Hapus filter" hanya saat ada filter) tab Proposal
+  dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; panel cari standar `PanelCari`
+  (cari · Filter status · Cari)) tab Proposal
   (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`), lalu tombol sekunder
   **Usulkan Proposal Baru** & **Kirim Laporan Baru**. Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
@@ -351,7 +351,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   aktifkan, hapus versi riwayat), Backup Data. Unduhan blob lewat `utils/unduhBlob.js` (`simpanBlob`).
 - Menu **Ketua STMIK** (`STMIK_NAV_ITEMS`, peran pertama `ketua_stmik`, hanya baca): Dashboard (adapter
   `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Pemantauan Proposal**
-  (`PemantauanPage.jsx`, `/pemantauan`: filter periode/jenis/cari/termasuk draft, kartu ringkasan + per status (klik =
+  (`PemantauanPage.jsx`, `/pemantauan`: `PanelCari` — cari + Filter periode/jenis/termasuk draft (langsung berlaku), kartu ringkasan + per status (klik =
   saring), tab Proposal (`/monitoring/proposals`, urut; baris → Detail Kegiatan baca saja, kembali ke Pemantauan) & Dosen
   pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Rekap Proposal** (`/cetak-dokumen/rekap-proposal`;
   `/cetak-dokumen` dialihkan ke sana). Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
@@ -528,6 +528,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti
   pohon sidebar peran pertama: `hooks/useJejakMenu.js` (`'akademik'|'dokumentasi'`) menambah induk Admin (Akademik › Dokumen
   Masuk/Luaran/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template); Ketua tetap tanpa induk itu. Halaman Cetak memakai `CetakBreadcrumb`.
+- **Panel cari standar** `src/components/PanelCari.jsx` (+ `PilihanFilter`): kolom cari · tombol **Filter** (panel filter hanya saat
+  dibuka, jumlah filter aktif di tombol) · **Cari**; baris "Filter aktif" (chip × + Hapus semua) hanya bila ada filter; `bare` = tanpa
+  kartu; responsif container query. Dipakai semua pencarian halaman: Dokumen Masuk (`CariFilterMasuk`), Pengguna, Luaran Dosen,
+  Riwayat Kegiatan dosen, Pemantauan, Detail Periode (`ProposalPanel`), Project Saya mahasiswa (tanpa filter). Pencarian baru wajib memakainya.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

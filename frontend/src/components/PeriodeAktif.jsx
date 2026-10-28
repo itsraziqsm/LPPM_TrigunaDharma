@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { FILTERS_MASUK } from '../hooks/useDokumenMasuk'
 import Breadcrumb from './Breadcrumb'
+import PanelCari, { PilihanFilter } from './PanelCari'
 
 // Blok bersama Dokumen Masuk (Proposal & Laporan Kegiatan, lihat hooks/useDokumenMasuk):
 //   KepalaMasuk      — judul + breadcrumb, lalu kartu ringkasan (teks [+ aksi] + 3 kotak angka; gaya Undangan)
@@ -106,98 +105,37 @@ export function KepalaMasuk({ judul, desc, crumbs, stats, aksi = null }) {
 }
 
 const JENIS_FILTER = [
-  { key: '', label: 'Semua jenis' },
-  { key: 'penelitian', label: 'Penelitian' },
-  { key: 'pengabdian', label: 'Pengabdian' },
+  ['', 'Semua jenis'],
+  ['penelitian', 'Penelitian'],
+  ['pengabdian', 'Pengabdian'],
 ]
 
-function Pilihan({ items, value, onChange, label }) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium text-slate-700">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {items.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            aria-pressed={value === f.key}
-            onClick={() => onChange(f.key)}
-            className={`inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
-              value === f.key ? 'border-navy-800 bg-navy-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-    </fieldset>
-  )
-}
-
-// Cari + Filter dalam satu kartu. Status bawaan "perlu"; tombol Filter menunjukkan jumlah
-// filter yang menyimpang dari bawaan, dan ringkasannya tampil saat panel tertutup.
+// Cari + Filter memakai panel cari standar (components/PanelCari). Status bawaan "perlu"; filter
+// aktif = yang menyimpang dari bawaan.
 export function CariFilterMasuk({ id, search, onSearch, onSubmit, placeholder, filter, onFilter, jenis, onJenis }) {
-  const [buka, setBuka] = useState(false)
   const statusLabel = FILTERS_MASUK.find((f) => f.key === filter)?.label
-  const jenisLabel = JENIS_FILTER.find((f) => f.key === jenis)?.label
-  const ubah = (filter !== 'perlu' ? 1 : 0) + (jenis ? 1 : 0)
+  const jenisLabel = JENIS_FILTER.find(([k]) => k === jenis)?.[1]
+  const aktif = [
+    filter !== 'perlu' ? { key: 'status', label: `Status: ${statusLabel}`, onRemove: () => onFilter('perlu') } : null,
+    jenis ? { key: 'jenis', label: `Jenis: ${jenisLabel}`, onRemove: () => onJenis('') } : null,
+  ].filter(Boolean)
   return (
-    <section className="card p-4 sm:p-5" aria-label="Pencarian dan filter">
-      <form
-        role="search"
-        onSubmit={(e) => {
-          e.preventDefault()
-          onSubmit()
-        }}
-        className="flex flex-col gap-2 sm:flex-row"
-      >
-        <label htmlFor={`${id}-cari`} className="sr-only">
-          Cari
-        </label>
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-          <input id={`${id}-cari`} type="search" className="input pl-9" placeholder={placeholder} value={search} onChange={(e) => onSearch(e.target.value)} />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-expanded={buka}
-            aria-controls={`${id}-filter`}
-            onClick={() => setBuka((v) => !v)}
-            className={`btn flex-1 sm:flex-none ${buka ? 'btn-primary' : 'btn-secondary'}`}
-          >
-            <SlidersHorizontal className="size-4" aria-hidden="true" />
-            Filter
-            {ubah ? <span className={`rounded-full px-1.5 text-xs tabular-nums ${buka ? 'bg-white text-navy-800' : 'bg-navy-800 text-white'}`}>{ubah}</span> : null}
-          </button>
-          <button type="submit" className="btn btn-primary flex-1 sm:flex-none">
-            Cari
-          </button>
-        </div>
-      </form>
-
-      {buka ? (
-        <div id={`${id}-filter`} className="mt-4 grid gap-4 border-t border-slate-100 pt-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <Pilihan label="Status" items={FILTERS_MASUK} value={filter} onChange={onFilter} />
-          <Pilihan label="Jenis kegiatan" items={JENIS_FILTER} value={jenis} onChange={onJenis} />
-        </div>
-      ) : ubah ? (
-        <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-          Filter aktif: <span className="badge badge-tag">{statusLabel}</span>
-          {jenis ? <span className="badge badge-tag">{jenisLabel}</span> : null}
-          <button
-            type="button"
-            onClick={() => {
-              onFilter('perlu')
-              onJenis('')
-            }}
-            className="inline-flex items-center gap-1 font-medium text-navy-600 hover:text-navy-800"
-          >
-            <X className="size-3.5" aria-hidden="true" />
-            Atur ulang
-          </button>
-        </p>
-      ) : null}
-    </section>
+    <PanelCari
+      id={id}
+      value={search}
+      onChange={onSearch}
+      onSubmit={onSubmit}
+      placeholder={placeholder}
+      aktif={aktif}
+      onReset={() => {
+        onFilter('perlu')
+        onJenis('')
+      }}
+    >
+      <div className="grid gap-4 @2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <PilihanFilter label="Status" items={FILTERS_MASUK.map((f) => [f.key, f.label])} value={filter} onChange={onFilter} />
+        <PilihanFilter label="Jenis kegiatan" items={JENIS_FILTER} value={jenis} onChange={onJenis} />
+      </div>
+    </PanelCari>
   )
 }

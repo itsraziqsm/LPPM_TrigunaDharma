@@ -4,6 +4,7 @@ import api from '../../api/axios'
 import { STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
 import { Badge, CloseButton, OverlayPanel } from './periodeComponents'
 import { ChevronRight } from 'lucide-react'
+import PanelCari, { PilihanFilter } from '../../components/PanelCari'
 
 function InlineWadah({ children }) {
     return <section className="card flex flex-col overflow-hidden">{children}</section>
@@ -108,37 +109,26 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                 </div>
             </header>
 
-            {/* Filter dan pencarian */}
-            <section className="border-b border-slate-200 bg-slate-50/60 px-6 py-4">
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
-                    <div>
-                        <label htmlFor="panel-cari" className="label">Cari Judul {isLaporan ? 'Laporan' : 'Proposal'}</label>
-                        <input
-                            id="panel-cari"
-                            type="text"
-                            placeholder={`Masukkan judul ${noun}...`}
-                            value={searchInput}
-                            onChange={(e) => handleSearchInput(e.target.value)}
-                            className="input"
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="panel-status" className="label">Filter Status</label>
-                        <select
-                            id="panel-status"
-                            value={statusFilter}
-                            onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-                            className="input"
-                        >
-                            <option value="">Semua</option>
-                            {Object.entries(STATUS_LABEL).map(([val, label]) => (
-                                <option key={val} value={val}>{label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-            </section>
+            {/* Panel cari standar (components/PanelCari): cari · Filter (status) · Cari */}
+            <div className="border-b border-slate-200 bg-slate-50/60 px-6 py-4">
+                <PanelCari
+                    id="panel"
+                    bare
+                    value={searchInput}
+                    onChange={handleSearchInput}
+                    onSubmit={() => { clearTimeout(debounceRef.current); setSearch(searchInput.trim()); setPage(1) }}
+                    placeholder={`Cari judul ${noun}`}
+                    aktif={statusFilter ? [{ key: 'status', label: `Status: ${STATUS_LABEL[statusFilter] || statusFilter}`, onRemove: () => { setStatusFilter(''); setPage(1) } }] : []}
+                    onReset={() => { setStatusFilter(''); setPage(1) }}
+                >
+                    <PilihanFilter
+                        label="Status"
+                        value={statusFilter}
+                        onChange={(v) => { setStatusFilter(v); setPage(1) }}
+                        items={[['', 'Semua status'], ...Object.entries(STATUS_LABEL)]}
+                    />
+                </PanelCari>
+            </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
                 {loading ? (

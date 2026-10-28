@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search } from 'lucide-react'
 import { monitoringApi } from '../api/monitoring'
 import { periodeApi } from '../api/periode'
 import UserAvatar from '../components/UserAvatar'
 import Breadcrumb from '../components/Breadcrumb'
+import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
@@ -96,10 +96,10 @@ export default function PemantauanPage() {
     }
   }, [tab, filter, status, urut, page])
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
-  const terapkan = (e) => {
-    e.preventDefault()
-    setFilter(form)
+  // Filter di panel berlaku langsung; kata kunci berlaku saat Cari.
+  const ubahFilter = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }))
+    setFilter((f) => ({ ...f, [k]: v }))
     setPage(1)
   }
   const gantiTab = (t) => {
@@ -126,46 +126,56 @@ export default function PemantauanPage() {
         <Breadcrumb items={[{ label: 'Pemantauan Proposal' }]} />
       </header>
 
-      <form onSubmit={terapkan} className="card flex flex-col gap-3 p-4 lg:flex-row lg:items-end" aria-label="Saring pemantauan">
-        <div className="flex-1">
-          <label htmlFor="pm-search" className="label">
-            Cari
-          </label>
-          <input id="pm-search" className="input" value={form.search} onChange={set('search')} placeholder="Judul, nama atau NIDN pengusul" />
+      {/* Panel cari standar (components/PanelCari): cari · Filter (periode, jenis, draft) · Cari */}
+      <PanelCari
+        id="pm"
+        value={form.search}
+        onChange={(v) => setForm((f) => ({ ...f, search: v }))}
+        onSubmit={() => {
+          setFilter((f) => ({ ...f, search: form.search.trim() }))
+          setPage(1)
+        }}
+        placeholder="Cari judul, nama atau NIDN pengusul"
+        aktif={[
+          filter.periodeId ? { key: 'periode', label: `Periode: ${periodes.find((p) => String(p.id) === String(filter.periodeId))?.nama || filter.periodeId}`, onRemove: () => ubahFilter('periodeId', '') } : null,
+          filter.jenis ? { key: 'jenis', label: `Jenis: ${filter.jenis === 'penelitian' ? 'Penelitian' : 'Pengabdian'}`, onRemove: () => ubahFilter('jenis', '') } : null,
+          filter.termasukDraft ? { key: 'draft', label: 'Termasuk draft', onRemove: () => ubahFilter('termasukDraft', false) } : null,
+        ].filter(Boolean)}
+        onReset={() => {
+          setForm((f) => ({ ...f, periodeId: '', jenis: '', termasukDraft: false }))
+          setFilter((f) => ({ ...f, periodeId: '', jenis: '', termasukDraft: false }))
+          setPage(1)
+        }}
+      >
+        <div className="grid gap-4 @2xl:grid-cols-3">
+          <div>
+            <label htmlFor="pm-periode" className="mb-2 block text-sm font-medium text-slate-700">
+              Periode
+            </label>
+            <select id="pm-periode" className="input" value={filter.periodeId} onChange={(e) => ubahFilter('periodeId', e.target.value)}>
+              <option value="">Semua periode</option>
+              {periodes.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nama}
+                  {p.tahun ? ` (${p.tahun})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <PilihanFilter
+            label="Jenis kegiatan"
+            value={filter.jenis}
+            onChange={(v) => ubahFilter('jenis', v)}
+            items={[['', 'Semua jenis'], ['penelitian', 'Penelitian'], ['pengabdian', 'Pengabdian']]}
+          />
+          <PilihanFilter
+            label="Draft"
+            value={filter.termasukDraft ? 'ya' : ''}
+            onChange={(v) => ubahFilter('termasukDraft', v === 'ya')}
+            items={[['', 'Tanpa draft'], ['ya', 'Termasuk draft']]}
+          />
         </div>
-        <div>
-          <label htmlFor="pm-periode" className="label">
-            Periode
-          </label>
-          <select id="pm-periode" className="input" value={form.periodeId} onChange={set('periodeId')}>
-            <option value="">Semua periode</option>
-            {periodes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nama}
-                {p.tahun ? ` (${p.tahun})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="pm-jenis" className="label">
-            Jenis
-          </label>
-          <select id="pm-jenis" className="input" value={form.jenis} onChange={set('jenis')}>
-            <option value="">Semua jenis</option>
-            <option value="penelitian">Penelitian</option>
-            <option value="pengabdian">Pengabdian</option>
-          </select>
-        </div>
-        <label className="flex items-center gap-2 pb-2.5 text-sm text-slate-700">
-          <input type="checkbox" checked={form.termasukDraft} onChange={set('termasukDraft')} className="size-4 accent-navy-700" />
-          Termasuk draft
-        </label>
-        <button type="submit" className="btn btn-primary">
-          <Search className="size-4" aria-hidden="true" />
-          Terapkan
-        </button>
-      </form>
+      </PanelCari>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan">
         <Kartu label="Jumlah proposal" value={rk === undefined ? '…' : rk?.jumlahProposal} hint={filter.termasukDraft ? 'Termasuk draft' : 'Sudah diajukan'} />
