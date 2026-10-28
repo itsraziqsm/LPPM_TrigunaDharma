@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
-// Periode sebagai "folder" (tema terang; Admin, Ketua LPPM, Dosen):
+// Periode sebagai "folder" (tema terang; Admin, Ketua LPPM, Dosen, Mahasiswa › Riwayat Project):
 //   FolderPeriode — kartu folder: bidang atas berwarna (navy = penelitian, brass = pengabdian),
 //                   lembar putih bertab berisi judul periode + jumlah kegiatan saja (Ubah/Hapus ada di
 //                   halaman Detail Periode → Pengaturan).
@@ -16,7 +16,7 @@ const TONE = {
   pengabdian: 'bg-brass-300',
 }
 
-export function FolderPeriode({ periode, jumlah, terpilih = false, onClick }) {
+export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, satuan = 'kegiatan' }) {
   const tone = TONE[periode.jenis] || 'bg-slate-200'
   return (
       <button
@@ -45,7 +45,7 @@ export function FolderPeriode({ periode, jumlah, terpilih = false, onClick }) {
             <span className="font-serif text-3xl font-medium leading-none text-navy-950 tabular-nums">
               {jumlah === undefined ? '…' : jumlah === null ? '—' : String(jumlah).padStart(2, '0')}
             </span>
-            <span className="text-sm text-slate-500">kegiatan</span>
+            <span className="text-sm text-slate-500">{satuan}</span>
           </span>
         </span>
       </button>

@@ -1,29 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarDays, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
+import Breadcrumb from '../components/Breadcrumb'
+import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 
 // ---------------------------------------------------------------------------
 // Mahasiswa › Riwayat Project (/riwayat-project; dulu menu "Periode", diganti karena
-// rancu dengan fitur Periode admin & ketua). Dikelompokkan per periode: hanya periode yang memuat project (kegiatan dosen)
-// tempat mahasiswa menjadi anggota tim `diterima`. Project dari
-// GET /mahasiswa/laporan-harian/proposals (berisi periode {id,nama,tahun}); tanggal &
-// status aktif periode dari GET /periode (boleh untuk semua user login). Klik project →
-// Project Saya › Laporan Harian (/project/:jenis?id=). Tiap periode = dropdown (buka/tutup);
-// status buka/tutup diingat per periode di localStorage (`riwayatProjectBuka`); bawaan:
-// periode aktif terbuka, periode lama tertutup.
+// rancu dengan fitur Periode admin & ketua). Periode tampil sebagai **folder** (desain sama dengan
+// Periode admin/ketua/dosen, components/FolderPeriode): judul + jumlah project, dikelompokkan per
+// TAHUN (GrupTahun, buka/tutup diingat di localStorage `riwayatProjectTahunBuka`). Hanya periode
+// yang memuat project tempat mahasiswa anggota tim `diterima`. Project dari
+// GET /mahasiswa/laporan-harian/proposals (berisi periode {id,nama,tahun}); detail periode dari
+// GET /periode. Klik folder → daftar project; klik project → Project Saya › Laporan Harian.
 // ---------------------------------------------------------------------------
-
-const KUNCI_BUKA = 'riwayatProjectBuka'
-
-function bacaBuka() {
-  try {
-    return JSON.parse(localStorage.getItem(KUNCI_BUKA) || '{}') || {}
-  } catch {
-    return {}
-  }
-}
 
 const JENIS_LABEL = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
 const STATUS_LABEL = { draft: 'Draft', diajukan: 'Diajukan', review: 'Review', revisi: 'Revisi', disetujui: 'Disetujui', ditolak: 'Ditolak' }
@@ -35,24 +26,11 @@ const STATUS_COLOR = {
   disetujui: 'badge-success',
   ditolak: 'badge-danger',
 }
-const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
 export default function RiwayatProjectPage() {
   const [data, setData] = useState(null) // [{ periode, projects }]
   const [error, setError] = useState('')
-  const [buka, setBuka] = useState(bacaBuka) // { [periodeId]: true|false } yang pernah diubah pengguna
-  const terbuka = (periode) => buka[periode.id] ?? Boolean(periode.isAktif)
-  const toggle = useCallback((periode) => {
-    setBuka((prev) => {
-      const next = { ...prev, [periode.id]: !(prev[periode.id] ?? Boolean(periode.isAktif)) }
-      try {
-        localStorage.setItem(KUNCI_BUKA, JSON.stringify(next))
-      } catch {
-        /* abaikan */
-      }
-      return next
-    })
-  }, [])
+  const [pilih, setPilih] = useState(null) // id periode yang dibuka
 
   useEffect(() => {
     let alive = true
@@ -65,13 +43,10 @@ export default function RiwayatProjectPage() {
         projects.forEach((p) => {
           const id = p.periode?.id ?? p.periodeId
           if (id == null) return
-          if (!groups.has(id)) groups.set(id, { periode: { ...p.periode, ...detail.get(id) }, projects: [] })
+          if (!groups.has(id)) groups.set(id, { periode: { id, ...p.periode, ...detail.get(id) }, projects: [] })
           groups.get(id).projects.push(p)
         })
-        const list = [...groups.values()].sort(
-          (a, b) => Number(Boolean(b.periode.isAktif)) - Number(Boolean(a.periode.isAktif)) || (b.periode.tahun || 0) - (a.periode.tahun || 0),
-        )
-        setData(list)
+        setData([...groups.values()])
       })
       .catch(() => alive && setError('Daftar periode gagal dimuat.'))
     return () => {
@@ -79,24 +54,17 @@ export default function RiwayatProjectPage() {
     }
   }, [])
 
+  const periodes = (data || []).map((g) => g.periode)
+  const projectsOf = (id) => data?.find((g) => g.periode.id === id)?.projects || []
+
   return (
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
           <h1 className="page-title">Riwayat Project</h1>
-          <p className="page-desc">Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, dikelompokkan per periode.</p>
+          <p className="page-desc">Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, per periode dan tahun.</p>
         </div>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Riwayat Project</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Riwayat Project' }]} />
       </header>
 
       {error ? (
@@ -119,64 +87,59 @@ export default function RiwayatProjectPage() {
           </Link>
         </section>
       ) : (
-        <ul className="space-y-4">
-          {data.map(({ periode, projects }) => (
-            <li key={periode.id} className="card overflow-hidden">
-              <h2>
-                <button
-                  type="button"
-                  onClick={() => toggle(periode)}
-                  aria-expanded={terbuka(periode)}
-                  aria-controls={`periode-${periode.id}`}
-                  className={`flex w-full flex-wrap items-start justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-slate-50 ${terbuka(periode) ? 'border-b border-slate-200' : ''}`}
-                >
-                  <span className="flex min-w-0 items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-navy-50 text-navy-700">
-                      <CalendarDays className="size-5" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-lg font-semibold text-navy-950">{periode.nama}</span>
-                      <span className="block text-sm text-slate-500">
-                        {[JENIS_LABEL[periode.jenis], periode.tahun ? `Tahun ${periode.tahun}` : null, periode.tanggalMulai ? `${hari(periode.tanggalMulai)} – ${hari(periode.tanggalSelesai)}` : null]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="text-sm font-medium text-slate-600 tabular-nums">{projects.length} project</span>
-                    {periode.isAktif !== undefined ? (
-                      <span className={`badge ${periode.isAktif ? 'badge-success' : 'badge-neutral'}`}>{periode.isAktif ? 'Aktif' : 'Nonaktif'}</span>
-                    ) : null}
-                    <ChevronDown className={`size-5 text-slate-400 transition-transform ${terbuka(periode) ? 'rotate-180' : ''}`} aria-hidden="true" />
-                  </span>
-                </button>
-              </h2>
-              <ul id={`periode-${periode.id}`} hidden={!terbuka(periode)} className="divide-y divide-slate-100">
-                {projects.map((p) => (
-                  <li key={p.id}>
-                    <Link
-                      to={`/project/${p.jenis}?id=${p.id}`}
-                      className="group flex items-center justify-between gap-4 px-6 py-3.5 transition-colors hover:bg-slate-50"
-                    >
-                      <span className="min-w-0">
-                        <span className="block font-medium text-slate-900 group-hover:text-navy-800">{p.judul}</span>
-                        <span className="mt-0.5 block text-sm text-slate-500">
-                          {JENIS_LABEL[p.jenis] || p.jenis} · Dosen pengusul: {p.pengusul?.fullName || p.pengusul?.name || '—'}
-                          {p.peran ? ` · Peran: ${p.peran}` : ''}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
-                        <ChevronRight className="size-4 text-slate-400 group-hover:text-navy-700" aria-hidden="true" />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+        <GrupTahun periodes={periodes} kunci="riwayatProjectTahunBuka">
+          {(isi) => {
+            const terpilih = isi.find((p) => p.id === pilih)
+            const projects = terpilih ? projectsOf(terpilih.id) : []
+            return (
+              <div className="space-y-4">
+                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {isi.map((p) => (
+                    <li key={p.id}>
+                      <FolderPeriode
+                        periode={p}
+                        jumlah={projectsOf(p.id).length}
+                        satuan="project"
+                        terpilih={pilih === p.id}
+                        onClick={() => setPilih((prev) => (prev === p.id ? null : p.id))}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {terpilih ? (
+                  <section aria-label={`Project ${terpilih.nama}`} className="rounded-xl border border-slate-200">
+                    <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                      <h3 className="font-semibold text-navy-950">{terpilih.nama}</h3>
+                      <span className="text-sm text-slate-500">{projects.length} project</span>
+                    </header>
+                    <ul className="divide-y divide-slate-100">
+                      {projects.map((p) => (
+                        <li key={p.id}>
+                          <Link
+                            to={`/project/${p.jenis}?id=${p.id}`}
+                            className="group flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block font-medium text-slate-900 group-hover:text-navy-800">{p.judul}</span>
+                              <span className="mt-0.5 block text-sm text-slate-500">
+                                {JENIS_LABEL[p.jenis] || p.jenis} · Dosen pengusul: {p.pengusul?.fullName || p.pengusul?.name || '—'}
+                                {p.peran ? ` · Peran: ${p.peran}` : ''}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                              <ChevronRight className="size-4 text-slate-400 group-hover:text-navy-700" aria-hidden="true" />
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+              </div>
+            )
+          }}
+        </GrupTahun>
       )}
     </div>
   )
