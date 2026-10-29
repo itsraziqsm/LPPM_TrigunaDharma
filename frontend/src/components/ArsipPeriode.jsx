@@ -60,12 +60,14 @@ export function PratinjauArsip({ periode: dipilih, itemsOf, satuan, detailTo, ST
               ))}
             </ul>
           )}
-          <footer className="border-t border-slate-100 px-4 py-2.5 text-right">
-            <Link to={detailTo(periode.id)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-navy-700 hover:text-navy-900">
-              Lihat lebih banyak
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          </footer>
+          {/* Seluruh baris = tombol; biru saat hover */}
+          <Link
+            to={detailTo(periode.id)}
+            className="flex items-center justify-center gap-1.5 rounded-b-xl border-t border-slate-100 px-4 py-3 text-sm font-semibold text-navy-700 transition-colors duration-200 hover:bg-navy-700 hover:text-white focus-visible:bg-navy-700 focus-visible:text-white"
+          >
+            Lihat lebih banyak
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
         </section>
       ) : null}
     </Collapse>

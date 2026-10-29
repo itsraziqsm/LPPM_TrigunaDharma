@@ -122,7 +122,7 @@ export default function NotificationBell() {
                     width: DROPDOWN_WIDTH,
                     zIndex: 9999,
                 }}
-                className={`overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
+                className={`overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none ${
                     tampil ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'
                 }`}
             >

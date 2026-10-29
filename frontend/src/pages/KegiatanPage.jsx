@@ -12,8 +12,8 @@ import PanelCari, { PilihanFilter } from '../components/PanelCari'
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
 // Riwayat (disorot, tepat di bawah ringkasan) berisi proposal (GET /dosen/proposals)
 // atau laporan (GET /laporan/my) untuk satu jenis — baris draft/revisi punya tombol
-// "Lanjutkan" (draft juga "Hapus") — lalu tombol sekunder Usulkan Proposal Baru &
-// Kirim Laporan Baru. Menggantikan halaman Proposal Saya (dihapus): tautan lama
+// "Lanjutkan" (draft juga "Hapus"); tombol Usulkan Proposal Baru &
+// Kirim Laporan Baru ada di atas Riwayat. Menggantikan halaman Proposal Saya (dihapus): tautan lama
 // diarahkan ke sini, `?status=` membuka dengan filter status, `?detail=<id>` dialihkan ke
 // halaman Detail Kegiatan (/kegiatan/:jenis/detail/:id); seluruh baris Riwayat bisa diklik
 // (proposal → Detail Kegiatan, laporan → index laporan).
@@ -406,6 +406,18 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
       </section>
 
+      {/* Aksi buat baru — di atas Riwayat */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link to={usulanTo} className="btn btn-secondary h-12">
+          <CirclePlus className="size-5" aria-hidden="true" />
+          Usulkan Proposal Baru
+        </Link>
+        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-secondary h-12">
+          <FileText className="size-5" aria-hidden="true" />
+          Kirim Laporan Baru
+        </Link>
+      </div>
+
       <section
         aria-labelledby="riwayat-kegiatan"
         className="scroll-mt-6 overflow-hidden rounded-2xl border-2 border-navy-800 bg-white shadow-md"
@@ -618,17 +630,6 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
         </div>
       </section>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Link to={usulanTo} className="btn btn-secondary h-12">
-          <CirclePlus className="size-5" aria-hidden="true" />
-          Usulkan Proposal Baru
-        </Link>
-        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-secondary h-12">
-          <FileText className="size-5" aria-hidden="true" />
-          Kirim Laporan Baru
-        </Link>
-      </div>
 
       <MemberSection jenis={jenis} label={label} userId={user?.id} />
     </div>

@@ -318,8 +318,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   lalu **Riwayat** yang disorot (kartu berbingkai navy, header gelap, pintasan "N proposal perlu
   dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; panel cari standar `PanelCari`
   (cari · Filter status · Cari)) tab Proposal
-  (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`), lalu tombol sekunder
-  **Usulkan Proposal Baru** & **Kirim Laporan Baru**. Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). **Tanpa tombol Detail**:
+  (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`); tombol sekunder
+  **Usulkan Proposal Baru** & **Kirim Laporan Baru** ada **di atas** Riwayat (di bawah kartu ringkasan). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
   dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan
   lama) dialihkan ke Detail Kegiatan.
@@ -365,7 +365,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   setelah terhapus kembali ke `/periode`), lalu Kegiatan Periode (`ProposalPanel inline`, tab Proposal/Laporan). **Dosen** punya menu **Arsip Kegiatan** (`/arsip-kegiatan` → `PeriodeDosenPage`):
   jumlah = kegiatan sendiri (ketua: `/dosen/proposals` semua halaman; anggota: `as-member`) per periode. Folder: judul agak turun dari tepi
   lembar, folder aktif → tab & lembar bergeser halus ke bawah. Klik folder (desktop) → `PratinjauArsip` (`components/ArsipPeriode.jsx`):
-  **3 terbaru** + **Lihat lebih banyak** → `DetailArsip` `/arsip-kegiatan/detail/:id` (kepala periode, `PanelCari` + filter status,
+  **3 terbaru** + **Lihat lebih banyak** (seluruh baris = tombol, biru navy saat hover) → `DetailArsip` `/arsip-kegiatan/detail/:id` (kepala periode, `PanelCari` + filter status,
   daftar lengkap, paginasi 10); di **ponsel** (`utils/layar.js` `layarPonsel`) klik folder langsung ke detail. Arsip Project mahasiswa sama.
 - **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua); Hapus =
   "Ajukan ke Ketua LPPM" (`deletion-request`, pantau/batalkan). **Ketua** di `PeriodePage`: hapus langsung (dialog
@@ -541,7 +541,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   0fr↔1fr + pudar, isi tetap terpasang + `inert` saat tertutup) — dipakai `GrupTahun`, grup sidebar (`NavGroup`), panel Filter
   `PanelCari`, pratinjau arsip, konfirmasi hapus akun; popover pasang-copot (lonceng notifikasi, saran `AnggotaSearch`) memakai
   `hooks/useTampil.js` (pudar + geser, tetap terpasang selama transisi keluar); `<details>` dianimasikan CSS `::details-content`
-  (`index.css`, Chromium 131+, lainnya buka/tutup biasa). Semua hormati `prefers-reduced-motion`. Dropdown baru wajib memakai ini.
+  (`index.css`, Chromium 131+, lainnya buka/tutup biasa). Semua hormati `prefers-reduced-motion`. Dropdown baru wajib memakai ini. **Tailwind 4: `translate-*` memakai properti CSS
+  `translate`**, jadi transisi kustom harus `transition-[translate,...]` (bukan `transform`) agar geser tidak instan.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

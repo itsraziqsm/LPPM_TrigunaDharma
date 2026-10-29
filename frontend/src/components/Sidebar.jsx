@@ -384,7 +384,7 @@ export default function Sidebar() {
       {/* ── Rail ───────────────────────────────────────────────────────── */}
       <aside
         aria-label="Navigasi"
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 transition-[transform,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem] lg:shadow-none' : ''} shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)]`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 transition-[translate,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem] lg:shadow-none' : ''} shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)]`}
       >
         {/* Merek (saat diciutkan hanya logo; tombol buka ada di atas profil) */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>

@@ -20,13 +20,13 @@ const TONE = {
 export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, satuan = 'kegiatan' }) {
   const tone = TONE[periode.jenis] || 'bg-slate-200'
   // Folder aktif: tab + lembar putih bergeser sedikit ke bawah (halus); bidang atas tetap.
-  const geser = `transition-transform duration-300 ease-out motion-reduce:transition-none ${terpilih ? 'translate-y-2' : 'translate-y-0'}`
+  const geser = `transition-[translate] duration-300 ease-out motion-reduce:transition-none ${terpilih ? 'translate-y-2' : 'translate-y-0'}`
   return (
       <button
         type="button"
         onClick={onClick}
         aria-pressed={terpilih}
-        className={`group relative block w-full overflow-hidden rounded-[1.4rem] border-2 text-left transition-[border-color,box-shadow,transform] duration-300 ease-out ${
+        className={`group relative block w-full overflow-hidden rounded-[1.4rem] border-2 text-left transition-[border-color,box-shadow,translate] duration-300 ease-out motion-reduce:transition-none ${
           terpilih ? 'border-navy-800 shadow-md' : 'border-slate-200 hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-md'
         } ${tone}`}
       >
