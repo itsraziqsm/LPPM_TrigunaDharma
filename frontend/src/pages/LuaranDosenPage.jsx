@@ -7,11 +7,13 @@ import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
 import { pesanBlob } from './cetak/cetakLuaran'
 import Breadcrumb from '../components/Breadcrumb'
+import ApiPending from '../components/ApiPending'
 import PanelCari from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
-// Luaran Dosen (admin, /luaran-dosen) — W-38, new-api.md bagian 25.2.
+// Luaran Dosen (Ketua LPPM › Dokumentasi › Luaran, /luaran-dosen; Admin dicabut) — W-38, new-api.md bagian 25.2.
+// Backend GET /luaran & unduhan masih khusus admin → bagi Ketua 403 sampai W-44 tersedia.
 // Tabel GET /luaran (filter + paginasi; prioritas jurnal & poster di atas), unduh satu
 // bukti (GET /luaran/:id/bukti, blob). Unduh CSV & semua bukti (ZIP) dipindah ke Cetak Dokumen
 // → Luaran Dosen (pages/cetak/CetakLuaranPage).
@@ -93,7 +95,7 @@ export default function LuaranDosenPage() {
     luaranApi
       .getAll({ ...bersihkan(filter), page, limit: LIMIT })
       .then((r) => alive && setState({ loading: false, items: r.data.data || [], total: Number(r.data.meta?.total) || 0, failed: false }))
-      .catch(() => alive && setState({ loading: false, items: [], total: 0, failed: true }))
+      .catch((e) => alive && setState({ loading: false, items: [], total: 0, failed: e.response?.status === 403 ? 'akses' : true }))
     return () => {
       alive = false
     }
@@ -140,7 +142,7 @@ export default function LuaranDosenPage() {
 
   return (
     <div className="page space-y-6">
-      <Breadcrumb className="flex justify-end" items={[{ label: 'Akademik' }, { label: 'Luaran' }]} />
+      <Breadcrumb className="flex justify-end" items={[{ label: 'Dokumentasi' }, { label: 'Luaran' }]} />
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="page-title">Luaran Dosen</h1>
@@ -205,6 +207,10 @@ export default function LuaranDosenPage() {
         <div className="space-y-4 p-4 sm:p-5">
         {state.loading ? (
           <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat luaran…</p>
+        ) : state.failed === 'akses' ? (
+          <p className="flex flex-wrap items-center justify-center gap-2 px-5 py-10 text-center text-sm text-slate-600">
+            Akses daftar luaran untuk Ketua LPPM belum tersedia di server (W-44). <ApiPending />
+          </p>
         ) : state.failed ? (
           <p className="px-5 py-10 text-center text-sm text-red-700">Daftar luaran gagal dimuat.</p>
         ) : state.items.length === 0 ? (

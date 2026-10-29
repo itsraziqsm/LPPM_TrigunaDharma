@@ -21,6 +21,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <DashboardLayout /> },
       { path: '/periode', element: <DashboardLayout page="periode" /> },
+      { path: '/cetak-laporan', element: <DashboardLayout page="cetak-laporan" /> },
       { path: '/riwayat-project', element: <DashboardLayout page="riwayat-project" /> },
       { path: '/proposals', element: <DashboardLayout page="proposals" /> },
       { path: '/proposals/detail/:id', element: <DashboardLayout page="review-proposal" /> },

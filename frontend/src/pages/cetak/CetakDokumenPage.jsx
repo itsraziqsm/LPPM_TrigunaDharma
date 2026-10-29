@@ -21,7 +21,7 @@ import CetakBreadcrumb from './CetakBreadcrumb'
 //   1. Rekapitulasi Proposal → /cetak-dokumen/rekap-proposal (halaman export lama)
 //   2. Surat Tugas           → /cetak-dokumen/surat-tugas
 //   3. Tabel Pengguna        → /cetak-dokumen/tabel-pengguna (semua / pilih peran)
-//   4. Luaran Dosen (admin)  → /cetak-dokumen/luaran-dosen (ZIP bukti &/atau CSV + filter)
+//   4. Luaran Dosen (Ketua)  → /cetak-dokumen/luaran-dosen (ZIP bukti &/atau CSV + filter)
 // Konfigurasi disimpan di peramban (utils/cetakConfig; endpoint W-42 belum ada).
 // ---------------------------------------------------------------------------
 
@@ -89,8 +89,9 @@ export default function CetakDokumenPage() {
   const [pengguna] = useState(() => loadCetakConfig(PENGGUNA_KEY))
   const [luaran] = useState(() => loadCetakConfig(LUARAN_KEY))
   const [printing, setPrinting] = useState('')
-  // Luaran Dosen (GET /luaran/unduh-*) hanya untuk admin.
-  const isAdmin = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
+  // Luaran Dosen (GET /luaran/unduh-*) hanya untuk Ketua LPPM (Admin dicabut); backend masih khusus
+  // admin → 403 sampai W-44.
+  const isKetua = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'ketua_lppm'
 
   const cetakPengguna = async () => {
     setPrinting('pengguna')
@@ -113,7 +114,10 @@ export default function CetakDokumenPage() {
     try {
       await unduhLuaran(luaran)
     } catch (e) {
-      alertDialog({ title: 'Unduhan gagal', message: await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.') })
+      alertDialog({
+        title: 'Unduhan gagal',
+        message: e.response?.status === 403 ? 'Akses unduh luaran untuk Ketua LPPM belum tersedia di server (W-44).' : await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.'),
+      })
     } finally {
       setPrinting('')
     }
@@ -201,7 +205,7 @@ export default function CetakDokumenPage() {
           onPrint={cetakPengguna}
           printing={printing === 'pengguna'}
         />
-        {isAdmin ? (
+        {isKetua ? (
           <DokumenCard
             icon={Award}
             title="Luaran Dosen"

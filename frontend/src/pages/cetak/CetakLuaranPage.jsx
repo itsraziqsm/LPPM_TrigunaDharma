@@ -10,7 +10,7 @@ import { LUARAN_FILTER, LUARAN_KEY } from './dokumen'
 import { pesanBlob, unduhLuaran } from './cetakLuaran'
 
 // ---------------------------------------------------------------------------
-// Konfigurasi "Luaran Dosen" (Cetak Dokumen, admin): keluaran Unduh semua bukti (ZIP) &/atau
+// Konfigurasi "Luaran Dosen" (Cetak Dokumen, Ketua LPPM; unduhan backend masih khusus admin → W-44): keluaran Unduh semua bukti (ZIP) &/atau
 // Unduh CSV, dengan filter halaman Luaran Dosen kecuali jenis luaran & prioritas.
 // Tombol unduh di halaman Luaran Dosen dipindah ke sini. Konfigurasi di peramban (W-42).
 // ---------------------------------------------------------------------------
@@ -69,7 +69,10 @@ export default function CetakLuaranPage() {
       try {
         await unduhLuaran(saved)
       } catch (e) {
-        alertDialog({ title: 'Unduhan gagal', message: await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.') })
+        alertDialog({
+          title: 'Unduhan gagal',
+          message: e.response?.status === 403 ? 'Akses unduh luaran untuk Ketua LPPM belum tersedia di server (W-44).' : await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.'),
+        })
         return
       } finally {
         setBusy(false)

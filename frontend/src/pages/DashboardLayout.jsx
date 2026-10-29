@@ -29,6 +29,7 @@ import SuratTugasPage from './cetak/SuratTugasPage'
 import CetakPenggunaPage from './cetak/CetakPenggunaPage'
 import PeriodeDosenPage from './PeriodeDosenPage'
 import CetakLuaranPage from './cetak/CetakLuaranPage'
+import CetakLaporanHarianPage from './cetak/CetakLaporanHarianPage'
 import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
 import LuaranDosenPage from './LuaranDosenPage'
@@ -119,16 +120,14 @@ export default function DashboardLayout({ page, jenis }) {
       if (isReviewer) return page === 'review-proposal' ? <ReviewProposalPage key={location.pathname} /> : <ReviewLaporanPage key={location.pathname} />
     }
 
-    // Ketua STMIK (W-37): pemantauan saja — Pemantauan Proposal, Rekap Proposal, dashboard.
+    // Ketua STMIK (hanya baca): Akademik › Pemantauan Proposal, Monitor Pengguna (Pengguna mode baca).
     if (primaryRole === 'ketua_stmik') {
       if (page === 'pemantauan') return <PemantauanPage />
-      if (page === 'export') return <ExportPage />
-      if (page === 'cetak-dokumen') return <Navigate to="/cetak-dokumen/rekap-proposal" replace />
+      if (page === 'users') return <UserManagementPage readOnly />
       return <DashboardHome role="ketua_stmik" isReviewer={false} />
     }
 
     if (isAdminOrKetua) {
-      if (page === 'pemantauan') return <PemantauanPage />
       if (page === 'periode') return <PeriodePage />
       if (page === 'periode-detail') return <PeriodePage key={location.pathname} />
       if (page === 'proposals') return <ProposalPage />
@@ -137,11 +136,12 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'export') return <ExportPage />
       if (page === 'surat-tugas') return <SuratTugasPage />
       if (page === 'cetak-pengguna') return <CetakPenggunaPage />
-      if (page === 'cetak-luaran' && primaryRole === 'admin') return <CetakLuaranPage />
+      // Luaran (Dokumentasi) hanya Ketua LPPM; Admin dicabut.
+      if (page === 'cetak-luaran' && primaryRole === 'ketua_lppm') return <CetakLuaranPage />
       if (page === 'laporan-masuk') return <LaporanMasukPage />
       if (page === 'backup' && primaryRole === 'admin') return <BackupPage />
       if (page === 'template-proposal' && primaryRole === 'admin') return <TemplateProposalPage />
-      if (page === 'luaran-dosen' && primaryRole === 'admin') return <LuaranDosenPage />
+      if (page === 'luaran-dosen' && primaryRole === 'ketua_lppm') return <LuaranDosenPage />
       return <DashboardHome role={primaryRole} isReviewer={isReviewer} />
     }
 
@@ -157,6 +157,7 @@ export default function DashboardLayout({ page, jenis }) {
       // Input Laporan Harian: halaman satu formulir (?id=<proposalId>)
       if (page === 'laporan-harian-input') return <LaporanHarianInputPage key={location.search} jenis={jenis} />
       if (page === 'riwayat-project') return <RiwayatProjectPage />
+      if (page === 'cetak-laporan') return <CetakLaporanHarianPage />
       // Menu lama "Periode" mahasiswa → Riwayat Project.
       if (page === 'periode') return <Navigate to="/riwayat-project" replace />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />

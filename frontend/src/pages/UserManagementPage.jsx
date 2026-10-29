@@ -7,6 +7,7 @@ import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
 import { KepalaMasuk } from '../components/PeriodeAktif'
+import ApiPending from '../components/ApiPending'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
@@ -801,11 +802,13 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-export default function UserManagementPage() {
+// readOnly = Monitor Pengguna (Ketua STMIK): daftar & detail tanpa aksi apa pun. Backend GET /users
+// masih khusus admin & Ketua LPPM → 403 sampai W-45 tersedia.
+export default function UserManagementPage({ readOnly = false }) {
   const { user: me } = useAuthStore()
   const myRoles = getRoleNames(me?.roles)
-  const isAdmin = myRoles.includes('admin')
-  const isKetua = myRoles.includes('ketua_lppm')
+  const isAdmin = !readOnly && myRoles.includes('admin')
+  const isKetua = !readOnly && myRoles.includes('ketua_lppm')
   // Smooth scroll di area daftar (halaman ini tidak memakai gulir wadah luar).
   const listScrollRef = useRef(null)
   const listContentRef = useRef(null)
@@ -850,8 +853,8 @@ export default function UserManagementPage() {
       const res = await usersApi.getAll(params)
       setUsers(res.data.data || [])
       setMeta(res.data.meta || { total: 0, page: 1, limit: 15 })
-    } catch {
-      setError('Gagal memuat data user')
+    } catch (e) {
+      setError(e.response?.status === 403 && readOnly ? 'akses' : 'Gagal memuat data user')
     } finally {
       setLoading(false)
     }
@@ -926,9 +929,13 @@ export default function UserManagementPage() {
         <div ref={listContentRef} className="page space-y-6">
           {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
           <KepalaMasuk
-            judul="Manajemen Pengguna"
-            desc="Kelola data pengguna, peran, dan status akun dalam satu tampilan yang rapi dan mudah dipantau."
-            crumbs={[{ label: 'Pengguna' }]}
+            judul={readOnly ? 'Monitor Pengguna' : 'Manajemen Pengguna'}
+            desc={
+              readOnly
+                ? 'Pantau data pengguna, peran, dan status akun. Hanya baca.'
+                : 'Kelola data pengguna, peran, dan status akun dalam satu tampilan yang rapi dan mudah dipantau.'
+            }
+            crumbs={[{ label: readOnly ? 'Monitor Pengguna' : 'Pengguna' }]}
             stats={[
               { label: 'Total Pengguna', value: meta.total },
               { label: 'Halaman Aktif', value: page },
@@ -988,7 +995,13 @@ export default function UserManagementPage() {
                 Memuat data pengguna...
               </p>
             ) : error ? (
-              <p className="px-6 py-14 text-center text-base text-red-600">{error}</p>
+              error === 'akses' ? (
+                <p className="flex flex-wrap items-center justify-center gap-2 px-6 py-14 text-center text-base text-slate-600">
+                  Akses daftar pengguna untuk Ketua STMIK belum tersedia di server (W-45). <ApiPending />
+                </p>
+              ) : (
+                <p className="px-6 py-14 text-center text-base text-red-600">{error}</p>
+              )
             ) : users.length === 0 ? (
               <p className="px-6 py-14 text-center text-base text-slate-500">Tidak ada user ditemukan</p>
             ) : (

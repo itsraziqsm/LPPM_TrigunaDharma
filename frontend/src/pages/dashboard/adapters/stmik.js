@@ -80,7 +80,7 @@ export async function load() {
       shortcuts: [
         { to: '/pemantauan', label: 'Pemantauan proposal', desc: 'Proposal, progres, anggaran & dosen pengusul.' },
         { to: '/pemantauan?tab=dosen', label: 'Dosen pengusul', desc: 'Rekap per dosen.' },
-        { to: '/cetak-dokumen/rekap-proposal', label: 'Rekap proposal', desc: 'Cetak rekapitulasi (PDF).' },
+        { to: '/users', label: 'Monitor pengguna', desc: 'Data pengguna, peran & status akun (baca saja).' },
         PROFILE_SHORTCUT,
       ],
     },

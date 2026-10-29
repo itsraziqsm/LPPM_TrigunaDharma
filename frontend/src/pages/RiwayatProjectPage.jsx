@@ -7,7 +7,7 @@ import Breadcrumb from '../components/Breadcrumb'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 
 // ---------------------------------------------------------------------------
-// Mahasiswa › Riwayat Project (/riwayat-project; dulu menu "Periode", diganti karena
+// Mahasiswa › Arsip Project (dulu "Riwayat Project"; /riwayat-project; dulu menu "Periode", diganti karena
 // rancu dengan fitur Periode admin & ketua). Periode tampil sebagai **folder** (desain sama dengan
 // Periode admin/ketua/dosen, components/FolderPeriode): judul + jumlah project, dikelompokkan per
 // TAHUN (GrupTahun, buka/tutup diingat di localStorage `riwayatProjectTahunBuka`). Hanya periode
@@ -61,10 +61,10 @@ export default function RiwayatProjectPage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          <h1 className="page-title">Riwayat Project</h1>
+          <h1 className="page-title">Arsip Project</h1>
           <p className="page-desc">Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, per periode dan tahun.</p>
         </div>
-        <Breadcrumb items={[{ label: 'Riwayat Project' }]} />
+        <Breadcrumb items={[{ label: 'Arsip Project' }]} />
       </header>
 
       {error ? (

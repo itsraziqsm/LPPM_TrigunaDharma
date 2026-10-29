@@ -6,7 +6,7 @@ import NotificationBell from './NotificationBell'
 import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
-import { Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, History, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { Archive, Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -37,72 +37,49 @@ const DOKUMEN_MASUK = {
   ],
 }
 
-// Admin (sidebar mendukung 3 tingkat): Akademik (Dokumen Masuk › Proposal/Laporan Kegiatan,
-// Luaran, Periode), Pengguna, Dokumentasi (Manajemen Template, Cetak Dokumen), Backup Data.
+// Menu per peran (sidebar mendukung 3 tingkat). Fitur yang tidak ada di menu = dicabut.
+// Admin: Akademik (Dokumen Masuk › Proposal/Laporan Kegiatan, Periode [lihat saja]), Dokumentasi
+// (Manajemen Template, Cetak Dokumen), Pengguna, Backup Data.
 const ADMIN_NAV_ITEMS = [
   {
-    path: '/akademik', label: 'Akademik', icon: (
-      <GraduationCap className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    ),
+    path: '/akademik', label: 'Akademik', icon: <GraduationCap className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />,
     children: [
       DOKUMEN_MASUK,
-      { path: '/luaran-dosen', label: 'Luaran', icon: <Award className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
       { path: '/periode', label: 'Periode', icon: <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
   {
-    path: '/users', label: 'Pengguna', icon: (
-      <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/dokumentasi', label: 'Dokumentasi', icon: (
-      <BookOpen className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    ),
+    path: '/dokumentasi', label: 'Dokumentasi', icon: <BookOpen className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />,
     children: [
       { path: '/template-proposal', label: 'Manajemen Template', icon: <FileCog className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
       { path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
-  {
-    path: '/backup', label: 'Backup Data', icon: (
-      <DatabaseBackup className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
+  { path: '/users', label: 'Pengguna', icon: <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+  { path: '/backup', label: 'Backup Data', icon: <DatabaseBackup className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
 ]
 
-// Ketua STMIK (W-37): hanya pemantauan — Pemantauan Proposal & Rekap Proposal.
+// Ketua STMIK (hanya baca): Akademik (Pemantauan Proposal) dan Monitor Pengguna (tampilan
+// Pengguna mode baca).
 const STMIK_NAV_ITEMS = [
   {
-    path: '/pemantauan', label: 'Pemantauan Proposal', icon: (
-      <ChartNoAxesColumn className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
+    path: '/akademik', label: 'Akademik', icon: <GraduationCap className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />,
+    children: [{ path: '/pemantauan', label: 'Pemantauan Proposal', icon: <ChartNoAxesColumn className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> }],
   },
-  {
-    path: '/cetak-dokumen/rekap-proposal', label: 'Rekap Proposal', icon: (
-      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
+  { path: '/users', label: 'Monitor Pengguna', icon: <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
 ]
 
-// Ketua LPPM: Dashboard, Dokumen Masuk (Proposal & Laporan Kegiatan), Periode,
-// User, Cetak Dokumen (rekap proposal & surat tugas).
+// Ketua LPPM: Dokumen Masuk, Periode, Pengguna, Dokumentasi (Cetak Dokumen, Luaran).
 const KETUA_NAV_ITEMS = [
   DOKUMEN_MASUK,
+  { path: '/periode', label: 'Periode', icon: <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+  { path: '/users', label: 'Pengguna', icon: <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
   {
-    path: '/periode', label: 'Periode', icon: (
-      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/users', label: 'User', icon: (
-      <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
-  },
-  {
-    path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: (
-      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
-    )
+    path: '/dokumentasi', label: 'Dokumentasi', icon: <BookOpen className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />,
+    children: [
+      { path: '/cetak-dokumen', label: 'Cetak Dokumen', icon: <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/luaran-dosen', label: 'Luaran', icon: <Award className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+    ],
   },
 ]
 
@@ -120,8 +97,8 @@ const DOSEN_NAV_ITEMS = [
     ],
   },
   {
-    path: '/periode', label: 'Periode', icon: (
-      <Calendar className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/periode', label: 'Arsip Kegiatan', icon: (
+      <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {
@@ -137,7 +114,7 @@ const DOSEN_NAV_ITEMS = [
 ]
 
 // Mahasiswa: Dashboard, Project Saya (Penelitian/Pengabdian → pilih project → Laporan
-// Harian), Riwayat Project (dikelompokkan per periode), Undangan Ikut Serta.
+// Harian), Arsip Project (folder per periode), Undangan Ikut Serta, Cetak Laporan (rekap laporan harian).
 const MAHASISWA_NAV_ITEMS = [
   {
     path: '/project', label: 'Project Saya', icon: (
@@ -149,13 +126,18 @@ const MAHASISWA_NAV_ITEMS = [
     ],
   },
   {
-    path: '/riwayat-project', label: 'Riwayat Project', icon: (
-      <History className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    path: '/riwayat-project', label: 'Arsip Project', icon: (
+      <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
   {
     path: '/undangan', label: 'Undangan Ikut Serta', badge: true, icon: (
       <MailPlus className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+    ),
+  },
+  {
+    path: '/cetak-laporan', label: 'Cetak Laporan', icon: (
+      <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     ),
   },
 ]

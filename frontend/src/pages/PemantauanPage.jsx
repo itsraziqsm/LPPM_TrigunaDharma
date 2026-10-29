@@ -4,6 +4,7 @@ import { monitoringApi } from '../api/monitoring'
 import { periodeApi } from '../api/periode'
 import UserAvatar from '../components/UserAvatar'
 import Breadcrumb from '../components/Breadcrumb'
+import useJejakMenu from '../hooks/useJejakMenu'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
@@ -52,6 +53,7 @@ function Halaman({ page, pages, onPage }) {
 }
 
 export default function PemantauanPage() {
+  const induk = useJejakMenu('akademik')
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'dosen' ? 'dosen' : 'proposal'
@@ -123,7 +125,7 @@ export default function PemantauanPage() {
           <h1 className="page-title">Pemantauan Proposal</h1>
           <p className="page-desc">Dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
         </div>
-        <Breadcrumb items={[{ label: 'Pemantauan Proposal' }]} />
+        <Breadcrumb items={[...induk, { label: 'Pemantauan Proposal' }]} />
       </header>
 
       {/* Panel cari standar (components/PanelCari): cari · Filter (periode, jenis, draft) · Cari */}

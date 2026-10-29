@@ -202,7 +202,7 @@ export async function load({ withReviewerDigest }) {
         },
         {
           to: '/users',
-          label: 'User',
+          label: 'Pengguna',
           desc: stats?.users
             ? `${stats.users.total ?? 0} akun: ${stats.users.dosen ?? 0} dosen, ${stats.users.reviewer ?? 0} reviewer.`
             : 'Kelola akun dan peran pengguna.',

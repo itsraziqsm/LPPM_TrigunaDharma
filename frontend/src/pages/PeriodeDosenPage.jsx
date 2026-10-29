@@ -8,7 +8,7 @@ import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 import { STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
-// Periode (Dosen, /periode): semua periode sebagai folder, dikelompokkan per tahun. Jumlah
+// Arsip Kegiatan (Dosen, menu dulu "Periode"; route tetap /periode): semua periode sebagai folder, dikelompokkan per tahun. Jumlah
 // kegiatan = proposal milik dosen (GET /dosen/proposals, semua halaman) + kegiatan tempat ia
 // anggota (GET /dosen/proposals/as-member), dihitung per periode di peramban — endpoint dosen
 // belum punya filter periodeId. Klik folder → daftar kegiatannya; baris → Detail Kegiatan.
@@ -69,10 +69,10 @@ export default function PeriodeDosenPage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="max-w-2xl">
-          <h1 className="page-title">Periode</h1>
+          <h1 className="page-title">Arsip Kegiatan</h1>
           <p className="page-desc">Periode penelitian & pengabdian beserta jumlah kegiatan Anda (sebagai ketua atau anggota) di tiap periode.</p>
         </div>
-        <Breadcrumb items={[{ label: 'Periode' }]} />
+        <Breadcrumb items={[{ label: 'Arsip Kegiatan' }]} />
       </header>
 
       {failed ? (

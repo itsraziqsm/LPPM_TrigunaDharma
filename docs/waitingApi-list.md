@@ -190,6 +190,19 @@ Data yang **menunggu API**:
 |---|---|---|---|---|
 | W-43 | Opsi filter status **Dihapus** di Daftar Backup (sekarang nonaktif, "API belum ada") | Saring backup yang filenya sudah dihapus; sebaliknya "Berhasil" sebaiknya hanya yang filenya masih ada | `GET /backup?status=dihapus` (= `dihapusAt IS NOT NULL`); `status=berhasil` → `dihapusAt IS NULL`. Alternatif: parameter `fileTersedia=true\|false`. Opsional: field turunan `status: "dihapus"` di respons log | Tanpa ini filter "Berhasil" ikut menampilkan backup yang filenya sudah dihapus. |
 
+## Hak akses menu per peran (perubahan menu Oktober 2026)
+
+Menu baru per peran (fitur yang tidak ada di menu = dicabut di frontend): Admin = Akademik (Dokumen Masuk, Periode lihat
+saja), Dokumentasi (Manajemen Template, Cetak Dokumen), Pengguna, Backup Data; Ketua LPPM = Dokumen Masuk, Periode,
+Pengguna, Dokumentasi (Cetak Dokumen, **Luaran**); Ketua STMIK = Akademik (Pemantauan Proposal), **Monitor Pengguna**;
+Dosen = Kegiatan, Arsip Kegiatan, Luaran, Undangan, Penugasan Review; Mahasiswa = Project Saya, Arsip Project, Undangan,
+Cetak Laporan. Dua fitur memindahkan akses ke peran yang belum diizinkan backend:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-44 | **Luaran** (Ketua LPPM › Dokumentasi › Luaran, `/luaran-dosen`) dan kartu **Luaran Dosen** di Cetak Dokumen Ketua | Daftar semua luaran + unduh CSV/ZIP untuk Ketua LPPM | Tambah `ketua_lppm` ke `authorize(...)` pada `GET /luaran`, `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip` (`luaran_admin.go`); `GET /luaran/:id/bukti` juga harus boleh untuk ketua | Sekarang 403 → halaman menampilkan "API belum ada". Admin tidak lagi punya menu Luaran. |
+| W-45 | **Monitor Pengguna** (Ketua STMIK, `/users`, tampilan Pengguna mode baca) | Daftar & detail pengguna (baca saja) | Tambah `ketua_stmik` ke `authorize(...)` pada `GET /users` dan `GET /users/:id` (`users.go`); tulis tetap admin/ketua | Sekarang 403 → "API belum ada". Tanpa aksi ubah status/peran/hapus. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

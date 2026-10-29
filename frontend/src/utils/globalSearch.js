@@ -26,7 +26,7 @@ const HALAMAN = {
     { to: '/proposals', title: 'Proposal Kegiatan', kata: 'dokumen masuk usulan' },
     { to: '/laporan-masuk', title: 'Laporan Kegiatan', kata: 'laporan masuk dokumen masuk' },
     { to: '/periode', title: 'Periode', kata: 'jadwal tahun' },
-    { to: '/users', title: 'Manajemen User', kata: 'pengguna dosen mahasiswa reviewer' },
+    { to: '/users', title: 'Pengguna', kata: 'manajemen user dosen mahasiswa reviewer' },
     { to: '/cetak-dokumen', title: 'Cetak Dokumen', kata: 'print export' },
     { to: '/cetak-dokumen/rekap-proposal', title: 'Rekapitulasi Proposal', kata: 'export excel pdf cetak' },
     { to: '/cetak-dokumen/surat-tugas', title: 'Surat Tugas', kata: 'cetak dokumen' },
@@ -34,7 +34,7 @@ const HALAMAN = {
   dosen: [
     { to: '/kegiatan/penelitian', title: 'Status Penelitian', kata: 'kegiatan riwayat' },
     { to: '/kegiatan/pengabdian', title: 'Status Pengabdian', kata: 'kegiatan riwayat' },
-    { to: '/periode', title: 'Periode', kata: 'folder tahun semester kegiatan' },
+    { to: '/periode', title: 'Arsip Kegiatan', kata: 'periode folder tahun semester kegiatan' },
     { to: '/kegiatan/penelitian/usulan', title: 'Usulkan Proposal Penelitian', kata: 'baru buat' },
     { to: '/kegiatan/pengabdian/usulan', title: 'Usulkan Proposal Pengabdian', kata: 'baru buat' },
     { to: '/kegiatan/penelitian/laporan/baru', title: 'Kirim Laporan Penelitian', kata: 'baru buat' },
@@ -45,31 +45,32 @@ const HALAMAN = {
   mahasiswa: [
     { to: '/project/penelitian', title: 'Project Penelitian', kata: 'project saya laporan harian' },
     { to: '/project/pengabdian', title: 'Project Pengabdian', kata: 'project saya laporan harian' },
-    { to: '/riwayat-project', title: 'Riwayat Project', kata: 'periode riwayat kegiatan' },
+    { to: '/riwayat-project', title: 'Arsip Project', kata: 'riwayat periode kegiatan' },
+    { to: '/cetak-laporan', title: 'Cetak Laporan', kata: 'rekap laporan harian pdf print' },
     { to: '/undangan', title: 'Undangan Ikut Serta', kata: 'undangan tim anggota' },
     { to: '/laporan-harian', title: 'Laporan Harian (semua project)', kata: 'kegiatan harian' },
   ],
   admin: [
     { to: '/backup', title: 'Backup Data', kata: 'cadangan database unduh' },
     { to: '/template-proposal', title: 'Manajemen Template', kata: 'template proposal format dokumen unggah docx' },
-    { to: '/luaran-dosen', title: 'Luaran Dosen', kata: 'jurnal poster bukti unduh csv zip' },
   ],
+  ketua_lppm: [{ to: '/luaran-dosen', title: 'Luaran', kata: 'luaran dosen jurnal poster bukti unduh csv zip' }],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
   ketua_stmik: [
     { to: '/pemantauan', title: 'Pemantauan Proposal', kata: 'monitoring anggaran progres' },
     { to: '/pemantauan?tab=dosen', title: 'Dosen Pengusul', kata: 'monitoring dosen rekap' },
-    { to: '/cetak-dokumen/rekap-proposal', title: 'Rekap Proposal', kata: 'cetak export pdf' },
+    { to: '/users', title: 'Monitor Pengguna', kata: 'pengguna user dosen mahasiswa' },
   ],
 }
 
 export function konteksPencarian(roleNames, isReviewer) {
   const primary = roleNames[0] || ''
   const peran = primary === 'admin' || primary === 'ketua_lppm' ? 'pengelola' : primary
-  return { peran, isReviewer, isAdmin: primary === 'admin' }
+  return { peran, isReviewer, isAdmin: primary === 'admin', isKetua: primary === 'ketua_lppm' }
 }
 
-function halaman({ peran, isReviewer, isAdmin }) {
-  return [...UMUM, ...(HALAMAN[peran] || []), ...(isAdmin ? HALAMAN.admin : []), ...(isReviewer ? HALAMAN.reviewer : [])]
+function halaman({ peran, isReviewer, isAdmin, isKetua }) {
+  return [...UMUM, ...(HALAMAN[peran] || []), ...(isAdmin ? HALAMAN.admin : []), ...(isKetua ? HALAMAN.ketua_lppm : []), ...(isReviewer ? HALAMAN.reviewer : [])]
 }
 
 const tgl = (iso) => (iso ? new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : null)
