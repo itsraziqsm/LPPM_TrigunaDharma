@@ -34,7 +34,7 @@ const HALAMAN = {
   dosen: [
     { to: '/kegiatan/penelitian', title: 'Status Penelitian', kata: 'kegiatan riwayat' },
     { to: '/kegiatan/pengabdian', title: 'Status Pengabdian', kata: 'kegiatan riwayat' },
-    { to: '/periode', title: 'Arsip Kegiatan', kata: 'periode folder tahun semester kegiatan' },
+    { to: '/arsip-kegiatan', title: 'Arsip Kegiatan', kata: 'periode folder tahun semester kegiatan' },
     { to: '/kegiatan/penelitian/usulan', title: 'Usulkan Proposal Penelitian', kata: 'baru buat' },
     { to: '/kegiatan/pengabdian/usulan', title: 'Usulkan Proposal Pengabdian', kata: 'baru buat' },
     { to: '/kegiatan/penelitian/laporan/baru', title: 'Kirim Laporan Penelitian', kata: 'baru buat' },
@@ -45,7 +45,7 @@ const HALAMAN = {
   mahasiswa: [
     { to: '/project/penelitian', title: 'Project Penelitian', kata: 'project saya laporan harian' },
     { to: '/project/pengabdian', title: 'Project Pengabdian', kata: 'project saya laporan harian' },
-    { to: '/riwayat-project', title: 'Arsip Project', kata: 'riwayat periode kegiatan' },
+    { to: '/arsip-project', title: 'Arsip Project', kata: 'riwayat periode kegiatan' },
     { to: '/cetak-laporan', title: 'Cetak Laporan', kata: 'rekap laporan harian pdf print' },
     { to: '/undangan', title: 'Undangan Ikut Serta', kata: 'undangan tim anggota' },
     { to: '/laporan-harian', title: 'Laporan Harian (semua project)', kata: 'kegiatan harian' },

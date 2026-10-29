@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Collapse from './Collapse'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -74,10 +75,10 @@ export default function PanelCari({ id, value, onChange, onSubmit, placeholder =
         </div>
       </form>
 
-      {children && buka ? (
-        <div id={`${id}-filter`} className="mt-4 border-t border-slate-100 pt-4">
-          {children}
-        </div>
+      {children ? (
+        <Collapse open={buka} id={`${id}-filter`}>
+          <div className="mt-4 border-t border-slate-100 pt-4">{children}</div>
+        </Collapse>
       ) : null}
 
       {aktif.length ? (

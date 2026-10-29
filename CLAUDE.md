@@ -272,7 +272,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/pemantauan` (Ketua STMIK), `/cetak-laporan` (mhs), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/pemantauan` (Ketua STMIK), `/cetak-laporan` (mhs), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
@@ -362,9 +362,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   localStorage, bawaan tahun terbaru terbuka). Admin/Ketua: jumlah = `GET /proposals?periodeId=&limit=1` → `meta.total`; folder
   tanpa tombol, klik → **Detail Periode** `/periode/detail/:id` (`PeriodePage` dengan param `id`): info (jenis, status, tahun,
   tanggal, jumlah kegiatan), kartu **Pengaturan** (Ubah = Ketua; Hapus = Ketua langsung / Admin "Ajukan hapus"; modal yang sama,
-  setelah terhapus kembali ke `/periode`), lalu Kegiatan Periode (`ProposalPanel inline`, tab Proposal/Laporan). **Dosen** punya menu **Periode** (`/periode` → `PeriodeDosenPage`):
-  jumlah = kegiatan sendiri (ketua: `/dosen/proposals` semua halaman; anggota: `as-member`) per periode, klik folder → daftar
-  kegiatannya → Detail Kegiatan.
+  setelah terhapus kembali ke `/periode`), lalu Kegiatan Periode (`ProposalPanel inline`, tab Proposal/Laporan). **Dosen** punya menu **Arsip Kegiatan** (`/arsip-kegiatan` → `PeriodeDosenPage`):
+  jumlah = kegiatan sendiri (ketua: `/dosen/proposals` semua halaman; anggota: `as-member`) per periode. Folder: judul agak turun dari tepi
+  lembar, folder aktif → tab & lembar bergeser halus ke bawah. Klik folder (desktop) → `PratinjauArsip` (`components/ArsipPeriode.jsx`):
+  **3 terbaru** + **Lihat lebih banyak** → `DetailArsip` `/arsip-kegiatan/detail/:id` (kepala periode, `PanelCari` + filter status,
+  daftar lengkap, paginasi 10); di **ponsel** (`utils/layar.js` `layarPonsel`) klik folder langsung ke detail. Arsip Project mahasiswa sama.
 - **Hak akses Admin (peran pertama `admin`)**: **Periode** lihat saja (tanpa Tambah/Edit, `canEdit` = Ketua); Hapus =
   "Ajukan ke Ketua LPPM" (`deletion-request`, pantau/batalkan). **Ketua** di `PeriodePage`: hapus langsung (dialog
   password → `periodeApi.remove` = `DELETE /periode/:id`), permintaan admin yang menunggu → Setujui & Hapus / Tolak; **Dokumen Masuk** lihat &
@@ -383,7 +385,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `RiwayatProjectPage.jsx`; dulu menu "Periode" — diganti karena rancu dengan fitur Periode admin/ketua, `/periode` untuk
   mahasiswa dialihkan ke sini): project yang diikuti dikelompokkan per periode (hanya periode dari project tsb., digabung
   `GET /periode`); periode = **folder** (`FolderPeriode`, `satuan="project"`: judul + jumlah project) dalam dropdown **per tahun**
-  (`GrupTahun`, diingat di `localStorage.riwayatProjectTahunBuka`); klik folder → daftar project → `/project/:jenis?id=`),
+  (`GrupTahun`, diingat di `localStorage.riwayatProjectTahunBuka`); klik folder → 3 project terbaru + Lihat lebih banyak → `/arsip-project/detail/:id`
+  (ponsel: langsung detail); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`), **Cetak Laporan** (`/cetak-laporan`, `pages/cetak/CetakLaporanHarianPage.jsx`: daftar project +
   Cetak rekap → `GET /mahasiswa/laporan-harian/:id` → PDF `pages/cetak/laporanHarianPDF.js`, sama dengan rekap di Project Saya). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
@@ -534,6 +537,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dibuka, jumlah filter aktif di tombol) · **Cari**; baris "Filter aktif" (chip × + Hapus semua) hanya bila ada filter; `bare` = tanpa
   kartu; responsif container query. Dipakai semua pencarian halaman: Dokumen Masuk (`CariFilterMasuk`), Pengguna, Luaran Dosen,
   Riwayat Kegiatan dosen, Pemantauan, Detail Periode (`ProposalPanel`), Project Saya mahasiswa (tanpa filter). Pencarian baru wajib memakainya.
+- **Animasi dropdown wajib halus**: buka/tutup berbasis tombol memakai `src/components/Collapse.jsx` (transisi `grid-template-rows`
+  0fr↔1fr + pudar, isi tetap terpasang + `inert` saat tertutup) — dipakai `GrupTahun`, grup sidebar (`NavGroup`), panel Filter
+  `PanelCari`, pratinjau arsip, konfirmasi hapus akun; popover pasang-copot (lonceng notifikasi, saran `AnggotaSearch`) memakai
+  `hooks/useTampil.js` (pudar + geser, tetap terpasang selama transisi keluar); `<details>` dianimasikan CSS `::details-content`
+  (`index.css`, Chromium 131+, lainnya buka/tutup biasa). Semua hormati `prefers-reduced-motion`. Dropdown baru wajib memakai ini.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

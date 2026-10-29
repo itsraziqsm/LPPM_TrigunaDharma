@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
 import Breadcrumb from '../components/Breadcrumb'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
+import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
+import { layarPonsel } from '../utils/layar'
 
 // ---------------------------------------------------------------------------
-// Mahasiswa › Arsip Project (dulu "Riwayat Project"; /riwayat-project; dulu menu "Periode", diganti karena
+// Mahasiswa › Arsip Project (dulu "Riwayat Project"; /arsip-project, detail /arsip-project/detail/:id; dulu menu "Periode", diganti karena
 // rancu dengan fitur Periode admin & ketua). Periode tampil sebagai **folder** (desain sama dengan
 // Periode admin/ketua/dosen, components/FolderPeriode): judul + jumlah project, dikelompokkan per
 // TAHUN (GrupTahun, buka/tutup diingat di localStorage `riwayatProjectTahunBuka`). Hanya periode
 // yang memuat project tempat mahasiswa anggota tim `diterima`. Project dari
 // GET /mahasiswa/laporan-harian/proposals (berisi periode {id,nama,tahun}); detail periode dari
-// GET /periode. Klik folder → daftar project; klik project → Project Saya › Laporan Harian.
+// GET /periode. Klik folder → 3 project terbaru + "Lihat lebih banyak" → detail (di ponsel langsung ke detail);
+// klik project → Project Saya › Laporan Harian.
 // ---------------------------------------------------------------------------
 
 const JENIS_LABEL = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
@@ -27,7 +29,22 @@ const STATUS_COLOR = {
   ditolak: 'badge-danger',
 }
 
+const STATUS = Object.fromEntries(Object.keys(STATUS_LABEL).map((k) => [k, [STATUS_LABEL[k], STATUS_COLOR[k]]]))
+const keItem = (p) => ({
+  id: p.id,
+  judul: p.judul,
+  status: p.status,
+  updatedAt: p.updatedAt,
+  createdAt: p.createdAt,
+  keterangan: [JENIS_LABEL[p.jenis] || p.jenis, `Dosen pengusul: ${p.pengusul?.fullName || p.pengusul?.name || '—'}`, p.peran ? `Peran: ${p.peran}` : null]
+    .filter(Boolean)
+    .join(' · '),
+  to: `/project/${p.jenis}?id=${p.id}`,
+})
+
 export default function RiwayatProjectPage() {
+  const { id: detailParam } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState(null) // [{ periode, projects }]
   const [error, setError] = useState('')
   const [pilih, setPilih] = useState(null) // id periode yang dibuka
@@ -56,6 +73,24 @@ export default function RiwayatProjectPage() {
 
   const periodes = (data || []).map((g) => g.periode)
   const projectsOf = (id) => data?.find((g) => g.periode.id === id)?.projects || []
+  const itemsOf = (id) => projectsOf(id).map(keItem)
+
+  if (detailParam) {
+    const id = Number(detailParam)
+    return (
+      <DetailArsip
+        judulMenu="Arsip Project"
+        kembaliTo="/arsip-project"
+        periode={periodes.find((p) => p.id === id)}
+        items={itemsOf(id)}
+        satuan="project"
+        STATUS={STATUS}
+        kosong="Belum ada project di periode ini."
+        memuat={!error && data === null}
+        gagal={Boolean(error)}
+      />
+    )
+  }
 
   return (
     <div className="page space-y-6">
@@ -88,57 +123,31 @@ export default function RiwayatProjectPage() {
         </section>
       ) : (
         <GrupTahun periodes={periodes} kunci="riwayatProjectTahunBuka">
-          {(isi) => {
-            const terpilih = isi.find((p) => p.id === pilih)
-            const projects = terpilih ? projectsOf(terpilih.id) : []
-            return (
-              <div className="space-y-4">
-                <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {isi.map((p) => (
-                    <li key={p.id}>
-                      <FolderPeriode
-                        periode={p}
-                        jumlah={projectsOf(p.id).length}
-                        satuan="project"
-                        terpilih={pilih === p.id}
-                        onClick={() => setPilih((prev) => (prev === p.id ? null : p.id))}
-                      />
-                    </li>
-                  ))}
-                </ul>
-                {terpilih ? (
-                  <section aria-label={`Project ${terpilih.nama}`} className="rounded-xl border border-slate-200">
-                    <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-4 py-3">
-                      <h3 className="font-semibold text-navy-950">{terpilih.nama}</h3>
-                      <span className="text-sm text-slate-500">{projects.length} project</span>
-                    </header>
-                    <ul className="divide-y divide-slate-100">
-                      {projects.map((p) => (
-                        <li key={p.id}>
-                          <Link
-                            to={`/project/${p.jenis}?id=${p.id}`}
-                            className="group flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50"
-                          >
-                            <span className="min-w-0">
-                              <span className="block font-medium text-slate-900 group-hover:text-navy-800">{p.judul}</span>
-                              <span className="mt-0.5 block text-sm text-slate-500">
-                                {JENIS_LABEL[p.jenis] || p.jenis} · Dosen pengusul: {p.pengusul?.fullName || p.pengusul?.name || '—'}
-                                {p.peran ? ` · Peran: ${p.peran}` : ''}
-                              </span>
-                            </span>
-                            <span className="flex shrink-0 items-center gap-2">
-                              <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
-                              <ChevronRight className="size-4 text-slate-400 group-hover:text-navy-700" aria-hidden="true" />
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-              </div>
-            )
-          }}
+          {(isi) => (
+            <div>
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {isi.map((p) => (
+                  <li key={p.id}>
+                    <FolderPeriode
+                      periode={p}
+                      jumlah={projectsOf(p.id).length}
+                      satuan="project"
+                      terpilih={pilih === p.id}
+                      onClick={() => (layarPonsel() ? navigate(`/arsip-project/detail/${p.id}`) : setPilih((prev) => (prev === p.id ? null : p.id)))}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <PratinjauArsip
+                periode={isi.find((p) => p.id === pilih) || null}
+                itemsOf={itemsOf}
+                satuan="project"
+                detailTo={(id) => `/arsip-project/detail/${id}`}
+                STATUS={STATUS}
+                kosong="Belum ada project di periode ini."
+              />
+            </div>
+          )}
         </GrupTahun>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import useTampil from '../../hooks/useTampil'
 import { createPortal } from 'react-dom'
 import api from '../../api/axios'
 import { Search, X } from 'lucide-react'
@@ -93,10 +94,14 @@ export function AnggotaSearch({ onAdd, addedIds, ketuaId, fixedRole, title = 'Ca
         setSearched(false)
     }
 
-    const dropdown = open && (
+    // Masuk/keluar halus (hooks/useTampil).
+    const { pasang, tampil } = useTampil(open)
+    const dropdown = pasang && (
         <div
             style={dropdownStyle}
-            className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+            className={`overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
+                tampil ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'
+            }`}
         >
             <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
                 <p className="text-sm font-semibold text-navy-950">Hasil pencarian anggota</p>

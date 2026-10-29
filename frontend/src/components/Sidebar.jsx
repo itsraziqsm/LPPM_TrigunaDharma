@@ -1,4 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import Collapse from './Collapse'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
@@ -97,7 +98,7 @@ const DOSEN_NAV_ITEMS = [
     ],
   },
   {
-    path: '/periode', label: 'Arsip Kegiatan', icon: (
+    path: '/arsip-kegiatan', label: 'Arsip Kegiatan', icon: (
       <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
@@ -126,7 +127,7 @@ const MAHASISWA_NAV_ITEMS = [
     ],
   },
   {
-    path: '/riwayat-project', label: 'Arsip Project', icon: (
+    path: '/arsip-project', label: 'Arsip Project', icon: (
       <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
@@ -193,8 +194,8 @@ function NavGroup({ item, onNavigate, depth = 0 }) {
         <span className="flex-1 truncate text-left">{item.label}</span>
         <ChevronRight className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} strokeWidth={1.8} aria-hidden="true" />
       </button>
-      {expanded ? (
-        <div id={listId} className={`${depth === 0 ? 'ml-[1.3rem]' : 'ml-3'} flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2`}>
+      <Collapse open={expanded} id={listId}>
+        <div className={`${depth === 0 ? 'ml-[1.3rem]' : 'ml-3'} flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2`}>
           {item.children.map((child) =>
             child.children ? (
               <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} />
@@ -205,7 +206,7 @@ function NavGroup({ item, onNavigate, depth = 0 }) {
             ),
           )}
         </div>
-      ) : null}
+      </Collapse>
     </div>
   )
 }

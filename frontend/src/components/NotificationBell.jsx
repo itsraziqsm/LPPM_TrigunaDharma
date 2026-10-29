@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import useTampil from '../hooks/useTampil'
 import ReactDOM from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { notificationApi } from '../api/notification'
@@ -108,7 +109,9 @@ export default function NotificationBell() {
         notifyNotificationsChanged('bell')
     }
 
-    const dropdown = open
+    // Masuk/keluar halus (pudar + geser kecil); tetap terpasang sebentar saat menutup.
+    const { pasang, tampil } = useTampil(open)
+    const dropdown = pasang
         ? ReactDOM.createPortal(
             <div
                 ref={dropdownRef}
@@ -119,7 +122,9 @@ export default function NotificationBell() {
                     width: DROPDOWN_WIDTH,
                     zIndex: 9999,
                 }}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl"
+                className={`overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-800 shadow-xl transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
+                    tampil ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'
+                }`}
             >
                 <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                     <span className="text-sm font-semibold text-navy-950">Notifikasi</span>

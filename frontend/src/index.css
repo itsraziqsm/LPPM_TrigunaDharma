@@ -498,3 +498,30 @@ html:has([aria-modal='true'], .overlay, [data-scroll-lock]) [data-scroll-contain
 body:has([aria-modal='true'], .overlay) .global-search-fab {
   display: none;
 }
+
+/* Dropdown <details> (dashboard "Periode berjalan", Detail teknis galat): buka/tutup halus.
+   Peramban dengan ::details-content + interpolate-size (Chromium 131+) menganimasikan tinggi;
+   peramban lain tetap buka/tutup biasa. Dropdown berbasis tombol memakai components/Collapse. */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    opacity: 0;
+    transition:
+      block-size 300ms ease-out,
+      opacity 300ms ease-out,
+      content-visibility 300ms allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    details::details-content {
+      transition: none;
+    }
+  }
+}

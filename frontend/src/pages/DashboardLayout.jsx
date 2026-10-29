@@ -156,10 +156,10 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'project') return <LaporanHarianPage key={jenis} jenis={jenis} />
       // Input Laporan Harian: halaman satu formulir (?id=<proposalId>)
       if (page === 'laporan-harian-input') return <LaporanHarianInputPage key={location.search} jenis={jenis} />
-      if (page === 'riwayat-project') return <RiwayatProjectPage />
+      if (page === 'riwayat-project') return <RiwayatProjectPage key={location.pathname} />
       if (page === 'cetak-laporan') return <CetakLaporanHarianPage />
       // Menu lama "Periode" mahasiswa → Riwayat Project.
-      if (page === 'periode') return <Navigate to="/riwayat-project" replace />
+      if (page === 'periode') return <Navigate to="/arsip-project" replace />
       if (page === 'penugasan' && isReviewer) return <ReviewTugasanPage />
       return <DashboardHome role="mahasiswa" isReviewer={isReviewer} />
     }
@@ -168,8 +168,9 @@ export default function DashboardLayout({ page, jenis }) {
       // key = jenis: pindah Penelitian ↔ Pengabdian mengosongkan filter & halaman
       if (page === 'kegiatan') return <KegiatanPage key={jenis} jenis={jenis} />
       if (page === 'luaran') return <LuaranPage />
-      if (page === 'periode') return <PeriodeDosenPage />
-      if (page === 'periode-detail') return <Navigate to="/periode" replace />
+      // Arsip Kegiatan (dulu Periode): /arsip-kegiatan[/detail/:id]; /periode lama dialihkan.
+      if (page === 'arsip-kegiatan') return <PeriodeDosenPage key={location.pathname} />
+      if (page === 'periode' || page === 'periode-detail') return <Navigate to="/arsip-kegiatan" replace />
       if (page === 'laporan') return <LaporanPage key={location.pathname} jenis={jenis} />
       if (page === 'laporan-isi') return <LaporanIsiPage key={location.pathname} jenis={jenis} />
       if (page === 'usulan') return <UsulanPage key={`${jenis}:${location.pathname}`} jenis={jenis} />

@@ -1,21 +1,34 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { layarPonsel } from '../utils/layar'
 import { periodeApi } from '../api/periode'
 import { proposalDosenApi } from '../api/Proposaldosen'
 import Breadcrumb from '../components/Breadcrumb'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
-import { STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
+import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
+import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
-// Arsip Kegiatan (Dosen, menu dulu "Periode"; route tetap /periode): semua periode sebagai folder, dikelompokkan per tahun. Jumlah
+// Arsip Kegiatan (Dosen, dulu menu "Periode"; /arsip-kegiatan, detail /arsip-kegiatan/detail/:id): semua periode
+// sebagai folder, dikelompokkan per tahun. Jumlah
 // kegiatan = proposal milik dosen (GET /dosen/proposals, semua halaman) + kegiatan tempat ia
 // anggota (GET /dosen/proposals/as-member), dihitung per periode di peramban — endpoint dosen
-// belum punya filter periodeId. Klik folder → daftar kegiatannya; baris → Detail Kegiatan.
+// belum punya filter periodeId. Klik folder → 3 kegiatan terbaru + "Lihat lebih banyak" → detail periode
+// (semua kegiatan, cari + filter status); baris → Detail Kegiatan.
 // ---------------------------------------------------------------------------
 
 const MAKS_HALAMAN = 20
 const periodeIdOf = (p) => p.periodeId ?? p.periode?.id
+const STATUS = Object.fromEntries(Object.keys(STATUS_LABEL).map((k) => [k, [STATUS_LABEL[k], STATUS_COLOR[k]]]))
+const keItem = (k) => ({
+  id: k.id,
+  judul: k.judul,
+  status: k.status,
+  updatedAt: k.updatedAt,
+  createdAt: k.createdAt,
+  keterangan: [JENIS_LABEL[k.jenis] || k.jenis, k.peranSaya].filter(Boolean).join(' · '),
+  to: `/kegiatan/${k.jenis}/detail/${k.id}`,
+})
 
 async function semuaProposal() {
   const out = []
@@ -29,6 +42,7 @@ async function semuaProposal() {
 }
 
 export default function PeriodeDosenPage() {
+  const { id: detailParam } = useParams()
   const navigate = useNavigate()
   const [periodes, setPeriodes] = useState(null)
   const [kegiatan, setKegiatan] = useState(null) // [{ ...proposal, peranSaya }]
@@ -63,7 +77,24 @@ export default function PeriodeDosenPage() {
     return m
   }, [kegiatan])
 
-  const daftar = pilih ? perPeriode[pilih.id] || [] : []
+  const itemsOf = (id) => (perPeriode[id] || []).map(keItem)
+
+  if (detailParam) {
+    const id = Number(detailParam)
+    return (
+      <DetailArsip
+        judulMenu="Arsip Kegiatan"
+        kembaliTo="/arsip-kegiatan"
+        periode={(periodes || []).find((p) => p.id === id)}
+        items={itemsOf(id)}
+        satuan="kegiatan"
+        STATUS={STATUS}
+        kosong="Anda belum punya kegiatan di periode ini."
+        memuat={!failed && (periodes === null || kegiatan === null)}
+        gagal={failed}
+      />
+    )
+  }
 
   return (
     <div className="page space-y-6">
@@ -89,7 +120,7 @@ export default function PeriodeDosenPage() {
       ) : (
         <GrupTahun periodes={periodes} kunci="periodeDosenTahunBuka">
           {(isi) => (
-            <div className="space-y-4">
+            <div>
               <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {isi.map((p) => (
                   <li key={p.id}>
@@ -97,41 +128,19 @@ export default function PeriodeDosenPage() {
                       periode={p}
                       jumlah={(perPeriode[p.id] || []).length}
                       terpilih={pilih?.id === p.id}
-                      onClick={() => setPilih((prev) => (prev?.id === p.id ? null : p))}
+                      onClick={() => (layarPonsel() ? navigate(`/arsip-kegiatan/detail/${p.id}`) : setPilih((prev) => (prev?.id === p.id ? null : p)))}
                     />
                   </li>
                 ))}
               </ul>
-              {pilih && isi.some((p) => p.id === pilih.id) ? (
-                <section aria-label={`Kegiatan ${pilih.nama}`} className="rounded-xl border border-slate-200">
-                  <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-4 py-3">
-                    <h3 className="font-semibold text-navy-950">{pilih.nama}</h3>
-                    <span className="text-sm text-slate-500">{daftar.length} kegiatan</span>
-                  </header>
-                  {daftar.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm text-slate-500">Anda belum punya kegiatan di periode ini.</p>
-                  ) : (
-                    <ul className="divide-y divide-slate-100">
-                      {daftar.map((k) => (
-                        <li key={k.id}>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/kegiatan/${k.jenis || pilih.jenis}/detail/${k.id}`)}
-                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate font-medium text-slate-900">{k.judul}</span>
-                              <span className="text-xs text-slate-500">{k.peranSaya}</span>
-                            </span>
-                            <span className={`badge ${STATUS_COLOR[k.status] || 'badge-neutral'}`}>{STATUS_LABEL[k.status] || k.status}</span>
-                            <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              ) : null}
+              <PratinjauArsip
+                periode={pilih && isi.some((p) => p.id === pilih.id) ? pilih : null}
+                itemsOf={itemsOf}
+                satuan="kegiatan"
+                detailTo={(id) => `/arsip-kegiatan/detail/${id}`}
+                STATUS={STATUS}
+                kosong="Anda belum punya kegiatan di periode ini."
+              />
             </div>
           )}
         </GrupTahun>

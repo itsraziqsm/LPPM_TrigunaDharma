@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Collapse from './Collapse'
 import { ChevronRight } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -18,26 +19,28 @@ const TONE = {
 
 export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, satuan = 'kegiatan' }) {
   const tone = TONE[periode.jenis] || 'bg-slate-200'
+  // Folder aktif: tab + lembar putih bergeser sedikit ke bawah (halus); bidang atas tetap.
+  const geser = `transition-transform duration-300 ease-out motion-reduce:transition-none ${terpilih ? 'translate-y-2' : 'translate-y-0'}`
   return (
       <button
         type="button"
         onClick={onClick}
         aria-pressed={terpilih}
-        className={`group relative block w-full overflow-hidden rounded-[1.4rem] border-2 text-left transition-all ${
+        className={`group relative block w-full overflow-hidden rounded-[1.4rem] border-2 text-left transition-[border-color,box-shadow,transform] duration-300 ease-out ${
           terpilih ? 'border-navy-800 shadow-md' : 'border-slate-200 hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-md'
         } ${tone}`}
       >
         {/* Bidang atas (punggung folder) */}
         <span className="block h-[4.5rem]" aria-hidden="true" />
         {/* Tab folder + sudut cekung penghubung ke lembar */}
-        <span className="absolute left-0 top-12 h-7 w-[48%] rounded-tr-[1.1rem] bg-white" aria-hidden="true" />
+        <span className={`absolute left-0 top-12 h-7 w-[48%] rounded-tr-[1.1rem] bg-white ${geser}`} aria-hidden="true" />
         <span
-          className="absolute top-[4.25rem] size-5 rounded-bl-[1.1rem] shadow-[-0.6rem_0.6rem_0_0_#fff]"
+          className={`absolute top-[4.25rem] size-5 rounded-bl-[1.1rem] shadow-[-0.6rem_0.6rem_0_0_#fff] ${geser}`}
           style={{ left: 'calc(48% - 0.05rem)' }}
           aria-hidden="true"
         />
         {/* Lembar putih: judul + jumlah kegiatan */}
-        <span className="relative -mt-px flex min-h-[8.5rem] flex-col justify-between rounded-tr-[1.1rem] bg-white px-5 pb-4 pt-1">
+        <span className={`relative -mt-px flex min-h-[8.5rem] flex-col justify-between rounded-tr-[1.1rem] bg-white px-5 pb-4 pt-3.5 ${geser}`}>
           <span className="line-clamp-2 text-base font-semibold leading-snug text-navy-950" title={periode.nama}>
             {periode.nama}
           </span>
@@ -94,11 +97,9 @@ export function GrupTahun({ periodes, kunci, children }) {
               <span className="font-serif text-xl font-medium text-navy-950 tabular-nums">{t}</span>
               <span className="text-sm text-slate-500">{isi.length} periode</span>
             </button>
-            {open ? (
-              <div id={`tahun-${t}`} className="border-t border-slate-100 px-5 pb-5 pt-4">
-                {children(isi)}
-              </div>
-            ) : null}
+            <Collapse open={open} id={`tahun-${t}`}>
+              <div className="border-t border-slate-100 px-5 pb-5 pt-4">{children(isi)}</div>
+            </Collapse>
           </section>
         )
       })}

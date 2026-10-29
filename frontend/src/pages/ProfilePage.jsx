@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Collapse from '../components/Collapse'
 import { Link, useNavigate } from 'react-router-dom'
 import { Camera, Download, KeyRound, TriangleAlert, UserRound } from 'lucide-react'
 import { usersApi } from '../api/users'
@@ -695,8 +696,9 @@ export default function ProfilePage() {
                       </button>
                     </div>
                   </li>
-                  {confirmDelete ? (
-                    <li className="bg-red-50/60 px-6 py-5">
+                  <li>
+                    <Collapse open={confirmDelete}>
+                    <div className="bg-red-50/60 px-6 py-5">
                       <form onSubmit={handleDeleteAccount} className="max-w-md space-y-3">
                         <p className="text-sm font-semibold text-red-800">Tindakan ini tidak dapat dibatalkan.</p>
                         <div>
@@ -722,8 +724,9 @@ export default function ProfilePage() {
                           </button>
                         </div>
                       </form>
-                    </li>
-                  ) : null}
+                    </div>
+                    </Collapse>
+                  </li>
                 </>
               ) : (
                 <li className="px-6 py-5">
