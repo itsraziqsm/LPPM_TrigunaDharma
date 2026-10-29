@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -643,25 +644,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           {isEdit ? 'Perbarui data proposal Anda.' : `Lengkapi ${steps.length === 5 ? 'lima' : 'empat'} langkah berikut untuk mengusulkan ${jenisLabel.toLowerCase()}.`}
         </p>
       </div>
-      <nav aria-label="Breadcrumb" className="text-sm">
-        <ol className="flex flex-wrap items-center gap-1.5">
-          <li>
-            <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true" className="text-slate-400">/</li>
-          <li>
-            <Link to={backTo} className="font-medium text-navy-600 hover:text-navy-800">
-              {JENIS_LABEL[jenisRoute] || jenisLabel}
-            </Link>
-          </li>
-          <li aria-hidden="true" className="text-slate-400">/</li>
-          <li aria-current="page" className="text-slate-500">
-            {isEdit ? 'Ubah Usulan' : `Usulan ${JENIS_LABEL[jenisRoute] || jenisLabel}`}
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb items={[{ label: JENIS_LABEL[jenisRoute] || jenisLabel, to: backTo }, { label: isEdit ? 'Ubah Usulan' : `Usulan ${JENIS_LABEL[jenisRoute] || jenisLabel}` }]} />
     </header>
   )
 

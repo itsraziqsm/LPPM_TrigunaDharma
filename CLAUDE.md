@@ -528,7 +528,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   admin/ketua: proposal → `/proposals?detail=`, laporan → `/laporan-masuk?id=`, user →
   `/users?id=`; mahasiswa: proposal tim (laporan harian). Kolom cari/filter di tiap halaman tetap
   seperti semula.
-- **Breadcrumb wajib di semua halaman semua peran**: komponen bersama `src/components/Breadcrumb.jsx` (`items: [{label, to?}]`,
+- **Breadcrumb wajib di semua halaman semua peran**: komponen bersama `src/components/Breadcrumb.jsx` (`items: [{label, to?}]`, `size` `sm`|`base`;
+  tidak ada lagi breadcrumb buatan tangan — semua halaman memakai komponen ini,
   "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
   rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti
   pohon sidebar peran pertama: `hooks/useJejakMenu.js` (`'akademik'|'dokumentasi'`) menambah induk per peran (Admin: Akademik › Dokumen

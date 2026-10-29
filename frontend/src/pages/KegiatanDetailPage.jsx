@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -228,19 +229,7 @@ export default function KegiatanDetailPage({ jenis }) {
             Kembali
           </button>
         )}
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li className="text-slate-500">Kegiatan {JENIS_LABEL[detail.jenis]}</li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Detail</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: `Kegiatan ${JENIS_LABEL[detail.jenis]}` }, { label: 'Detail' }]} />
       </div>
 
       {/* Kepala: judul, status, tahapan, aksi */}

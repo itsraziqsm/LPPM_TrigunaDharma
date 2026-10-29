@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import Collapse from '../components/Collapse'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Camera, Download, KeyRound, TriangleAlert, UserRound } from 'lucide-react'
 import { usersApi } from '../api/users'
 import { authApi } from '../api/auth'
@@ -347,17 +348,7 @@ export default function ProfilePage() {
           <h1 className="page-title">Pengaturan</h1>
           <p className="page-desc">Kelola informasi akun, data diri, dan keamanan Anda.</p>
         </div>
-        <nav aria-label="Breadcrumb" className="text-base">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Pengaturan</li>
-          </ol>
-        </nav>
+        <Breadcrumb size="base" items={[{ label: 'Pengaturan' }]} />
       </header>
 
       <div className="grid items-start gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">

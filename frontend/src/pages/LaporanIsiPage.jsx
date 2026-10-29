@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, Info, Save, Trash2, Users } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
@@ -83,33 +84,9 @@ function validate(form, file, laporan, links) {
   return e
 }
 
-function Breadcrumb({ jenis, laporanId, label }) {
+function JejakLaporan({ jenis, laporanId, label }) {
   return (
-    <nav aria-label="Breadcrumb" className="text-sm">
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-            Home
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li>
-          <Link to={`/kegiatan/${jenis}`} className="font-medium text-navy-600 hover:text-navy-800">
-            {label}
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li>
-          <Link to={`/kegiatan/${jenis}/laporan/${laporanId}`} className="font-medium text-navy-600 hover:text-navy-800">
-            Laporan {label}
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li aria-current="page" className="text-slate-500">
-          Isi laporan
-        </li>
-      </ol>
-    </nav>
+    <Breadcrumb items={[{ label, to: `/kegiatan/${jenis}` }, { label: `Laporan ${label}`, to: `/kegiatan/${jenis}/laporan/${laporanId}` }, { label: 'Isi laporan' }]} />
   )
 }
 
@@ -368,7 +345,7 @@ export default function LaporanIsiPage({ jenis }) {
         <h1 className="page-title">Laporan {label}</h1>
         <p className="page-desc">Lengkapi empat langkah berikut, lalu simpan dan ajukan dari halaman laporan.</p>
       </div>
-      <Breadcrumb jenis={jenis} laporanId={id} label={label} />
+      <JejakLaporan jenis={jenis} laporanId={id} label={label} />
     </header>
   )
 

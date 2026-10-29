@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import Breadcrumb from '../components/Breadcrumb'
 import { CalendarClock, DatabaseBackup, Download, RefreshCw, Trash2 } from 'lucide-react'
 import { backupApi } from '../api/backup'
 import { alertDialog, confirmDialog } from '../utils/dialog'
@@ -216,17 +216,7 @@ export default function BackupPage() {
           <h1 className="page-title">Backup Data</h1>
           <p className="page-desc">Cadangkan seluruh database sistem, unduh file backup, dan pantau riwayatnya.</p>
         </div>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Backup Data</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Backup Data' }]} />
       </header>
 
       {/* ── Backup sekarang ─────────────────────────────────────────────── */}

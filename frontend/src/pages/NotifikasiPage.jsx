@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
 import { notificationApi } from '../api/notification'
@@ -169,17 +170,7 @@ export default function NotifikasiPage() {
   return (
     <div className="page rise space-y-6">
       <header className="space-y-4">
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Notifikasi</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Notifikasi' }]} />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="page-title">Notifikasi</h1>

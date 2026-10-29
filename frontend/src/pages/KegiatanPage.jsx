@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, ChevronRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Trash2 } from 'lucide-react'
 import { proposalDosenApi } from '../api/Proposaldosen'
@@ -366,17 +367,7 @@ export default function KegiatanPage({ jenis }) {
           <h1 className="page-title">Status {label}</h1>
           <p className="page-desc">{copy.desc}</p>
         </div>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex flex-wrap items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">{label}</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label }]} />
       </header>
 
       {flash ? (

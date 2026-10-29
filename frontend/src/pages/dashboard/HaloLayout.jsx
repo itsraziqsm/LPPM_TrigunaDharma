@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import Breadcrumb from '../../components/Breadcrumb'
 import { Check, FilePen, Files, NotebookText, RefreshCw, Timer, UserPlus } from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
 import { ShortcutStrip } from './components'
@@ -45,21 +46,7 @@ export function HaloHeader({ now, name, roleLabel, loading, refreshing, updatedA
     <header className="space-y-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="page-title">Dashboard</h1>
-        <nav aria-label="Breadcrumb" className="text-base">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">
-              /
-            </li>
-            <li aria-current="page" className="text-slate-500">
-              Dashboard
-            </li>
-          </ol>
-        </nav>
+        <Breadcrumb size="base" items={[{ label: 'Dashboard' }]} />
       </div>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

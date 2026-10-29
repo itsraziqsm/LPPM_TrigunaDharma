@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import Breadcrumb from '../components/Breadcrumb'
 import ErrorState from '../components/ErrorState'
 
 // Menu Luaran: fitur belum dibangun, menunggu keputusan/kelanjutan dari pihak
@@ -8,17 +8,7 @@ export default function LuaranPage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <h1 className="page-title">Luaran</h1>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Luaran</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Luaran' }]} />
       </header>
 
       <div className="card px-5 py-10 sm:px-8">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CircleCheck, FileText, PencilLine, Send, Trash2 } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
@@ -29,26 +30,10 @@ function errorText(e, fallback) {
   return e.response?.data?.message || fallback
 }
 
-function Breadcrumb({ jenis, last }) {
+function JejakLaporan({ jenis, last }) {
   const label = JENIS_LABEL[jenis] || 'Kegiatan'
   return (
-    <nav aria-label="Breadcrumb" className="text-sm">
-      <ol className="flex flex-wrap items-center gap-1.5">
-        <li>
-          <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-            Home
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li>
-          <Link to={`/kegiatan/${jenis}`} className="font-medium text-navy-600 hover:text-navy-800">
-            {label}
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-slate-400">/</li>
-        <li aria-current="page" className="text-slate-500">{last}</li>
-      </ol>
-    </nav>
+    <Breadcrumb items={[{ label, to: `/kegiatan/${jenis}` }, { label: last }]} />
   )
 }
 
@@ -87,7 +72,7 @@ function LaporanBaru({ jenis }) {
           <h1 className="page-title">Laporan {label}</h1>
           <p className="page-desc">Pilih proposal yang sudah disetujui untuk dibuatkan laporannya. Satu proposal hanya punya satu laporan.</p>
         </div>
-        <Breadcrumb jenis={jenis} last={`Laporan ${label}`} />
+        <JejakLaporan jenis={jenis} last={`Laporan ${label}`} />
       </header>
 
       <Message msg={msg} />
@@ -174,7 +159,7 @@ function LaporanDetail({ id, jenis }) {
   if (loadError || !laporan) {
     return (
       <div className="page space-y-6">
-        <Breadcrumb jenis={jenis} last="Laporan" />
+        <JejakLaporan jenis={jenis} last="Laporan" />
         <section className="card px-6 py-12 text-center">
           {loadError ? (
             <>
@@ -239,7 +224,7 @@ function LaporanDetail({ id, jenis }) {
             {laporan.submittedAt ? ` · diajukan ${tanggal(laporan.submittedAt)}` : ''}
           </p>
         </div>
-        <Breadcrumb jenis={jenis} last="Laporan" />
+        <JejakLaporan jenis={jenis} last="Laporan" />
       </header>
 
       <Message msg={msg} />

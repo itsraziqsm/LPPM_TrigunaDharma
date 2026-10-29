@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Breadcrumb from '../components/Breadcrumb'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, CalendarDays, Clock, Trash2, UserRound } from 'lucide-react'
 import { notificationApi } from '../api/notification'
@@ -204,19 +205,7 @@ export default function NotifikasiDetailPage() {
     <div className="page space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {back}
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">Home</Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li>
-              <Link to="/notifikasi" className="font-medium text-navy-600 hover:text-navy-800">Notifikasi</Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li aria-current="page" className="text-slate-500">Detail</li>
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Notifikasi', to: '/notifikasi' }, { label: 'Detail' }]} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

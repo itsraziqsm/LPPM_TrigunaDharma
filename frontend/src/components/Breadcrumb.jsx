@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom'
 
 // Breadcrumb bersama (gaya sama dengan breadcrumb halaman lain): "Home / … / halaman ini".
 // items: [{ label, to? }] — item terakhir = halaman saat ini (tanpa tautan). Home selalu pertama.
-export default function Breadcrumb({ items = [], className = '' }) {
+// size: 'sm' (bawaan) | 'base' (kepala Dashboard & Pengaturan).
+export default function Breadcrumb({ items = [], className = '', size = 'sm' }) {
   const semua = [{ label: 'Home', to: '/dashboard' }, ...items]
   return (
-    <nav aria-label="Breadcrumb" className={`text-sm ${className}`}>
+    <nav aria-label="Breadcrumb" className={`${size === 'base' ? 'text-base' : 'text-sm'} ${className}`}>
       <ol className="flex flex-wrap items-center gap-1.5">
         {semua.map((it, i) => {
           const terakhir = i === semua.length - 1

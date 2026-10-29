@@ -593,23 +593,7 @@ export default function LaporanHarianPage({ jenis }) {
             Pilih project {jenisLabel ? jenisLabel.toLowerCase() + ' ' : ''}tempat Anda menjadi anggota tim, lalu isi dan kelola laporan harian.
           </p>
         </div>
-        <nav aria-label="Breadcrumb" className="text-sm">
-          <ol className="flex flex-wrap items-center gap-1.5">
-            <li>
-              <Link to="/dashboard" className="font-medium text-navy-600 hover:text-navy-800">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true" className="text-slate-400">/</li>
-            <li className="text-slate-500">Project Saya</li>
-            {jenisLabel ? (
-              <>
-                <li aria-hidden="true" className="text-slate-400">/</li>
-                <li aria-current="page" className="text-slate-500">{jenisLabel}</li>
-              </>
-            ) : null}
-          </ol>
-        </nav>
+        <Breadcrumb items={[{ label: 'Project Saya' }, ...(jenisLabel ? [{ label: jenisLabel }] : [])]} />
       </header>
 
       <section aria-label="Ringkasan project">
