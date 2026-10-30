@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"unicode/utf8"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // W-34: hapus proposal/laporan yang sudah diajukan oleh Admin dengan izin Ketua LPPM. Tidak ada
@@ -279,20 +281,23 @@ func (s *Server) approveDokumenHapus(c *Ctx) error {
 			for rows.Next() {
 				var id int64
 				if err := rows.Scan(&id); err != nil {
-					rows.Close()
+					_ = rows.Close()
 					return err
 				}
 				ids = append(ids, id)
 			}
-			rows.Close()
+			_ = rows.Close()
+			if err := rows.Err(); err != nil {
+				return err
+			}
 		}
-		in, args := placeholders(len(ids)), idArgs(ids)
-		if _, err := tx.ExecContext(ctx, "DELETE FROM `Notification` WHERE `refType` IN ('proposal','laporan') AND `refId` IN ("+in+")", args...); err != nil {
+		args := idArgs(ids)
+		if _, err := tx.ExecContext(ctx, sqlb.In("DELETE FROM `Notification` WHERE `refType` IN ('proposal','laporan') AND `refId` IN (?*)", len(ids)), args...); err != nil {
 			return err
 		}
 		// permintaan ini + permintaan lain yang menunggu untuk dokumen yang sama/turunannya
 		if _, err := tx.ExecContext(ctx,
-			"UPDATE `DokumenDeletionRequest` SET `status` = 'approved', `approverId` = ?, `decidedAt` = ?, `updatedAt` = ? WHERE `status` = 'pending' AND (`id` = ? OR `kegiatanId` IN ("+in+"))",
+			sqlb.In("UPDATE `DokumenDeletionRequest` SET `status` = 'approved', `approverId` = ?, `decidedAt` = ?, `updatedAt` = ? WHERE `status` = 'pending' AND (`id` = ? OR `kegiatanId` IN (?*))", len(ids)),
 			append([]any{c.user.UserID, now, now, reqID}, args...)...); err != nil {
 			return err
 		}

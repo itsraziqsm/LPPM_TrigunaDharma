@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 
 	"lppm-backend-go/internal/database"
+	"lppm-backend-go/internal/sqlb"
 )
 
 type target struct {
@@ -73,42 +73,48 @@ func main() {
 }
 
 func findTargets(db *sql.DB) ([]target, error) {
-	rows, err := db.Query("SELECT p.`id`,p.`jenis`,p.`judul`,p.`status`,COALESCE(u.`fullName`,u.`name`) FROM `Proposal` p JOIN `User` u ON u.`id` = p.`pengusulId`" +
-		" WHERE EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'mahasiswa')" +
-		" AND NOT EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'dosen')" +
-		" ORDER BY p.`id`")
-	if err != nil {
-		return nil, err
-	}
 	var out []target
-	for rows.Next() {
+	if err := eachRow(db, "SELECT p.`id`,p.`jenis`,p.`judul`,p.`status`,COALESCE(u.`fullName`,u.`name`) FROM `Proposal` p JOIN `User` u ON u.`id` = p.`pengusulId`"+
+		" WHERE EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'mahasiswa')"+
+		" AND NOT EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'dosen')"+
+		" ORDER BY p.`id`", func(rows *sql.Rows) error {
 		var t target
 		if err := rows.Scan(&t.id, &t.jenis, &t.judul, &t.status, &t.nama); err != nil {
-			rows.Close()
-			return nil, err
+			return err
 		}
 		out = append(out, t)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 	for i := range out {
-		lrows, err := db.Query("SELECT `id` FROM `Laporan` WHERE `proposalId` = ?", out[i].id)
-		if err != nil {
-			return nil, err
-		}
-		for lrows.Next() {
+		if err := eachRow(db, "SELECT `id` FROM `Laporan` WHERE `proposalId` = ?", func(rows *sql.Rows) error {
 			var id int64
-			if err := lrows.Scan(&id); err != nil {
-				lrows.Close()
-				return nil, err
+			if err := rows.Scan(&id); err != nil {
+				return err
 			}
 			out[i].laporan = append(out[i].laporan, id)
+			return nil
+		}, out[i].id); err != nil {
+			return nil, err
 		}
-		lrows.Close()
 	}
 	return out, nil
+}
+
+// eachRow menjalankan query lalu memanggil scan untuk setiap baris; rows selalu ditutup.
+func eachRow(db *sql.DB, query string, scan func(*sql.Rows) error, args ...any) error {
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := scan(rows); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
 func deleteTargets(db *sql.DB, targets []target) error {
@@ -124,8 +130,7 @@ func deleteTargets(db *sql.DB, targets []target) error {
 		for i, id := range ids {
 			args[i] = id
 		}
-		in := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-		if _, err := tx.Exec("DELETE FROM `Notification` WHERE `refType` IN ('proposal','laporan') AND `refId` IN ("+in+")", args...); err != nil {
+		if _, err := tx.Exec(sqlb.In("DELETE FROM `Notification` WHERE `refType` IN ('proposal','laporan') AND `refId` IN (?*)", len(ids)), args...); err != nil {
 			return err
 		}
 		// Laporan dulu: baris Kegiatan laporan tidak ikut terhapus oleh CASCADE proposal.

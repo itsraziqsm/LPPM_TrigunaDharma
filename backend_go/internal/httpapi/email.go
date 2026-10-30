@@ -43,14 +43,14 @@ func sendMail(cfg config.Config, to, subject, html string) error {
 	if cfg.SMTPSecure {
 		tlsConn := tls.Client(conn, &tls.Config{ServerName: cfg.SMTPHost, MinVersion: tls.VersionTLS12})
 		if err := tlsConn.Handshake(); err != nil {
-			conn.Close()
+			_ = conn.Close()
 			return fmt.Errorf("establish SMTP TLS: %w", err)
 		}
 		conn = tlsConn
 	}
 	client, err := smtp.NewClient(conn, cfg.SMTPHost)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return fmt.Errorf("create SMTP client: %w", err)
 	}
 	defer client.Close()
@@ -93,7 +93,7 @@ func sendMail(cfg config.Config, to, subject, html string) error {
 		strings.ReplaceAll(html, "\n", "\r\n"),
 	}, "\r\n")
 	if _, err := writer.Write([]byte(message)); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return fmt.Errorf("write SMTP message: %w", err)
 	}
 	if err := writer.Close(); err != nil {

@@ -45,7 +45,7 @@ func openDSN(dsn string) (*sql.DB, error) {
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(5 * time.Minute)
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("connect mysql: %w", err)
 	}
 	return db, nil

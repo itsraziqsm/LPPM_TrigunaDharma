@@ -15,9 +15,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
+	"path"
 	"sort"
 	"time"
 
@@ -63,14 +64,21 @@ func main() {
 		log.Fatalf("create _prisma_migrations: %v", err)
 	}
 
-	entries, err := os.ReadDir(*dir)
+	// Semua berkas migrasi dibaca lewat os.Root: tidak bisa keluar dari folder migrasi.
+	root, err := os.OpenRoot(*dir)
+	if err != nil {
+		log.Fatalf("read %s: %v", *dir, err)
+	}
+	defer func() { _ = root.Close() }()
+	migrations := root.FS()
+	entries, err := fs.ReadDir(migrations, ".")
 	if err != nil {
 		log.Fatalf("read %s: %v", *dir, err)
 	}
 	var names []string
 	for _, e := range entries {
 		if e.IsDir() {
-			if _, err := os.Stat(filepath.Join(*dir, e.Name(), "migration.sql")); err == nil {
+			if _, err := fs.Stat(migrations, path.Join(e.Name(), "migration.sql")); err == nil {
 				names = append(names, e.Name())
 			}
 		}
@@ -79,7 +87,7 @@ func main() {
 
 	applied := 0
 	for _, name := range names {
-		script, err := os.ReadFile(filepath.Join(*dir, name, "migration.sql"))
+		script, err := fs.ReadFile(migrations, path.Join(name, "migration.sql"))
 		if err != nil {
 			log.Fatal(err)
 		}

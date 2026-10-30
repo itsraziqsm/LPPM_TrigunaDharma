@@ -4,11 +4,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Node: controllers/reviewer.controller.ts, services/reviewer.service.ts,
 // routes/reviewer.routes.ts.
+
+// tugasanCols: kolom baris ReviewerTugasan baru (proposal & laporan).
+var tugasanCols = []string{"proposalId", "reviewerId", "createdAt"}
 
 func (s *Server) registerReviewerRoutes() {
 	g := s.group("/api/v1/reviewer", s.authenticate)
@@ -46,14 +50,12 @@ func (s *Server) tugaskanReviewer(c *Ctx) error {
 	}
 	now := s.nowMs()
 	if len(reviewerIDs) > 0 {
-		values := make([]string, len(reviewerIDs))
 		args := make([]any, 0, len(reviewerIDs)*3)
-		for i, rid := range reviewerIDs {
-			values[i] = "(?,?,?)"
+		for _, rid := range reviewerIDs {
 			args = append(args, proposalID, rid, now)
 		}
 		// createMany({skipDuplicates: true}) → INSERT IGNORE on MySQL
-		if _, err := s.db.ExecContext(ctx, "INSERT IGNORE INTO `ReviewerTugasan` (`proposalId`,`reviewerId`,`createdAt`) VALUES "+strings.Join(values, ","), args...); err != nil {
+		if _, err := s.db.ExecContext(ctx, sqlb.InsertIgnoreRows("ReviewerTugasan", tugasanCols, len(reviewerIDs)), args...); err != nil {
 			return err
 		}
 	}
@@ -182,25 +184,21 @@ func (s *Server) upsertReview(c *Ctx, proposalID, reviewerID int64) (O, error) {
 		}
 		cols = append(cols, "isDone", "createdAt", "updatedAt")
 		args = append(args, false, now, now)
-		quoted := make([]string, len(cols))
-		for i, col := range cols {
-			quoted[i] = "`" + col + "`"
-		}
-		if _, err := s.db.ExecContext(ctx, "INSERT INTO `ProposalReview` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(cols))+")", args...); err != nil {
+		if _, err := s.db.ExecContext(ctx, sqlb.Insert("ProposalReview", cols), args...); err != nil {
 			return nil, err
 		}
 	} else {
-		sets := []string{}
+		cols := []string{}
 		args := []any{}
 		for _, f := range fields {
 			if v, ok := body[f]; ok {
-				sets = append(sets, "`"+f+"` = ?")
+				cols = append(cols, f)
 				args = append(args, v)
 			}
 		}
-		sets = append(sets, "`isDone` = ?", "`updatedAt` = ?")
+		cols = append(cols, "isDone", "updatedAt")
 		args = append(args, false, now, existing.Int64("id"))
-		if _, err := s.db.ExecContext(ctx, "UPDATE `ProposalReview` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+		if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("ProposalReview", cols), args...); err != nil {
 			return nil, err
 		}
 	}

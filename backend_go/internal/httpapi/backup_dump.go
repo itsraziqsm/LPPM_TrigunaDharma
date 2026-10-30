@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // dumpDatabase menulis dump SQL lengkap (struktur + data + VIEW) seperti mysqldump, tanpa
@@ -41,12 +43,14 @@ func dumpDatabase(ctx context.Context, db *sql.DB, out io.Writer) (tables int, r
 		return 0, 0, err
 	}
 
+	// Error bufio.Writer bersifat sticky: tulisan berikutnya diabaikan dan error dikembalikan
+	// oleh w.Flush() di akhir, jadi hasil setiap WriteString tidak perlu diperiksa satu per satu.
 	w := bufio.NewWriterSize(out, 1<<20)
 	fmt.Fprintf(w, "-- Backup database LPPM `%s`\n-- Dibuat %s\n-- Pulihkan: gunzip < file.sql.gz | mysql -u <user> -p <database>\n\n",
 		dbName, time.Now().UTC().Format(time.RFC3339))
-	w.WriteString("SET NAMES utf8mb4;\nSET time_zone = '+00:00';\nSET FOREIGN_KEY_CHECKS = 0;\nSET UNIQUE_CHECKS = 0;\nSET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';\n\n")
+	_, _ = w.WriteString("SET NAMES utf8mb4;\nSET time_zone = '+00:00';\nSET FOREIGN_KEY_CHECKS = 0;\nSET UNIQUE_CHECKS = 0;\nSET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';\n\n")
 	for _, v := range views {
-		fmt.Fprintf(w, "DROP VIEW IF EXISTS %s;\n", quoteIdent(v))
+		fmt.Fprintf(w, "DROP VIEW IF EXISTS %s;\n", sqlb.QuoteAny(v))
 	}
 	for _, t := range baseTables {
 		n, err := dumpTable(ctx, conn, w, t)
@@ -58,14 +62,14 @@ func dumpDatabase(ctx context.Context, db *sql.DB, out io.Writer) (tables int, r
 	for _, v := range views {
 		var name, create string
 		var charset, collation sql.NullString
-		if err := conn.QueryRowContext(ctx, "SHOW CREATE VIEW "+quoteIdent(v)).Scan(&name, &create, &charset, &collation); err != nil {
+		if err := conn.QueryRowContext(ctx, "SHOW CREATE VIEW "+sqlb.QuoteAny(v)).Scan(&name, &create, &charset, &collation); err != nil {
 			return 0, 0, fmt.Errorf("view %s: %w", v, err)
 		}
 		// DEFINER dibuang agar bisa dipulihkan oleh user database mana pun.
 		create = definerRe.ReplaceAllString(create, "")
 		fmt.Fprintf(w, "\n-- VIEW %s\n%s;\n", v, create)
 	}
-	w.WriteString("\nSET FOREIGN_KEY_CHECKS = 1;\nSET UNIQUE_CHECKS = 1;\n-- Selesai\n")
+	_, _ = w.WriteString("\nSET FOREIGN_KEY_CHECKS = 1;\nSET UNIQUE_CHECKS = 1;\n-- Selesai\n")
 	if err := w.Flush(); err != nil {
 		return 0, 0, err
 	}
@@ -101,12 +105,12 @@ const maxInsertBytes = 4 << 20
 
 func dumpTable(ctx context.Context, conn *sql.Conn, w *bufio.Writer, table string) (int64, error) {
 	var name, create string
-	if err := conn.QueryRowContext(ctx, "SHOW CREATE TABLE "+quoteIdent(table)).Scan(&name, &create); err != nil {
+	if err := conn.QueryRowContext(ctx, "SHOW CREATE TABLE "+sqlb.QuoteAny(table)).Scan(&name, &create); err != nil {
 		return 0, err
 	}
-	fmt.Fprintf(w, "\n-- TABEL %s\nDROP TABLE IF EXISTS %s;\n%s;\n", table, quoteIdent(table), create)
+	fmt.Fprintf(w, "\n-- TABEL %s\nDROP TABLE IF EXISTS %s;\n%s;\n", table, sqlb.QuoteAny(table), create)
 
-	rs, err := conn.QueryContext(ctx, "SELECT * FROM "+quoteIdent(table))
+	rs, err := conn.QueryContext(ctx, sqlb.SelectAll(table))
 	if err != nil {
 		return 0, err
 	}
@@ -118,10 +122,10 @@ func dumpTable(ctx context.Context, conn *sql.Conn, w *bufio.Writer, table strin
 	names := make([]string, len(cols))
 	types := make([]string, len(cols))
 	for i, c := range cols {
-		names[i] = quoteIdent(c.Name())
+		names[i] = sqlb.QuoteAny(c.Name())
 		types[i] = strings.ToUpper(c.DatabaseTypeName())
 	}
-	prefix := "INSERT INTO " + quoteIdent(table) + " (" + strings.Join(names, ",") + ") VALUES\n"
+	prefix := "INSERT INTO " + sqlb.QuoteAny(table) + " (" + strings.Join(names, ",") + ") VALUES\n"
 	raw := make([]any, len(cols))
 	ptrs := make([]any, len(cols))
 	for i := range raw {
@@ -131,9 +135,9 @@ func dumpTable(ctx context.Context, conn *sql.Conn, w *bufio.Writer, table strin
 	var stmt strings.Builder
 	flush := func() {
 		if stmt.Len() > 0 {
-			w.WriteString(prefix)
-			w.WriteString(stmt.String())
-			w.WriteString(";\n")
+			_, _ = w.WriteString(prefix)
+			_, _ = w.WriteString(stmt.String())
+			_, _ = w.WriteString(";\n")
 			stmt.Reset()
 		}
 	}
@@ -165,10 +169,6 @@ func dumpTable(ctx context.Context, conn *sql.Conn, w *bufio.Writer, table strin
 	}
 	flush()
 	return count, nil
-}
-
-func quoteIdent(name string) string {
-	return "`" + strings.ReplaceAll(name, "`", "``") + "`"
 }
 
 func isNumericType(t string) bool {

@@ -31,12 +31,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 
 	"lppm-backend-go/internal/database"
+	"lppm-backend-go/internal/sqlb"
 )
 
 type skenario struct {
@@ -261,46 +263,35 @@ func (c *ctx) load() error {
 		return err
 	}
 	c.dosen = map[string]user{}
-	rows, err := c.db.Query("SELECT `id`,`email`,COALESCE(`fullName`,`name`) FROM `User` WHERE `email` LIKE 'dosen%@lppm.dev' AND `status` = 'approved'")
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
+	if err := eachRow(c.db, "SELECT `id`,`email`,COALESCE(`fullName`,`name`) FROM `User` WHERE `email` LIKE 'dosen%@lppm.dev' AND `status` = 'approved'", func(rows *sql.Rows) error {
 		var u user
 		var email string
 		if err := rows.Scan(&u.id, &email, &u.nama); err != nil {
-			rows.Close()
 			return err
 		}
 		c.dosen[email] = u
-	}
-	rows.Close()
-	rows, err = c.db.Query("SELECT `id`,COALESCE(`fullName`,`name`) FROM `User` WHERE `email` LIKE 'mahasiswa%@lppm.dev' AND `status` = 'approved' ORDER BY `id`")
-	if err != nil {
+		return nil
+	}); err != nil {
 		return err
 	}
-	for rows.Next() {
+	if err := eachRow(c.db, "SELECT `id`,COALESCE(`fullName`,`name`) FROM `User` WHERE `email` LIKE 'mahasiswa%@lppm.dev' AND `status` = 'approved' ORDER BY `id`", func(rows *sql.Rows) error {
 		var u user
 		if err := rows.Scan(&u.id, &u.nama); err != nil {
-			rows.Close()
 			return err
 		}
 		c.mhs = append(c.mhs, u)
+		return nil
+	}); err != nil {
+		return err
 	}
-	rows.Close()
 	if len(c.mhs) == 0 {
 		return errors.New("belum ada akun mahasiswa: jalankan `go run ./cmd/seed` dulu")
 	}
 	c.bidang = map[string][]string{}
-	rows, err = c.db.Query("SELECT `nama`,`jenisKegiatan` FROM `MasterData` WHERE `kategori` = 'bidang' AND `isAktif` = true ORDER BY `urutan`")
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
+	if err := eachRow(c.db, "SELECT `nama`,`jenisKegiatan` FROM `MasterData` WHERE `kategori` = 'bidang' AND `isAktif` = true ORDER BY `urutan`", func(rows *sql.Rows) error {
 		var nama string
 		var jenis sql.NullString
 		if err := rows.Scan(&nama, &jenis); err != nil {
-			rows.Close()
 			return err
 		}
 		for _, j := range []string{"penelitian", "pengabdian"} {
@@ -308,34 +299,45 @@ func (c *ctx) load() error {
 				c.bidang[j] = append(c.bidang[j], nama)
 			}
 		}
-	}
-	rows.Close()
-	rows, err = c.db.Query("SELECT `nama` FROM `MasterData` WHERE `kategori` = 'jenis_mitra' AND `isAktif` = true ORDER BY `urutan`")
-	if err != nil {
+		return nil
+	}); err != nil {
 		return err
 	}
-	for rows.Next() {
+	return eachRow(c.db, "SELECT `nama` FROM `MasterData` WHERE `kategori` = 'jenis_mitra' AND `isAktif` = true ORDER BY `urutan`", func(rows *sql.Rows) error {
 		var nama string
 		if err := rows.Scan(&nama); err != nil {
-			rows.Close()
 			return err
 		}
 		c.mitraJns = append(c.mitraJns, nama)
+		return nil
+	})
+}
+
+// eachRow menjalankan query lalu memanggil scan untuk setiap baris; rows selalu ditutup.
+func eachRow(db *sql.DB, query string, scan func(*sql.Rows) error, args ...any) error {
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return err
 	}
-	rows.Close()
-	return nil
+	defer rows.Close()
+	for rows.Next() {
+		if err := scan(rows); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }
 
 func semuaJudul() []string {
 	return append(append([]string{}, topikPenelitian...), topikPengabdian...)
 }
 
-func inArgs(list []string) (string, []any) {
+func inArgs(list []string) []any {
 	args := make([]any, len(list))
 	for i, v := range list {
 		args[i] = v
 	}
-	return strings.TrimSuffix(strings.Repeat("?,", len(list)), ","), args
+	return args
 }
 
 func (c *ctx) sudahAda(pengusulID int64, judul string) (bool, error) {
@@ -346,8 +348,8 @@ func (c *ctx) sudahAda(pengusulID int64, judul string) (bool, error) {
 
 // hapusSeed menghapus proposal seed (judul dari daftar topik) milik user beserta laporannya.
 func (c *ctx) hapusSeed(pengusulID int64) (int, error) {
-	in, args := inArgs(semuaJudul())
-	pids, err := ids(c.db, "SELECT `id` FROM `Proposal` WHERE `pengusulId` = ? AND `judul` IN ("+in+")", append([]any{pengusulID}, args...)...)
+	judul := semuaJudul()
+	pids, err := ids(c.db, sqlb.In("SELECT `id` FROM `Proposal` WHERE `pengusulId` = ? AND `judul` IN (?*)", len(judul)), append([]any{pengusulID}, inArgs(judul)...)...)
 	if err != nil {
 		return 0, err
 	}
@@ -477,8 +479,13 @@ func (c *ctx) buatProposal(pengusul user, email string, s skenario, judul string
 			mitraJenis, "Kec. Percut Sei Tuan, Kab. Deli Serdang, Sumatera Utara", fmt.Sprintf("0812-6%03d-%04d", c.n, 1000+c.n),
 			"Mitra membutuhkan pendampingan pemanfaatan teknologi informasi untuk meningkatkan layanan dan usaha.")
 	}
-	if _, err := tx.Exec("INSERT INTO `"+table+"` (`"+strings.Join(cols, "`,`")+"`) VALUES ("+strings.TrimSuffix(strings.Repeat("?,", len(cols)), ",")+")", args...); err != nil {
+	if _, err := tx.Exec(sqlb.Insert(table, cols), args...); err != nil {
 		return 0, err
+	}
+	// Nilai proposal yang disalin ke laporan (seperti POST /laporan).
+	salin := map[string]any{}
+	for i, col := range cols {
+		salin[col] = args[i]
 	}
 
 	// Tim: draft → undangan menunggu, selain itu sudah diterima semua.
@@ -560,14 +567,27 @@ func (c *ctx) buatProposal(pengusul user, email string, s skenario, judul string
 	}
 
 	if s.laporan != "" {
-		if err := c.buatLaporan(tx, id, table, pengusul, s, judul, created.Add(12*24*time.Hour)); err != nil {
+		if err := c.buatLaporan(tx, id, table, pengusul, s, judul, created.Add(12*24*time.Hour), salin); err != nil {
 			return 0, err
 		}
 	}
 	return id, tx.Commit()
 }
 
-func (c *ctx) buatLaporan(tx *sql.Tx, pid int64, table string, pengusul user, s skenario, judul string, created time.Time) error {
+// kolomSalinan: kolom proposal yang disalin ke laporan (yang ada di tabel jenisnya).
+var kolomSalinan = []string{"judul", "abstrak", "anggaran", "luaran", "rumpunIlmu", "bidang", "kataKunci", "pengusulId", "periodeId",
+	"skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan"}
+
+// realisasi92 = 92% anggaran (string desimal), dibulatkan 2 angka.
+func realisasi92(anggaran any) any {
+	v, err := strconv.ParseFloat(fmt.Sprint(anggaran), 64)
+	if err != nil {
+		return nil
+	}
+	return fmt.Sprintf("%.2f", v*0.92)
+}
+
+func (c *ctx) buatLaporan(tx *sql.Tx, pid int64, table string, pengusul user, s skenario, judul string, created time.Time, salin map[string]any) error {
 	now := c.now
 	var submitted, approved, catatan any
 	if s.laporan != "draft" {
@@ -586,26 +606,26 @@ func (c *ctx) buatLaporan(tx *sql.Tx, pid int64, table string, pengusul user, s 
 		return err
 	}
 	lid, _ := res.LastInsertId()
-	extraCols, extraSel := "`skema`,`metodePenelitian`", "`skema`, 'Metode eksperimen dengan pengujian black-box dan evaluasi usability (SUS).'"
-	if s.jenis == "pengabdian" {
-		extraCols, extraSel = "`mitra`,`mitraJenis`,`mitraAlamat`,`mitraKontak`,`mitraKebutuhan`", "`mitra`,`mitraJenis`,`mitraAlamat`,`mitraKontak`,`mitraKebutuhan`"
-	}
-	var dokCols, dokSel string
-	dokArgs := []any{}
-	if s.laporan != "draft" {
-		dokCols, dokSel = ",`dokumenNama`,`dokumenMime`,`dokumenUkuran`,`dokumenBlob`", ",?,?,?,?"
-		dokArgs = append(dokArgs, "Laporan - "+truncate(judul, 150)+".pdf", "application/pdf", len(pdfKecil), pdfKecil)
-	}
-	q := "INSERT INTO `" + table + "` (`id`,`tipe`,`proposalId`,`judul`,`abstrak`,`status`,`anggaran`,`luaran`,`rumpunIlmu`,`bidang`,`kataKunci`," +
-		"`luaranTercapai`,`ringkasanHasil`,`realisasiAnggaran`," + extraCols + ",`catatanRevisi`,`pengusulId`,`periodeId`,`submittedAt`,`approvedAt`,`createdAt`,`updatedAt`" + dokCols + ")" +
-		" SELECT ?, 'laporan', `id`, `judul`, `abstrak`, ?, `anggaran`, `luaran`, `rumpunIlmu`, `bidang`, `kataKunci`, ?, ?, ROUND(`anggaran` * 0.92, 2), " + extraSel +
-		", ?, `pengusulId`, `periodeId`, ?, ?, ?, ?" + dokSel + " FROM `" + table + "` WHERE `id` = ?"
-	args := []any{lid, s.laporan, "Artikel telah disubmit ke jurnal SINTA 4; poster dipresentasikan pada seminar nasional.",
+	cols := []string{"id", "tipe", "proposalId", "status", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "catatanRevisi",
+		"submittedAt", "approvedAt", "createdAt", "updatedAt"}
+	args := []any{lid, "laporan", pid, s.laporan, "Artikel telah disubmit ke jurnal SINTA 4; poster dipresentasikan pada seminar nasional.",
 		`Kegiatan "` + judul + `" telah dilaksanakan sesuai jadwal. Seluruh tahapan selesai dan hasil dimanfaatkan mitra/pengguna.`,
-		catatan, submitted, approved, created, now}
-	args = append(args, dokArgs...)
-	args = append(args, pid)
-	if _, err := tx.Exec(q, args...); err != nil {
+		realisasi92(salin["anggaran"]), catatan, submitted, approved, created, now}
+	for _, col := range kolomSalinan {
+		if v, ok := salin[col]; ok {
+			cols = append(cols, col)
+			args = append(args, v)
+		}
+	}
+	if s.jenis == "penelitian" {
+		cols = append(cols, "metodePenelitian")
+		args = append(args, "Metode eksperimen dengan pengujian black-box dan evaluasi usability (SUS).")
+	}
+	if s.laporan != "draft" {
+		cols = append(cols, "dokumenNama", "dokumenMime", "dokumenUkuran", "dokumenBlob")
+		args = append(args, "Laporan - "+truncate(judul, 150)+".pdf", "application/pdf", len(pdfKecil), pdfKecil)
+	}
+	if _, err := tx.Exec(sqlb.Insert(table, cols), args...); err != nil {
 		return err
 	}
 	if s.laporan != "draft" {

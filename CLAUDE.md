@@ -10,7 +10,7 @@ Bahasa domain, pesan API, dan komentar kode mayoritas **bahasa Indonesia**. Pert
 ## Struktur repo
 
 ```
-backend_go/     Backend aktif (Go 1.23+, net/http murni, MySQL). Port 1:1 dari backend Node.
+backend_go/     Backend aktif (Go 1.26+, net/http murni, MySQL). Port 1:1 dari backend Node.
 frontend/    Frontend aktif (React 19 + Vite 8 + Tailwind 4 + Zustand + React Router 7).
 docs/           Dokumentasi lintas bagian, mis. waitingApi-list.md (UI yang menunggu endpoint).
 Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Prisma asli,
@@ -19,6 +19,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
+- `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
 - `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
@@ -57,7 +58,8 @@ go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahas
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/seed-proposal [-reset|-dry-run]  # proposal + laporan contoh SEMUA status (17 per dosen1 & dosen2, 3 per dosen3–5; aman diulang)
 go run ./cmd/server             # default PORT=3000
-go test ./...                   # unit test tanpa DB (config, database, httpapi/compat_test)
+go test ./...                   # unit test tanpa DB (config, database, sqlb, httpapi/compat_test)
+sh scripts/security-scan.sh     # go vet + go test + gosec + govulncheck (gosec 0 temuan; lihat SECURITY.md)
 python3 scripts/e2e.py http://localhost:3000   # ±766 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
 docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otomatis saat start
 ```
@@ -69,6 +71,10 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
 - `internal/config` — baca env (`godotenv`). Default: `PORT=3000`, `CORS_ORIGIN=*`,
   `JWT_ACCESS_EXPIRES_IN=15m`, `JWT_REFRESH_EXPIRES_IN=30d`, `RATE_LIMIT_MAX=500`
   per 15 menit. `NODE_ENV=production` menyembunyikan pesan error 500.
+- `internal/sqlb` — **pembangun SQL dinamis wajib**: `Insert`, `InsertIgnoreRows`, `UpdateByID`, `In` (penanda
+  `(?*)`), `Ident` (validasi `^[A-Za-z_][A-Za-z0-9_]*$`, panic bila tidak valid), `QuoteAny`/`SelectAll` (nama dari
+  metadata DB). Nilai selalu `?`; jangan merangkai query dengan `+`/`Sprintf` dari variabel (gosec G202). File yang
+  namanya dari data dibuka lewat `os.Root` (backup, migrasi); file sensitif 0600.
 - `internal/database` — parsing `DATABASE_URL` gaya Prisma (password spesial boleh
   mentah atau URL-encoded), koneksi UTC.
 - `internal/httpapi` — router mini ala Express (`router.go`: `group(prefix, middleware...)`,
@@ -245,7 +251,7 @@ mengirim file asli; teks error internal 500 bisa sedikit beda; skema DB terpecah
 export & hapus akun sendiri; luaran kegiatan, nilai kepercayaan, verifikasi email; rumpun ilmu/bidang/kata kunci + master data; detail mitra pengabdian; kata kunci & metode
 penelitian di laporan; ketua boleh mengatur peran reviewer; hanya peran reviewer yang bisa
 ditugaskan/mereview, beri/cabut/cabut paksa reviewer; periode: admin hanya melihat, Ketua
-tambah/ubah/hapus langsung, admin hapus lewat persetujuan Ketua.
+tambah/ubah/hapus langsung, admin hapus lewat persetujuan Ketua; ETag memakai SHA-256 (format sama).
 
 ### Akun seed (`cmd/seed`)
 `admin@lppm.dev/admin123456`, `ketua@lppm.dev/ketua123456`,
@@ -576,7 +582,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - Dashboard baru belum diuji terhadap backend asli (lihat CATATAN_REDESIGN.md).
 
 ## Konvensi kerja
-- Sebelum push perubahan backend: `go vet ./... && go test ./...`; untuk frontend:
+- Sebelum push perubahan backend: `go vet ./... && go test ./...` (lebih baik `sh scripts/security-scan.sh`:
+  gosec harus tetap 0 temuan); untuk frontend:
   `npm run lint && npm run build`.
 - Jangan commit `.env`, `node_modules/`, `dist/`, `logs/`, atau binary `bin/`.
 - Jika mengubah kontrak API, perbarui pemanggil di `frontend/src/api/` dan dokumen ini.

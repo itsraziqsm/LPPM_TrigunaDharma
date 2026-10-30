@@ -3,6 +3,8 @@ package httpapi
 import (
 	"net/http"
 	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Master data pilihan formulir (W-22 rumpun ilmu & bidang, W-25 jenis luaran,
@@ -130,12 +132,8 @@ func (s *Server) createMaster(c *Ctx) error {
 	now := s.nowMs()
 	cols = append(cols, "kategori", "createdAt", "updatedAt")
 	args = append(args, kategori, now, now)
-	quoted := make([]string, len(cols))
-	for i, col := range cols {
-		quoted[i] = "`" + col + "`"
-	}
 	// Nama duplikat dalam kategori yang sama → 409 "Resource already exists".
-	res, err := s.db.ExecContext(c.r.Context(), "INSERT INTO `MasterData` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(cols))+")", args...)
+	res, err := s.db.ExecContext(c.r.Context(), sqlb.Insert("MasterData", cols), args...)
 	if err != nil {
 		return err
 	}
@@ -163,13 +161,9 @@ func (s *Server) updateMaster(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	sets := make([]string, 0, len(cols)+1)
-	for _, col := range cols {
-		sets = append(sets, "`"+col+"` = ?")
-	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
-	if _, err := s.db.ExecContext(c.r.Context(), "UPDATE `MasterData` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(c.r.Context(), sqlb.UpdateByID("MasterData", cols), args...); err != nil {
 		return err
 	}
 	_, item, err := s.masterByID(c, kategori)

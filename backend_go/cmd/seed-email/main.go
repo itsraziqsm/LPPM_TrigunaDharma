@@ -21,6 +21,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"lppm-backend-go/internal/database"
+	"lppm-backend-go/internal/sqlb"
 )
 
 type account struct {
@@ -93,23 +94,19 @@ func main() {
 			cols = append(cols, k)
 			args = append(args, v)
 		}
-		quoted := make([]string, len(cols))
-		for i, c := range cols {
-			quoted[i] = "`" + c + "`"
-		}
 		tx, err := db.Begin()
 		if err != nil {
 			log.Fatal(err)
 		}
-		res, err := tx.Exec("INSERT INTO `User` ("+strings.Join(quoted, ",")+") VALUES ("+strings.TrimSuffix(strings.Repeat("?,", len(cols)), ",")+")", args...)
+		res, err := tx.Exec(sqlb.Insert("User", cols), args...)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			log.Fatalf("user %s: %v", a.email, err)
 		}
 		id, _ := res.LastInsertId()
 		for _, r := range a.roles {
 			if _, err := tx.Exec("INSERT INTO `UserRole` (`userId`,`roleId`,`createdAt`) VALUES (?,?,?)", id, roleIDs[r], now); err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 				log.Fatalf("user role %s: %v", a.email, err)
 			}
 		}

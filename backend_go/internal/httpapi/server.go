@@ -47,12 +47,14 @@ func New(cfg config.Config, db *sql.DB) (*Server, error) {
 	if err := os.MkdirAll("logs", 0o750); err != nil {
 		return nil, fmt.Errorf("create logs directory: %w", err)
 	}
-	accessLog, err := os.OpenFile(filepath.Join("logs", "access.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o640)
+	accessLog, err := os.OpenFile(filepath.Join("logs", "access.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("open access log: %w", err)
 	}
+	_ = accessLog.Chmod(0o600) // file lama (dibuat versi sebelumnya dengan 0640) ikut diperketat
 	s := newServer(cfg, db)
 	s.accessLog = accessLog
+	go dummyPasswordHash() // siapkan hash dummy login di latar (bcrypt ±250 ms)
 	s.startBackupScheduler()
 	return s, nil
 }

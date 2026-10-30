@@ -29,7 +29,7 @@ tidak perlu diubah: cukup arahkan base URL ke server Go.
 
 ## Menjalankan
 
-Butuh Go 1.23+ dan MySQL/MariaDB.
+Butuh Go 1.26+ dan MySQL/MariaDB (Go lama dengan `GOTOOLCHAIN=auto` otomatis mengunduh go1.26.10, lihat `go.mod`).
 
 ```bash
 cp .env.example .env          # isi DATABASE_URL & JWT secret (bisa salin dari .env Node)
@@ -158,6 +158,7 @@ cmd/seed-proposal proposal & laporan contoh semua status (fokus dosen1 & dosen2)
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
+internal/sqlb       pembangun SQL dinamis yang aman (identifier tervalidasi, nilai lewat ?)
 internal/httpapi    router ala Express, middleware, dan semua handler
   auth.go, users.go, periode.go, proposals.go, proposal_dosen.go,
   reviewer.go, laporan.go (laporan + dokumen lampiran), laporan_harian.go,
@@ -171,6 +172,7 @@ internal/httpapi    router ala Express, middleware, dan semua handler
   luaran), kata_kunci.go (validasi & simpan kata kunci), reviewer_akses.go (hak akses reviewer
   dosen: beri, cabut, cabut paksa + pengalihan tugasan)
 scripts/e2e.py  uji end-to-end seluruh alur (khusus database development!)
+scripts/security-scan.sh  go vet + go test + gosec + govulncheck (lihat SECURITY.md)
 ```
 
 ## Pengujian
@@ -182,6 +184,15 @@ python3 scripts/e2e.py http://localhost:3000  # ±766 pengecekan end-to-end
 
 `scripts/e2e.py` membuat & menghapus data, jadi jalankan hanya di database
 development yang sudah di-seed, dengan `TRUST_PROXY=true`.
+
+### Keamanan
+
+```bash
+sh scripts/security-scan.sh   # go vet, go test, gosec (0 temuan), govulncheck
+```
+
+Hasil pemindaian, perbaikan per aturan gosec, versi dependensi, dan aturan untuk kode baru
+(SQL dinamis lewat `internal/sqlb`, file lewat `os.Root`, izin 0600) ada di [`SECURITY.md`](SECURITY.md).
 
 ## Perbedaan yang disengaja dengan versi Node
 
@@ -257,7 +268,9 @@ development yang sudah di-seed, dengan `TRUST_PROXY=true`.
 21. Akses anggota tim: dosen yang diundang (`pending`) boleh **membaca** seluruh proposal & file; semua
     anggota (pending/diterima) **hanya baca** — aksi tulis `/proposals/...` → 403 (Node: anggota diterima
     bisa menulis). Detail undangan + `aksesPenuh`. Lihat `new-api.md` bagian 27.
-22. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+22. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
+    klien sehingga perilaku 304 tidak berubah. Lihat `SECURITY.md`.
+23. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

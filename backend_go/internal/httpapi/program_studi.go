@@ -2,7 +2,8 @@ package httpapi
 
 import (
 	"net/http"
-	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Master data program studi (W-19). Tidak ada padanannya di Node: endpoint
@@ -77,12 +78,8 @@ func (s *Server) createProgramStudi(c *Ctx) error {
 	now := s.nowMs()
 	cols = append(cols, "createdAt", "updatedAt")
 	args = append(args, now, now)
-	quoted := make([]string, len(cols))
-	for i, col := range cols {
-		quoted[i] = "`" + col + "`"
-	}
 	// Nama duplikat → 409 "Resource already exists" (UNIQUE, lewat handleError).
-	res, err := s.db.ExecContext(c.r.Context(), "INSERT INTO `ProgramStudi` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(cols))+")", args...)
+	res, err := s.db.ExecContext(c.r.Context(), sqlb.Insert("ProgramStudi", cols), args...)
 	if err != nil {
 		return err
 	}
@@ -106,13 +103,9 @@ func (s *Server) updateProgramStudi(c *Ctx) error {
 		return err
 	}
 	cols, args := programStudiValues(c.bodyMap())
-	sets := make([]string, 0, len(cols)+1)
-	for _, col := range cols {
-		sets = append(sets, "`"+col+"` = ?")
-	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
-	if _, err := s.db.ExecContext(c.r.Context(), "UPDATE `ProgramStudi` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(c.r.Context(), sqlb.UpdateByID("ProgramStudi", cols), args...); err != nil {
 		return err
 	}
 	item, err := s.programStudiByID(c, id)

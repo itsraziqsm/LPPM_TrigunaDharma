@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 )
@@ -97,21 +98,29 @@ func convertValue(dbType string, value any) any {
 	case int32:
 		return int64(v)
 	case uint64:
-		return int64(v)
+		if v <= math.MaxInt64 {
+			return int64(v)
+		}
+		return v // di luar jangkauan int64: tidak dipotong
 	}
 	return value
 }
 
+// stripInternal membuang kolom bantu berawalan "__" dari setiap objek.
 func stripInternal(items []O) {
 	for i := range items {
-		kept := items[i][:0]
-		for _, kv := range items[i] {
-			if !strings.HasPrefix(kv.K, "__") {
-				kept = append(kept, kv)
-			}
-		}
-		items[i] = kept
+		items[i] = withoutInternal(items[i])
 	}
+}
+
+func withoutInternal(item O) O {
+	kept := make(O, 0, len(item))
+	for _, kv := range item {
+		if !strings.HasPrefix(kv.K, "__") {
+			kept = append(kept, kv)
+		}
+	}
+	return kept
 }
 
 func placeholders(n int) string {
@@ -207,30 +216,32 @@ func attachMany(ctx context.Context, q dbtx, items []O, pk, key, query string) (
 // object stored under key; when the nested id is NULL the value is null.
 func nestColumns(items []O, prefix, key string) {
 	for i := range items {
-		nested := O{}
-		kept := make(O, 0, len(items[i]))
-		insertAt := -1
-		for _, kv := range items[i] {
-			if strings.HasPrefix(kv.K, prefix) {
-				if insertAt < 0 {
-					insertAt = len(kept)
-				}
-				nested = append(nested, KV{strings.TrimPrefix(kv.K, prefix), kv.V})
-				continue
-			}
-			kept = append(kept, kv)
-		}
-		var value any = nested
-		if nested.Get("id") == nil && nested.Has("id") {
-			value = nil
-		}
-		if insertAt < 0 {
-			kept = append(kept, KV{key, value})
-		} else {
-			kept = append(kept[:insertAt], append(O{{key, value}}, kept[insertAt:]...)...)
-		}
-		items[i] = kept
+		items[i] = nestPrefixed(items[i], prefix, key)
 	}
+}
+
+func nestPrefixed(item O, prefix, key string) O {
+	nested := O{}
+	kept := make(O, 0, len(item))
+	insertAt := -1
+	for _, kv := range item {
+		if strings.HasPrefix(kv.K, prefix) {
+			if insertAt < 0 {
+				insertAt = len(kept)
+			}
+			nested = append(nested, KV{strings.TrimPrefix(kv.K, prefix), kv.V})
+			continue
+		}
+		kept = append(kept, kv)
+	}
+	var value any = nested
+	if nested.Get("id") == nil && nested.Has("id") {
+		value = nil
+	}
+	if insertAt < 0 {
+		return append(kept, KV{key, value})
+	}
+	return append(kept[:insertAt], append(O{{key, value}}, kept[insertAt:]...)...)
 }
 
 func (s *Server) withTx(ctx context.Context, fn func(tx *sql.Tx) error) error {

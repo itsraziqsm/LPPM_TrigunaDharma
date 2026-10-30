@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Luaran kegiatan (W-01, W-02, W-12): output yang dijanjikan di proposal.
@@ -164,7 +165,7 @@ func (s *Server) ensureCapaianEditable(ctx context.Context, p *proposalRow) erro
 
 // luaranSets maps validated body fields to SET clauses (dates parsed).
 func luaranSets(body map[string]any, fields []string) ([]string, []any, error) {
-	sets := []string{}
+	cols := []string{}
 	args := []any{}
 	for _, field := range fields {
 		v, ok := body[field]
@@ -178,10 +179,10 @@ func luaranSets(body map[string]any, fields []string) ([]string, []any, error) {
 			}
 			v = t
 		}
-		sets = append(sets, "`"+field+"` = ?")
+		cols = append(cols, field)
 		args = append(args, v)
 	}
-	return sets, args, nil
+	return cols, args, nil
 }
 
 // ── handlers ─────────────────────────────────────────────────────────────
@@ -246,14 +247,14 @@ func (s *Server) createLuaran(c *Ctx) error {
 }
 
 func (s *Server) applyLuaranUpdate(c *Ctx, id int64, fields []string, message string) error {
-	sets, args, err := luaranSets(c.bodyMap(), fields)
+	cols, args, err := luaranSets(c.bodyMap(), fields)
 	if err != nil {
 		return err
 	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
 	ctx := c.r.Context()
-	if _, err := s.db.ExecContext(ctx, "UPDATE `LuaranKegiatan` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("LuaranKegiatan", cols), args...); err != nil {
 		return err
 	}
 	item, err := s.luaranResponse(ctx, id)

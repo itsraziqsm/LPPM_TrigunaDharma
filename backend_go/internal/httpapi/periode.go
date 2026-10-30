@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Node: routes/periode.routes.ts, controllers/periode.controller.ts,
@@ -166,7 +168,7 @@ func (s *Server) updatePeriode(c *Ctx) error {
 		return err
 	}
 	body := c.bodyMap()
-	sets := []string{}
+	cols := []string{}
 	args := []any{}
 	for _, field := range []string{"nama", "tahun", "jenis", "tanggalMulai", "tanggalSelesai", "isAktif"} {
 		value, ok := body[field]
@@ -183,12 +185,12 @@ func (s *Server) updatePeriode(c *Ctx) error {
 			}
 			value = t
 		}
-		sets = append(sets, "`"+field+"` = ?")
+		cols = append(cols, field)
 		args = append(args, value)
 	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
-	if _, err := s.db.ExecContext(ctx, "UPDATE `Periode` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("Periode", cols), args...); err != nil {
 		return err
 	}
 	periode, err := s.periodeByID(ctx, s.db, id)
@@ -303,12 +305,15 @@ func (s *Server) requestPeriodeDeletion(c *Ctx) error {
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		targets = append(targets, id)
 	}
-	rows.Close()
+	_ = rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
 	for _, userID := range targets {
 		if err := s.createNotification(ctx, s.db, notification{
 			UserID: userID, Type: "deletion_request", Judul: "Permintaan Penghapusan Periode",
@@ -450,12 +455,15 @@ func (s *Server) deletePeriodeLangsung(c *Ctx) error {
 		for rows.Next() {
 			var p pending
 			if err := rows.Scan(&p.id, &p.requesterID); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return err
 			}
 			waiting = append(waiting, p)
 		}
-		rows.Close()
+		_ = rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE `PeriodeDeletionRequest` SET `status` = 'approved', `approverId` = ?, `updatedAt` = ? WHERE `periodeId` = ? AND `status` = 'pending'",
 			c.user.UserID, s.nowMs(), periodeID); err != nil {

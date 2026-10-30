@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Node: controllers/laporan.controller.ts, services/laporan.service.ts,
@@ -216,17 +217,17 @@ func (s *Server) updateLaporan(c *Ctx) error {
 		return err
 	}
 	body := c.bodyMap()
-	sets := []string{}
+	cols := []string{}
 	args := []any{}
 	for _, field := range []string{"jenis", "judul", "dokumenUrl", "keterangan"} {
 		if v, ok := body[field]; ok {
-			sets = append(sets, "`"+field+"` = ?")
+			cols = append(cols, field)
 			args = append(args, v)
 		}
 	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
-	if _, err := s.db.ExecContext(ctx, "UPDATE `LaporanProposal` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("LaporanProposal", cols), args...); err != nil {
 		return err
 	}
 	laporan, err := queryObj(ctx, s.db, "SELECT "+laporanColumns+" FROM `LaporanProposal` WHERE `id` = ?", id)

@@ -9,7 +9,10 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Node: src/routes/auth.routes.ts, controllers/auth.controller.ts,
@@ -19,10 +22,22 @@ const (
 	bcryptSaltRounds        = 12
 	refreshTokenExpiryDays  = 30
 	passwordResetExpiry     = time.Hour
-	dummyPasswordHash       = "$2a$12$dummyhashfordummycomparison00000000000000000000000000"
 	roleOrderBy             = " ORDER BY ur.`roleId` ASC"
 	userRolesByUserIDsQuery = "SELECT ur.`userId` AS __k, r.`name` FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` IN (%s) ORDER BY ur.`userId`, ur.`roleId`"
 )
+
+// dummyPasswordHash: hash bcrypt (biaya sama dengan hash user) dari password acak, dibuat sekali.
+// Dipakai saat email tidak terdaftar agar waktu respons login sama dengan password salah
+// (mencegah enumerasi email). Tidak ada kredensial yang tertanam di kode.
+var dummyPasswordHash = sync.OnceValue(func() string {
+	random := make([]byte, 32)
+	_, _ = rand.Read(random)
+	hash, err := hashPassword(hex.EncodeToString(random), bcryptSaltRounds)
+	if err != nil {
+		return ""
+	}
+	return hash
+})
 
 var (
 	loginSchema = zObj(
@@ -160,7 +175,7 @@ func (s *Server) login(c *Ctx) error {
 	if user != nil {
 		valid = passwordMatches(user.Password, password)
 	} else {
-		_ = passwordMatches(dummyPasswordHash, password)
+		_ = passwordMatches(dummyPasswordHash(), password)
 	}
 	s.secureDelay()
 	if user == nil || !valid {
@@ -300,13 +315,9 @@ func (s *Server) registerUser(c *Ctx, role string, optionalFields []string) erro
 		columns = append(columns, field)
 		args = append(args, arg)
 	}
-	quoted := make([]string, len(columns))
-	for i, col := range columns {
-		quoted[i] = "`" + col + "`"
-	}
 	var id int64
 	err = s.withTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, "INSERT INTO `User` ("+strings.Join(quoted, ",")+") VALUES ("+placeholders(len(columns))+")", args...)
+		res, err := tx.ExecContext(ctx, sqlb.Insert("User", columns), args...)
 		if err != nil {
 			return err
 		}

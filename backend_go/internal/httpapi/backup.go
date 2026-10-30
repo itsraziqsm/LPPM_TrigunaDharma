@@ -69,16 +69,16 @@ func (s *Server) mulaiBackup(ctx context.Context, sumber string, userID, periode
 	}
 	var got sql.NullInt64
 	if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK("+backupLockSQL+", 0)").Scan(&got); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return 0, err
 	}
 	if !got.Valid || got.Int64 != 1 {
-		conn.Close()
+		_ = conn.Close()
 		return 0, errBackupBerjalan
 	}
 	release := func() {
 		_, _ = conn.ExecContext(context.Background(), "DO RELEASE_LOCK("+backupLockSQL+")")
-		conn.Close()
+		_ = conn.Close()
 	}
 	mulai := s.nowMs()
 	res, err := s.db.ExecContext(ctx, "INSERT INTO `BackupLog` (`sumber`,`dibuatOlehId`,`status`,`periode`,`mulaiAt`) VALUES (?,?,'berjalan',?,?)",
@@ -120,21 +120,32 @@ func (s *Server) jalankanBackup(id int64, sumber string, mulai time.Time) {
 	}
 }
 
-// tulisFileBackup menulis dump gzip ke <nama>.part lalu rename (file tidak pernah setengah jadi).
-func (s *Server) tulisFileBackup(nama string) (tables int, rows int64, size int64, err error) {
+// bukaFolderBackup membuka BACKUP_DIR sebagai os.Root: semua operasi file backup dibatasi di
+// folder itu, nama file tidak bisa keluar lewat "../" atau symlink.
+func (s *Server) bukaFolderBackup() (*os.Root, error) {
 	if err := os.MkdirAll(s.cfg.BackupDir, 0o750); err != nil {
+		return nil, err
+	}
+	return os.OpenRoot(s.cfg.BackupDir)
+}
+
+// tulisFileBackup menulis dump gzip ke <nama>.part lalu rename (file tidak pernah setengah jadi).
+// File hanya bisa dibaca pemilik proses (0600) karena berisi seluruh data.
+func (s *Server) tulisFileBackup(nama string) (tables int, rows int64, size int64, err error) {
+	root, err := s.bukaFolderBackup()
+	if err != nil {
 		return 0, 0, 0, err
 	}
-	final := filepath.Join(s.cfg.BackupDir, nama)
-	part := final + ".part"
-	f, err := os.OpenFile(part, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
+	defer func() { _ = root.Close() }()
+	part := nama + ".part"
+	f, err := root.OpenFile(part, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 	defer func() {
 		if err != nil {
-			f.Close()
-			os.Remove(part)
+			_ = f.Close()
+			_ = root.Remove(part)
 		}
 	}()
 	gz := gzip.NewWriter(f)
@@ -150,10 +161,10 @@ func (s *Server) tulisFileBackup(nama string) (tables int, rows int64, size int6
 	if err = f.Close(); err != nil {
 		return 0, 0, 0, err
 	}
-	if err = os.Rename(part, final); err != nil {
+	if err = root.Rename(part, nama); err != nil {
 		return 0, 0, 0, err
 	}
-	st, err := os.Stat(final)
+	st, err := root.Stat(nama)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -418,7 +429,8 @@ func (s *Server) backupJadwal(c *Ctx) error {
 	})
 }
 
-// fileBackupSiap memastikan log punya file yang masih ada di server.
+// fileBackupSiap memastikan log punya file yang masih ada di server dan mengembalikan nama
+// filenya (tanpa folder; dibuka lewat bukaFolderBackup).
 func (s *Server) fileBackupSiap(item O) (string, error) {
 	switch {
 	case item.Get("status") == "berjalan":
@@ -429,7 +441,7 @@ func (s *Server) fileBackupSiap(item O) (string, error) {
 		return "", httpError(http.StatusGone, "File backup sudah dihapus")
 	}
 	nama, _ := item.Get("namaFile").(string)
-	return filepath.Join(s.cfg.BackupDir, filepath.Base(nama)), nil
+	return filepath.Base(nama), nil
 }
 
 func (s *Server) downloadBackup(c *Ctx) error {
@@ -442,32 +454,37 @@ func (s *Server) downloadBackup(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	path, err := s.fileBackupSiap(item)
+	nama, err := s.fileBackupSiap(item)
 	if err != nil {
 		return err
 	}
-	f, err := os.Open(path)
+	root, err := s.bukaFolderBackup()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+	f, err := root.Open(nama)
 	if errors.Is(err, os.ErrNotExist) {
 		return httpError(http.StatusNotFound, "File backup tidak ditemukan di server")
 	}
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	st, err := f.Stat()
 	if err != nil {
 		return err
 	}
 	if err := s.logActivity(ctx, s.db, c, activityEntry{
 		UserID: c.user.UserID, Action: "backup.download", EntityType: "backup", EntityID: id,
-		Detail: "Backup database diunduh: " + filepath.Base(path),
+		Detail: "Backup database diunduh: " + nama,
 	}); err != nil {
 		return err
 	}
 	h := c.w.Header()
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Content-Type", "application/gzip")
-	h.Set("Content-Disposition", `attachment; filename="`+jsEncodeURIComponent(filepath.Base(path))+`"`)
+	h.Set("Content-Disposition", `attachment; filename="`+jsEncodeURIComponent(nama)+`"`)
 	h.Set("Content-Length", strconv.FormatInt(st.Size(), 10))
 	c.w.WriteHeader(http.StatusOK)
 	if c.r.Method != http.MethodHead {
@@ -486,14 +503,19 @@ func (s *Server) deleteBackup(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	path, err := s.fileBackupSiap(item)
+	nama, err := s.fileBackupSiap(item)
 	if err != nil {
 		if e, ok := err.(*apiError); ok && e.status == http.StatusGone {
 			return httpError(http.StatusConflict, "File backup sudah dihapus")
 		}
 		return err
 	}
-	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+	root, err := s.bukaFolderBackup()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+	if err := root.Remove(nama); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, "UPDATE `BackupLog` SET `dihapusAt` = ?, `dihapusOlehId` = ? WHERE `id` = ?", s.nowMs(), c.user.UserID, id); err != nil {
@@ -501,7 +523,7 @@ func (s *Server) deleteBackup(c *Ctx) error {
 	}
 	if err := s.logActivity(ctx, s.db, c, activityEntry{
 		UserID: c.user.UserID, Action: "backup.delete", EntityType: "backup", EntityID: id,
-		Detail: "File backup dihapus: " + filepath.Base(path),
+		Detail: "File backup dihapus: " + nama,
 	}); err != nil {
 		return err
 	}

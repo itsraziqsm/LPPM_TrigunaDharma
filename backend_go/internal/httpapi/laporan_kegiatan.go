@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Fitur laporan (baris tipe 'laporan' di tabel Penelitian/Pengabdian).
@@ -749,13 +751,11 @@ func (s *Server) tugaskanLaporanReviewer(c *Ctx) error {
 		return err
 	}
 	now := s.nowMs()
-	values := make([]string, len(ids))
 	args := make([]any, 0, len(ids)*3)
-	for i, rid := range ids {
-		values[i] = "(?,?,?)"
+	for _, rid := range ids {
 		args = append(args, l.ID, rid, now)
 	}
-	if _, err := s.db.ExecContext(ctx, "INSERT IGNORE INTO `ReviewerTugasan` (`proposalId`,`reviewerId`,`createdAt`) VALUES "+strings.Join(values, ","), args...); err != nil {
+	if _, err := s.db.ExecContext(ctx, sqlb.InsertIgnoreRows("ReviewerTugasan", tugasanCols, len(ids)), args...); err != nil {
 		return err
 	}
 	if err := s.updateKegiatan(ctx, s.db, l.ID, "`status` = 'review', `updatedAt` = ?", now); err != nil {

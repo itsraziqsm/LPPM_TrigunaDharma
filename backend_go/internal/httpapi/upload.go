@@ -82,7 +82,7 @@ func multerFile(field string, rule uploadRule) step {
 			filename := part.FileName()
 			if filename == "" && part.Header.Get("Content-Type") == "" {
 				value, err := io.ReadAll(io.LimitReader(part, 1024*1024+1))
-				part.Close()
+				_ = part.Close()
 				if err != nil {
 					return plainError("Unexpected end of form")
 				}
@@ -93,7 +93,7 @@ func multerFile(field string, rule uploadRule) step {
 				continue
 			}
 			if name != field || file != nil {
-				part.Close()
+				_ = part.Close()
 				return plainError("Unexpected field")
 			}
 			mimetype := part.Header.Get("Content-Type")
@@ -104,11 +104,11 @@ func multerFile(field string, rule uploadRule) step {
 				mimetype = mt
 			}
 			if !validEnum(mimetype, rule.allowed) {
-				part.Close()
+				_ = part.Close()
 				return httpError(rule.status, rule.filterMsg)
 			}
 			data, err := io.ReadAll(io.LimitReader(part, int64(rule.maxBytes)+1))
-			part.Close()
+			_ = part.Close()
 			if err != nil {
 				return plainError("Unexpected end of form")
 			}

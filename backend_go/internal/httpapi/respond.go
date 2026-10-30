@@ -1,7 +1,7 @@
 package httpapi
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -67,8 +67,11 @@ func (s *Server) writeBody(w http.ResponseWriter, r *http.Request, status int, p
 	}
 }
 
+// weakETag: format sama dengan modul etag Express (W/"<panjang hex>-<27 karakter base64>"),
+// tetapi hash memakai SHA-256 (Express: SHA-1). ETag bersifat opak bagi klien, jadi nilai yang
+// berbeda dari Node tidak memengaruhi perilaku (304 tetap jalan).
 func weakETag(body []byte) string {
-	sum := sha1.Sum(body)
+	sum := sha256.Sum256(body)
 	hash := base64.StdEncoding.EncodeToString(sum[:])[:27]
 	return `W/"` + strconv.FormatInt(int64(len(body)), 16) + "-" + hash + `"`
 }

@@ -8,6 +8,8 @@ import (
 	"math"
 	"net/http"
 	"strings"
+
+	"lppm-backend-go/internal/sqlb"
 )
 
 // Node: routes/user.routes.ts, controllers/user.controller.ts,
@@ -264,7 +266,7 @@ func (s *Server) assignRoles(c *Ctx) error {
 			return nil
 		}
 		_, err := tx.ExecContext(ctx,
-			"INSERT INTO `UserRole` (`userId`,`roleId`,`createdAt`) SELECT ?, `id`, ? FROM `Role` WHERE `name` IN ("+placeholders(len(names))+") ORDER BY `id`",
+			sqlb.In("INSERT INTO `UserRole` (`userId`,`roleId`,`createdAt`) SELECT ?, `id`, ? FROM `Role` WHERE `name` IN (?*) ORDER BY `id`", len(names)),
 			append([]any{id, now}, names...)...)
 		return err
 	})
@@ -353,7 +355,7 @@ func (s *Server) updateProfile(c *Ctx) error {
 		return err
 	}
 	body := c.bodyMap()
-	sets := []string{}
+	cols := []string{}
 	args := []any{}
 	for _, field := range profileFields {
 		value, exists := body[field]
@@ -365,7 +367,7 @@ func (s *Server) updateProfile(c *Ctx) error {
 			if err != nil {
 				return err
 			}
-			sets = append(sets, "`sintaScore` = ?")
+			cols = append(cols, "sintaScore")
 			args = append(args, score)
 			continue
 		}
@@ -381,7 +383,7 @@ func (s *Server) updateProfile(c *Ctx) error {
 			if err != nil {
 				return plainError("Invalid value for argument `tanggalLahir`: Provided Date object is invalid.")
 			}
-			sets = append(sets, "`tanggalLahir` = ?")
+			cols = append(cols, "tanggalLahir")
 			args = append(args, t)
 			continue
 		}
@@ -396,11 +398,11 @@ func (s *Server) updateProfile(c *Ctx) error {
 		default:
 			return plainError(fmt.Sprintf("Invalid value for argument `%s`: Expected String.", field))
 		}
-		sets = append(sets, "`"+field+"` = ?")
+		cols = append(cols, field)
 	}
-	sets = append(sets, "`updatedAt` = ?")
+	cols = append(cols, "updatedAt")
 	args = append(args, s.nowMs(), id)
-	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET "+strings.Join(sets, ", ")+" WHERE `id` = ?", args...); err != nil {
+	if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("User", cols), args...); err != nil {
 		return err
 	}
 	user, err := s.profileByID(ctx, id)
