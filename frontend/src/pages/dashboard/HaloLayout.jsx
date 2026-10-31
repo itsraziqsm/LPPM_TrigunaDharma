@@ -78,13 +78,16 @@ export function HaloHeader({ now, name, roleLabel, loading, refreshing, updatedA
 
 // ── Bagian 2: Pintasan (baris kartu horizontal) + kartu angka ───────────────
 // Maks MAKS_PINTASAN (4): yang terakhir digunakan user dulu, sisanya urutan adapter (paling penting).
+// Ponsel (< sm): judul & kartu pintasan disembunyikan; hanya kartu angka (children) yang tampil.
 export function PintasanSection({ shortcuts, children }) {
   const userId = useAuthStore((s) => s.user?.id)
   if ((!shortcuts || shortcuts.length === 0) && !children) return null
   return (
     <section aria-labelledby="pintasan" className="space-y-3">
-      <SectionTitle id="pintasan">Pintasan</SectionTitle>
-      <ShortcutStrip items={pilihPintasan(userId, shortcuts, MAKS_PINTASAN)} />
+      <div className="space-y-3 max-sm:hidden">
+        <SectionTitle id="pintasan">Pintasan</SectionTitle>
+        <ShortcutStrip items={pilihPintasan(userId, shortcuts, MAKS_PINTASAN)} />
+      </div>
       {children}
     </section>
   )
@@ -130,15 +133,16 @@ export function ToneCard({ tone, label, value, hint, icon: IconCmp, pending, to 
     <>
       <div className="min-w-0">
         <p className={`text-sm font-semibold leading-tight ${t.label}`}>{label}</p>
-        <p className={`mt-2 text-[1.75rem] font-bold leading-none tabular-nums lining-nums ${t.value}`}>{show(value)}</p>
+        <p className={`mt-2 text-2xl font-bold leading-none tabular-nums lining-nums sm:text-[1.75rem] ${t.value}`}>{show(value)}</p>
         {pending ? <ApiPending className="mt-2" /> : hint ? <p className="mt-2 text-xs text-slate-600">{hint}</p> : null}
       </div>
-      <span className={`grid size-14 shrink-0 place-items-center rounded-full ${t.badge}`}>
+      {/* Ikon disembunyikan di ponsel (kartu 2×2). */}
+      <span className={`hidden size-14 shrink-0 place-items-center rounded-full sm:grid ${t.badge}`}>
         <IconCmp className="size-8" aria-hidden="true" />
       </span>
     </>
   )
-  const cls = `flex h-full min-h-[7.25rem] items-center justify-between gap-3 rounded-xl border px-5 py-4 ${t.box}`
+  const cls = `flex h-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 sm:min-h-[7.25rem] sm:px-5 sm:py-4 ${t.box}`
   return (
     <li>
       {to ? (
@@ -155,7 +159,7 @@ export function ToneCard({ tone, label, value, hint, icon: IconCmp, pending, to 
 export function ToneCardGrid({ label = 'Ringkasan', children }) {
   return (
     <section aria-label={label}>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{children}</ul>
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">{children}</ul>
     </section>
   )
 }

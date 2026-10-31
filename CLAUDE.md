@@ -310,7 +310,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   grid membungkus di desktop, hover = sedikit membesar (`scale-[1.03]`, `transition-[scale,…]`); isi pintasan mengikuti menu
   sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`); tampil **maks 4**
   (`utils/riwayat.js` `pilihPintasan`: halaman yang terakhir dibuka user dulu — `DashboardLayout` mencatat tiap pindah halaman per user di
-  localStorage `riwayatHalaman:<id>` — sisanya urutan adapter = paling penting; tanpa API), lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
+  localStorage `riwayatHalaman:<id>` — sisanya urutan adapter = paling penting; tanpa API; **ponsel (< sm): judul & kartu pintasan
+  disembunyikan**), lalu kartu angka `ToneCard` (4 kartu; ponsel **2×2 tanpa ikon**, `ToneCardGrid` `grid-cols-2`); dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
   **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
@@ -505,7 +506,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.
 - `/profil` = halaman **Pengaturan** (`ProfilePage.jsx`): kiri kartu ringkasan `sticky`,
   kanan Foto Profil (unggah/hapus), Informasi Profil (+ jabatan fungsional, SINTA, dropdown
-  program studi, status verifikasi email `emailVerifiedAt` + kirim ulang), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout; **Ketua LPPM tidak bisa menghapus akun
+  program studi, status verifikasi email `emailVerifiedAt` + kirim ulang), Ganti Password, Zona Berbahaya (unduh data, hapus akun → logout; **Ketua LPPM & Ketua STMIK tidak bisa menghapus akun
   sendiri**, diganti keterangan hubungi Admin). Nilai awal
   dari `/auth/me`; simpan hanya mengirim field yang berubah dan memperbarui store lewat
   `useAuthStore.setState` tanpa `fetchMe()` (fetchMe memicu layar memuat global).

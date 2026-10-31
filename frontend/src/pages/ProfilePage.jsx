@@ -162,8 +162,9 @@ export default function ProfilePage() {
   const user = useAuthStore((s) => s.user)
   const roleNames = getRoleNames(user?.roles)
   const isMahasiswa = roleNames[0] === 'mahasiswa'
-  // Ketua LPPM tidak boleh menghapus akunnya sendiri (jabatan struktural).
-  const canDeleteAccount = !roleNames.includes('ketua_lppm')
+  // Ketua LPPM & Ketua STMIK tidak boleh menghapus akunnya sendiri (jabatan struktural).
+  const jabatanStruktural = roleNames.includes('ketua_lppm') ? 'Ketua LPPM' : roleNames.includes('ketua_stmik') ? 'Ketua STMIK' : null
+  const canDeleteAccount = !jabatanStruktural
 
   const [saved, setSaved] = useState(() => profileFrom(user))
   const [form, setForm] = useState(saved)
@@ -723,7 +724,7 @@ export default function ProfilePage() {
                 <li className="px-6 py-5">
                   <h3 className="text-base font-semibold text-slate-900">Hapus akun ini</h3>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Akun Ketua LPPM tidak dapat dihapus sendiri. Hubungi Admin bila jabatan berpindah.
+                    Akun {jabatanStruktural} tidak dapat dihapus sendiri. Hubungi Admin bila jabatan berpindah.
                   </p>
                 </li>
               )}
