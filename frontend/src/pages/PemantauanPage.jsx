@@ -8,6 +8,7 @@ import KartuNavy, { TabNavy } from '../components/KartuNavy'
 import { barisKlik } from '../utils/barisKlik'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
+import StatistikVisual from './statistik/StatistikVisual'
 
 // ---------------------------------------------------------------------------
 // Statistik (/statistik, dulu Pemantauan Proposal /pemantauan) — Ketua STMIK (juga bisa dibuka Ketua LPPM/Admin),
@@ -23,16 +24,6 @@ const rupiah = (v) => (v == null || v === '' ? '—' : `Rp ${Number(v).toLocaleS
 const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 const nama = (u) => u?.fullName || u?.name || '—'
 const bersih = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v !== false))
-
-function Kartu({ label, value, hint }) {
-  return (
-    <div className="card p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{value ?? '—'}</p>
-      {hint ? <p className="mt-0.5 text-xs text-slate-500">{hint}</p> : null}
-    </div>
-  )
-}
 
 function Halaman({ page, pages, onPage }) {
   if (pages <= 1) return null
@@ -179,32 +170,17 @@ export default function PemantauanPage() {
         </div>
       </PanelCari>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Ringkasan">
-        <Kartu label="Jumlah proposal" value={rk === undefined ? '…' : rk?.jumlahProposal} hint={filter.termasukDraft ? 'Termasuk draft' : 'Sudah diajukan'} />
-        <Kartu label="Dosen pengusul" value={rk === undefined ? '…' : rk?.jumlahDosenPengusul} />
-        <Kartu label="Total anggaran" value={rk === undefined ? '…' : rk ? rupiah(rk.totalAnggaran) : null} />
-        <Kartu label="Anggaran disetujui" value={rk === undefined ? '…' : rk ? rupiah(rk.anggaranDisetujui) : null} />
-      </section>
-
-      {rk ? (
-        <section className="card flex flex-wrap gap-x-6 gap-y-2 px-5 py-3 text-sm" aria-label="Per status">
-          {STATUS_URUT.filter((k) => rk.perStatus?.[k] != null).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => {
-                gantiTab('proposal')
-                setStatus(status === k ? '' : k)
-              }}
-              className={`inline-flex items-center gap-2 rounded-md px-1.5 py-0.5 ${status === k ? 'bg-navy-50 ring-1 ring-navy-200' : 'hover:bg-slate-50'}`}
-              aria-pressed={status === k}
-            >
-              <span className={`badge ${STATUS_COLOR[k] || 'badge-neutral'}`}>{STATUS_LABEL[k] || k}</span>
-              <strong className="tabular-nums text-slate-900">{rk.perStatus[k]}</strong>
-            </button>
-          ))}
-        </section>
-      ) : null}
+      {/* Kartu angka + diagram (pages/statistik); klik status di diagram = saring tabel */}
+      <StatistikVisual
+        filter={filter}
+        ringkasan={rk}
+        status={status}
+        onStatus={(st) => {
+          gantiTab('proposal')
+          setStatus(st)
+          setPage(1)
+        }}
+      />
 
       {/* Tabel bingkai navy (M1) + tab di kepala gelap */}
       <KartuNavy

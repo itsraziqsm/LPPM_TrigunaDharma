@@ -8,9 +8,10 @@ import { KepalaMasuk } from '../../components/PeriodeAktif'
 import { FolderPeriode, GrupTahun } from '../../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../../components/ArsipPeriode'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from '../ProposalDosen/constants'
+import useJejakMenu from '../../hooks/useJejakMenu'
 
 // ---------------------------------------------------------------------------
-// Ketua STMIK › Arsip Periode (/arsip-periode, detail /arsip-periode/detail/:id; hanya baca):
+// Ketua STMIK › Akademik › Arsip Periode (/arsip-periode, detail /arsip-periode/detail/:id; hanya baca):
 // semua periode sebagai folder (FolderPeriode) dalam dropdown per tahun (GrupTahun). Jumlah =
 // proposal yang sudah diajukan (GET /monitoring/proposals semua halaman, tanpa draft) per periode.
 // Klik folder → 3 terbaru + "Lihat lebih banyak" → detail periode (cari + filter status);
@@ -33,6 +34,7 @@ const keItem = (p) => ({
 export default function ArsipPeriodeStmikPage() {
   const { id: detailParam } = useParams()
   const navigate = useNavigate()
+  const induk = useJejakMenu('akademik')
   const [periodes, setPeriodes] = useState(null)
   const [proposals, setProposals] = useState(null)
   const [failed, setFailed] = useState(false)
@@ -76,6 +78,7 @@ export default function ArsipPeriodeStmikPage() {
         kosong="Belum ada proposal yang diajukan di periode ini."
         memuat={!failed && (periodes === null || proposals === null)}
         gagal={failed}
+        induk={induk}
       />
     )
   }
@@ -86,7 +89,7 @@ export default function ArsipPeriodeStmikPage() {
     <div className="page space-y-6">
       <KepalaMasuk
         judul="Arsip Periode"
-        crumbs={[{ label: 'Arsip Periode' }]}
+        crumbs={[...induk, { label: 'Arsip Periode' }]}
         desc="Seluruh periode penelitian & pengabdian beserta jumlah proposal yang diajukan di tiap periode. Hanya baca."
         stats={[
           { label: 'Total periode', value: periodes === null ? '…' : periodes.length },

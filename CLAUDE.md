@@ -359,14 +359,19 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   aktifkan, hapus versi riwayat), Backup Data. Unduhan blob lewat `utils/unduhBlob.js` (`simpanBlob`).
 - Menu **Ketua STMIK** (`STMIK_NAV_ITEMS`, peran pertama `ketua_stmik`, hanya baca): Dashboard (adapter
   `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Akademik** › **Daftar Dokumen** ›
-  **Proposal** / **Laporan** (`pages/stmik/DaftarDokumenStmikPage.jsx` prop `tipe`, `/daftar-dokumen/proposal|laporan`: data semua
+  **Proposal** / **Laporan** (+ **Arsip Periode**, lihat bawah) (`pages/stmik/DaftarDokumenStmikPage.jsx` prop `tipe`, `/daftar-dokumen/proposal|laporan`: data semua
   halaman (`utils/semuaHalaman.js`) dari `GET /monitoring/proposals` / `GET /laporan`, tanpa draft; tampil = periode **aktif** + yang
   masih **berjalan** di luar periode aktif (proposal: bukan ditolak & tahapan < 4; laporan: diajukan/review/revisi); `KepalaMasuk`
   (Ditampilkan/Periode aktif/Berjalan di luar), `PanelCari` (Cakupan, Status, Jenis), `KartuNavy`, paginasi 10; baris proposal → Detail
   Kegiatan, laporan → `/laporan-masuk/detail/:id` (`LaporanMasukDetailPage` mode `bacaSaja`: tanpa reviewer/keputusan/hapus)),
   **Statistik** (dulu Pemantauan Proposal; `PemantauanPage.jsx`, `/statistik`, `/pemantauan` dialihkan: `PanelCari` — cari + Filter
-  periode/jenis/termasuk draft (langsung berlaku), kartu ringkasan + per status (klik = saring), tab Proposal (`/monitoring/proposals`,
-  urut) & Dosen pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Arsip Periode** (`pages/stmik/ArsipPeriodeStmikPage.jsx`,
+  periode/jenis/termasuk draft (langsung berlaku), lalu `pages/statistik/StatistikVisual.jsx` (semua halaman `/monitoring/proposals`,
+  `/laporan`, `/proposals` mengikuti filter): kartu angka (jumlah proposal, jumlah laporan, dosen pengusul, anggaran disetujui) + diagram
+  (`statistik/Grafik.jsx`, tanpa pustaka chart; warna `statistik/warna.js` dicek validator dataviz, selalu berlabel + persen): donat
+  Keputusan proposal (diproses/revisi/diterima/ditolak + tingkat penerimaan; klik = saring tabel), donat Laporan terhadap proposal
+  diterima (+ status laporan), batang 100% Penelitian vs pengabdian (jumlah, anggaran diajukan/disetujui, laporan), Topik paling sering
+  (8 teratas bidang / rumpun ilmu / kata kunci); di bawahnya tabel tab Proposal (`/monitoring/proposals`, urut) & Dosen pengusul
+  (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Akademik** › **Arsip Periode** (`pages/stmik/ArsipPeriodeStmikPage.jsx`,
   `/arsip-periode[/detail/:id]`: folder per tahun seperti Arsip Kegiatan, jumlah = proposal diajukan per periode dari `/monitoring/proposals`),
   **Cetak Laporan** (`pages/cetak/CetakRekapStmikPage.jsx`, `/cetak-laporan` — rute sama dengan mahasiswa, dipilih per peran; PDF
   `pages/cetak/rekapStmikPDF.js`: rekap kegiatan per periode (satu/semua, opsional daftar proposal), rekap tahunan (+ per jenis), rekap
@@ -551,7 +556,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
   rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti
   pohon sidebar peran pertama: `hooks/useJejakMenu.js` (`'akademik'|'dokumentasi'`) menambah induk per peran (Admin: Akademik › Dokumen
-  Masuk/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template; Ketua LPPM: Dokumentasi › Cetak Dokumen/Luaran; Ketua STMIK: Akademik › Daftar Dokumen). Halaman Cetak memakai `CetakBreadcrumb`.
+  Masuk/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template; Ketua LPPM: Dokumentasi › Cetak Dokumen/Luaran; Ketua STMIK: Akademik › Daftar Dokumen/Arsip Periode). Halaman Cetak memakai `CetakBreadcrumb`.
 - **Panel cari standar** `src/components/PanelCari.jsx` (+ `PilihanFilter`): kolom cari · tombol **Filter** (panel filter hanya saat
   dibuka, jumlah filter aktif di tombol) · **Cari**; baris "Filter aktif" (chip × + Hapus semua) hanya bila ada filter; `bare` = tanpa
   kartu; responsif container query. Dipakai semua pencarian halaman: Dokumen Masuk (`CariFilterMasuk`), Pengguna, Luaran Dosen,

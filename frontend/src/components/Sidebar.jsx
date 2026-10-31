@@ -60,8 +60,8 @@ const ADMIN_NAV_ITEMS = [
   { path: '/backup', label: 'Backup Data', icon: <DatabaseBackup className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
 ]
 
-// Ketua STMIK (hanya baca): Akademik (Daftar Dokumen › Proposal/Laporan), Statistik (dulu Pemantauan
-// Proposal), Arsip Periode, Cetak Laporan, Monitor Pengguna (tampilan Pengguna mode baca).
+// Ketua STMIK (hanya baca): Akademik (Daftar Dokumen › Proposal/Laporan, Arsip Periode), Statistik (dulu
+// Pemantauan Proposal), Cetak Laporan, Monitor Pengguna (tampilan Pengguna mode baca).
 const STMIK_NAV_ITEMS = [
   {
     path: '/akademik', label: 'Akademik', icon: <GraduationCap className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />,
@@ -73,10 +73,10 @@ const STMIK_NAV_ITEMS = [
           { path: '/daftar-dokumen/laporan', label: 'Laporan', icon: <FileCheck2 className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
         ],
       },
+      { path: '/arsip-periode', label: 'Arsip Periode', icon: <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
   { path: '/statistik', label: 'Statistik', icon: <ChartNoAxesColumn className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
-  { path: '/arsip-periode', label: 'Arsip Periode', icon: <Archive className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
   { path: '/cetak-laporan', label: 'Cetak Laporan', icon: <Printer className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
   { path: '/users', label: 'Monitor Pengguna', icon: <Users className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
 ]

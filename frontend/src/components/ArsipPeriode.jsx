@@ -77,7 +77,8 @@ export function PratinjauArsip({ periode: dipilih, itemsOf, satuan, detailTo, ST
 const LIMIT = 10
 const JENIS = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
 
-export function DetailArsip({ judulMenu, kembaliTo, periode, items, satuan, STATUS, kosong, memuat, gagal }) {
+// induk = jejak menu di depan (mis. Akademik untuk Ketua STMIK).
+export function DetailArsip({ judulMenu, kembaliTo, periode, items, satuan, STATUS, kosong, memuat, gagal, induk = [] }) {
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
@@ -97,7 +98,7 @@ export function DetailArsip({ judulMenu, kembaliTo, periode, items, satuan, STAT
           <ArrowLeft className="size-4" aria-hidden="true" />
           {judulMenu}
         </Link>
-        <Breadcrumb items={[{ label: judulMenu, to: kembaliTo }, { label: periode?.nama || 'Detail' }]} />
+        <Breadcrumb items={[...induk, { label: judulMenu, to: kembaliTo }, { label: periode?.nama || 'Detail' }]} />
       </div>
 
       {gagal ? (
