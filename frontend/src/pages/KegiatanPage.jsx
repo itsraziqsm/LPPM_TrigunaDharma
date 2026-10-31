@@ -10,6 +10,7 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { barisKlik } from '../utils/barisKlik'
 import KartuNavy from '../components/KartuNavy'
+import { StatusCard } from '../components/KepalaStatus'
 
 // ---------------------------------------------------------------------------
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
@@ -189,22 +190,6 @@ const dateTime = (v) =>
   v ? new Date(v).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 
 // Kartu angka sesuai desain: ubin ikon, angka besar, label. Juga dipakai Project Saya (mahasiswa).
-export function StatusCard({ icon: Icon, tone, value, label, to }) {
-  const body = (
-    <>
-      <span className={`grid size-10 place-items-center rounded-lg sm:size-16 sm:rounded-xl ${tone.tile}`}>
-        <Icon className="size-5 sm:size-8" strokeWidth={1.8} aria-hidden="true" />
-      </span>
-      <span className={`mt-2 font-serif text-2xl font-medium leading-none tabular-nums lining-nums sm:mt-3 sm:text-[2rem] ${tone.text}`}>
-        {value === null || value === undefined ? '—' : value}
-      </span>
-      <span className="mt-1.5 text-xs leading-tight text-slate-500 sm:text-sm">{label}</span>
-    </>
-  )
-  const cls = 'card flex flex-col items-center px-2 py-3 text-center sm:px-5 sm:py-6'
-  return <li>{to ? <Link to={to} className={`${cls} transition-shadow hover:shadow-md`}>{body}</Link> : <div className={cls}>{body}</div>}</li>
-}
-
 function TipeTab({ active, onClick, children }) {
   return (
     <button

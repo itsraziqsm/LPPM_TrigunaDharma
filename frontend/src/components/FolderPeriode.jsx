@@ -8,7 +8,7 @@ import { ChevronRight } from 'lucide-react'
 //                   lembar putih bertab berisi judul periode + jumlah kegiatan saja (Ubah/Hapus ada di
 //                   halaman Detail Periode → Pengaturan).
 //   GrupTahun     — dropdown per TAHUN (bukan per semester) berisi folder-folder periode;
-//                   buka/tutup diingat di localStorage (`kunci`), bawaan: tahun terbaru terbuka.
+//                   bawaan: semua tahun TERTUTUP (tidak diingat; prop `kunci` lama diabaikan).
 // Tanpa gradien (aturan desain Navy Akademik).
 // ---------------------------------------------------------------------------
 
@@ -55,29 +55,13 @@ export function FolderPeriode({ periode, jumlah, terpilih = false, onClick, satu
   )
 }
 
-function bacaBuka(kunci) {
-  try {
-    return JSON.parse(localStorage.getItem(kunci) || '{}')
-  } catch {
-    return {}
-  }
-}
-
 // periodes dikelompokkan per `tahun` (terbaru dulu); children(periodesTahunItu) merender isi grup.
-export function GrupTahun({ periodes, kunci, children }) {
+export function GrupTahun({ periodes, children }) {
   const tahunList = [...new Set(periodes.map((p) => p.tahun))].sort((a, b) => b - a)
-  const [buka, setBuka] = useState(() => bacaBuka(kunci))
-  const terbuka = (t) => buka[t] ?? t === tahunList[0]
-  const toggle = (t) =>
-    setBuka((prev) => {
-      const next = { ...prev, [t]: !(prev[t] ?? t === tahunList[0]) }
-      try {
-        localStorage.setItem(kunci, JSON.stringify(next))
-      } catch {
-        /* abaikan */
-      }
-      return next
-    })
+  // Semua tahun tertutup saat halaman dibuka; buka/tutup hanya selama halaman tampil.
+  const [buka, setBuka] = useState({})
+  const terbuka = (t) => Boolean(buka[t])
+  const toggle = (t) => setBuka((prev) => ({ ...prev, [t]: !prev[t] }))
 
   return (
     <div className="space-y-4">

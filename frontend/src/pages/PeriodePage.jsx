@@ -5,9 +5,10 @@ import useAuthStore from '../store/authStore'
 import { getRoleNames, EMPTY_FORM, JENIS_LABEL } from './periode/periodeConstants'
 import { Badge, Modal } from './periode/periodeComponents'
 import ProposalPanel from './periode/ProposalPanel'
-import { KepalaMasuk } from '../components/PeriodeAktif'
+import KepalaStatus from '../components/KepalaStatus'
+import { TONE } from '../utils/toneStatus'
 import useJejakMenu from '../hooks/useJejakMenu'
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Trash2, CalendarRange, CircleCheck, FileText } from 'lucide-react'
 import Breadcrumb from '../components/Breadcrumb'
 import { proposalApi } from '../api/proposal'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
@@ -236,7 +237,7 @@ export default function PeriodePage() {
   const daftar = (
     <>
       {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
-      <KepalaMasuk
+      <KepalaStatus
         judul="Periode Penelitian & Pengabdian"
         crumbs={[...induk, { label: 'Periode' }]}
         desc={
@@ -258,10 +259,10 @@ export default function PeriodePage() {
             </button>
           ) : null
         }
-        stats={[
-          { label: 'Total Periode', value: periodes.length },
-          { label: 'Periode Aktif', value: periodes.filter((p) => p.isAktif).length },
-          { label: 'Total Kegiatan', value: Object.values(jumlah).reduce((n, v) => n + (Number(v) || 0), 0) },
+        kartu={[
+          { icon: CalendarRange, tone: TONE.navy, label: 'Total Periode', value: periodes.length },
+          { icon: CircleCheck, tone: TONE.hijau, label: 'Periode Aktif', value: periodes.filter((p) => p.isAktif).length },
+          { icon: FileText, tone: TONE.navy, label: 'Total Kegiatan', value: Object.values(jumlah).reduce((n, v) => n + (Number(v) || 0), 0) },
         ]}
       />
 

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CalendarRange, FolderOpen, ListChecks } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { layarPonsel } from '../utils/layar'
 import { periodeApi } from '../api/periode'
 import { proposalDosenApi } from '../api/Proposaldosen'
-import { KepalaMasuk } from '../components/PeriodeAktif'
+import KepalaStatus from '../components/KepalaStatus'
+import { TONE } from '../utils/toneStatus'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
@@ -99,14 +101,14 @@ export default function PeriodeDosenPage() {
   return (
     <div className="page space-y-6">
       {/* Kepala standar (M2) */}
-      <KepalaMasuk
+      <KepalaStatus
         judul="Arsip Kegiatan"
         crumbs={[{ label: 'Arsip Kegiatan' }]}
         desc="Periode penelitian & pengabdian beserta jumlah kegiatan Anda (sebagai ketua atau anggota) di tiap periode."
-        stats={[
-          { label: 'Total periode', value: periodes === null ? '…' : periodes.length },
-          { label: 'Kegiatan saya', value: kegiatan === null ? '…' : kegiatan.length },
-          { label: 'Periode berisi', value: kegiatan === null ? '…' : Object.keys(perPeriode).length },
+        kartu={[
+          { icon: CalendarRange, tone: TONE.navy, label: 'Total periode', value: periodes === null ? '…' : periodes.length },
+          { icon: ListChecks, tone: TONE.navy, label: 'Kegiatan saya', value: kegiatan === null ? '…' : kegiatan.length },
+          { icon: FolderOpen, tone: TONE.hijau, label: 'Periode berisi', value: kegiatan === null ? '…' : Object.keys(perPeriode).length },
         ]}
       />
 

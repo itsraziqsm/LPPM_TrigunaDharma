@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { CalendarRange, CircleCheck, FolderKanban } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
-import { KepalaMasuk } from '../components/PeriodeAktif'
+import KepalaStatus from '../components/KepalaStatus'
+import { TONE } from '../utils/toneStatus'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
 import { layarPonsel } from '../utils/layar'
@@ -95,14 +97,14 @@ export default function RiwayatProjectPage() {
   return (
     <div className="page space-y-6">
       {/* Kepala standar (M2) */}
-      <KepalaMasuk
+      <KepalaStatus
         judul="Arsip Project"
         crumbs={[{ label: 'Arsip Project' }]}
         desc="Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, per periode dan tahun."
-        stats={[
-          { label: 'Total project', value: data === null ? '…' : data.reduce((n, g) => n + g.projects.length, 0) },
-          { label: 'Periode', value: data === null ? '…' : data.length },
-          { label: 'Periode aktif', value: data === null ? '…' : periodes.filter((p) => p.isAktif).length },
+        kartu={[
+          { icon: FolderKanban, tone: TONE.navy, label: 'Total project', value: data === null ? '…' : data.reduce((n, g) => n + g.projects.length, 0) },
+          { icon: CalendarRange, tone: TONE.navy, label: 'Periode', value: data === null ? '…' : data.length },
+          { icon: CircleCheck, tone: TONE.hijau, label: 'Periode aktif', value: data === null ? '…' : periodes.filter((p) => p.isAktif).length },
         ]}
       />
 

@@ -379,10 +379,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users belum untuk ketua_stmik → 403 = ApiPending
   W-45). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
   Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
-- **Periode** (`PeriodePage`): kepala `KepalaMasuk` (prop `aksi` = tombol Tambah Periode untuk Ketua; kotak Total, Aktif, Dipilih).
+- **Periode** (`PeriodePage`): kepala `KepalaStatus` (gaya Status Penelitian dosen; prop `aksi` = tombol Tambah Periode untuk Ketua; kartu Total Periode, Periode Aktif, Total Kegiatan).
   Daftar periode = **folder** (`components/FolderPeriode.jsx`: `FolderPeriode` tema terang — bidang atas navy (penelitian) /
-  brass (pengabdian), lembar bertab berisi **judul + jumlah kegiatan** saja; `GrupTahun` = dropdown **per tahun**, diingat di
-  localStorage, bawaan tahun terbaru terbuka). Admin/Ketua: jumlah = `GET /proposals?periodeId=&limit=1` → `meta.total`; folder
+  brass (pengabdian), lembar bertab berisi **judul + jumlah kegiatan** saja; `GrupTahun` = dropdown **per tahun**, bawaan
+  **semua tertutup** (tidak diingat)). Admin/Ketua: jumlah = `GET /proposals?periodeId=&limit=1` → `meta.total`; folder
   tanpa tombol, klik → **Detail Periode** `/periode/detail/:id` (`PeriodePage` dengan param `id`): info (jenis, status, tahun,
   tanggal, jumlah kegiatan), kartu **Pengaturan** (Ubah = Ketua; Hapus = Ketua langsung / Admin "Ajukan hapus"; modal yang sama,
   setelah terhapus kembali ke `/periode`), lalu Kegiatan Periode (`ProposalPanel inline`, tab Proposal/Laporan). **Dosen** punya menu **Arsip Kegiatan** (`/arsip-kegiatan` → `PeriodeDosenPage`):
@@ -399,7 +399,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `components/PermintaanHapusDokumen.jsx` (Proposal Kegiatan: semua; Laporan Kegiatan: laporan) → Setujui & Hapus (password) / Tolak.
 - Menu **Mahasiswa** (`MAHASISWA_NAV_ITEMS`): Dashboard, grup **Project Saya** (`/project/penelitian`,
   `/project/pengabdian` → `LaporanHarianPage` prop `jenis`: daftar project = `GET /mahasiswa/laporan-harian/proposals`
-  disaring per jenis; kepala + 3 `StatusCard` (diekspor dari `KegiatanPage`) seperti Status Penelitian dosen: **Total Project**,
+  disaring per jenis; kepala + 3 `StatusCard` (`components/KepalaStatus.jsx`) seperti Status Penelitian dosen: **Total Project**,
   **Project Selesai** (tahap 4) & **Project Berlangsung** (belum tahap 4, bukan ditolak) — tahapan dari `GET /dosen/proposals/as-member`
   → pilih project (`?id=`) → Laporan Harian: tabel **Riwayat Laporan Harian** bergaya Riwayat dosen
   (bingkai navy, kepala gelap, `table-tight`, kolom/aksi tetap); tombol **Input Laporan Harian** → halaman satu formulir
@@ -408,7 +408,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `RiwayatProjectPage.jsx`; dulu menu "Periode" — diganti karena rancu dengan fitur Periode admin/ketua, `/periode` untuk
   mahasiswa dialihkan ke sini): project yang diikuti dikelompokkan per periode (hanya periode dari project tsb., digabung
   `GET /periode`); periode = **folder** (`FolderPeriode`, `satuan="project"`: judul + jumlah project) dalam dropdown **per tahun**
-  (`GrupTahun`, diingat di `localStorage.riwayatProjectTahunBuka`); klik folder → 3 project terbaru + Lihat lebih banyak → `/arsip-project/detail/:id`
+  (`GrupTahun`, bawaan tertutup); klik folder → 3 project terbaru + Lihat lebih banyak → `/arsip-project/detail/:id`
   (ponsel: langsung detail); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`), **Cetak Laporan** (`/cetak-laporan`, `pages/cetak/CetakLaporanHarianPage.jsx`: daftar project +
   Cetak rekap → `GET /mahasiswa/laporan-harian/:id` → PDF `pages/cetak/laporanHarianPDF.js`, sama dengan rekap di Project Saya). Semua dari API yang sudah ada.
@@ -573,8 +573,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Daftar Backup, Semua Versi template, "sebagai anggota tim" (Kegiatan dosen). Riwayat Kegiatan, Riwayat Laporan Harian & Daftar Luaran
   memakai gaya yang sama. Tabel daftar baru wajib memakainya.
 - **Kepala ringkasan (M2)**: halaman yang **belum punya** kartu ringkasan memakai `KepalaMasuk` (3 kotak gaya Undangan): Backup Data,
-  Cetak Dokumen, Luaran (Ketua), Notifikasi, Arsip Kegiatan, Arsip Project, Cetak Laporan (selain Dokumen Masuk, Pengguna, Periode
-  yang sudah). Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
+  Cetak Dokumen, Luaran (Ketua), Notifikasi, Cetak Laporan (selain Dokumen Masuk & Pengguna yang sudah). **Semua halaman Periode/Arsip**
+  (Periode admin/ketua, Arsip Kegiatan, Arsip Project, Arsip Periode Ketua STMIK) memakai **`KepalaStatus`** (`components/KepalaStatus.jsx`:
+  judul + deskripsi kiri, breadcrumb kanan, aksi, 3 `StatusCard` ikon berubin; nada di `utils/toneStatus.js`), sama dengan Kegiatan dosen. Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
   Manajemen Template (kartu template aktif), Undangan & Penugasan Review.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):

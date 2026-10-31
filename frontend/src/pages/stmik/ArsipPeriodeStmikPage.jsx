@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CalendarRange, CircleCheck, FileText } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { layarPonsel } from '../../utils/layar'
 import { periodeApi } from '../../api/periode'
 import { monitoringApi } from '../../api/monitoring'
 import { semuaHalaman } from '../../utils/semuaHalaman'
-import { KepalaMasuk } from '../../components/PeriodeAktif'
+import KepalaStatus from '../../components/KepalaStatus'
+import { TONE } from '../../utils/toneStatus'
 import { FolderPeriode, GrupTahun } from '../../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../../components/ArsipPeriode'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from '../ProposalDosen/constants'
@@ -87,14 +89,14 @@ export default function ArsipPeriodeStmikPage() {
 
   return (
     <div className="page space-y-6">
-      <KepalaMasuk
+      <KepalaStatus
         judul="Arsip Periode"
         crumbs={[...induk, { label: 'Arsip Periode' }]}
         desc="Seluruh periode penelitian & pengabdian beserta jumlah proposal yang diajukan di tiap periode. Hanya baca."
-        stats={[
-          { label: 'Total periode', value: periodes === null ? '…' : periodes.length },
-          { label: 'Periode aktif', value: periodes === null ? '…' : periodes.filter((p) => p.isAktif).length },
-          { label: 'Total proposal', value: proposals === null ? '…' : proposals.length },
+        kartu={[
+          { icon: CalendarRange, tone: TONE.navy, label: 'Total periode', value: periodes === null ? '…' : periodes.length },
+          { icon: CircleCheck, tone: TONE.hijau, label: 'Periode aktif', value: periodes === null ? '…' : periodes.filter((p) => p.isAktif).length },
+          { icon: FileText, tone: TONE.navy, label: 'Total proposal', value: proposals === null ? '…' : proposals.length },
         ]}
       />
 
