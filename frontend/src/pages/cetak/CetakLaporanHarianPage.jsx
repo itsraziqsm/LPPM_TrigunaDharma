@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Printer } from 'lucide-react'
+import { FolderKanban, HeartHandshake, Microscope, Printer } from 'lucide-react'
 import { laporanHarianApi } from '../../api/laporanHarian'
-import { KepalaMasuk } from '../../components/PeriodeAktif'
+import KepalaStatus from '../../components/KepalaStatus'
+import { TONE } from '../../utils/toneStatus'
 import PanelCari from '../../components/PanelCari'
 import { alertDialog } from '../../utils/dialog'
 import { downloadRekap } from './laporanHarianPDF'
@@ -54,14 +55,14 @@ export default function CetakLaporanHarianPage() {
   return (
     <div className="page space-y-6">
       {/* Kepala standar (M2) */}
-      <KepalaMasuk
+      <KepalaStatus
         judul="Cetak Laporan"
         crumbs={[{ label: 'Cetak Laporan' }]}
         desc="Cetak rekap laporan harian tiap project sebagai PDF."
-        stats={[
-          { label: 'Total project', value: projects === null ? '…' : projects.length },
-          { label: 'Penelitian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'penelitian').length },
-          { label: 'Pengabdian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'pengabdian').length },
+        kartu={[
+          { icon: FolderKanban, tone: TONE.navy, label: 'Total project', value: projects === null ? '…' : projects.length },
+          { icon: Microscope, tone: TONE.navy, label: 'Penelitian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'penelitian').length },
+          { icon: HeartHandshake, tone: TONE.hijau, label: 'Pengabdian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'pengabdian').length },
         ]}
       />
 

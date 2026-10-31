@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarRange, Coins, FolderOpen, Printer } from 'lucide-react'
+import { CalendarRange, Coins, FileText, FolderOpen, Printer } from 'lucide-react'
 import { monitoringApi } from '../../api/monitoring'
 import { periodeApi } from '../../api/periode'
 import { semuaHalaman } from '../../utils/semuaHalaman'
-import { KepalaMasuk } from '../../components/PeriodeAktif'
+import KepalaStatus from '../../components/KepalaStatus'
+import { TONE } from '../../utils/toneStatus'
 import { alertDialog } from '../../utils/dialog'
 import { agregat, rekapAnggaranPDF, rekapPeriodePDF, rekapTahunanPDF, rupiah } from './rekapStmikPDF'
 
@@ -16,6 +17,13 @@ import { agregat, rekapAnggaranPDF, rekapPeriodePDF, rekapTahunanPDF, rupiah } f
 //   3. Rekap anggaran disetujui (filter tahun & jenis; + realisasi laporan)
 // ---------------------------------------------------------------------------
 
+// Angka ringkas untuk kartu kepala (mis. Rp 30 jt).
+const rupiahRingkas = (v) => {
+  const n = Number(v || 0)
+  if (n >= 1e9) return `Rp ${(n / 1e9).toLocaleString('id-ID', { maximumFractionDigits: 1 })} M`
+  if (n >= 1e6) return `Rp ${(n / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`
+  return rupiah(n)
+}
 const urutPeriode = (a, b) => (Number(b.tahun) || 0) - (Number(a.tahun) || 0) || String(a.nama).localeCompare(String(b.nama))
 
 function KartuCetak({ icon: Icon, judul, desc, ringkas, onCetak, disabled, children }) {
@@ -96,14 +104,14 @@ export default function CetakRekapStmikPage() {
 
   return (
     <div className="page space-y-6">
-      <KepalaMasuk
+      <KepalaStatus
         judul="Cetak Laporan"
         crumbs={[{ label: 'Cetak Laporan' }]}
         desc="Cetak rekap kegiatan per periode, rekap tahunan, dan rekap anggaran disetujui sebagai PDF. Draft tidak dihitung."
-        stats={[
-          { label: 'Periode', value: memuat ? '…' : (periodes || []).length },
-          { label: 'Proposal diajukan', value: memuat ? '…' : total.jumlah },
-          { label: 'Anggaran disetujui', value: memuat ? '…' : rupiah(total.disetujui) },
+        kartu={[
+          { icon: CalendarRange, tone: TONE.navy, label: 'Periode', value: memuat ? '…' : (periodes || []).length },
+          { icon: FileText, tone: TONE.navy, label: 'Proposal diajukan', value: memuat ? '…' : total.jumlah },
+          { icon: Coins, tone: TONE.hijau, label: 'Anggaran disetujui', value: memuat ? '…' : rupiahRingkas(total.disetujui) },
         ]}
       />
 

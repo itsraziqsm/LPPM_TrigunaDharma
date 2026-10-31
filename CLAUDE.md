@@ -576,8 +576,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Daftar Backup, Semua Versi template, "sebagai anggota tim" (Kegiatan dosen). Riwayat Kegiatan, Riwayat Laporan Harian & Daftar Luaran
   memakai gaya yang sama. Tabel daftar baru wajib memakainya.
 - **Kepala ringkasan (M2)**: halaman yang **belum punya** kartu ringkasan memakai `KepalaMasuk` (3 kotak gaya Undangan): Backup Data,
-  Cetak Dokumen, Luaran (Ketua), Notifikasi, Cetak Laporan (selain Dokumen Masuk & Pengguna yang sudah). **Semua halaman Periode/Arsip**
-  (Periode admin/ketua, Arsip Kegiatan, Arsip Project, Arsip Periode Ketua STMIK) memakai **`KepalaStatus`** (`components/KepalaStatus.jsx`:
+  Cetak Dokumen, Luaran (Ketua), Notifikasi (selain Dokumen Masuk & Pengguna yang sudah). **Semua halaman Periode/Arsip & Cetak Laporan**
+  (Periode admin/ketua, Arsip Kegiatan, Arsip Project, Arsip Periode Ketua STMIK, Cetak Laporan mahasiswa & Ketua STMIK) memakai **`KepalaStatus`** (`components/KepalaStatus.jsx`:
   judul + deskripsi kiri, breadcrumb kanan, aksi, 3 `StatusCard` ikon berubin; nada di `utils/toneStatus.js`), sama dengan Kegiatan dosen. Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
   Manajemen Template (kartu template aktif), Undangan & Penugasan Review.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
