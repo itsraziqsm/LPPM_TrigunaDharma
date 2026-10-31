@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
 import useAuthStore from '../store/authStore'
+import { catatKunjungan } from '../utils/riwayat'
 import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
@@ -86,6 +87,12 @@ export default function DashboardLayout({ page, jenis }) {
     enabled: !selfScrolling,
     resetKey: ready ? location.pathname : 'memuat',
   })
+
+  // Riwayat halaman per user → pintasan dashboard "terakhir digunakan" (utils/riwayat.js).
+  const userId = user?.id
+  useEffect(() => {
+    if (ready) catatKunjungan(userId, location.pathname)
+  }, [ready, userId, location.pathname])
 
   if (!user || loading) {
     return (

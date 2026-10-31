@@ -308,7 +308,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`namaSapaan`), tanggal & peran, muat ulang; **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
   (`PintasanSection`: `model.shortcuts` sebagai kartu **judul saja** (`desc` jadi tooltip) `ShortcutStrip` — baris digeser di ponsel,
   grid membungkus di desktop, hover = sedikit membesar (`scale-[1.03]`, `transition-[scale,…]`); isi pintasan mengikuti menu
-  sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`), lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
+  sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`); tampil **maks 4**
+  (`utils/riwayat.js` `pilihPintasan`: halaman yang terakhir dibuka user dulu — `DashboardLayout` mencatat tiap pindah halaman per user di
+  localStorage `riwayatHalaman:<id>` — sisanya urutan adapter = paling penting; tanpa API), lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
   **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
@@ -540,7 +542,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
   kaca pembesar melayang kanan bawah (bulat; hover/fokus melebar ke kiri jadi pil "Telusuri" + ikon; disembunyikan saat ada modal, `.global-search-fab` di
   `index.css`) atau **Ctrl/⌘ + F** membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
-  kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc). Latar
+  kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc; kolom kosong = **riwayat per user** "Terakhir
+  dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>`, + Hapus riwayat; tanpa API)). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
   `data-scroll-container` (wadah gulir `DashboardLayout`, daftar Manajemen User) — wadah gulir baru
   wajib diberi atribut ini. Kunci yang sama berlaku **global untuk semua modal** (`html:has([aria-modal='true'],

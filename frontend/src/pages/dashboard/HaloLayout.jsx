@@ -3,6 +3,8 @@ import Breadcrumb from '../../components/Breadcrumb'
 import { Check, FilePen, Files, NotebookText, RefreshCw, Timer, UserPlus } from 'lucide-react'
 import ApiPending from '../../components/ApiPending'
 import { ShortcutStrip } from './components'
+import useAuthStore from '../../store/authStore'
+import { MAKS_PINTASAN, pilihPintasan } from '../../utils/riwayat'
 import { formatClock, formatLongDate } from './format'
 
 // ---------------------------------------------------------------------------
@@ -75,12 +77,14 @@ export function HaloHeader({ now, name, roleLabel, loading, refreshing, updatedA
 }
 
 // ── Bagian 2: Pintasan (baris kartu horizontal) + kartu angka ───────────────
+// Maks MAKS_PINTASAN (4): yang terakhir digunakan user dulu, sisanya urutan adapter (paling penting).
 export function PintasanSection({ shortcuts, children }) {
+  const userId = useAuthStore((s) => s.user?.id)
   if ((!shortcuts || shortcuts.length === 0) && !children) return null
   return (
     <section aria-labelledby="pintasan" className="space-y-3">
       <SectionTitle id="pintasan">Pintasan</SectionTitle>
-      <ShortcutStrip items={shortcuts} />
+      <ShortcutStrip items={pilihPintasan(userId, shortcuts, MAKS_PINTASAN)} />
       {children}
     </section>
   )

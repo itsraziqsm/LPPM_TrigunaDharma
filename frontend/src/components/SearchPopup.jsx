@@ -12,7 +12,8 @@ import { CornerDownLeft, Search, X } from 'lucide-react'
 // badgeClass?, disabled?, note? }]>; `group` berurutan dirender sebagai judul
 // kelompok. onSelect(item, q) saat rekomendasi dipilih; onSubmit(q) (opsional)
 // menambah baris pertama "Tampilkan semua hasil ...". decorate(item) (opsional)
-// dipanggil saat render. fetchRecs wajib stabil (useCallback).
+// dipanggil saat render. fetchRecs wajib stabil (useCallback). recent (opsional) = item yang
+// tampil saat kolom kosong (riwayat, kelompok "Terakhir dibuka"); onClearRecent menghapusnya.
 // ---------------------------------------------------------------------------
 
 function PopupPanel({
@@ -28,6 +29,8 @@ function PopupPanel({
   decorate,
   hint,
   emptyText = 'Tidak ada hasil. Coba kata kunci lain.',
+  recent = [],
+  onClearRecent,
   children,
 }) {
   const [q, setQ] = useState(initialQuery)
@@ -42,7 +45,8 @@ function PopupPanel({
   const enough = term.length >= minChars
   const loading = enough && (recs.query !== term || recs.src !== fetchRecs)
   const fetched = enough && !loading ? recs.items : []
-  const items = decorate ? fetched.map(decorate) : fetched
+  const riwayat = !term && recent.length ? recent.map((r) => ({ ...r, group: 'Terakhir dibuka' })) : []
+  const items = riwayat.length ? riwayat : decorate ? fetched.map(decorate) : fetched
   const submitRow = onSubmit && term ? { key: '__submit', submit: true } : null
   const rows = submitRow ? [submitRow, ...items] : items
 
@@ -114,7 +118,15 @@ function PopupPanel({
   }
 
   let body
-  if (!enough) {
+  if (riwayat.length) {
+    body = onClearRecent ? (
+      <p className="px-5 pb-3 text-right">
+        <button type="button" onClick={onClearRecent} className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-navy-800 hover:underline">
+          Hapus riwayat
+        </button>
+      </p>
+    ) : null
+  } else if (!enough) {
     body = (
       <p className="px-5 py-8 text-center text-sm text-slate-500">
         {term ? `Ketik minimal ${minChars} karakter untuk melihat rekomendasi.` : hint || 'Mulai mengetik untuk melihat rekomendasi.'}
