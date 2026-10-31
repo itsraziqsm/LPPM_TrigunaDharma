@@ -4,6 +4,8 @@ import { monitoringApi } from '../api/monitoring'
 import { periodeApi } from '../api/periode'
 import UserAvatar from '../components/UserAvatar'
 import Breadcrumb from '../components/Breadcrumb'
+import KartuNavy, { TabNavy } from '../components/KartuNavy'
+import { barisKlik } from '../utils/barisKlik'
 import useJejakMenu from '../hooks/useJejakMenu'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
@@ -36,8 +38,8 @@ function Kartu({ label, value, hint }) {
 function Halaman({ page, pages, onPage }) {
   if (pages <= 1) return null
   return (
-    <footer className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm">
-      <span className="text-slate-500">
+    <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
+      <span className="tabular-nums">
         Halaman {page} dari {pages}
       </span>
       <span className="flex gap-2">
@@ -48,7 +50,7 @@ function Halaman({ page, pages, onPage }) {
           Berikutnya
         </button>
       </span>
-    </footer>
+    </nav>
   )
 }
 
@@ -206,56 +208,42 @@ export default function PemantauanPage() {
         </section>
       ) : null}
 
-      <section className="card overflow-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
-          <div role="tablist" aria-label="Tampilan" className="flex gap-1 rounded-lg bg-slate-100 p-1">
-            {[
-              ['proposal', 'Proposal'],
-              ['dosen', 'Dosen pengusul'],
-            ].map(([k, l]) => (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={tab === k}
-                onClick={() => gantiTab(k)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === k ? 'bg-white text-navy-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                {l}
+      {/* Tabel bingkai navy (M1) + tab di kepala gelap */}
+      <KartuNavy
+        id="daftar-pemantauan"
+        judul={tab === 'dosen' ? 'Dosen Pengusul' : 'Daftar Proposal'}
+        desc={tab === 'dosen' ? 'Urut jumlah proposal terbanyak. Klik baris untuk melihat proposal dosen itu.' : 'Klik baris untuk membuka detail kegiatan (baca saja).'}
+        badge={list.loading ? '…' : `${list.total} ${tab === 'dosen' ? 'dosen' : 'proposal'}`}
+        tab={<TabNavy label="Tampilan" value={tab} onChange={gantiTab} items={[['proposal', 'Proposal'], ['dosen', 'Dosen pengusul']]} />}
+      >
+        {tab === 'proposal' ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {status ? (
+              <button type="button" onClick={() => setStatus('')} className="btn btn-ghost btn-sm">
+                Status: {STATUS_LABEL[status]} ×
               </button>
-            ))}
+            ) : null}
+            <label htmlFor="pm-urut" className="text-sm text-slate-500">
+              Urutkan
+            </label>
+            <select id="pm-urut" className="input w-auto py-1.5" value={urut} onChange={(e) => setUrut(e.target.value)}>
+              <option value="terbaru">Terbaru</option>
+              <option value="anggaran">Anggaran terbesar</option>
+              <option value="judul">Judul</option>
+              <option value="pengusul">Pengusul</option>
+            </select>
           </div>
-          {tab === 'proposal' ? (
-            <span className="flex flex-wrap items-center gap-2">
-              {status ? (
-                <button type="button" onClick={() => setStatus('')} className="btn btn-ghost btn-sm">
-                  Status: {STATUS_LABEL[status]} ×
-                </button>
-              ) : null}
-              <label htmlFor="pm-urut" className="text-sm text-slate-500">
-                Urutkan
-              </label>
-              <select id="pm-urut" className="input w-auto py-1.5" value={urut} onChange={(e) => setUrut(e.target.value)}>
-                <option value="terbaru">Terbaru</option>
-                <option value="anggaran">Anggaran terbesar</option>
-                <option value="judul">Judul</option>
-                <option value="pengusul">Pengusul</option>
-              </select>
-            </span>
-          ) : (
-            <span className="text-sm text-slate-500">Urut jumlah proposal terbanyak</span>
-          )}
-        </header>
+        ) : null}
 
         {list.loading ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat data…</p>
+          <p className="py-10 text-center text-sm text-slate-500">Memuat data…</p>
         ) : list.failed ? (
-          <p className="px-5 py-10 text-center text-sm text-red-700">Data pemantauan gagal dimuat.</p>
+          <p className="py-10 text-center text-sm text-red-700">Data pemantauan gagal dimuat.</p>
         ) : list.items.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">Tidak ada data untuk filter ini.</p>
+          <p className="py-10 text-center text-sm text-slate-500">Tidak ada data untuk filter ini.</p>
         ) : tab === 'proposal' ? (
-          <div className="table-wrap rounded-none border-0">
-            <table className="table">
+          <div className="table-wrap">
+            <table className="table table-tight">
               <thead>
                 <tr>
                   <th scope="col">Proposal</th>
@@ -269,13 +257,7 @@ export default function PemantauanPage() {
               </thead>
               <tbody>
                 {list.items.map((p) => (
-                  <tr
-                    key={p.id}
-                    tabIndex={0}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => navigate(`/kegiatan/${p.jenis}/detail/${p.id}`)}
-                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/kegiatan/${p.jenis}/detail/${p.id}`)}
-                  >
+                  <tr key={p.id} {...barisKlik(() => navigate(`/kegiatan/${p.jenis}/detail/${p.id}`), p.judul)}>
                     <td className="min-w-56">
                       <span className="block font-semibold text-slate-900">{p.judul}</span>
                       <span className="block text-xs text-slate-500">
@@ -320,8 +302,8 @@ export default function PemantauanPage() {
             </table>
           </div>
         ) : (
-          <div className="table-wrap rounded-none border-0">
-            <table className="table">
+          <div className="table-wrap">
+            <table className="table table-tight">
               <thead>
                 <tr>
                   <th scope="col">Dosen</th>
@@ -335,14 +317,7 @@ export default function PemantauanPage() {
               </thead>
               <tbody>
                 {list.items.map((r) => (
-                  <tr
-                    key={r.dosen?.id}
-                    tabIndex={0}
-                    className="cursor-pointer hover:bg-slate-50"
-                    title="Lihat proposal dosen ini"
-                    onClick={() => lihatDosen(r.dosen)}
-                    onKeyDown={(e) => e.key === 'Enter' && lihatDosen(r.dosen)}
-                  >
+                  <tr key={r.dosen?.id} title="Lihat proposal dosen ini" {...barisKlik(() => lihatDosen(r.dosen), nama(r.dosen))}>
                     <td>
                       <span className="flex items-center gap-2">
                         <UserAvatar user={r.dosen} className="size-8 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
@@ -381,7 +356,7 @@ export default function PemantauanPage() {
           </div>
         )}
         <Halaman page={page} pages={pages} onPage={setPage} />
-      </section>
+      </KartuNavy>
     </div>
   )
 }

@@ -4,7 +4,9 @@ import Breadcrumb from './Breadcrumb'
 import PanelCari, { PilihanFilter } from './PanelCari'
 
 // Blok bersama Dokumen Masuk (Proposal & Laporan Kegiatan, lihat hooks/useDokumenMasuk):
-//   KepalaMasuk      — judul + breadcrumb, lalu kartu ringkasan (teks [+ aksi] + 3 kotak angka; gaya Undangan)
+//   KepalaMasuk      — judul + breadcrumb, lalu kartu ringkasan (teks [+ aksi] + 3 kotak angka; gaya Undangan).
+//                      M2: dipasang pada halaman yang belum punya kartu ringkasan; halaman yang sudah punya
+//                      (Kegiatan, Project Saya, Pemantauan, Manajemen Template) tetap dengan ringkasannya.
 //   PeriodeAktif     — kartu periode aktif selebar halaman + jumlah perlu ditangani (klik = saring)
 //   TanpaPeriodeAktif— keadaan kosong bila tidak ada periode aktif
 //   CariFilterMasuk  — kolom cari + tombol Filter; panel filter (status, jenis) hanya tampil saat dibuka

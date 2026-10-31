@@ -12,7 +12,8 @@ import { getRoleNames } from '../../utils/roles'
 import { LUARAN_KEY, PENGGUNA_KEY, REKAP_KEY, SURAT_TUGAS_KEY, luaranRingkas, penggunaRingkas, rekapRingkas, suratTugasData } from './dokumen'
 import { ambilPengguna, penggunaPDF } from './cetakPengguna'
 import { pesanBlob, unduhLuaran } from './cetakLuaran'
-import CetakBreadcrumb from './CetakBreadcrumb'
+import { KepalaMasuk } from '../../components/PeriodeAktif'
+import useJejakMenu from '../../hooks/useJejakMenu'
 
 // ---------------------------------------------------------------------------
 // Cetak Dokumen (Admin & Ketua LPPM, route /cetak-dokumen; dulu Export/Print
@@ -92,6 +93,9 @@ export default function CetakDokumenPage() {
   // Luaran Dosen (GET /luaran/unduh-*) hanya untuk Ketua LPPM (Admin dicabut); backend masih khusus
   // admin → 403 sampai W-44.
   const isKetua = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'ketua_lppm'
+  const induk = useJejakMenu('dokumentasi')
+  // Konfigurasi tersimpan per kartu yang tampil (untuk kotak ringkasan).
+  const konfigurasi = [rekap, surat, pengguna, ...(isKetua ? [luaran] : [])]
 
   const cetakPengguna = async () => {
     setPrinting('pengguna')
@@ -158,13 +162,17 @@ export default function CetakDokumenPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Cetak Dokumen</h1>
-          <p className="page-desc">Atur konfigurasi tiap dokumen, lalu cetak sebagai PDF atau unduh filenya.</p>
-        </div>
-        <CetakBreadcrumb />
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Cetak Dokumen"
+        crumbs={[...induk, { label: 'Cetak Dokumen' }]}
+        desc="Atur konfigurasi tiap dokumen, lalu cetak sebagai PDF atau unduh filenya."
+        stats={[
+          { label: 'Jenis dokumen', value: konfigurasi.length },
+          { label: 'Dikonfigurasi', value: konfigurasi.filter(Boolean).length },
+          { label: 'Memakai bawaan', value: konfigurasi.filter((c) => !c).length },
+        ]}
+      />
 
       {flash ? (
         <div role="status" className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">

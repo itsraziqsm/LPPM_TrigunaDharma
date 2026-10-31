@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { FileText } from 'lucide-react'
+import KartuNavy from '../components/KartuNavy'
+import { barisKlik, tanpaBaris } from '../utils/barisKlik'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { proposalApi } from '../api/proposal'
 import useJejakMenu from '../hooks/useJejakMenu'
@@ -155,122 +158,74 @@ export default function ProposalPage() {
           }}
         />
 
-        {/* Tabel data utama */}
-        <section className="card overflow-hidden">
-          <header className="border-b border-slate-200 px-6 py-4">
-            <h2 className="text-lg font-semibold text-navy-950">Daftar Proposal</h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {total} proposal ({FILTERS_MASUK.find((f) => f.key === filter).label.toLowerCase()}) dari periode aktif.
-              {truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian.` : ''}
-            </p>
-          </header>
-
+        {/* Tabel data utama — bingkai navy (M1); seluruh baris membuka detail */}
+        <KartuNavy
+          id="daftar-proposal"
+          judul="Daftar Proposal"
+          desc={`Proposal (${FILTERS_MASUK.find((f) => f.key === filter).label.toLowerCase()}) dari periode aktif. Klik baris untuk membuka detail.${
+            truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian.` : ''
+          }`}
+          badge={loading ? '…' : `${total} proposal`}
+        >
           {loading ? (
-            <p className="flex items-center justify-center gap-3 px-6 py-14 text-center text-base text-slate-500">
+            <p className="flex items-center justify-center gap-3 py-12 text-center text-base text-slate-500">
               <span className="spinner text-navy-600" aria-hidden="true" />
               Memuat data...
             </p>
           ) : proposals.length === 0 ? (
-            <div className="px-6 py-14 text-center">
-              <h3 className="text-lg font-semibold text-navy-950">
-                Tidak ada proposal ditemukan
-              </h3>
+            <div className="py-12 text-center">
+              <h3 className="text-lg font-semibold text-navy-950">Tidak ada proposal ditemukan</h3>
               <p className="mx-auto mt-2 max-w-md text-base leading-relaxed text-slate-500">
-                Coba ubah kata kunci, filter status, atau periode. Proposal periode
-                sebelumnya ada di menu Periode.
+                Coba ubah kata kunci, filter status, atau periode. Proposal periode sebelumnya ada di menu Periode.
               </p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="table table-tight min-w-[880px]">
+              <div className="table-wrap">
+                <table className="table table-tight min-w-[860px]">
                   <thead>
                     <tr>
-                      <th className="pl-6">Judul Proposal</th>
-                      <th>Ketua</th>
-                      <th>Anggaran</th>
-                      <th>Status</th>
-                      <th>Anggota</th>
-                      <th className="pr-6">Tindakan</th>
+                      <th scope="col">Judul Proposal</th>
+                      <th scope="col">Ketua</th>
+                      <th scope="col">Anggaran</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Anggota</th>
+                      <th scope="col" className="text-right">
+                        <span className="sr-only">Aksi</span>
+                      </th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {proposals.map((p) => (
-                      <tr key={p.id}>
-                        <td className="min-w-[16rem] max-w-[30rem] pl-6">
-                          <p className="font-medium leading-snug text-slate-900">
+                      <tr key={p.id} {...barisKlik(() => bukaDetail(p.id), p.judul)}>
+                        <td className="min-w-[16rem] max-w-[28rem]">
+                          <p className="line-clamp-2 font-semibold leading-snug text-slate-900" title={p.judul}>
                             {p.judul}
                           </p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                            <Badge
-                              label={JENIS_LABEL[p.jenis] || p.jenis || '—'}
-                              className="badge-tag"
-                            />
-                            <span className="text-sm text-slate-500">
-                              ID Proposal #{p.id}
-                            </span>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                            <Badge label={JENIS_LABEL[p.jenis] || p.jenis || '—'} className="badge-tag" />
+                            <span className="text-xs text-slate-500">ID #{p.id}</span>
                           </div>
                         </td>
-
                         <td>
-                          <p className="font-medium text-slate-900">
-                            {p.pengusul?.fullName || p.pengusul?.name || '—'}
-                          </p>
-                          <p
-                            className="mt-0.5 max-w-[12rem] truncate text-sm text-slate-500"
-                            title={p.pengusul?.email || undefined}
-                          >
+                          <p className="font-medium text-slate-900">{p.pengusul?.fullName || p.pengusul?.name || '—'}</p>
+                          <p className="mt-0.5 max-w-[12rem] truncate text-xs text-slate-500" title={p.pengusul?.email || undefined}>
                             {p.pengusul?.email || '—'}
                           </p>
                         </td>
-
-                        <td className="whitespace-nowrap tabular-nums text-slate-900">
-                          {p.anggaran
-                            ? `Rp ${Number(p.anggaran).toLocaleString('id-ID')}`
-                            : '—'}
-                        </td>
-
+                        <td className="whitespace-nowrap tabular-nums text-slate-900">{p.anggaran ? `Rp ${Number(p.anggaran).toLocaleString('id-ID')}` : '—'}</td>
                         <td>
-                          <Badge
-                            label={STATUS_LABEL[p.status] || p.status || '—'}
-                            className={STATUS_COLOR[p.status] || 'badge-neutral'}
-                          />
+                          <Badge label={STATUS_LABEL[p.status] || p.status || '—'} className={STATUS_COLOR[p.status] || 'badge-neutral'} />
                         </td>
-
-                        <td className="whitespace-nowrap text-slate-900">
-                          {p.anggota?.length ?? 0} orang
-                        </td>
-
-                        <td className="pr-6">
-                          <div className="-ml-2 flex w-[9.5rem] flex-col gap-0.5">
-                            <button
-                              onClick={() => bukaDetail(p.id)}
-                              className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800"
-                            >
-                              Lihat Detail Proposal
+                        <td className="whitespace-nowrap text-slate-900">{p.anggota?.length ?? 0} orang</td>
+                        <td>
+                          <div className="flex items-center justify-end gap-1">
+                            <button type="button" onClick={tanpaBaris(() => openDokumenWithAuth(p.id))} className="btn btn-ghost btn-sm px-2" title="Lihat dokumen utama">
+                              <FileText className="size-4" aria-hidden="true" />
+                              Dokumen
                             </button>
-
-                            {viewOnly ? null : (
-                              <button
-                                onClick={() => bukaDetail(p.id, '#keputusan')}
-                                disabled={isStatusFinal(p.status)}
-                                title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : undefined}
-                                className="btn btn-ghost btn-sm w-full justify-start px-2 text-navy-800 disabled:cursor-not-allowed disabled:text-slate-400"
-                              >
-                                {isStatusFinal(p.status) ? 'Status final (disetujui)' : 'Ubah Status Proposal'}
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => openDokumenWithAuth(p.id)}
-                              className="btn btn-ghost btn-sm w-full justify-start px-2"
-                            >
-                              Lihat Dokumen Utama
-                            </button>
-
                             {viewOnly ? (
-                              <div className="px-2 pt-1">
+                              <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
                                 <HapusDokumen
                                   compact
                                   tipe="proposal"
@@ -283,8 +238,18 @@ export default function ProposalPage() {
                                     setTick((t) => t + 1)
                                   }}
                                 />
-                              </div>
-                            ) : null}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={tanpaBaris(() => bukaDetail(p.id, '#keputusan'))}
+                                disabled={isStatusFinal(p.status)}
+                                title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : 'Ubah status proposal'}
+                                className="btn btn-secondary btn-sm whitespace-nowrap disabled:cursor-not-allowed"
+                              >
+                                {isStatusFinal(p.status) ? 'Final' : 'Ubah Status'}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -293,35 +258,24 @@ export default function ProposalPage() {
                 </table>
               </div>
 
-              {/* Navigasi halaman */}
-              <footer className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-base text-slate-500">
-                  Halaman {page} dari {totalPages} — {total} total
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                    disabled={page <= 1}
-                    className="btn btn-secondary"
-                  >
-                    Halaman Sebelumnya
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setPage((prev) => Math.min(totalPages, prev + 1))
-                    }
-                    disabled={page >= totalPages}
-                    className="btn btn-secondary"
-                  >
-                    Halaman Berikutnya
-                  </button>
-                </div>
-              </footer>
+              {totalPages > 1 ? (
+                <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
+                  <span className="tabular-nums">
+                    Halaman {page} dari {totalPages} · {total} proposal
+                  </span>
+                  <span className="flex gap-2">
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                      Sebelumnya
+                    </button>
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={page >= totalPages} onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}>
+                      Berikutnya
+                    </button>
+                  </span>
+                </nav>
+              ) : null}
             </>
           )}
-        </section>
+        </KartuNavy>
       </div>
 
     </>

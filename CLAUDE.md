@@ -550,6 +550,15 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `hooks/useTampil.js` (pudar + geser, tetap terpasang selama transisi keluar); `<details>` dianimasikan CSS `::details-content`
   (`index.css`, Chromium 131+, lainnya buka/tutup biasa). Semua hormati `prefers-reduced-motion`. Dropdown baru wajib memakai ini. **Tailwind 4: `translate-*` memakai properti CSS
   `translate`**, jadi transisi kustom harus `transition-[translate,...]` (bukan `transform`) agar geser tidak instan.
+- **Tabel bingkai navy (M1)** `src/components/KartuNavy.jsx` (+ `TabNavy` tab di kepala gelap): judul serif, deskripsi, lencana
+  jumlah/aksi, badan putih. Dipakai Proposal Kegiatan & Laporan Kegiatan (seluruh baris → halaman detail lewat `utils/barisKlik.js`
+  `barisKlik`; tombol di baris memakai `tanpaBaris` (Dokumen, Ubah Status / Hapus admin)), Pemantauan (tab Proposal/Dosen pengusul),
+  Daftar Backup, Semua Versi template, "sebagai anggota tim" (Kegiatan dosen). Riwayat Kegiatan, Riwayat Laporan Harian & Daftar Luaran
+  memakai gaya yang sama. Tabel daftar baru wajib memakainya.
+- **Kepala ringkasan (M2)**: halaman yang **belum punya** kartu ringkasan memakai `KepalaMasuk` (3 kotak gaya Undangan): Backup Data,
+  Cetak Dokumen, Luaran (Ketua), Notifikasi, Arsip Kegiatan, Arsip Project, Cetak Laporan (selain Dokumen Masuk, Pengguna, Periode
+  yang sudah). Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
+  Manajemen Template (kartu template aktif), Undangan & Penugasan Review.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

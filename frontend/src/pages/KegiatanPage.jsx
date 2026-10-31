@@ -8,6 +8,8 @@ import useAuthStore from '../store/authStore'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
+import { barisKlik } from '../utils/barisKlik'
+import KartuNavy from '../components/KartuNavy'
 
 // ---------------------------------------------------------------------------
 // Halaman "Status Penelitian / Pengabdian" (menu Kegiatan, dosen): ringkasan,
@@ -58,24 +60,6 @@ function TahapanBadge({ tahapan }) {
   )
 }
 
-// Seluruh baris tabel bisa diklik (mouse & keyboard) untuk membuka detail; tombol di
-// dalam baris (Lanjutkan, Hapus) menghentikan propagasi.
-function barisKlik(buka, judul) {
-  return {
-    onClick: buka,
-    onKeyDown: (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault()
-        buka()
-      }
-    },
-    tabIndex: 0,
-    role: 'link',
-    'aria-label': `Buka detail: ${judul}`,
-    className: 'cursor-pointer transition-colors hover:bg-navy-50/60 focus-visible:bg-navy-50 focus-visible:outline-none',
-  }
-}
-
 // Proposal milik dosen lain tempat user menjadi anggota (undangan diterima):
 // GET /dosen/proposals/as-member. Detail lewat GET /proposals/:id (readOnly).
 function MemberSection({ jenis, label, userId }) {
@@ -105,19 +89,20 @@ function MemberSection({ jenis, label, userId }) {
   const pages = Math.max(1, Math.ceil(total / LIMIT))
 
   return (
-    <section aria-labelledby="kegiatan-anggota" className="space-y-3">
-      <div>
-        <h2 id="kegiatan-anggota" className="text-xl font-semibold text-navy-950">
-          {label} sebagai anggota tim
-        </h2>
-        <p className="mt-0.5 text-sm text-slate-500">
+    <KartuNavy
+      id="kegiatan-anggota"
+      judul={`${label} sebagai Anggota Tim`}
+      desc={
+        <>
           {label} milik dosen lain yang undangannya sudah Anda terima. Undangan yang menunggu respons ada di{' '}
-          <Link to="/undangan" className="font-semibold text-navy-700 hover:text-navy-900">
+          <Link to="/undangan" className="font-semibold text-white underline underline-offset-2 hover:text-brass-300">
             Undangan Kerja Sama
           </Link>
           .
-        </p>
-      </div>
+        </>
+      }
+      badge={state === 'loading' ? '…' : `${total} ${label.toLowerCase()}`}
+    >
       <div className="table-wrap">
         <table className="table table-tight">
           <thead>
@@ -196,7 +181,7 @@ function MemberSection({ jenis, label, userId }) {
           </span>
         </nav>
       ) : null}
-    </section>
+    </KartuNavy>
   )
 }
 

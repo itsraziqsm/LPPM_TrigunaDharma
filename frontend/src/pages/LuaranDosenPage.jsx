@@ -6,7 +6,7 @@ import { periodeApi } from '../api/periode'
 import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
 import { pesanBlob } from './cetak/cetakLuaran'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
 import ApiPending from '../components/ApiPending'
 import PanelCari from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
@@ -142,13 +142,17 @@ export default function LuaranDosenPage() {
 
   return (
     <div className="page space-y-6">
-      <Breadcrumb className="flex justify-end" items={[{ label: 'Dokumentasi' }, { label: 'Luaran' }]} />
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="page-title">Luaran Dosen</h1>
-          <p className="page-desc">Semua target & capaian luaran kegiatan. Luaran prioritas (jurnal & poster) selalu di atas.</p>
-        </div>
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Luaran Dosen"
+        crumbs={[{ label: 'Dokumentasi' }, { label: 'Luaran' }]}
+        desc="Semua target & capaian luaran kegiatan. Luaran prioritas (jurnal & poster) selalu di atas."
+        stats={[
+          { label: 'Total luaran', value: state.loading ? '…' : state.failed ? '—' : state.total },
+          { label: 'Halaman Aktif', value: page },
+          { label: 'Filter aktif', value: aktif.length },
+        ]}
+      />
 
       {/* Panel cari standar (components/PanelCari): cari · Filter (7 filter, Terapkan) · Cari */}
       <PanelCari

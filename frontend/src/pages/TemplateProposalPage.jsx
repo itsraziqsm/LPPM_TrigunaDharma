@@ -4,6 +4,8 @@ import { templateProposalApi } from '../api/templateProposal'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
 import Breadcrumb from '../components/Breadcrumb'
+import KartuNavy from '../components/KartuNavy'
+import useJejakMenu from '../hooks/useJejakMenu'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
@@ -185,6 +187,7 @@ export default function TemplateProposalPage() {
     if (ok) aksi(t, () => templateProposalApi.remove(t.id), 'Gagal menghapus template')
   }
 
+  const induk = useJejakMenu('dokumentasi')
   const aktif = JENIS.map((j) => ({ ...j, item: state.items.find((t) => t.jenis === j.value && t.isAktif) }))
 
   return (
@@ -194,7 +197,7 @@ export default function TemplateProposalPage() {
           <h1 className="page-title">Manajemen Template</h1>
           <p className="page-desc">Template yang diunduh dosen saat menyusun usulan. Jenis tanpa template sendiri memakai template umum.</p>
         </div>
-        <Breadcrumb items={[{ label: 'Dokumentasi' }, { label: 'Manajemen Template' }]} />
+        <Breadcrumb items={[...induk, { label: 'Manajemen Template' }]} />
       </header>
 
       {!jenis && !state.loading && !state.failed ? (
@@ -217,9 +220,9 @@ export default function TemplateProposalPage() {
 
       <UnggahForm onDone={reload} />
 
-      <section className="card overflow-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5">
-          <h2 className="text-base font-semibold text-navy-950">Semua versi</h2>
+      {/* Tabel bingkai navy (M1) */}
+      <KartuNavy id="semua-versi" judul="Semua Versi" desc="Satu versi aktif per jenis; versi lama bisa diaktifkan lagi atau dihapus." badge={state.loading ? '…' : `${state.items.length} versi`}>
+        <div className="flex justify-end">
           <select aria-label="Saring jenis" className="input w-auto" value={jenis} onChange={(e) => setJenis(e.target.value)}>
             <option value="">Semua jenis</option>
             {JENIS.map((j) => (
@@ -228,16 +231,16 @@ export default function TemplateProposalPage() {
               </option>
             ))}
           </select>
-        </header>
+        </div>
         {state.loading ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat template…</p>
+          <p className="py-10 text-center text-sm text-slate-500">Memuat template…</p>
         ) : state.failed ? (
-          <p className="px-5 py-10 text-center text-sm text-red-700">Daftar template gagal dimuat.</p>
+          <p className="py-10 text-center text-sm text-red-700">Daftar template gagal dimuat.</p>
         ) : state.items.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">Belum ada template yang diunggah.</p>
+          <p className="py-10 text-center text-sm text-slate-500">Belum ada template yang diunggah.</p>
         ) : (
-          <div className="table-wrap rounded-none border-0">
-            <table className="table">
+          <div className="table-wrap">
+            <table className="table table-tight">
               <thead>
                 <tr>
                   <th scope="col">Template</th>
@@ -308,7 +311,7 @@ export default function TemplateProposalPage() {
             </table>
           </div>
         )}
-      </section>
+      </KartuNavy>
     </div>
   )
 }

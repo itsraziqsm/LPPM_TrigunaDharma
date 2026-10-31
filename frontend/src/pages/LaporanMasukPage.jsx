@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import KartuNavy from '../components/KartuNavy'
+import { barisKlik, tanpaBaris } from '../utils/barisKlik'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { laporanApi } from '../api/laporan'
 import useJejakMenu from '../hooks/useJejakMenu'
@@ -113,89 +115,94 @@ export default function LaporanMasukPage() {
         }}
       />
 
-      <div className="table-wrap">
-        <table className="table table-tight">
-          <thead>
-            <tr>
-              <th scope="col">Diajukan</th>
-              <th scope="col">Judul</th>
-              <th scope="col">Pengusul</th>
-              <th scope="col">Jenis</th>
-              <th scope="col">Status</th>
-              <th scope="col">Reviewer</th>
-              <th scope="col">
-                <span className="sr-only">Aksi</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr aria-hidden="true">
-                <td colSpan={7}>
-                  <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
-                </td>
-              </tr>
-            ) : failed ? (
+      {/* Tabel bingkai navy (M1); seluruh baris membuka detail */}
+      <KartuNavy
+        id="daftar-laporan"
+        judul="Daftar Laporan"
+        desc={`Laporan (${filterLabel.toLowerCase()}) dari periode aktif. Klik baris untuk membuka detail.${
+          truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian atau filter.` : ''
+        }`}
+        badge={loading ? '…' : `${total} laporan`}
+      >
+        <div className="table-wrap">
+          <table className="table table-tight">
+            <thead>
               <tr>
-                <td colSpan={7} className="py-10 text-center">
-                  <p className="text-slate-600">Daftar laporan gagal dimuat.</p>
-                  <button type="button" onClick={refresh} className="btn btn-secondary btn-sm mt-3">
-                    Coba lagi
-                  </button>
-                </td>
+                <th scope="col">Diajukan</th>
+                <th scope="col">Judul</th>
+                <th scope="col">Pengusul</th>
+                <th scope="col">Jenis</th>
+                <th scope="col">Status</th>
+                <th scope="col">Reviewer</th>
+                <th scope="col">
+                  <span className="sr-only">Aksi</span>
+                </th>
               </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-10 text-center text-slate-500">
-                  {noPeriode ? 'Tidak ada periode aktif.' : `Tidak ada laporan (${filterLabel.toLowerCase()}) di periode aktif.`}
-                </td>
-              </tr>
-            ) : (
-              rows.map((l) => (
-                <tr key={l.id}>
-                  <td className="whitespace-nowrap tabular-nums">{tanggal(l.submittedAt || l.createdAt)}</td>
-                  <td className="min-w-[16rem] max-w-md">
-                    <p className="line-clamp-2 font-semibold text-slate-900">{l.judul}</p>
-                    <p className="text-xs text-slate-500">{l.periode?.nama || '—'}</p>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr aria-hidden="true">
+                  <td colSpan={7}>
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
                   </td>
-                  <td>{l.pengusul?.fullName || l.pengusul?.name}</td>
-                  <td>{JENIS_LABEL[l.jenis] || l.jenis}</td>
-                  <td>
-                    <StatusBadge status={l.status} />
-                  </td>
-                  <td className="tabular-nums">{(l.reviewerTugasan || []).length}</td>
-                  <td className="text-right">
-                    <button type="button" onClick={() => open(l.id)} className="btn btn-ghost btn-sm">
-                      {viewOnly ? 'Lihat' : 'Kelola'}
+                </tr>
+              ) : failed ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center">
+                    <p className="text-slate-600">Daftar laporan gagal dimuat.</p>
+                    <button type="button" onClick={refresh} className="btn btn-secondary btn-sm mt-3">
+                      Coba lagi
                     </button>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-10 text-center text-slate-500">
+                    {noPeriode ? 'Tidak ada periode aktif.' : `Tidak ada laporan (${filterLabel.toLowerCase()}) di periode aktif.`}
+                  </td>
+                </tr>
+              ) : (
+                rows.map((l) => (
+                  <tr key={l.id} {...barisKlik(() => open(l.id), l.judul)}>
+                    <td className="whitespace-nowrap tabular-nums">{tanggal(l.submittedAt || l.createdAt)}</td>
+                    <td className="min-w-[16rem] max-w-md">
+                      <p className="line-clamp-2 font-semibold text-slate-900">{l.judul}</p>
+                      <p className="text-xs text-slate-500">{l.periode?.nama || '—'}</p>
+                    </td>
+                    <td>{l.pengusul?.fullName || l.pengusul?.name}</td>
+                    <td>{JENIS_LABEL[l.jenis] || l.jenis}</td>
+                    <td>
+                      <StatusBadge status={l.status} />
+                    </td>
+                    <td className="tabular-nums">{(l.reviewerTugasan || []).length}</td>
+                    <td className="text-right">
+                      <button type="button" onClick={tanpaBaris(() => open(l.id))} className="btn btn-secondary btn-sm">
+                        {viewOnly ? 'Lihat' : 'Kelola'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {!loading && total > LIMIT ? (
-        <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
-          <span className="tabular-nums">
-            Halaman {page} dari {pages} · {total} laporan
-          </span>
-          <span className="flex gap-2">
-            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              Sebelumnya
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>
-              Berikutnya
-            </button>
-          </span>
-        </nav>
-      ) : null}
-
-      {truncated ? (
-        <p className="text-xs text-amber-700">Lebih dari {FETCH_LIMIT} laporan cocok di satu periode; persempit dengan pencarian atau filter.</p>
-      ) : null}
-
+        {!loading && total > LIMIT ? (
+          <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
+            <span className="tabular-nums">
+              Halaman {page} dari {pages} · {total} laporan
+            </span>
+            <span className="flex gap-2">
+              <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                Sebelumnya
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" disabled={page >= pages} onClick={() => setPage(page + 1)}>
+                Berikutnya
+              </button>
+            </span>
+          </nav>
+        ) : null}
+      </KartuNavy>
     </div>
   )
 }

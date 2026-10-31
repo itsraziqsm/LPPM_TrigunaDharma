@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Printer } from 'lucide-react'
 import { laporanHarianApi } from '../../api/laporanHarian'
-import Breadcrumb from '../../components/Breadcrumb'
+import { KepalaMasuk } from '../../components/PeriodeAktif'
 import PanelCari from '../../components/PanelCari'
 import { alertDialog } from '../../utils/dialog'
 import { downloadRekap } from './laporanHarianPDF'
@@ -53,13 +53,17 @@ export default function CetakLaporanHarianPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Cetak Laporan</h1>
-          <p className="page-desc">Cetak rekap laporan harian tiap project sebagai PDF.</p>
-        </div>
-        <Breadcrumb items={[{ label: 'Cetak Laporan' }]} />
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Cetak Laporan"
+        crumbs={[{ label: 'Cetak Laporan' }]}
+        desc="Cetak rekap laporan harian tiap project sebagai PDF."
+        stats={[
+          { label: 'Total project', value: projects === null ? '…' : projects.length },
+          { label: 'Penelitian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'penelitian').length },
+          { label: 'Pengabdian', value: projects === null ? '…' : projects.filter((p) => p.jenis === 'pengabdian').length },
+        ]}
+      />
 
       <PanelCari id="cetak-lh" value={search} onChange={setSearch} onSubmit={() => {}} placeholder="Cari judul project atau nama dosen pengusul" />
 

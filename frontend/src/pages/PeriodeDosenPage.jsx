@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { layarPonsel } from '../utils/layar'
 import { periodeApi } from '../api/periode'
 import { proposalDosenApi } from '../api/Proposaldosen'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
@@ -98,13 +98,17 @@ export default function PeriodeDosenPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Arsip Kegiatan</h1>
-          <p className="page-desc">Periode penelitian & pengabdian beserta jumlah kegiatan Anda (sebagai ketua atau anggota) di tiap periode.</p>
-        </div>
-        <Breadcrumb items={[{ label: 'Arsip Kegiatan' }]} />
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Arsip Kegiatan"
+        crumbs={[{ label: 'Arsip Kegiatan' }]}
+        desc="Periode penelitian & pengabdian beserta jumlah kegiatan Anda (sebagai ketua atau anggota) di tiap periode."
+        stats={[
+          { label: 'Total periode', value: periodes === null ? '…' : periodes.length },
+          { label: 'Kegiatan saya', value: kegiatan === null ? '…' : kegiatan.length },
+          { label: 'Periode berisi', value: kegiatan === null ? '…' : Object.keys(perPeriode).length },
+        ]}
+      />
 
       {failed ? (
         <div className="card px-6 py-14 text-center text-base text-red-600">Data periode gagal dimuat. Muat ulang halaman untuk mencoba lagi.</div>

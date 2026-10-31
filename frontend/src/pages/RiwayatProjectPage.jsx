@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { periodeApi } from '../api/periode'
 import { laporanHarianApi } from '../api/laporanHarian'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
 import { FolderPeriode, GrupTahun } from '../components/FolderPeriode'
 import { DetailArsip, PratinjauArsip } from '../components/ArsipPeriode'
 import { layarPonsel } from '../utils/layar'
@@ -94,13 +94,17 @@ export default function RiwayatProjectPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Arsip Project</h1>
-          <p className="page-desc">Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, per periode dan tahun.</p>
-        </div>
-        <Breadcrumb items={[{ label: 'Arsip Project' }]} />
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Arsip Project"
+        crumbs={[{ label: 'Arsip Project' }]}
+        desc="Semua project kegiatan dosen yang Anda ikuti sebagai anggota tim, per periode dan tahun."
+        stats={[
+          { label: 'Total project', value: data === null ? '…' : data.reduce((n, g) => n + g.projects.length, 0) },
+          { label: 'Periode', value: data === null ? '…' : data.length },
+          { label: 'Periode aktif', value: data === null ? '…' : periodes.filter((p) => p.isAktif).length },
+        ]}
+      />
 
       {error ? (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
 import { notificationApi } from '../api/notification'
@@ -169,30 +169,23 @@ export default function NotifikasiPage() {
 
   return (
     <div className="page rise space-y-6">
-      <header className="space-y-4">
-        <Breadcrumb items={[{ label: 'Notifikasi' }]} />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="page-title">Notifikasi</h1>
-            <p className="page-desc">
-              {unreadTotal === null
-                ? 'Kabar terbaru tentang proposal, review, laporan, dan periode.'
-                : unreadTotal > 0
-                  ? `${unreadTotal} notifikasi belum dibaca.`
-                  : 'Semua notifikasi sudah dibaca.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={markAll}
-            disabled={busyAll || !unreadTotal}
-            className="btn btn-secondary shrink-0"
-          >
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Notifikasi"
+        crumbs={[{ label: 'Notifikasi' }]}
+        desc="Kabar terbaru tentang proposal, review, laporan, dan periode."
+        aksi={
+          <button type="button" onClick={markAll} disabled={busyAll || !unreadTotal} className="btn btn-secondary">
             <CheckCheck className="size-4" aria-hidden="true" />
             Tandai semua dibaca
           </button>
-        </div>
-      </header>
+        }
+        stats={[
+          { label: filter === 'belum' ? 'Belum dibaca (filter)' : 'Total notifikasi', value: loading ? '—' : total },
+          { label: 'Belum dibaca', value: unreadTotal === null ? '—' : unreadTotal },
+          { label: 'Ditampilkan', value: loading ? '—' : items.length },
+        ]}
+      />
 
       <div role="tablist" aria-label="Filter notifikasi" className="flex gap-7 border-b border-slate-200">
         <FilterTab active={filter === 'semua'} onClick={() => setFilter('semua')}>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import Breadcrumb from '../components/Breadcrumb'
+import { KepalaMasuk } from '../components/PeriodeAktif'
+import KartuNavy from '../components/KartuNavy'
 import { CalendarClock, DatabaseBackup, Download, RefreshCw, Trash2 } from 'lucide-react'
 import { backupApi } from '../api/backup'
 import { alertDialog, confirmDialog } from '../utils/dialog'
@@ -23,6 +24,7 @@ const STATUS = {
   dihapus: { label: 'Dihapus', cls: 'badge-neutral' },
 }
 
+const tanggalSaja = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 const waktu = (v) =>
   v ? new Date(v).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
 
@@ -211,13 +213,17 @@ export default function BackupPage() {
 
   return (
     <div className="page space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <div className="max-w-2xl">
-          <h1 className="page-title">Backup Data</h1>
-          <p className="page-desc">Cadangkan seluruh database sistem, unduh file backup, dan pantau riwayatnya.</p>
-        </div>
-        <Breadcrumb items={[{ label: 'Backup Data' }]} />
-      </header>
+      {/* Kepala standar (M2) */}
+      <KepalaMasuk
+        judul="Backup Data"
+        crumbs={[{ label: 'Backup Data' }]}
+        desc="Cadangkan seluruh database sistem, unduh file backup, dan pantau riwayatnya."
+        stats={[
+          { label: 'Total backup', value: loading ? '—' : total },
+          { label: 'Otomatis', value: <span className="text-lg">{jadwal ? (jadwal.otomatisAktif ? 'Aktif' : 'Mati') : '—'}</span> },
+          { label: 'Berikutnya', value: <span className="text-lg">{jadwal?.otomatisAktif ? tanggalSaja(jadwal.berikutnyaAt) : '—'}</span> },
+        ]}
+      />
 
       {/* ── Backup sekarang ─────────────────────────────────────────────── */}
       <section aria-labelledby="backup-sekarang" className="card flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
@@ -282,60 +288,52 @@ export default function BackupPage() {
       ) : null}
 
       {/* ── Daftar Backup ───────────────────────────────────────────────── */}
-      <section aria-labelledby="daftar-backup" className="card overflow-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
-          <div>
-            <h2 id="daftar-backup" className="text-lg font-semibold text-navy-950">
-              Daftar Backup
-            </h2>
-            <p className="mt-0.5 text-sm text-slate-500">{total} backup tercatat, terbaru di atas.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="backup-sumber" className="sr-only">
-              Dilakukan oleh
-            </label>
-            <select
-              id="backup-sumber"
-              className="input w-44"
-              value={sumber}
-              onChange={(e) => {
-                setSumber(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Semua pelaku</option>
-              <option value="sistem">Sistem (otomatis)</option>
-              <option value="admin">Admin (manual)</option>
-            </select>
-            <label htmlFor="backup-status" className="sr-only">
-              Status
-            </label>
-            <select
-              id="backup-status"
-              className="input w-44"
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value)
-                setPage(1)
-              }}
-            >
-              <option value="">Semua status</option>
-              <option value="berjalan">Berjalan</option>
-              <option value="berhasil">Berhasil</option>
-              <option value="gagal">Gagal</option>
-              {/* W-43: backend belum bisa menyaring backup yang filenya dihapus */}
-              <option value="dihapus" disabled>
-                Dihapus (API belum ada)
-              </option>
-            </select>
-            <button type="button" onClick={refresh} className="btn btn-ghost btn-sm" title="Muat ulang">
-              <RefreshCw className="size-4" aria-hidden="true" />
-              <span className="sr-only">Muat ulang</span>
-            </button>
-          </div>
-        </header>
-
-        <div className="table-wrap rounded-none border-0">
+      {/* Tabel bingkai navy (M1) */}
+      <KartuNavy id="daftar-backup" judul="Daftar Backup" desc="Terbaru di atas. Unduh file .sql.gz atau hapus file (catatan tetap tersimpan)." badge={loading ? '…' : `${total} backup`}>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <label htmlFor="backup-sumber" className="sr-only">
+            Dilakukan oleh
+          </label>
+          <select
+            id="backup-sumber"
+            className="input w-44"
+            value={sumber}
+            onChange={(e) => {
+              setSumber(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Semua pelaku</option>
+            <option value="sistem">Sistem (otomatis)</option>
+            <option value="admin">Admin (manual)</option>
+          </select>
+          <label htmlFor="backup-status" className="sr-only">
+            Status
+          </label>
+          <select
+            id="backup-status"
+            className="input w-44"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Semua status</option>
+            <option value="berjalan">Berjalan</option>
+            <option value="berhasil">Berhasil</option>
+            <option value="gagal">Gagal</option>
+            {/* W-43: backend belum bisa menyaring backup yang filenya dihapus */}
+            <option value="dihapus" disabled>
+              Dihapus (API belum ada)
+            </option>
+          </select>
+          <button type="button" onClick={refresh} className="btn btn-ghost btn-sm" title="Muat ulang">
+            <RefreshCw className="size-4" aria-hidden="true" />
+            <span className="sr-only">Muat ulang</span>
+          </button>
+        </div>
+        <div className="table-wrap">
           <table className="table table-tight min-w-[880px]">
             <thead>
               <tr>
@@ -443,7 +441,7 @@ export default function BackupPage() {
         </div>
 
         {!loading && total > LIMIT ? (
-          <footer className="flex items-center justify-between gap-3 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
+          <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
             <span className="tabular-nums">
               Halaman {page} dari {pages}
             </span>
@@ -455,9 +453,9 @@ export default function BackupPage() {
                 Berikutnya
               </button>
             </span>
-          </footer>
+          </nav>
         ) : null}
-      </section>
+      </KartuNavy>
 
       <p className="text-xs text-slate-500">
         Memulihkan backup dilakukan di server oleh pengelola sistem (lihat dokumentasi backend), bukan dari halaman ini.
