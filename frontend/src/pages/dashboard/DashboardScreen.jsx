@@ -32,7 +32,10 @@ export default function DashboardScreen({
   else
     body = (
       <>
-        <PintasanSection shortcuts={model.shortcuts}>
+        <PintasanSection
+          // Pintasan ber-`roles` hanya untuk peran itu (admin & Ketua LPPM berbagi adapter).
+          shortcuts={(model.shortcuts || []).filter((s) => !s.roles || s.roles.includes(role))}
+        >
           <KpiToneCards items={model.kpis} />
         </PintasanSection>
         <DashboardBody model={model} />

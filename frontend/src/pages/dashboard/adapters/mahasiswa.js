@@ -227,8 +227,8 @@ export async function load({ withReviewerDigest }) {
 
       shortcuts: [
         {
-          to: '/laporan-harian',
-          label: 'Laporan harian',
+          to: '/project/penelitian',
+          label: 'Project saya',
           desc: hasProposals
             ? `${last7.length} laporan dalam 7 hari terakhir.`
             : 'Buat dan lihat laporan kegiatan.',
@@ -242,6 +242,8 @@ export async function load({ withReviewerDigest }) {
               : 'Tidak ada undangan baru.'
             : 'Tinjau undangan dan konfirmasi.',
         },
+        { to: '/arsip-project', label: 'Arsip project', desc: 'Project yang diikuti per periode.' },
+        { to: '/cetak-laporan', label: 'Cetak laporan', desc: 'Rekap laporan harian (PDF).' },
         ...(withReviewerDigest ? [tugasanShortcut(digest)] : []),
         PROFILE_SHORTCUT,
       ],

@@ -144,6 +144,8 @@ export async function load({ withReviewerDigest }) {
         latest: latest
           ? {
               id: latest.id,
+              // Tujuan klik: Detail Kegiatan proposal ini.
+              to: `/kegiatan/${latest.jenis === 'pengabdian' ? 'pengabdian' : 'penelitian'}/detail/${latest.id}`,
               judul: latest.judul,
               jenis: JENIS_LABEL[latest.jenis] || latest.jenis || null,
               periode: latest.periode?.nama || null,
@@ -254,6 +256,8 @@ export async function load({ withReviewerDigest }) {
               : 'Tidak ada undangan baru.'
             : 'Tinjau undangan kolaborasi.',
         },
+        { to: '/arsip-kegiatan', label: 'Arsip kegiatan', desc: 'Kegiatan Anda per periode.' },
+        { to: '/luaran', label: 'Luaran', desc: 'Luaran kegiatan.' },
         ...(withReviewerDigest ? [tugasanShortcut(digest)] : []),
         PROFILE_SHORTCUT,
       ],

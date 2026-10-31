@@ -195,7 +195,7 @@ export async function load({ withReviewerDigest }) {
       shortcuts: [
         {
           to: '/proposals',
-          label: 'Proposal',
+          label: 'Proposal kegiatan',
           desc: hasStats
             ? `${total} proposal, ${counts.diajukan || 0} menunggu diproses.`
             : 'Tinjau dan proses proposal.',
@@ -210,9 +210,13 @@ export async function load({ withReviewerDigest }) {
         {
           to: '/periode',
           label: 'Periode',
-          desc: periodsKnown ? `${periods.length} periode aktif.` : 'Kelola periode proposal.',
+          desc: periodsKnown ? `${periods.length} periode aktif.` : 'Periode proposal & kegiatannya.',
         },
+        { to: '/laporan-masuk', label: 'Laporan kegiatan', desc: 'Tinjau dan proses laporan kegiatan.' },
         { to: '/cetak-dokumen', label: 'Cetak dokumen', desc: 'Rekap proposal & surat tugas (PDF).' },
+        { to: '/luaran-dosen', label: 'Luaran dosen', desc: 'Daftar luaran kegiatan dosen.', roles: ['ketua_lppm'] },
+        { to: '/template-proposal', label: 'Manajemen template', desc: 'Versi template proposal.', roles: ['admin'] },
+        { to: '/backup', label: 'Backup data', desc: 'Backup basis data manual & otomatis.', roles: ['admin'] },
         ...(withReviewerDigest ? [tugasanShortcut(digest)] : []),
         PROFILE_SHORTCUT,
       ],

@@ -4,6 +4,7 @@ import {
   Award,
   BadgeCheck,
   Check,
+  ChevronRight,
   DollarSign,
   HeartHandshake,
   Microscope,
@@ -153,10 +154,16 @@ function LatestProposal({ latest, unavailable }) {
             ))}
           </ol>
         </div>
-        <p className="mt-5 text-xs text-slate-500">
-          Tahap saat ini: <span className="font-semibold text-navy-800">{latest.stageLabel || STAGES[stage]}</span>
-          {rejected ? ' · proposal ditolak' : ''}
-        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-slate-500">
+            Tahap saat ini: <span className="font-semibold text-navy-800">{latest.stageLabel || STAGES[stage]}</span>
+            {rejected ? ' · proposal ditolak' : ''}
+          </p>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-navy-700 group-hover:text-navy-900">
+            Lihat detail kegiatan
+            <ChevronRight className="size-4 transition-[translate] duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+          </span>
+        </div>
       </>
     )
   }
@@ -164,7 +171,18 @@ function LatestProposal({ latest, unavailable }) {
   return (
     <section aria-labelledby="usulan-terakhir" className="space-y-3">
       <SectionTitle id="usulan-terakhir">Usulan Terakhir</SectionTitle>
-      <div className="rounded-xl bg-white px-6 py-6 shadow-md sm:px-8">{content}</div>
+      {latest?.to && !unavailable ? (
+        // Seluruh kartu = tautan ke Detail Kegiatan usulan terakhir.
+        <Link
+          to={latest.to}
+          aria-label={`Buka detail kegiatan: ${latest.judul}`}
+          className="group block rounded-xl border border-transparent bg-white px-6 py-6 shadow-md transition-[border-color,box-shadow] duration-200 hover:border-navy-200 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600 sm:px-8"
+        >
+          {content}
+        </Link>
+      ) : (
+        <div className="rounded-xl bg-white px-6 py-6 shadow-md sm:px-8">{content}</div>
+      )}
     </section>
   )
 }

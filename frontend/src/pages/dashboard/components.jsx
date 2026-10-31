@@ -48,7 +48,7 @@ export function PanelLink({ to, children }) {
       className="group flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 text-sm font-semibold text-navy-700 transition-colors hover:bg-slate-50 hover:text-navy-900 sm:px-6"
     >
       {children}
-      <Chevron className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+      <Chevron className="size-4 shrink-0 transition-[translate,color] group-hover:translate-x-0.5" />
     </Link>
   )
 }
@@ -287,16 +287,16 @@ export function Feed({ items, emptyTitle, emptyDesc }) {
 export function ShortcutStrip({ items }) {
   if (!items || items.length === 0) return null
   return (
-    <nav aria-label="Pintasan" className="-mx-1 overflow-x-auto px-1 pb-1" data-lenis-prevent-horizontal>
-      <ul className="flex snap-x gap-3">
+    <nav aria-label="Pintasan" className="-mx-2 -mt-2 overflow-x-auto px-2 pb-1 pt-2" data-lenis-prevent-horizontal>
+      <ul className="flex snap-x gap-3 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">
         {items.map((item) => (
           <li key={`${item.to}-${item.label}`} className="min-w-[13.5rem] flex-1 snap-start lg:min-w-0">
             <Link
               to={item.to}
-              className="group flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-colors hover:border-navy-300 hover:bg-navy-50/50"
+              className="group flex h-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-[scale,border-color,background-color,box-shadow] duration-200 ease-out hover:scale-[1.03] hover:border-navy-300 hover:bg-navy-50/50 hover:shadow-md focus-visible:scale-[1.03] motion-reduce:transition-none motion-reduce:hover:scale-100"
             >
               {/* Judul saja (keterangan dihapus); desc tetap jadi tooltip. */}
-              <span className="min-w-0 truncate text-sm font-semibold text-slate-900" title={item.desc || undefined}>
+              <span className="line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-slate-900" title={item.desc || item.label}>
                 {item.label}
               </span>
               <Chevron className="size-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-navy-700" />

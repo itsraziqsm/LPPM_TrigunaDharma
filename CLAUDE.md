@@ -306,15 +306,16 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`) dengan **urutan bagian Beranda
   yang sama**: 1. **Halo** (`HaloHeader`: judul + breadcrumb, "Halo {nama}!" — `fullName` tanpa gelar depan/belakang
   (`namaSapaan`), tanggal & peran, muat ulang; **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
-  (`PintasanSection`: `model.shortcuts` sebagai baris kartu horizontal **judul saja** (`desc` jadi tooltip) `ShortcutStrip`, digeser
-  di ponsel, lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
+  (`PintasanSection`: `model.shortcuts` sebagai kartu **judul saja** (`desc` jadi tooltip) `ShortcutStrip` — baris digeser di ponsel,
+  grid membungkus di desktop, hover = sedikit membesar (`scale-[1.03]`, `transition-[scale,…]`); isi pintasan mengikuti menu
+  sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`), lalu kartu angka `ToneCard`; dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
   **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
-  (urutan di atas: Pintasan + kartu dokumen, Usulan Terakhir + tahapan, Informasi, Profil Dosen, Statistik Dosen). Data dari `adapters/dosen.js` (`model.dosen`).
+  (urutan di atas: Pintasan + kartu dokumen, Usulan Terakhir + tahapan (seluruh kartu = tautan ke `/kegiatan/:jenis/detail/:id`, `latest.to`), Informasi, Profil Dosen, Statistik Dosen). Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
 - Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,
