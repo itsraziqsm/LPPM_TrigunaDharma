@@ -34,6 +34,9 @@ import BackupPage from './BackupPage'
 import TemplateProposalPage from './TemplateProposalPage'
 import LuaranDosenPage from './LuaranDosenPage'
 import PemantauanPage from './PemantauanPage'
+import DaftarDokumenStmikPage from './stmik/DaftarDokumenStmikPage'
+import ArsipPeriodeStmikPage from './stmik/ArsipPeriodeStmikPage'
+import CetakRekapStmikPage from './cetak/CetakRekapStmikPage'
 import ReviewProposalPage from './review/ReviewProposalPage'
 import ProposalMasukDetailPage from './ProposalMasukDetailPage'
 import LaporanMasukDetailPage from './LaporanMasukDetailPage'
@@ -120,9 +123,15 @@ export default function DashboardLayout({ page, jenis }) {
       if (isReviewer) return page === 'review-proposal' ? <ReviewProposalPage key={location.pathname} /> : <ReviewLaporanPage key={location.pathname} />
     }
 
-    // Ketua STMIK (hanya baca): Akademik › Pemantauan Proposal, Monitor Pengguna (Pengguna mode baca).
+    // Ketua STMIK (hanya baca): Akademik › Daftar Dokumen (Proposal, Laporan), Statistik (dulu Pemantauan),
+    // Arsip Periode, Cetak Laporan, Monitor Pengguna (Pengguna mode baca).
     if (primaryRole === 'ketua_stmik') {
-      if (page === 'pemantauan') return <PemantauanPage />
+      if (page === 'statistik') return <PemantauanPage />
+      if (page === 'daftar-proposal') return <DaftarDokumenStmikPage key="proposal" tipe="proposal" />
+      if (page === 'daftar-laporan') return <DaftarDokumenStmikPage key="laporan" tipe="laporan" />
+      if (page === 'review-laporan') return <LaporanMasukDetailPage key={location.pathname} />
+      if (page === 'arsip-periode') return <ArsipPeriodeStmikPage key={location.pathname} />
+      if (page === 'cetak-laporan') return <CetakRekapStmikPage />
       if (page === 'users') return <UserManagementPage readOnly />
       return <DashboardHome role="ketua_stmik" isReviewer={false} />
     }

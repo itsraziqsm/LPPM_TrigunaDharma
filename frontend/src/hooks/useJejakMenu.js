@@ -4,7 +4,7 @@ import { getRoleNames } from '../utils/roles'
 // Induk menu untuk breadcrumb, mengikuti pohon sidebar peran pertama (components/Sidebar.jsx):
 //   Admin       — Akademik › Dokumen Masuk/Periode; Dokumentasi › Manajemen Template/Cetak Dokumen
 //   Ketua LPPM  — Dokumentasi › Cetak Dokumen/Luaran (Dokumen Masuk & Periode di tingkat atas)
-//   Ketua STMIK — Akademik › Pemantauan Proposal
+//   Ketua STMIK — Akademik › Daftar Dokumen (Statistik, Arsip Periode, Cetak Laporan di tingkat atas)
 //   grup: 'akademik' | 'dokumentasi'
 const INDUK = {
   admin: { akademik: [{ label: 'Akademik' }], dokumentasi: [{ label: 'Dokumentasi' }] },

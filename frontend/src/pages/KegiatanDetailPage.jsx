@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Breadcrumb from '../components/Breadcrumb'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -106,6 +106,7 @@ function Tahapan({ tahapan, status }) {
 export default function KegiatanDetailPage({ jenis }) {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const user = useAuthStore((s) => s.user)
   const roles = getRoleNames(user?.roles)
   const isDosen = roles[0] === 'dosen'
@@ -161,8 +162,10 @@ export default function KegiatanDetailPage({ jenis }) {
   }, [sebagaiPengusul, detail])
 
   const isStmik = roles[0] === 'ketua_stmik'
-  const kembali = isDosen || roles[0] === 'mahasiswa' ? `/kegiatan/${jenis}` : isStmik ? '/pemantauan' : '/proposals'
-  const kembaliLabel = roles[0] === 'mahasiswa' ? null : isDosen ? `Status ${JENIS_LABEL[jenis]}` : isStmik ? 'Pemantauan Proposal' : 'Proposal Kegiatan'
+  // Ketua STMIK: kembali ke halaman asal (state.dari: Daftar Proposal, Statistik, Arsip Periode).
+  const dari = isStmik ? location.state?.dari : null
+  const kembali = dari?.to || (isDosen || roles[0] === 'mahasiswa' ? `/kegiatan/${jenis}` : isStmik ? '/daftar-dokumen/proposal' : '/proposals')
+  const kembaliLabel = dari?.label || (roles[0] === 'mahasiswa' ? null : isDosen ? `Status ${JENIS_LABEL[jenis]}` : isStmik ? 'Daftar Proposal' : 'Proposal Kegiatan')
 
   if (state.status !== 'ready') {
     return (

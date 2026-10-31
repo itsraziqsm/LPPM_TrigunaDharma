@@ -278,7 +278,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/pemantauan` (Ketua STMIK), `/cetak-laporan` (mhs), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
@@ -358,11 +358,22 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Manajemen Template** (dulu Template Proposal; `TemplateProposalPage.jsx`: unggah versi DOCX/PDF per jenis umum/penelitian/pengabdian, unduh,
   aktifkan, hapus versi riwayat), Backup Data. Unduhan blob lewat `utils/unduhBlob.js` (`simpanBlob`).
 - Menu **Ketua STMIK** (`STMIK_NAV_ITEMS`, peran pertama `ketua_stmik`, hanya baca): Dashboard (adapter
-  `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Akademik** › **Pemantauan Proposal**
-  (`PemantauanPage.jsx`, `/pemantauan`: `PanelCari` — cari + Filter periode/jenis/termasuk draft (langsung berlaku), kartu ringkasan + per status (klik =
-  saring), tab Proposal (`/monitoring/proposals`, urut; baris → Detail Kegiatan baca saja, kembali ke Pemantauan) & Dosen
-  pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Monitor Pengguna** (`/users` → `UserManagementPage readOnly`: tanpa
-  ubah status/peran/hapus/reviewer; backend GET /users belum untuk ketua_stmik → 403 = ApiPending W-45). Rekap Proposal dicabut. Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
+  `dashboard/adapters/stmik.js`: `GET /monitoring/ringkasan` & `/monitoring/proposals`), **Akademik** › **Daftar Dokumen** ›
+  **Proposal** / **Laporan** (`pages/stmik/DaftarDokumenStmikPage.jsx` prop `tipe`, `/daftar-dokumen/proposal|laporan`: data semua
+  halaman (`utils/semuaHalaman.js`) dari `GET /monitoring/proposals` / `GET /laporan`, tanpa draft; tampil = periode **aktif** + yang
+  masih **berjalan** di luar periode aktif (proposal: bukan ditolak & tahapan < 4; laporan: diajukan/review/revisi); `KepalaMasuk`
+  (Ditampilkan/Periode aktif/Berjalan di luar), `PanelCari` (Cakupan, Status, Jenis), `KartuNavy`, paginasi 10; baris proposal → Detail
+  Kegiatan, laporan → `/laporan-masuk/detail/:id` (`LaporanMasukDetailPage` mode `bacaSaja`: tanpa reviewer/keputusan/hapus)),
+  **Statistik** (dulu Pemantauan Proposal; `PemantauanPage.jsx`, `/statistik`, `/pemantauan` dialihkan: `PanelCari` — cari + Filter
+  periode/jenis/termasuk draft (langsung berlaku), kartu ringkasan + per status (klik = saring), tab Proposal (`/monitoring/proposals`,
+  urut) & Dosen pengusul (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Arsip Periode** (`pages/stmik/ArsipPeriodeStmikPage.jsx`,
+  `/arsip-periode[/detail/:id]`: folder per tahun seperti Arsip Kegiatan, jumlah = proposal diajukan per periode dari `/monitoring/proposals`),
+  **Cetak Laporan** (`pages/cetak/CetakRekapStmikPage.jsx`, `/cetak-laporan` — rute sama dengan mahasiswa, dipilih per peran; PDF
+  `pages/cetak/rekapStmikPDF.js`: rekap kegiatan per periode (satu/semua, opsional daftar proposal), rekap tahunan (+ per jenis), rekap
+  anggaran disetujui (filter tahun & jenis, + realisasi laporan); agregat dihitung di peramban), **Monitor Pengguna** (`/users` →
+  `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users belum untuk ketua_stmik → 403 = ApiPending
+  W-45). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
+  Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
 - **Periode** (`PeriodePage`): kepala `KepalaMasuk` (prop `aksi` = tombol Tambah Periode untuk Ketua; kotak Total, Aktif, Dipilih).
   Daftar periode = **folder** (`components/FolderPeriode.jsx`: `FolderPeriode` tema terang — bidang atas navy (penelitian) /
   brass (pengabdian), lembar bertab berisi **judul + jumlah kegiatan** saja; `GrupTahun` = dropdown **per tahun**, diingat di
@@ -540,7 +551,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
   rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti
   pohon sidebar peran pertama: `hooks/useJejakMenu.js` (`'akademik'|'dokumentasi'`) menambah induk per peran (Admin: Akademik › Dokumen
-  Masuk/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template; Ketua LPPM: Dokumentasi › Cetak Dokumen/Luaran; Ketua STMIK: Akademik › Pemantauan). Halaman Cetak memakai `CetakBreadcrumb`.
+  Masuk/Periode, Dokumentasi › Cetak Dokumen/Manajemen Template; Ketua LPPM: Dokumentasi › Cetak Dokumen/Luaran; Ketua STMIK: Akademik › Daftar Dokumen). Halaman Cetak memakai `CetakBreadcrumb`.
 - **Panel cari standar** `src/components/PanelCari.jsx` (+ `PilihanFilter`): kolom cari · tombol **Filter** (panel filter hanya saat
   dibuka, jumlah filter aktif di tombol) · **Cari**; baris "Filter aktif" (chip × + Hapus semua) hanya bila ada filter; `bare` = tanpa
   kartu; responsif container query. Dipakai semua pencarian halaman: Dokumen Masuk (`CariFilterMasuk`), Pengguna, Luaran Dosen,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, UserPlus } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
 import { usersApi } from '../api/users'
@@ -32,13 +32,18 @@ function errorText(e, fallback) {
 }
 
 // viewOnly (Admin): lihat saja + hapus dengan izin; tugaskan reviewer & keputusan = Ketua.
+// bacaSaja (Ketua STMIK): hanya baca (tanpa hapus/reviewer/keputusan); kembali ke Daftar Laporan.
 export default function LaporanMasukDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   // Admin (peran pertama): lihat & hapus saja; Ketua mengelola reviewer & keputusan.
-  const viewOnly = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'admin'
+  const peran = getRoleNames(useAuthStore((st) => st.user)?.roles)[0]
+  const viewOnly = peran === 'admin'
+  const bacaSaja = peran === 'ketua_stmik'
+  const location = useLocation()
+  const asal = bacaSaja ? location.state?.dari || { to: '/daftar-dokumen/laporan', label: 'Daftar Laporan' } : { to: '/laporan-masuk', label: 'Laporan Kegiatan' }
   const induk = useJejakMenu('akademik')
-  const onClose = () => navigate('/laporan-masuk')
+  const onClose = () => navigate(asal.to)
   const onChanged = () => {}
   const [laporan, setLaporan] = useState(null)
   const [error, setError] = useState('')
@@ -132,18 +137,24 @@ export default function LaporanMasukDetailPage() {
     }
   }
 
-  const canAssign = !viewOnly && laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
+  const canAssign = !viewOnly && !bacaSaja && laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
   // Laporan yang sudah disetujui berstatus final: status tidak bisa diubah lagi.
-  const canDecide = !viewOnly && laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
+  const canDecide = !viewOnly && !bacaSaja && laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
 
   return (
     <div className="page rise space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/laporan-masuk" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
+        <Link to={asal.to} className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-navy-900">
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Laporan Kegiatan
+          {asal.label}
         </Link>
-        <Breadcrumb items={[...induk, { label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan', to: '/laporan-masuk' }, { label: 'Detail' }]} />
+        <Breadcrumb
+          items={
+            bacaSaja
+              ? [...induk, { label: 'Daftar Dokumen' }, { label: 'Daftar Laporan', to: '/daftar-dokumen/laporan' }, { label: 'Detail' }]
+              : [...induk, { label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan', to: '/laporan-masuk' }, { label: 'Detail' }]
+          }
+        />
       </div>
 
       <header className="card p-6">
@@ -151,6 +162,7 @@ export default function LaporanMasukDetailPage() {
           <span className="badge badge-tag">Laporan {JENIS_LABEL[laporan?.jenis] || ''}</span>
           {laporan ? <StatusBadge status={laporan.status} /> : null}
           {viewOnly ? <span className="badge badge-neutral">Lihat & hapus (Admin)</span> : null}
+          {bacaSaja ? <span className="badge badge-neutral">Baca saja</span> : null}
         </p>
         <h1 className="mt-2 break-words font-serif text-2xl font-medium leading-snug text-navy-950 sm:text-3xl">{laporan?.judul || 'Memuat…'}</h1>
         {laporan ? (
@@ -201,7 +213,7 @@ export default function LaporanMasukDetailPage() {
                     {laporan.reviewerTugasan.map((t) => (
                       <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <span className="flex min-w-0 items-center gap-2"><UserAvatar user={t.reviewer || { id: t.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" /><span className="truncate">{t.reviewer?.fullName || t.reviewer?.name}</span></span>
-                        {viewOnly ? null : (
+                        {viewOnly || bacaSaja ? null : (
                           <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
                             Hapus
                           </button>

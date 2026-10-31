@@ -6,12 +6,11 @@ import UserAvatar from '../components/UserAvatar'
 import Breadcrumb from '../components/Breadcrumb'
 import KartuNavy, { TabNavy } from '../components/KartuNavy'
 import { barisKlik } from '../utils/barisKlik'
-import useJejakMenu from '../hooks/useJejakMenu'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 
 // ---------------------------------------------------------------------------
-// Pemantauan Proposal (/pemantauan) — Ketua STMIK (juga bisa dibuka Ketua LPPM/Admin),
+// Statistik (/statistik, dulu Pemantauan Proposal /pemantauan) — Ketua STMIK (juga bisa dibuka Ketua LPPM/Admin),
 // hanya baca. W-37, new-api.md bagian 24: ringkasan (GET /monitoring/ringkasan),
 // tab Proposal (GET /monitoring/proposals: pengusul, status/tahapan, anggaran, laporan)
 // & Dosen (GET /monitoring/dosen: rekap per dosen). Filter bersama: periode, jenis,
@@ -55,7 +54,6 @@ function Halaman({ page, pages, onPage }) {
 }
 
 export default function PemantauanPage() {
-  const induk = useJejakMenu('akademik')
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'dosen' ? 'dosen' : 'proposal'
@@ -124,10 +122,10 @@ export default function PemantauanPage() {
     <div className="page space-y-6">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="page-title">Pemantauan Proposal</h1>
-          <p className="page-desc">Dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
+          <h1 className="page-title">Statistik</h1>
+          <p className="page-desc">Pemantauan proposal: dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
         </div>
-        <Breadcrumb items={[...induk, { label: 'Pemantauan Proposal' }]} />
+        <Breadcrumb items={[{ label: 'Statistik' }]} />
       </header>
 
       {/* Panel cari standar (components/PanelCari): cari · Filter (periode, jenis, draft) · Cari */}
@@ -257,7 +255,7 @@ export default function PemantauanPage() {
               </thead>
               <tbody>
                 {list.items.map((p) => (
-                  <tr key={p.id} {...barisKlik(() => navigate(`/kegiatan/${p.jenis}/detail/${p.id}`), p.judul)}>
+                  <tr key={p.id} {...barisKlik(() => navigate(`/kegiatan/${p.jenis}/detail/${p.id}`, { state: { dari: { to: '/statistik', label: 'Statistik' } } }), p.judul)}>
                     <td className="min-w-56">
                       <span className="block font-semibold text-slate-900">{p.judul}</span>
                       <span className="block text-xs text-slate-500">

@@ -9,7 +9,7 @@ import PanelCari, { PilihanFilter } from './PanelCari'
 // Blok bersama Arsip Kegiatan (dosen) & Arsip Project (mahasiswa):
 //   PratinjauArsip — daftar di bawah folder terpilih: hanya 3 terbaru + "Lihat lebih banyak" → detail.
 //   DetailArsip    — halaman /arsip-…/detail/:id: kepala periode + panel cari (status) + daftar lengkap.
-// `item` = { id, judul, status, keterangan, to }; `STATUS` = { kode: [label, kelasBadge] }.
+// `item` = { id, judul, status, keterangan, to, state? }; `STATUS` = { kode: [label, kelasBadge] }.
 // ---------------------------------------------------------------------------
 
 const PRATINJAU_MAX = 3
@@ -20,7 +20,7 @@ function Baris({ item, STATUS }) {
   const [label, cls] = STATUS[item.status] || [item.status, 'badge-neutral']
   return (
     <li>
-      <Link to={item.to} className="group flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50">
+      <Link to={item.to} state={item.state} className="group flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-slate-50">
         <span className="min-w-0">
           <span className="block truncate font-medium text-slate-900 group-hover:text-navy-800">{item.judul}</span>
           <span className="mt-0.5 block text-sm text-slate-500">{item.keterangan}</span>

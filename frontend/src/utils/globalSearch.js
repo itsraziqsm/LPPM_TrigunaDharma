@@ -57,8 +57,12 @@ const HALAMAN = {
   ketua_lppm: [{ to: '/luaran-dosen', title: 'Luaran', kata: 'luaran dosen jurnal poster bukti unduh csv zip' }],
   reviewer: [{ to: '/penugasan', title: 'Penugasan Review', kata: 'tugasan reviewer' }],
   ketua_stmik: [
-    { to: '/pemantauan', title: 'Pemantauan Proposal', kata: 'monitoring anggaran progres' },
-    { to: '/pemantauan?tab=dosen', title: 'Dosen Pengusul', kata: 'monitoring dosen rekap' },
+    { to: '/daftar-dokumen/proposal', title: 'Daftar Proposal', kata: 'akademik dokumen proposal periode aktif berjalan' },
+    { to: '/daftar-dokumen/laporan', title: 'Daftar Laporan', kata: 'akademik dokumen laporan kegiatan' },
+    { to: '/statistik', title: 'Statistik', kata: 'pemantauan monitoring anggaran progres' },
+    { to: '/statistik?tab=dosen', title: 'Dosen Pengusul', kata: 'statistik monitoring dosen rekap' },
+    { to: '/arsip-periode', title: 'Arsip Periode', kata: 'periode folder tahun' },
+    { to: '/cetak-laporan', title: 'Cetak Laporan', kata: 'rekap periode tahunan anggaran pdf' },
     { to: '/users', title: 'Monitor Pengguna', kata: 'pengguna user dosen mahasiswa' },
   ],
 }
