@@ -208,6 +208,23 @@ Cetak Laporan. Dua fitur memindahkan akses ke peran yang belum diizinkan backend
 | W-44 | **Luaran** (Ketua LPPM › Dokumentasi › Luaran, `/luaran-dosen`) dan kartu **Luaran Dosen** di Cetak Dokumen Ketua | Daftar semua luaran + unduh CSV/ZIP untuk Ketua LPPM | Tambah `ketua_lppm` ke `authorize(...)` pada `GET /luaran`, `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip` (`luaran_admin.go`); `GET /luaran/:id/bukti` juga harus boleh untuk ketua | Sekarang 403 → halaman menampilkan "API belum ada". Admin tidak lagi punya menu Luaran. |
 | W-45 | **Monitor Pengguna** (Ketua STMIK, `/users`, tampilan Pengguna mode baca) | Daftar & detail pengguna (baca saja) | Tambah `ketua_stmik` ke `authorize(...)` pada `GET /users` dan `GET /users/:id` (`users.go`); tulis tetap admin/ketua | Sekarang 403 → "API belum ada". Tanpa aksi ubah status/peran/hapus. |
 
+## Registrasi — satu identitas satu pendaftaran (`frontend/src/pages/RegisterPage.jsx`, `/register`)
+
+Keputusan: pendaftaran dikunci per **identitas** (email + NIDN/NIRM), **bukan** per perangkat (MAC address tidak bisa dibaca
+peramban/server; IP dipakai bersama satu kampus). Satu orang hanya bisa punya satu pendaftaran aktif; daftar ulang hanya
+boleh setelah pendaftaran sebelumnya **ditolak**. Saat ini kolom `email`, `nidn`, `nim` sudah UNIQUE di DB, tetapi duplikat
+hanya menghasilkan 409 umum "Resource already exists" dan akun `rejected` tidak bisa mendaftar ulang sama sekali.
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-48 | Formulir Daftar (dosen & mahasiswa) + halaman baru **"Pendaftaran sudah terkirim"** | Validasi identitas lebih ketat & jawaban yang membedakan status pendaftaran sebelumnya | **1. Validasi** `POST /auth/register/dosen` & `/register/mahasiswa` (422 `{"errors":{"field":["pesan"]}}`): `email` wajib, format valid (sudah `zStr().Email()`; tambah: di-*trim* & huruf kecil sebelum disimpan/dicek agar unik tanpa beda huruf, tanpa spasi, domain ber-TLD); `nidn` **wajib** untuk dosen, hanya angka, **minimal 10 digit** (`^\d{10,}$`); `nim` **wajib** untuk mahasiswa, kini berarti **NIRM**, tepat **10 digit** (`^\d{10}$`). Nama field JSON & kolom DB tetap `nim` (kompatibel; label UI "NIRM"). **2. Cek identitas sebelum INSERT** (cari `User` dengan email ATAU nidn/nim yang sama): status `pending` → **409** `{ success:false, code:"PENDAFTARAN_MENUNGGU", message:"Pendaftaran dengan identitas ini sudah terkirim dan menunggu persetujuan admin.", data:{ email:"bu***@kampus.ac.id", createdAt } }`; status `approved` → **409** `code:"AKUN_SUDAH_AKTIF"` ("Akun sudah aktif, silakan masuk."); status `rejected` → **boleh daftar ulang**: perbarui baris lama (password baru, profil, peran, `status='pending'`, `createdAt/updatedAt`) lalu balas **201** seperti pendaftaran baru; email milik satu user tetapi NIDN/NIRM milik user lain → **409** `code:"IDENTITAS_BENTROK"`. **3. (Opsional)** `POST /auth/register/status` `{ email }` → `{ status: "pending"\|"approved"\|"rejected"\|"tidak_ada" }` dengan `authLimiter`, untuk tombol "Cek status pendaftaran" | Field `code` dipakai frontend untuk memilih tampilan (halaman "sudah terkirim" vs "silakan masuk") tanpa mencocokkan teks pesan. Akun hapus-sendiri (`deletedAt`, status `rejected`, email dianonimkan): kosongkan juga `nidn`/`nim` saat anonimisasi agar orangnya bisa mendaftar lagi. Aturan format yang sama sebaiknya juga berlaku di `PATCH /users/profile/me` (ubah NIDN/NIRM) dan saat admin mengubah data. Data lama yang belum memenuhi format **tidak** diubah otomatis. Endpoint status (3) membuka kemungkinan menebak email terdaftar; batasi lajunya atau ganti dengan pengiriman status lewat email. |
+
+Rencana frontend setelah W-48 tersedia (validasi format bisa lebih dulu di frontend): label "NIM" → **"NIRM"** (10 digit), NIDN
+min. 10 digit (hanya angka, `inputMode="numeric"`), email divalidasi sebelum kirim; halaman **"Pendaftaran sudah terkirim —
+menunggu persetujuan admin"** setelah daftar berhasil atau saat API menjawab `PENDAFTARAN_MENUNGGU`; `AKUN_SUDAH_AKTIF` → arahkan
+ke Login dengan pesan; penanda di `localStorage` hanya untuk kenyamanan (buka `/register` di peramban yang sama → langsung ke
+halaman "sudah terkirim", dengan tautan "Daftar dengan data lain" / "Cek status").
+
 ## Riwayat penggunaan per user (Dashboard › Pintasan, Pencarian global)
 
 Sekarang memakai "SOP Frontend": riwayat disimpan di `localStorage` per user (`utils/riwayat.js`: `riwayatHalaman:<id>`,
