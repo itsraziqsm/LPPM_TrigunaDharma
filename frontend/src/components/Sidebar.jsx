@@ -277,6 +277,16 @@ export default function Sidebar() {
   const logout = useAuthStore((s) => s.logout)
   const [pendingCount, setPendingCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Bilah atas ponsel melayang (pil semi transparan ala iOS) setelah wadah gulir halaman digulir.
+  const [melayang, setMelayang] = useState(false)
+  useEffect(() => {
+    const cek = (e) => {
+      const el = e.target
+      if (el instanceof Element && el.hasAttribute('data-scroll-container')) setMelayang(el.scrollTop > 8)
+    }
+    document.addEventListener('scroll', cek, { capture: true, passive: true })
+    return () => document.removeEventListener('scroll', cek, { capture: true })
+  }, [])
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const { pathname } = useLocation()
   // Elemen wadah menu (ref-callback → state) untuk sorot item aktif yang meluncur (SorotNav).
@@ -363,7 +373,14 @@ export default function Sidebar() {
   return (
     <>
       {/* ── Bilah atas (hanya layar kecil) ─────────────────────────────── */}
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-1 border-b border-white/10 bg-rail pl-2 pr-14 lg:hidden">
+      <div
+        data-melayang={melayang || undefined}
+        className={`fixed z-40 flex items-center gap-1 pl-2 pr-14 transition-[top,left,right,height,border-radius,background-color,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:hidden ${
+          melayang
+            ? 'left-2 right-2 top-2 h-12 rounded-2xl border border-white/15 bg-rail/70 shadow-[0_8px_24px_-8px_rgba(13,28,63,0.45)] backdrop-blur-xl backdrop-saturate-150'
+            : 'left-0 right-0 top-0 h-14 rounded-none border border-transparent border-b-white/10 bg-rail'
+        }`}
+      >
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -379,7 +396,7 @@ export default function Sidebar() {
 
       {/* ── Lonceng notifikasi (satu instance) ─────────────────────────── */}
       <div
-        className={`fixed right-2 top-2 z-40 lg:right-auto ${
+        className={`fixed z-40 transition-[top,right] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:right-auto ${melayang ? 'right-3.5 top-3.5' : 'right-2 top-2'} ${
           collapsed ? 'lg:left-[1.125rem] lg:top-[4.5rem]' : 'lg:left-[12.5rem] lg:top-[1.0625rem]'
         }`}
       >
