@@ -358,12 +358,17 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
     // Informasi → Profil Dosen → Statistik Dosen.
     body = (
       <>
+        <hr className="pemisah" />
         <PintasanSection shortcuts={model.shortcuts}>
           <DocCards cards={dosen.cards} luaran={dosen.luaran} />
         </PintasanSection>
+        <hr className="pemisah" />
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
+        <hr className="pemisah" />
         <DashboardBody model={model} />
+        <hr className="pemisah" />
         <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
+        <hr className="pemisah" />
         <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
       </>
     )

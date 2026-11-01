@@ -218,7 +218,11 @@ export default function TemplateProposalPage() {
         </section>
       ) : null}
 
+      <hr className="pemisah" />
+
       <UnggahForm onDone={reload} />
+
+      <hr className="pemisah" />
 
       {/* Tabel bingkai navy (M1) */}
       <KartuNavy id="semua-versi" judul="Semua Versi" desc="Satu versi aktif per jenis; versi lama bisa diaktifkan lagi atau dihapus." badge={state.loading ? '…' : `${state.items.length} versi`}>

@@ -68,6 +68,8 @@ export default function CetakPenggunaPage() {
         <CetakBreadcrumb last="Tabel Pengguna" />
       </header>
 
+      <hr className="pemisah" />
+
       <section className="card">
         <header className="border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-semibold text-navy-950">Peran</h2>

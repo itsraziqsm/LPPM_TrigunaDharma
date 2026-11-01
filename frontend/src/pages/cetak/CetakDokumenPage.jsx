@@ -180,6 +180,8 @@ export default function CetakDokumenPage() {
         </div>
       ) : null}
 
+      <hr className="pemisah" />
+
       <ul className="grid gap-5 lg:grid-cols-2">
         <DokumenCard
           icon={FileSpreadsheet}

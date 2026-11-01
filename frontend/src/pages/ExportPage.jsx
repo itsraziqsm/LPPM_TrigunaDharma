@@ -403,6 +403,8 @@ export default function ExportPage() {
         )}
       </header>
 
+      <hr className="pemisah" />
+
       <div className="space-y-6">
         {/* Filter */}
         <FilterBar

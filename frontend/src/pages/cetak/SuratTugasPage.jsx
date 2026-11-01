@@ -204,6 +204,8 @@ export default function SuratTugasPage() {
         </div>
       ) : null}
 
+      <hr className="pemisah" />
+
       {/* 1. Kegiatan */}
       <section className="card">
         <header className="border-b border-slate-200 px-6 py-4">
@@ -261,6 +263,8 @@ export default function SuratTugasPage() {
           </div>
         </div>
       </section>
+
+      <hr className="pemisah" />
 
       {/* 2. Tugas & petugas */}
       <section className="card">
@@ -329,6 +333,8 @@ export default function SuratTugasPage() {
         </div>
       </section>
 
+      <hr className="pemisah" />
+
       {/* 3. Waktu & tempat */}
       <section className="card">
         <header className="border-b border-slate-200 px-6 py-4">
@@ -361,6 +367,8 @@ export default function SuratTugasPage() {
           </div>
         </div>
       </section>
+
+      <hr className="pemisah" />
 
       {/* 4. Surat */}
       <section className="card">

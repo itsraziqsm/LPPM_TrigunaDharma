@@ -97,6 +97,8 @@ export default function CetakLuaranPage() {
         <CetakBreadcrumb last="Luaran Dosen" />
       </header>
 
+      <hr className="pemisah" />
+
       <section className="card">
         <header className="border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-semibold text-navy-950">1. Keluaran</h2>
@@ -117,6 +119,8 @@ export default function CetakLuaranPage() {
           <FieldError message={error} />
         </fieldset>
       </section>
+
+      <hr className="pemisah" />
 
       <section className="card">
         <header className="border-b border-slate-200 px-6 py-4">

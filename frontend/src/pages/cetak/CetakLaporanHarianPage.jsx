@@ -66,6 +66,8 @@ export default function CetakLaporanHarianPage() {
         ]}
       />
 
+      <hr className="pemisah" />
+
       <PanelCari id="cetak-lh" value={search} onChange={setSearch} onSubmit={() => {}} placeholder="Cari judul project atau nama dosen pengusul" />
 
       {failed ? (

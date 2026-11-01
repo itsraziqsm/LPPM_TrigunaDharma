@@ -367,6 +367,8 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
       </section>
 
+      <hr className="pemisah" />
+
       {/* Aksi buat baru — di atas Riwayat */}
       <div className="grid gap-3 sm:grid-cols-2">
         <Link to={usulanTo} className="btn btn-secondary h-12">
@@ -591,6 +593,8 @@ export default function KegiatanPage({ jenis }) {
         ) : null}
         </div>
       </section>
+
+      <hr className="pemisah" />
 
       <MemberSection jenis={jenis} label={label} userId={user?.id} />
     </div>

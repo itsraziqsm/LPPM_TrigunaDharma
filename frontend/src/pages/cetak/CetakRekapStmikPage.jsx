@@ -115,6 +115,8 @@ export default function CetakRekapStmikPage() {
         ]}
       />
 
+      <hr className="pemisah" />
+
       {failed ? (
         <div className="card px-6 py-12 text-center text-base text-red-600">Data rekap gagal dimuat. Muat ulang halaman untuk mencoba lagi.</div>
       ) : memuat ? (

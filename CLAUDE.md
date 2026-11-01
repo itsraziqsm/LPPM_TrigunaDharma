@@ -581,6 +581,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (Periode admin/ketua, Arsip Kegiatan, Arsip Project, Arsip Periode Ketua STMIK, Cetak Laporan mahasiswa & Ketua STMIK) memakai **`KepalaStatus`** (`components/KepalaStatus.jsx`:
   judul + deskripsi kiri, breadcrumb kanan, aksi, 3 `StatusCard` ikon berubin; nada di `utils/toneStatus.js`), sama dengan Kegiatan dosen. Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
   Manajemen Template (kartu template aktif), Undangan & Penugasan Review.
+- **Garis pemisah section**: `<hr className="pemisah" />` (kelas `.pemisah` di `index.css`, garis tipis `slate-200`) di antara
+  section halaman: Dashboard semua peran (Halo | Pintasan | [Usulan Terakhir] | Informasi | [Profil Dosen | Statistik Dosen]),
+  Kegiatan dosen (kepala | aksi + Riwayat | sebagai anggota tim), Dokumentasi (Manajemen Template, Luaran Dosen, Cetak Dokumen +
+  sub-halamannya: Rekap Proposal, Surat Tugas per bagian, Tabel Pengguna, Luaran Dosen) dan Cetak Laporan. Halaman baru di grup
+  tersebut wajib memakainya.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

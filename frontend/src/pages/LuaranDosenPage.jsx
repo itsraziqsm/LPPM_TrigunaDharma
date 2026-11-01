@@ -154,6 +154,8 @@ export default function LuaranDosenPage() {
         ]}
       />
 
+      <hr className="pemisah" />
+
       {/* Panel cari standar (components/PanelCari): cari · Filter (7 filter, Terapkan) · Cari */}
       <PanelCari
         id="ld"
