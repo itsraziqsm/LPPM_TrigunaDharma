@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
 import { bacaPendaftaran, rapikanEmail, simpanPendaftaran, validasiDaftar } from '../utils/pendaftaran'
@@ -43,6 +43,9 @@ const Field = ({ label, name, type = 'text', value, onChange, placeholder, requi
 
 // Satu identitas satu pendaftaran (W-48): validasi email/NIDN/NIRM di sini; status pendaftaran
 // sebelumnya dari kode galat server → halaman /register/terkirim atau Login.
+const LANGKAH = ['Akun', 'Data diri']
+const LANGKAH_KOLOM = [['email', 'password'], ['name', 'nidn', 'nim', 'programStudi', 'prodi']]
+
 const PESAN_DUPLIKAT =
   'Email, NIDN, atau NIRM ini sudah terdaftar. Bila pendaftaran Anda masih menunggu persetujuan, tunggu konfirmasi admin; bila sudah disetujui, silakan masuk.'
 
@@ -61,7 +64,20 @@ export default function RegisterPage() {
   const [sudahTerkirim] = useState(() => Boolean(bacaPendaftaran()))
 
   const galatKlien = validasiDaftar(role, form)
-  const galat = (k) => (coba ? galatKlien[k] : null) || galatServer[k]
+  const [langkah, setLangkah] = useState(0) // 0 = akun, 1 = data dosen/mahasiswa
+  const [arah, setArah] = useState('maju')
+  const [cobaLangkah, setCobaLangkah] = useState([false, false])
+  const galat = (k) => ((coba || cobaLangkah[LANGKAH_KOLOM[0].includes(k) ? 0 : 1]) ? galatKlien[k] : null) || galatServer[k]
+  const lanjut = () => {
+    setCobaLangkah((c) => [true, c[1]])
+    if (LANGKAH_KOLOM[0].some((k) => galatKlien[k])) return
+    setArah('maju')
+    setLangkah(1)
+  }
+  const kembali = () => {
+    setArah('mundur')
+    setLangkah(0)
+  }
 
   const handleChange = (e) => {
     clearError()
@@ -75,8 +91,12 @@ export default function RegisterPage() {
   }
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (langkah === 0) return lanjut()
     setCoba(true)
-    if (Object.keys(galatKlien).length) return
+    if (Object.keys(galatKlien).length) {
+      if (LANGKAH_KOLOM[0].some((k) => galatKlien[k])) kembali()
+      return
+    }
     const email = rapikanEmail(form.email)
     try {
       const payload = role === 'dosen'
@@ -95,6 +115,8 @@ export default function RegisterPage() {
         navigate('/login', { replace: true, state: { flash: 'Akun dengan identitas ini sudah aktif. Silakan masuk.', email } })
       } else if (err.status === 422 && err.fieldErrors) {
         setGalatServer(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, [].concat(v).join(' ')])))
+        // Galat di email/password → tampilkan langkah 1.
+        if (LANGKAH_KOLOM[0].some((k) => err.fieldErrors[k])) kembali()
       } else if (err.status === 409 && !err.code) {
         // Backend lama (sebelum W-48): 409 umum "Resource already exists".
         clearError()
@@ -178,21 +200,27 @@ export default function RegisterPage() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="mt-6" noValidate>
-            <p className="text-sm font-semibold text-navy-900">Informasi Akun</p>
+          {/* Dua langkah: 1. Akun (email & password) → 2. Data dosen/mahasiswa. Bilah progres bergerak halus. */}
+          <ol className="mt-7 grid grid-cols-2 gap-3" aria-label="Langkah pendaftaran">
+            {LANGKAH.map((l, i) => (
+              <li key={l} aria-current={langkah === i ? 'step' : undefined}>
+                <span className="block h-1.5 overflow-hidden rounded-full bg-slate-200">
+                  <span
+                    className="block h-full rounded-full bg-navy-700 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                    style={{ width: langkah >= i ? '100%' : '0%' }}
+                  />
+                </span>
+                <span className={`mt-2 block text-xs font-semibold ${langkah >= i ? 'text-navy-900' : 'text-slate-400'}`}>
+                  {i + 1}. {l}
+                </span>
+              </li>
+            ))}
+          </ol>
 
-            <div className="mt-4 space-y-4">
-              <Field
-                label="Nama Lengkap"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Nama lengkap Anda"
-                required
-                error={galat('name')}
-                autoComplete="name"
-              />
-
+          <form onSubmit={handleSubmit} className="mt-6 overflow-hidden" noValidate>
+            <div key={langkah} className={arah === 'maju' ? 'langkah-maju' : 'langkah-mundur'}>
+            {langkah === 0 ? (
+            <div className="space-y-4">
               <Field
                 label="Email"
                 name="email"
@@ -234,13 +262,22 @@ export default function RegisterPage() {
                 {galat('password') ? <span className="mt-1.5 block text-xs text-red-700">{galat('password')}</span> : null}
               </div>
             </div>
-
-            <hr className="my-6 border-slate-200" />
-
-            <p className="text-sm font-semibold text-navy-900">{role === 'dosen' ? 'Data Dosen' : 'Data Mahasiswa'}</p>
+            ) : (
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-navy-900">{role === 'dosen' ? 'Data Dosen' : 'Data Mahasiswa'}</p>
+              <Field
+                label="Nama Lengkap"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Nama lengkap Anda"
+                required
+                error={galat('name')}
+                autoComplete="name"
+              />
 
             {role === 'dosen' ? (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   label="NIDN"
                   name="nidn"
@@ -262,7 +299,7 @@ export default function RegisterPage() {
                 />
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   label="NIRM"
                   name="nim"
@@ -284,17 +321,33 @@ export default function RegisterPage() {
                 />
               </div>
             )}
+            </div>
+            )}
+            </div>
 
-            <button type="submit" className="btn btn-primary mt-8 h-11 w-full text-[0.9375rem]" disabled={loading}>
-              {loading
-                ? (
-                  <span className="flex items-center justify-center gap-2.5">
-                    <span className="spinner" aria-hidden="true" />
-                    Mendaftar...
-                  </span>
-                )
-                : 'Daftar Sekarang'}
-            </button>
+            {langkah === 0 ? (
+              <button type="button" onClick={lanjut} className="btn btn-primary mt-8 h-11 w-full text-[0.9375rem]">
+                Lanjut
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            ) : (
+              <div className="mt-8 grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+                <button type="button" onClick={kembali} className="btn btn-secondary h-11" disabled={loading}>
+                  <ChevronLeft size={16} aria-hidden="true" />
+                  Kembali
+                </button>
+                <button type="submit" className="btn btn-primary h-11 text-[0.9375rem]" disabled={loading}>
+                  {loading
+                    ? (
+                      <span className="flex items-center justify-center gap-2.5">
+                        <span className="spinner" aria-hidden="true" />
+                        Mendaftar...
+                      </span>
+                    )
+                    : 'Daftar Sekarang'}
+                </button>
+              </div>
+            )}
           </form>
 
           <p className="mt-8 text-center text-sm text-slate-500">

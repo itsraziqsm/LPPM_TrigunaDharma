@@ -314,6 +314,34 @@
   animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Perpindahan langkah formulir (Daftar): geser + pudar sesuai arah */
+@keyframes langkah-maju {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes langkah-mundur {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.langkah-maju {
+  animation: langkah-maju 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.langkah-mundur {
+  animation: langkah-mundur 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
