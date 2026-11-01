@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Check, ChevronLeft, Clock } from 'lucide-react'
 import useLenis from '../hooks/useLenis'
-import LogoLppm from '../components/LogoLppm'
+import MerekLppm from '../components/MerekLppm'
 import ApiPending from '../components/ApiPending'
 import { bacaPendaftaran, hapusPendaftaran } from '../utils/pendaftaran'
 
@@ -30,7 +30,7 @@ export default function PendaftaranTerkirimPage() {
   return (
     <main ref={scrollRef} data-scroll-container className="fixed inset-0 grid place-items-center overflow-y-auto bg-canvas px-6 py-12">
       <section className="rise w-full max-w-md text-center" aria-labelledby="terkirim-judul">
-        <LogoLppm className="mx-auto size-12" />
+        <MerekLppm />
         <div className="mx-auto mt-8 grid size-14 place-items-center rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
           {menunggu ? <Clock size={26} strokeWidth={2} aria-hidden="true" /> : <Check size={26} strokeWidth={2.2} aria-hidden="true" />}
         </div>

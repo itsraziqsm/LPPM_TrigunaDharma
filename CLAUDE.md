@@ -272,8 +272,8 @@ npm run lint      # baseline: 0 error, 2 peringatan lama
 Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/api/axios.js`); nomor WhatsApp admin: `VITE_ADMIN_WA` (lihat `frontend/.env.example`).
 
 ### Arsitektur
-- `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` publik
-  (`VerifyEmailPage.jsx`, tanpa guard) dan `PrivateRoute`; semua
+- `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` & `/reset-password?token=` publik
+  (`VerifyEmailPage.jsx`, `ResetPasswordPage.jsx`, tanpa guard), `/lupa-password` (tamu) dan `PrivateRoute`; semua
   halaman privat merender `DashboardLayout` dengan prop `page`: `/dashboard`, `/periode`, `/periode/detail/:id` (admin/ketua),
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
@@ -658,6 +658,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   membesar jadi pil hijau membulat "Berhasil" + centang yang tergambar (`.pil-isi`, `.centang-gambar`, 1,2 dtk; 0,4 dtk bila reduced-motion) —
   dijalankan lewat `login(email, pw, { sebelumMasuk })` yang ditunggu **sebelum** token disimpan (GuestRoute langsung mengalihkan bila token ada). ⚠ `authStore.login` menambah **jeda 0,75 dtk
   hanya di dev** (`import.meta.env.DEV`) agar animasi terlihat di localhost — tidak aktif di build produksi; hapus blok itu bila tak diperlukan.
+  **Lupa password**: tautan "Lupa password?" di samping label Password Login → `/lupa-password` (`LupaPasswordPage.jsx`, tamu: `POST /auth/forgot-password`,
+  selalu tampil "Periksa Email Anda") ; tautan email → `/reset-password?token=` (`ResetPasswordPage.jsx`, publik tanpa guard: password baru ≥ 8 + ulangi,
+  `POST /auth/reset-password {token, newPassword}`, sesi lokal dikosongkan → `/login` + flash; token tak valid → "Minta tautan baru"). Butuh `FRONTEND_URL` di backend.
+  Reset oleh Admin (password sementara + wajib ganti) = ApiPending W-52. Halaman tamu mandiri (Terkirim, Lupa/Reset password) memakai merek
+  `components/MerekLppm.jsx` (lencana + teks "LPPM").
   Daftar: setelah `register` berhasil → `setBerhasil` + `tungguOutro()` lalu tetap ke `/register/terkirim` (`authStore.register` juga punya jeda dev 0,75 dtk).
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
   (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan

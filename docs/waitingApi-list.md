@@ -265,6 +265,16 @@ terbaca dosen sehingga aturan komposisi tim gagal). **Sudah ditangani di fronten
 |---|---|---|---|---|
 | W-51 | Usulan (ubah draf/revisi) › langkah Anggota: panel Ketentuan tim, kolom NIDN/NIM | `nim`, `nidn`, dan peran tiap anggota | Tambah `u.nidn`, `u.nim` (+ `roles` lewat `attachUserRoles`) pada query anggota di `proposal_queries.go` (dan `laporan_kegiatan.go`) | Menghapus 1 permintaan pencarian per anggota saat membuka draf; anggota yang akunnya tidak lagi `approved` tidak muncul di pencarian sehingga tetap terbaca dosen sampai W-51 ada. |
 
+## Reset password oleh Admin (Manajemen Pengguna)
+
+Lupa password mandiri **sudah tersambung** (`/lupa-password` → `POST /auth/forgot-password`, tautan email → `/reset-password?token=` →
+`POST /auth/reset-password`). Untuk pengguna yang tidak bisa menerima email, dibutuhkan reset oleh Admin. Password asli **tidak pernah**
+bisa ditampilkan/dicetak (disimpan bcrypt), jadi alurnya memakai password sementara sekali pakai:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-52 | Manajemen Pengguna › panel detail: tombol **Reset password** (Admin) + dialog yang menampilkan password sementara **sekali** (salin, tidak bisa dibuka lagi); saat login dengan password sementara → paksa **Ganti password** | Password sementara acak + penanda wajib ganti | `POST /users/:id/reset-password` (admin; body `{ password }` = password Admin pelaksana sebagai konfirmasi) → `{ passwordSementara: "Xy7…" }` (acak ≥ 12 karakter, hanya di respons ini); kolom baru `User.wajibGantiPassword` (BOOLEAN) di-set `true`, semua `RefreshToken` user dicabut, catat `ActivityLog` (`user.reset_password`), notifikasi ke user; `POST /auth/login` & `GET /auth/me` mengirim `wajibGantiPassword`; `PATCH /users/profile/password` mengosongkan penanda | Jangan pernah mengirim/menyimpan password asli atau hash ke frontend. Opsional: password sementara kedaluwarsa (mis. 24 jam). Frontend: setelah login, bila `wajibGantiPassword` → arahkan ke halaman ganti password sebelum Dashboard. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

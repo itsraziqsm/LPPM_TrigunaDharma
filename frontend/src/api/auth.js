@@ -22,4 +22,11 @@ export const authApi = {
 
   verifyEmail: (token) =>
     api.post('/auth/verify-email', { token }),
+
+  // Lupa password: kirim tautan reset ke email (selalu sukses) & simpan password baru dari tautan.
+  forgotPassword: (email) =>
+    api.post('/auth/forgot-password', { email }),
+
+  resetPassword: (token, newPassword) =>
+    api.post('/auth/reset-password', { token, newPassword }),
 }

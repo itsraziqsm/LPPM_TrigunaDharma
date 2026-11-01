@@ -6,6 +6,8 @@ import PendaftaranTerkirimPage from '../pages/PendaftaranTerkirimPage'
 import DashboardLayout from '../pages/DashboardLayout'
 import ErrorPage from '../pages/ErrorPage'
 import VerifyEmailPage from '../pages/VerifyEmailPage'
+import LupaPasswordPage from '../pages/LupaPasswordPage'
+import ResetPasswordPage from '../pages/ResetPasswordPage'
 
 const router = createBrowserRouter([
   {
@@ -15,6 +17,7 @@ const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
       { path: '/register/terkirim', element: <PendaftaranTerkirimPage /> },
+      { path: '/lupa-password', element: <LupaPasswordPage /> },
     ],
   },
   {
@@ -79,6 +82,8 @@ const router = createBrowserRouter([
   },
   // Publik (login atau tidak): konfirmasi link verifikasi email.
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <ErrorPage routeError /> },
+  // Publik: tautan reset password dari email (POST /auth/reset-password).
+  { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <ErrorPage routeError /> },
   // Halaman galat: /error/401, /error/403, /error/408, /error/500, /error/503, dst.
   { path: '/error/:code', element: <ErrorPage /> },
   // Export/Print Laporan kini menu Cetak Dokumen; tautan lama tetap jalan.
