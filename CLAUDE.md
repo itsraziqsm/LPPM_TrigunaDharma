@@ -506,7 +506,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dan keluar; satu-satunya tombol buka = ikon `PanelLeftOpen` (kebalikan `PanelLeftClose`) di posisi yang sama (tepat di atas profil). Menu baru wajib punya `icon` (termasuk item `children`). Sidebar dua bagian:
   **atas** terang `bg-rail-soft` (#E5EDFF: merek, menu, lalu tombol "Sembunyikan menu" tepat di
   atas profil, dengan bantuan pintasan `Ctrl`/`⌘` + `B` (`MOD_KEY`); item aktif kartu putih +
-  garis brass) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol
+  garis brass yang **meluncur** ke item yang diklik — satu kotak `components/SorotNav.jsx` di belakang `a[aria-current=page]`, diukur ulang
+  saat pindah halaman/grup membuka-menutup (ResizeObserver), memudar bila item aktif di grup tertutup, juga di rail ciut; tautan `z-10`) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol
   "Keluar dari Sistem" selebar kartu profil, merah saat hover). Sisi kanan sidebar diberi
   bayangan pemisah dari konten (dihapus saat sidebar diciutkan). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel.
   Keluar selalu lewat dialog konfirmasi (`ConfirmDialog`, portal ke body). Status disimpan di

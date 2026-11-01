@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import Collapse from './Collapse'
+import SorotNav from './SorotNav'
 import { useEffect, useState } from 'react'
 import useAuthStore from '../store/authStore'
 import { proposalDosenApi } from '../api/Proposaldosen'
@@ -168,11 +169,10 @@ function getRoleNames(roles) {
   return roles.map(r => r.role?.name || r.name || '')
 }
 
+// Latar & garis brass item aktif digambar SorotNav (kotak yang meluncur ke item yang diklik).
 const navLinkClass = ({ isActive }) =>
-  `relative flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
-    isActive
-      ? 'bg-white text-navy-950 shadow-sm ring-1 ring-inset ring-navy-100 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brass-400'
-      : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
+  `relative z-10 flex h-10 items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors duration-300 ${
+    isActive ? 'text-navy-950' : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
   }`
 
 // Semua tautan daun (tanpa children) dari pohon menu — dipakai rail ciut & cek grup aktif.
@@ -197,7 +197,7 @@ function NavGroup({ item, onNavigate, depth = 0 }) {
         onClick={() => setManual({ path: pathname, open: !expanded })}
         aria-expanded={expanded}
         aria-controls={listId}
-        className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
+        className={`relative z-10 flex h-10 w-full items-center gap-3 rounded-lg px-3 text-[0.8125rem] font-medium transition-colors ${
           childActive ? 'text-navy-950' : 'text-slate-600 hover:bg-white/70 hover:text-navy-950'
         }`}
       >
@@ -250,10 +250,8 @@ const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
 
 // Tombol ikon di rail ciut: label lewat aria-label + tooltip (title).
 const railItemClass = ({ isActive }) =>
-  `relative grid size-10 place-items-center rounded-lg transition-colors ${
-    isActive
-      ? 'bg-white text-navy-950 shadow-sm ring-1 ring-inset ring-navy-100 before:absolute before:inset-y-2 before:-left-[0.875rem] before:w-0.5 before:rounded-full before:bg-brass-400'
-      : 'text-slate-500 hover:bg-white/70 hover:text-navy-950'
+  `relative z-10 grid size-10 place-items-center rounded-lg transition-colors duration-300 ${
+    isActive ? 'text-navy-950' : 'text-slate-500 hover:bg-white/70 hover:text-navy-950'
   }`
 
 // Avatar profil di rail ciut (bagian akun berlatar gelap).
@@ -280,6 +278,10 @@ export default function Sidebar() {
   const [pendingCount, setPendingCount] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  const { pathname } = useLocation()
+  // Elemen wadah menu (ref-callback → state) untuk sorot item aktif yang meluncur (SorotNav).
+  const [menuEl, setMenuEl] = useState(null)
+  const [railEl, setRailEl] = useState(null)
 
   const toggleCollapsed = () =>
     setCollapsed((value) => {
@@ -420,7 +422,8 @@ export default function Sidebar() {
 
         {/* Navigasi utama */}
         <nav aria-label="Navigasi utama" className={`min-h-0 flex-1 overflow-y-auto px-3 pt-2 ${hideWhenCollapsed}`}>
-          <div className="flex flex-col gap-0.5">
+          <div ref={setMenuEl} className="relative flex flex-col gap-0.5">
+            <SorotNav wadah={menuEl} kunci={`${pathname}|${collapsed}|${mobileOpen}`} />
             {allNavItems.map((item) => item.children ? (
               <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} />
             ) : (
@@ -453,7 +456,8 @@ export default function Sidebar() {
             atas (pt-12) untuk lonceng notifikasi yang diposisikan fixed. */}
         {collapsed ? (
           <>
-            <nav aria-label="Navigasi utama" className="hidden min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto pt-12 lg:flex">
+            <nav ref={setRailEl} aria-label="Navigasi utama" className="relative hidden min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto pt-12 lg:flex">
+              <SorotNav wadah={railEl} kunci={`${pathname}|rail`} varian="rail" />
               {daunMenu(allNavItems)
                 .map((item) => (
                   <NavLink
