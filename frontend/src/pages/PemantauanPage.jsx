@@ -55,7 +55,9 @@ export default function PemantauanPage() {
   const [urut, setUrut] = useState('terbaru')
   const [page, setPage] = useState(1)
   const [ringkasan, setRingkasan] = useState(undefined)
-  const [list, setList] = useState({ loading: true, items: [], total: 0, failed: false })
+  // `tab` = tab pemilik `items`; selama memuat tab/halaman baru, tabel lama tetap tampil (pudar) agar tinggi kartu
+  // tidak menciut dan posisi gulir tidak melompat.
+  const [list, setList] = useState({ loading: true, items: [], total: 0, failed: false, tab: null })
 
   useEffect(() => {
     periodeApi
@@ -82,8 +84,8 @@ export default function PemantauanPage() {
     const q = { ...bersih(filter), page, limit: LIMIT }
     const req = tab === 'dosen' ? monitoringApi.dosen(q) : monitoringApi.proposals({ ...q, ...(status ? { status } : {}), urut })
     req
-      .then((r) => alive && setList({ loading: false, items: r.data.data || [], total: Number(r.data.meta?.total) || 0, failed: false }))
-      .catch(() => alive && setList({ loading: false, items: [], total: 0, failed: true }))
+      .then((r) => alive && setList({ loading: false, items: r.data.data || [], total: Number(r.data.meta?.total) || 0, failed: false, tab }))
+      .catch(() => alive && setList({ loading: false, items: [], total: 0, failed: true, tab }))
     return () => {
       alive = false
     }
@@ -96,17 +98,21 @@ export default function PemantauanPage() {
     setPage(1)
   }
   const gantiTab = (t) => {
-    setParams(t === 'dosen' ? { tab: 'dosen' } : {})
+    // replace: ganti tab tidak menambah riwayat (tombol Kembali langsung keluar halaman).
+    setParams(t === 'dosen' ? { tab: 'dosen' } : {}, { replace: true })
     setPage(1)
   }
   const lihatDosen = (d) => {
     const q = d.nidn || d.fullName || d.name || ''
     setForm((f) => ({ ...f, search: q }))
     setFilter((f) => ({ ...f, search: q }))
-    setParams({})
+    setParams({}, { replace: true })
     setPage(1)
   }
   const pages = Math.max(1, Math.ceil(list.total / LIMIT))
+  // Tabel yang digambar mengikuti data yang ada (bisa tab lama selama tab baru dimuat).
+  const tabData = list.tab || tab
+  const memuatUlang = list.loading && list.items.length > 0
   const rk = ringkasan
 
   return (
@@ -187,11 +193,20 @@ export default function PemantauanPage() {
         id="daftar-pemantauan"
         judul={tab === 'dosen' ? 'Dosen Pengusul' : 'Daftar Proposal'}
         desc={tab === 'dosen' ? 'Urut jumlah proposal terbanyak. Klik baris untuk melihat proposal dosen itu.' : 'Klik baris untuk membuka detail kegiatan (baca saja).'}
-        badge={list.loading ? '…' : `${list.total} ${tab === 'dosen' ? 'dosen' : 'proposal'}`}
+        badge={
+          list.loading ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="spinner size-3.5" aria-hidden="true" />
+              Memuat
+            </span>
+          ) : (
+            `${list.total} ${tabData === 'dosen' ? 'dosen' : 'proposal'}`
+          )
+        }
         tab={<TabNavy label="Tampilan" value={tab} onChange={gantiTab} items={[['proposal', 'Proposal'], ['dosen', 'Dosen pengusul']]} />}
       >
-        {tab === 'proposal' ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
+        {/* Baris alat selalu ada (ruang tetap); di tab Dosen pengusul isinya disembunyikan. */}
+        <div className={`flex flex-wrap items-center justify-end gap-2 ${tab === 'proposal' ? '' : 'invisible'}`} aria-hidden={tab !== 'proposal' || undefined}>
             {status ? (
               <button type="button" onClick={() => setStatus('')} className="btn btn-ghost btn-sm">
                 Status: {STATUS_LABEL[status]} ×
@@ -207,15 +222,16 @@ export default function PemantauanPage() {
               <option value="pengusul">Pengusul</option>
             </select>
           </div>
-        ) : null}
 
-        {list.loading ? (
-          <p className="py-10 text-center text-sm text-slate-500">Memuat data…</p>
+        {/* 1: memuat pertama kali = placeholder setinggi tabel; memuat ulang = tabel lama dipudarkan & tidak bisa diklik. */}
+        <div aria-busy={list.loading || undefined} className={`min-h-64 transition-opacity duration-150 ${memuatUlang ? 'pointer-events-none opacity-50' : ''}`}>
+        {list.loading && !memuatUlang ? (
+          <p className="flex min-h-64 items-center justify-center text-sm text-slate-500">Memuat data…</p>
         ) : list.failed ? (
           <p className="py-10 text-center text-sm text-red-700">Data pemantauan gagal dimuat.</p>
         ) : list.items.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-500">Tidak ada data untuk filter ini.</p>
-        ) : tab === 'proposal' ? (
+        ) : tabData === 'proposal' ? (
           <div className="table-wrap">
             <table className="table table-tight">
               <thead>
@@ -329,6 +345,7 @@ export default function PemantauanPage() {
             </table>
           </div>
         )}
+        </div>
         <Halaman page={page} pages={pages} onPage={setPage} />
       </KartuNavy>
     </div>

@@ -378,7 +378,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Keputusan proposal (diproses/revisi/diterima/ditolak + tingkat penerimaan; klik = saring tabel), donat Laporan terhadap proposal
   diterima (+ status laporan), batang 100% Penelitian vs pengabdian (jumlah, anggaran diajukan/disetujui, laporan), Topik paling sering
   (8 teratas bidang / rumpun ilmu / kata kunci); di bawahnya tabel tab Proposal (`/monitoring/proposals`, urut) & Dosen pengusul
-  (`/monitoring/dosen`; klik = cari proposal dosen itu)), **Akademik** › **Arsip Periode** (`pages/stmik/ArsipPeriodeStmikPage.jsx`,
+  (`/monitoring/dosen`; klik = cari proposal dosen itu); ganti tab/halaman **tanpa kedip**: tabel lama tetap tampil pudar & tidak bisa
+  diklik sampai data baru datang (`list.tab` = pemilik data), badge = indikator memuat, baris Urutkan selalu menyisakan ruang, `min-h-64`,
+  tab di URL memakai `replace`), **Akademik** › **Arsip Periode** (`pages/stmik/ArsipPeriodeStmikPage.jsx`,
   `/arsip-periode[/detail/:id]`: folder per tahun seperti Arsip Kegiatan, jumlah = proposal diajukan per periode dari `/monitoring/proposals`),
   **Cetak Laporan** (`pages/cetak/CetakRekapStmikPage.jsx`, `/cetak-laporan` — rute sama dengan mahasiswa, dipilih per peran; PDF
   `pages/cetak/rekapStmikPDF.js`: rekap kegiatan per periode (satu/semua, opsional daftar proposal), rekap tahunan (+ per jenis), rekap
