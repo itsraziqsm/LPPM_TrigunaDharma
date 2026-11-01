@@ -275,6 +275,16 @@ bisa ditampilkan/dicetak (disimpan bcrypt), jadi alurnya memakai password sement
 |---|---|---|---|---|
 | W-52 | Manajemen Pengguna › panel detail: tombol **Reset password** (Admin) + dialog yang menampilkan password sementara **sekali** (salin, tidak bisa dibuka lagi); saat login dengan password sementara → paksa **Ganti password** | Password sementara acak + penanda wajib ganti | `POST /users/:id/reset-password` (admin; body `{ password }` = password Admin pelaksana sebagai konfirmasi) → `{ passwordSementara: "Xy7…" }` (acak ≥ 12 karakter, hanya di respons ini); kolom baru `User.wajibGantiPassword` (BOOLEAN) di-set `true`, semua `RefreshToken` user dicabut, catat `ActivityLog` (`user.reset_password`), notifikasi ke user; `POST /auth/login` & `GET /auth/me` mengirim `wajibGantiPassword`; `PATCH /users/profile/password` mengosongkan penanda | Jangan pernah mengirim/menyimpan password asli atau hash ke frontend. Opsional: password sementara kedaluwarsa (mis. 24 jam). Frontend: setelah login, bila `wajibGantiPassword` → arahkan ke halaman ganti password sebelum Dashboard. |
 
+## Log Aktivitas (Admin & Ketua LPPM, `/log`)
+
+Halaman Log Aktivitas memakai `GET /activity-logs` (page, limit 15, `action` LIKE). **Kategori belum ada di backend**: filter Kategori di
+frontend sementara dipetakan ke awalan `action` (`utils/kategoriLog.js`: LOGIN, user., proposal., review, laporan, dokumen., periode.,
+template., luaran., backup.) dan kolom cari hanya menyaring halaman yang sedang tampil.
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-53 | Log Aktivitas: filter **Kategori**, kolom **Cari**, (opsional) rentang tanggal & kartu ringkasan | Kategori resmi per log, pencarian teks di server, filter tanggal | Kolom `ActivityLog.kategori` (ENUM mis. `auth`, `akun`, `proposal`, `review`, `laporan`, `dokumen`, `periode`, `template`, `luaran`, `backup`, `sistem`) diisi saat `logActivity` (data lama di-backfill dari awalan `action`); `GET /activity-logs` + `kategori=`, `search=` (nama/email user, `action`, `detail`, IP), `dari=`/`sampai=` (tanggal); opsional `GET /activity-logs/ringkasan` → `{ total, perKategori: {…}, loginHariIni }` | Catat juga **logout** & **login gagal** (sekarang hanya `LOGIN` berhasil yang tercatat) agar kategori "Info login" lengkap. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

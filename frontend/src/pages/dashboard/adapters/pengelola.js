@@ -4,6 +4,7 @@ import { usersApi } from '../../../api/users'
 import { periodeApi } from '../../../api/periode'
 import { activityLogApi } from '../../../api/activityLog'
 import { JENIS_LABEL, formatDate, sortAttention, statusMeta, timeAgo } from '../format'
+import { aksiTerbaca } from '../../../utils/kategoriLog'
 import {
   PROFILE_SHORTCUT,
   approvalHint,
@@ -183,12 +184,14 @@ export async function load({ withReviewerDigest }) {
         items: (data.logs || []).map((log) => ({
           key: log.id,
           lead: log.user?.name || 'Sistem',
-          rest: log.action,
-          detail: log.description,
+          rest: aksiTerbaca(log.action),
+          detail: log.detail,
           when: timeAgo(log.createdAt),
         })),
         emptyTitle: 'Belum ada aktivitas',
         emptyDesc: 'Aktivitas pengguna akan tercatat di sini.',
+        to: '/log',
+        toLabel: 'Lihat log lebih banyak',
         unavailable: !data.logs,
       },
 

@@ -278,7 +278,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id`, `/bantuan` (semua peran), `/undangan[/:id]`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id`, `/bantuan` (semua peran), `/log` (admin/ketua), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
@@ -314,7 +314,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   disembunyikan**), lalu kartu angka `ToneCard` (4 kartu; ponsel **2×2 tanpa ikon**, `ToneCardGrid` `grid-cols-2`); dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
-  **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`)
+  **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`);
+  admin & Ketua LPPM: **Aktivitas sistem** (`feed`, `Feed lebar`) **selebar area konten** di bawah dua kolom Informasi (layar lebar: satu baris per log,
+  waktu di kanan; aksi `aksiTerbaca`, keterangan = `log.detail`) + tautan **"Lihat log lebih banyak"** → **`/log`** (`LogAktivitasPage.jsx`, admin/ketua:
+  `KepalaStatus` 3 kartu (total, login, aktivitas proposal = `meta.total`), `PanelCari` + Filter **Kategori** (dipetakan ke awalan `action`,
+  `utils/kategoriLog.js`; cari = halaman tampil saja → ApiPending W-53), tabel `KartuNavy` 15 per halaman)
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`

@@ -9,6 +9,7 @@ import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
 import BantuanPage from './BantuanPage'
+import LogAktivitasPage from './LogAktivitasPage'
 import ProposalPage from './ProposalPage'
 import UndanganPage from './UndanganPage'
 import UndanganDetailPage from './UndanganDetailPage'
@@ -151,6 +152,7 @@ export default function DashboardLayout({ page, jenis }) {
       if (page === 'periode-detail') return <PeriodePage key={location.pathname} />
       if (page === 'proposals') return <ProposalPage />
       if (page === 'users') return <UserManagementPage />
+      if (page === 'log') return <LogAktivitasPage />
       if (page === 'cetak-dokumen') return <CetakDokumenPage />
       if (page === 'export') return <ExportPage />
       if (page === 'surat-tugas') return <SuratTugasPage />

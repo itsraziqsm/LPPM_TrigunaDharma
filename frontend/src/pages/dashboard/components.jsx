@@ -251,13 +251,14 @@ export function ProgressRows({ rows, emptyTitle, emptyDesc }) {
 }
 
 // ── Umpan aktivitas (garis waktu) ───────────────────────────────────────────
-export function Feed({ items, emptyTitle, emptyDesc }) {
+// lebar = panel selebar konten (Aktivitas sistem): di layar lebar waktu di kanan & keterangan sebaris, agar ringkas.
+export function Feed({ items, emptyTitle, emptyDesc, lebar = false }) {
   if (items.length === 0) return <EmptyState title={emptyTitle} desc={emptyDesc} />
 
   return (
     <ol className="px-5 py-5 sm:px-6">
       {items.map((item, index) => (
-        <li key={item.key} className="relative flex gap-3.5 pb-5 last:pb-0">
+        <li key={item.key} className={`relative flex gap-3.5 last:pb-0 ${lebar ? "pb-5 lg:pb-3.5" : "pb-5"}`}>
           {index < items.length - 1 ? (
             <span aria-hidden="true" className="absolute bottom-0 left-1 top-4 w-px bg-slate-200" />
           ) : null}
@@ -267,16 +268,18 @@ export function Feed({ items, emptyTitle, emptyDesc }) {
               item.unread ? 'bg-navy-600' : 'bg-slate-300'
             }`}
           />
-          <div className="min-w-0 flex-1">
-            <p className="break-words text-base leading-snug text-slate-900">
-              {item.unread ? <span className="sr-only">Belum dibaca. </span> : null}
-              <span className="font-semibold">{item.lead}</span>
-              {item.rest ? <span className="text-slate-600"> {item.rest}</span> : null}
-            </p>
-            {item.detail ? (
-              <p className="mt-0.5 line-clamp-2 break-words text-sm leading-relaxed text-slate-500">{item.detail}</p>
-            ) : null}
-            {item.when ? <p className="mt-1 text-xs text-slate-500">{item.when}</p> : null}
+          <div className={`min-w-0 flex-1 ${lebar ? 'lg:flex lg:items-baseline lg:gap-6' : ''}`}>
+            <div className={`min-w-0 ${lebar ? 'lg:flex lg:flex-1 lg:items-baseline lg:gap-3' : ''}`}>
+              <p className={`break-words text-base leading-snug text-slate-900 ${lebar ? 'lg:shrink-0' : ''}`}>
+                {item.unread ? <span className="sr-only">Belum dibaca. </span> : null}
+                <span className="font-semibold">{item.lead}</span>
+                {item.rest ? <span className="text-slate-600"> {item.rest}</span> : null}
+              </p>
+              {item.detail ? (
+                <p className={`mt-0.5 break-words text-sm leading-relaxed text-slate-500 ${lebar ? 'line-clamp-2 lg:mt-0 lg:line-clamp-1 lg:min-w-0' : 'line-clamp-2'}`}>{item.detail}</p>
+              ) : null}
+            </div>
+            {item.when ? <p className={`mt-1 text-xs text-slate-500 ${lebar ? 'lg:mt-0 lg:shrink-0 lg:whitespace-nowrap' : ''}`}>{item.when}</p> : null}
           </div>
         </li>
       ))}
@@ -471,18 +474,6 @@ export function DashboardBody({ model }) {
             )}
           </Panel>
 
-          {feed ? (
-            <Panel
-              title={feed.title}
-              footer={feed.to ? <PanelLink to={feed.to}>{feed.toLabel}</PanelLink> : null}
-            >
-              {feed.unavailable ? (
-                <Unavailable />
-              ) : (
-                <Feed items={feed.items} emptyTitle={feed.emptyTitle} emptyDesc={feed.emptyDesc} />
-              )}
-            </Panel>
-          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -508,6 +499,13 @@ export function DashboardBody({ model }) {
           </CollapsiblePanel>
         </div>
       </div>
+
+      {/* Aktivitas sistem (admin & Ketua LPPM): selebar area konten, di bawah dua kolom Informasi. */}
+      {feed ? (
+        <Panel title={feed.title} footer={feed.to ? <PanelLink to={feed.to}>{feed.toLabel}</PanelLink> : null}>
+          {feed.unavailable ? <Unavailable /> : <Feed items={feed.items} emptyTitle={feed.emptyTitle} emptyDesc={feed.emptyDesc} lebar />}
+        </Panel>
+      ) : null}
     </section>
   )
 }

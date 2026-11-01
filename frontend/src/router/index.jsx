@@ -46,6 +46,7 @@ const router = createBrowserRouter([
       { path: '/profil', element: <DashboardLayout page="profil" /> },
       { path: '/notifikasi', element: <DashboardLayout page="notifikasi" /> },
       { path: '/bantuan', element: <DashboardLayout page="bantuan" /> },
+      { path: '/log', element: <DashboardLayout page="log" /> },
       { path: '/notifikasi/:id', element: <DashboardLayout page="notifikasi-detail" /> },
       { path: '/luaran', element: <DashboardLayout page="luaran" /> },
       { path: '/laporan-masuk', element: <DashboardLayout page="laporan-masuk" /> },
