@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import { Link } from 'react-router-dom'
 import { Download, ExternalLink } from 'lucide-react'
 import { luaranApi } from '../api/luaran'
@@ -206,12 +207,14 @@ export default function LuaranDosenPage() {
               <p className="mt-1 text-sm text-white/75">Target & capaian luaran seluruh kegiatan; prioritas (jurnal & poster) di atas.</p>
             </div>
             <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white tabular-nums">
-              {state.loading ? '…' : `${state.total} luaran`}
+              {state.loading ? <IndikatorMemuat /> : `${state.total} luaran`}
             </span>
           </div>
         </header>
         <div className="space-y-4 p-4 sm:p-5">
-        {state.loading ? (
+        {/* Muat ulang (filter/halaman): tabel lama tetap tampil pudar — tanpa kedip. */}
+        <AreaMemuat memuat={state.loading && state.items.length > 0}>
+        {state.loading && state.items.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat luaran…</p>
         ) : state.failed === 'akses' ? (
           <p className="flex flex-wrap items-center justify-center gap-2 px-5 py-10 text-center text-sm text-slate-600">
@@ -295,6 +298,7 @@ export default function LuaranDosenPage() {
             </table>
           </div>
         )}
+        </AreaMemuat>
         {pages > 1 ? (
           <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
             <span className="tabular-nums">

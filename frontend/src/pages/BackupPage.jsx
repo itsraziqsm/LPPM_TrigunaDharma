@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import { KepalaMasuk } from '../components/PeriodeAktif'
 import KartuNavy from '../components/KartuNavy'
 import { CalendarClock, DatabaseBackup, Download, RefreshCw, Trash2 } from 'lucide-react'
@@ -219,7 +220,7 @@ export default function BackupPage() {
         crumbs={[{ label: 'Backup Data' }]}
         desc="Cadangkan seluruh database sistem, unduh file backup, dan pantau riwayatnya."
         stats={[
-          { label: 'Total backup', value: loading ? '—' : total },
+          { label: 'Total backup', value: loading && rows.length === 0 ? '—' : total },
           { label: 'Otomatis', value: <span className="text-lg">{jadwal ? (jadwal.otomatisAktif ? 'Aktif' : 'Mati') : '—'}</span> },
           { label: 'Berikutnya', value: <span className="text-lg">{jadwal?.otomatisAktif ? tanggalSaja(jadwal.berikutnyaAt) : '—'}</span> },
         ]}
@@ -289,7 +290,7 @@ export default function BackupPage() {
 
       {/* ── Daftar Backup ───────────────────────────────────────────────── */}
       {/* Tabel bingkai navy (M1) */}
-      <KartuNavy id="daftar-backup" judul="Daftar Backup" desc="Terbaru di atas. Unduh file .sql.gz atau hapus file (catatan tetap tersimpan)." badge={loading ? '…' : `${total} backup`}>
+      <KartuNavy id="daftar-backup" judul="Daftar Backup" desc="Terbaru di atas. Unduh file .sql.gz atau hapus file (catatan tetap tersimpan)." badge={loading ? <IndikatorMemuat /> : `${total} backup`}>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <label htmlFor="backup-sumber" className="sr-only">
             Dilakukan oleh
@@ -333,7 +334,8 @@ export default function BackupPage() {
             <span className="sr-only">Muat ulang</span>
           </button>
         </div>
-        <div className="table-wrap">
+        {/* Muat ulang (halaman/filter/setelah backup atau hapus): tabel lama tetap tampil pudar — tanpa kedip. */}
+        <AreaMemuat memuat={loading && rows.length > 0} className="table-wrap">
           <table className="table table-tight min-w-[880px]">
             <thead>
               <tr>
@@ -349,7 +351,7 @@ export default function BackupPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && rows.length === 0 ? (
                 <tr aria-hidden="true">
                   <td colSpan={7} className="pl-6">
                     <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
@@ -438,9 +440,9 @@ export default function BackupPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </AreaMemuat>
 
-        {!loading && total > LIMIT ? (
+        {total > LIMIT ? (
           <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
             <span className="tabular-nums">
               Halaman {page} dari {pages}

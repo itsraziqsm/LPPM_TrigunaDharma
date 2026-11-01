@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import AreaMemuat from '../../components/AreaMemuat'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/axios'
 import { STATUS_LABEL, STATUS_COLOR, JENIS_LABEL } from './periodeConstants'
@@ -26,6 +27,8 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
     const [searchInput, setSearchInput] = useState('')
     const [statusFilter, setStatusFilter] = useState('')
     const [tipe, setTipe] = useState('proposal')
+    // Tipe pemilik data yang sedang tampil (bisa tipe lama selama tipe baru dimuat).
+    const [dataTipe, setDataTipe] = useState('proposal')
     const navigate = useNavigate()
     const isLaporan = tipe === 'laporan'
     const noun = isLaporan ? 'laporan' : 'proposal'
@@ -42,6 +45,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                 const res = await api.get(tipe === 'laporan' ? '/laporan' : '/proposals', { params })
                 if (!cancelled) {
                     setProposals((res.data.data || []).filter(p => p.jenis === periode.jenis))
+                    setDataTipe(tipe)
                     setMeta(res.data.meta || { total: 0, limit: 10 })
                 }
             } catch {
@@ -130,8 +134,9 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                 </PanelCari>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto">
-                {loading ? (
+            {/* Muat ulang: daftar lama tetap tampil (pudar) — tanpa kedip (components/AreaMemuat). */}
+            <AreaMemuat memuat={loading && proposals.length > 0} className="min-h-0 flex-1 overflow-y-auto">
+                {loading && proposals.length === 0 ? (
                     <div className="px-6 py-14 text-center">
                         <p className="flex items-center justify-center gap-3 text-base text-slate-500">
                             <span className="spinner text-navy-600" aria-hidden="true" />
@@ -152,7 +157,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                         {proposals.map((p) => (
                             <article
                                 key={p.id}
-                                onClick={() => navigate(isLaporan ? `/laporan-masuk/detail/${p.id}` : `/proposals/detail/${p.id}`)}
+                                onClick={() => navigate(dataTipe === 'laporan' ? `/laporan-masuk/detail/${p.id}` : `/proposals/detail/${p.id}`)}
                                 className="group cursor-pointer px-6 py-4 transition-colors duration-150 hover:bg-slate-50"
                             >
                                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
@@ -185,7 +190,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                                         </div>
 
                                         <span className="inline-flex items-center gap-1 text-sm font-medium text-navy-700">
-                                            Lihat detail {noun}
+                                            Lihat detail {dataTipe === 'laporan' ? 'laporan' : 'proposal'}
                                             <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                                         </span>
                                     </div>
@@ -194,7 +199,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                         ))}
                     </section>
                 )}
-            </div>
+            </AreaMemuat>
 
             {totalPages > 1 && (
                 <footer className="border-t border-slate-200 px-6 py-3.5">

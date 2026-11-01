@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, ChevronRight, CircleCheck, CirclePlus, FileCheck, FileText, ListChecks, Trash2 } from 'lucide-react'
@@ -102,9 +103,9 @@ function MemberSection({ jenis, label, userId }) {
           .
         </>
       }
-      badge={state === 'loading' ? '…' : `${total} ${label.toLowerCase()}`}
+      badge={state === 'loading' ? <IndikatorMemuat /> : `${total} ${label.toLowerCase()}`}
     >
-      <div className="table-wrap">
+      <AreaMemuat memuat={state === 'loading' && rows.length > 0} className="table-wrap">
         <table className="table table-tight">
           <thead>
             <tr>
@@ -119,7 +120,7 @@ function MemberSection({ jenis, label, userId }) {
             </tr>
           </thead>
           <tbody>
-            {state === 'loading' ? (
+            {state === 'loading' && rows.length === 0 ? (
               <tr aria-hidden="true">
                 <td colSpan={6}>
                   <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
@@ -166,7 +167,7 @@ function MemberSection({ jenis, label, userId }) {
             )}
           </tbody>
         </table>
-      </div>
+      </AreaMemuat>
       {total > LIMIT ? (
         <nav aria-label="Halaman keanggotaan" className="flex items-center justify-between gap-3 text-sm text-slate-600">
           <span className="tabular-nums">
@@ -218,6 +219,8 @@ export default function KegiatanPage({ jenis }) {
   const [laporanDiterima, setLaporanDiterima] = useState(null)
   const [tipe, setTipe] = useState('proposal')
   const [rows, setRows] = useState([])
+  // Tipe pemilik `rows` (tab lama tetap tampil pudar selama tab baru dimuat — tanpa kedip).
+  const [rowsTipe, setRowsTipe] = useState('proposal')
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -271,6 +274,7 @@ export default function KegiatanPage({ jenis }) {
       .then((r) => {
         if (!alive) return
         setRows(r.data.data || [])
+        setRowsTipe(tipe)
         setTotal(Number(r.data.meta?.total) || 0)
       })
       .catch(() => {
@@ -328,7 +332,9 @@ export default function KegiatanPage({ jenis }) {
   const pages = Math.max(1, Math.ceil(total / LIMIT))
   const usulanTo = `/kegiatan/${jenis}/usulan`
   const isLaporan = tipe === 'laporan'
-  const colCount = isLaporan ? 7 : 9
+  const dataLaporan = rowsTipe === 'laporan'
+  const dataColCount = dataLaporan ? 7 : 9
+  const memuatUlang = loading && rows.length > 0
 
   return (
     <div className="page rise space-y-6">
@@ -445,7 +451,7 @@ export default function KegiatanPage({ jenis }) {
             />
           </PanelCari>
 
-        <div className="table-wrap">
+        <AreaMemuat memuat={memuatUlang} className="table-wrap">
           <table className="table table-tight">
             <thead>
               <tr>
@@ -454,7 +460,7 @@ export default function KegiatanPage({ jenis }) {
                 <th scope="col">Jenis</th>
                 <th scope="col">Status</th>
                 <th scope="col">Tanggal Update</th>
-                {isLaporan ? (
+                {dataLaporan ? (
                   <th scope="col">Luaran Tercapai</th>
                 ) : (
                   <>
@@ -469,18 +475,18 @@ export default function KegiatanPage({ jenis }) {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && rows.length === 0 ? (
                 [0, 1, 2].map((i) => (
                   <tr key={i} aria-hidden="true">
-                    <td colSpan={colCount}>
+                    <td colSpan={dataColCount}>
                       <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
                     </td>
                   </tr>
                 ))
               ) : failed ? (
                 <tr>
-                  <td colSpan={colCount} className="py-10 text-center">
-                    <p className="text-slate-600">Riwayat {isLaporan ? 'laporan' : 'proposal'} gagal dimuat.</p>
+                  <td colSpan={dataColCount} className="py-10 text-center">
+                    <p className="text-slate-600">Riwayat {dataLaporan ? 'laporan' : 'proposal'} gagal dimuat.</p>
                     <button type="button" onClick={refresh} className="btn btn-secondary btn-sm mt-3">
                       Coba lagi
                     </button>
@@ -488,10 +494,10 @@ export default function KegiatanPage({ jenis }) {
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={colCount} className="py-10 text-center text-slate-500">
+                  <td colSpan={dataColCount} className="py-10 text-center text-slate-500">
                     {status || query
                       ? 'Tidak ada yang cocok dengan filter.'
-                      : isLaporan
+                      : dataLaporan
                         ? `Belum ada laporan ${label.toLowerCase()}.`
                         : copy.empty}
                   </td>
@@ -500,7 +506,7 @@ export default function KegiatanPage({ jenis }) {
                 rows.map((p) => {
                   const lanjut = p.status === 'draft' || p.status === 'revisi'
                   const buka = () =>
-                    navigate(isLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}` : `/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
+                    navigate(dataLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}` : `/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
                   const klik = barisKlik(buka, p.judul)
                   return (
                   <tr key={`${tipe}-${p.id}`} {...klik} className={`${klik.className} ${lanjut ? 'bg-amber-50/60' : ''}`}>
@@ -515,7 +521,7 @@ export default function KegiatanPage({ jenis }) {
                       </p>
                       {lanjut ? (
                         <Link
-                          to={isLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi` : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`}
+                          to={dataLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi` : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`}
                           onClick={(e) => e.stopPropagation()}
                           onKeyDown={(e) => e.stopPropagation()}
                           className="btn btn-primary btn-sm mt-2"
@@ -526,13 +532,13 @@ export default function KegiatanPage({ jenis }) {
                       ) : null}
                     </td>
                     <td>
-                      <span className={`badge ${isLaporan ? 'badge-success' : 'badge-info'}`}>{isLaporan ? 'Laporan' : 'Proposal'}</span>
+                      <span className={`badge ${dataLaporan ? 'badge-success' : 'badge-info'}`}>{dataLaporan ? 'Laporan' : 'Proposal'}</span>
                     </td>
                     <td>
                       <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
                     </td>
                     <td className="whitespace-nowrap tabular-nums">{dateTime(p.updatedAt)}</td>
-                    {isLaporan ? (
+                    {dataLaporan ? (
                       <td className="max-w-xs">{p.luaranTercapai || '—'}</td>
                     ) : (
                       <>
@@ -544,7 +550,7 @@ export default function KegiatanPage({ jenis }) {
                       </>
                     )}
                     <td className="whitespace-nowrap text-right">
-                      {isLaporan ? (
+                      {dataLaporan ? (
                         <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
                       ) : (
                         <>
@@ -574,12 +580,12 @@ export default function KegiatanPage({ jenis }) {
               )}
             </tbody>
           </table>
-        </div>
+        </AreaMemuat>
 
-        {!loading && !failed && total > LIMIT ? (
+        {!failed && total > LIMIT ? (
           <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
             <span className="tabular-nums">
-              Halaman {page} dari {pages} · {total} {isLaporan ? 'laporan' : 'proposal'}
+              Halaman {page} dari {pages} · {total} {dataLaporan ? 'laporan' : 'proposal'}
             </span>
             <span className="flex gap-2">
               <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>

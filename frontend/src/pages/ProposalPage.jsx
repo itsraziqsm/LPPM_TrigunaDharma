@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import { FileText } from 'lucide-react'
 import KartuNavy from '../components/KartuNavy'
 import { barisKlik, tanpaBaris } from '../utils/barisKlik'
@@ -165,9 +166,11 @@ export default function ProposalPage() {
           desc={`Proposal (${FILTERS_MASUK.find((f) => f.key === filter).label.toLowerCase()}) dari periode aktif. Klik baris untuk membuka detail.${
             truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian.` : ''
           }`}
-          badge={loading ? '…' : `${total} proposal`}
+          badge={loading ? <IndikatorMemuat /> : `${total} proposal`}
         >
-          {loading ? (
+          {/* Muat ulang (filter/cari/periode/aksi): tabel lama tetap tampil pudar — tanpa kedip. */}
+          <AreaMemuat memuat={loading && all.length > 0}>
+          {loading && all.length === 0 ? (
             <p className="flex items-center justify-center gap-3 py-12 text-center text-base text-slate-500">
               <span className="spinner text-navy-600" aria-hidden="true" />
               Memuat data...
@@ -275,6 +278,7 @@ export default function ProposalPage() {
               ) : null}
             </>
           )}
+          </AreaMemuat>
         </KartuNavy>
       </div>
 

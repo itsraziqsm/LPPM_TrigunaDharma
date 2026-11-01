@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import AreaMemuat from '../components/AreaMemuat'
 import { KepalaMasuk } from '../components/PeriodeAktif'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
@@ -201,7 +202,9 @@ export default function NotifikasiPage() {
         </FilterTab>
       </div>
 
-      {loading ? (
+      {/* Muat ulang (filter/setelah aksi): daftar lama tetap tampil pudar — tanpa kedip. */}
+      <AreaMemuat memuat={loading && items.length > 0}>
+      {loading && items.length === 0 ? (
         <div className="card divide-y divide-slate-100" aria-busy="true">
           <p role="status" className="sr-only">Memuat notifikasi</p>
           {[0, 1, 2, 3].map((i) => (
@@ -322,6 +325,7 @@ export default function NotifikasiPage() {
           ) : null}
         </div>
       )}
+      </AreaMemuat>
     </div>
   )
 }

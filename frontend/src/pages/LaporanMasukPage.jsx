@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import KartuNavy from '../components/KartuNavy'
 import { barisKlik, tanpaBaris } from '../utils/barisKlik'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
@@ -122,9 +123,10 @@ export default function LaporanMasukPage() {
         desc={`Laporan (${filterLabel.toLowerCase()}) dari periode aktif. Klik baris untuk membuka detail.${
           truncated ? ` Lebih dari ${FETCH_LIMIT} cocok di satu periode; persempit dengan pencarian atau filter.` : ''
         }`}
-        badge={loading ? '…' : `${total} laporan`}
+        badge={loading ? <IndikatorMemuat /> : `${total} laporan`}
       >
-        <div className="table-wrap">
+        {/* Muat ulang: tabel lama tetap tampil pudar — tanpa kedip (components/AreaMemuat). */}
+        <AreaMemuat memuat={loading && all.length > 0} className="table-wrap">
           <table className="table table-tight">
             <thead>
               <tr>
@@ -140,7 +142,7 @@ export default function LaporanMasukPage() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && all.length === 0 ? (
                 <tr aria-hidden="true">
                   <td colSpan={7}>
                     <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
@@ -185,9 +187,9 @@ export default function LaporanMasukPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </AreaMemuat>
 
-        {!loading && total > LIMIT ? (
+        {total > LIMIT ? (
           <nav aria-label="Halaman" className="flex items-center justify-between gap-3 text-sm text-slate-600">
             <span className="tabular-nums">
               Halaman {page} dari {pages} · {total} laporan

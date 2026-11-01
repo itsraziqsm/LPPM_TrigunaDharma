@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import AreaMemuat from '../../components/AreaMemuat'
 import { ClipboardCheck, Coins, FileCheck2, FileText, Users } from 'lucide-react'
 import { monitoringApi } from '../../api/monitoring'
 import { laporanApi } from '../../api/laporan'
@@ -78,11 +79,13 @@ function Panel({ judul, desc, aksi, children }) {
 export default function StatistikVisual({ filter, ringkasan, status, onStatus }) {
   const [data, setData] = useState(null) // { proposals, laporan, topik }
   const [failed, setFailed] = useState(false)
+  // Ganti filter: angka & diagram lama tetap tampil pudar sampai data baru datang (tanpa kedip).
+  const [memuat, setMemuat] = useState(true)
   const [topik, setTopik] = useState('bidang')
 
   useEffect(() => {
     let alive = true
-    setData(null)
+    setMemuat(true)
     setFailed(false)
     const q = Object.fromEntries(Object.entries({ periodeId: filter.periodeId, jenis: filter.jenis, search: filter.search }).filter(([, v]) => v))
     Promise.all([
@@ -99,6 +102,7 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
         })
       })
       .catch(() => alive && setFailed(true))
+      .finally(() => alive && setMemuat(false))
     return () => {
       alive = false
     }
@@ -166,7 +170,7 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
   }
 
   return (
-    <div className="space-y-4">
+    <AreaMemuat memuat={memuat} className="space-y-4">
       {/* Kartu angka */}
       <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" aria-label="Ringkasan">
         <KartuAngka
@@ -263,6 +267,6 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
         <ClipboardCheck className="size-3.5" aria-hidden="true" />
         Persentase dibulatkan satu desimal. Arahkan kursor ke diagram untuk melihat rinciannya.
       </p>
-    </div>
+    </AreaMemuat>
   )
 }

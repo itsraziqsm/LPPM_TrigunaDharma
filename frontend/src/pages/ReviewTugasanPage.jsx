@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import AreaMemuat from '../components/AreaMemuat'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import LaporanTugasan from './laporan/LaporanTugasan'
 import { reviewerApi } from '../api/reviewer'
@@ -204,8 +205,9 @@ export default function ReviewTugasanPage() {
         <LaporanTugasan onRingkasan={setRingkasanLaporan} />
       ) : (
         <>
-      {/* Daftar penugasan */}
-      {loading ? (
+      {/* Daftar penugasan — ganti halaman: daftar lama tetap tampil pudar (tanpa kedip). */}
+      <AreaMemuat memuat={loading && tugasan.length > 0}>
+      {loading && tugasan.length === 0 ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="card animate-pulse p-6">
@@ -234,6 +236,7 @@ export default function ReviewTugasanPage() {
           ))}
         </div>
       )}
+      </AreaMemuat>
 
       {/* Pagination */}
       {totalPages > 1 && (

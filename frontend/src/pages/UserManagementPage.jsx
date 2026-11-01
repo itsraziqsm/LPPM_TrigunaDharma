@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import { useSearchParams } from 'react-router-dom'
 import { labelKandidat } from '../utils/kandidatReviewer'
 import { usersApi } from '../api/users'
@@ -977,7 +978,7 @@ export default function UserManagementPage({ readOnly = false }) {
                   </p>
                 </div>
                 <div className="text-sm text-slate-500">
-                  {meta.total} user terdaftar
+                  {loading && users.length > 0 ? <IndikatorMemuat /> : `${meta.total} user terdaftar`}
                 </div>
               </div>
             </header>
@@ -989,7 +990,9 @@ export default function UserManagementPage({ readOnly = false }) {
               <span className="text-xs font-semibold text-slate-500">Bergabung</span>
             </div>
 
-            {loading ? (
+            {/* Muat ulang (halaman/cari/filter): daftar lama tetap tampil pudar — tanpa kedip. */}
+            <AreaMemuat memuat={loading && users.length > 0}>
+            {loading && users.length === 0 ? (
               <p className="flex items-center justify-center gap-3 px-6 py-14 text-center text-base text-slate-500">
                 <span className="spinner text-navy-600" aria-hidden="true" />
                 Memuat data pengguna...
@@ -1079,6 +1082,7 @@ export default function UserManagementPage({ readOnly = false }) {
                 })}
               </div>
             )}
+            </AreaMemuat>
           </section>
 
           {/* Pagination */}

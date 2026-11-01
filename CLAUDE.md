@@ -601,6 +601,12 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Tugas, Tabel Pengguna) & Cetak Laporan (rekap Ketua STMIK, laporan harian) memanggil `tampilkanPdf(doc, nama)` (judul PDF diisi,
   blob dibuka di tab baru; popup diblokir → unduh biasa), bukan `doc.save`. Handler yang menunggu data (`await`) wajib memanggil
   `siapkanTab()` sinkron di awal klik dan `batalTab()` bila gagal/kosong. Unduhan file server (ZIP/CSV luaran) tetap unduh.
+- **Muat ulang tanpa kedip** (`components/AreaMemuat.jsx`: `AreaMemuat` + `IndikatorMemuat`): saat daftar/tabel dimuat ulang (ganti tab,
+  filter, halaman, cari, setelah aksi) data lama **tetap tampil** dipudarkan & tidak bisa diklik sampai data baru datang; placeholder/skeleton
+  hanya untuk muat pertama (`memuat && data kosong`); badge kepala kartu = `IndikatorMemuat`; daftar ber-tab menyimpan tab pemilik data
+  (mis. `rowsTipe`, `dataTipe`, `list.tab`) agar kolom tidak tertukar. Dipakai Detail Periode (`ProposalPanel`), Proposal/Laporan Kegiatan,
+  Pengguna, Luaran Dosen, Backup, Notifikasi, Riwayat & anggota tim Kegiatan, Penugasan Review, Statistik (tabel & diagram). Daftar baru wajib
+  memakainya. **Avatar** (`UserAvatar`): inisial selalu tampil dulu, foto ditumpuk & memudar masuk setelah termuat (yang pernah termuat langsung tampil).
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
