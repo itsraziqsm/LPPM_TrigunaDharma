@@ -143,7 +143,11 @@ Data yang **sudah** tersambung ke API yang ada:
 
 | Status verifikasi email + kirim ulang | `emailVerifiedAt` (`/auth/me`), `POST /auth/verify-email/resend`; link email → `/verify-email` (`POST /auth/verify-email`) |
 
-Data yang **menunggu API**: tidak ada lagi.
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-46 | Zona Berbahaya › Hapus akun: **Ketua LPPM & Ketua STMIK tidak bisa menghapus akun sendiri** (frontend menyembunyikan formulir, diganti keterangan "Hubungi Admin") | Larangan juga ditegakkan di server | `DELETE /users/profile/me`: bila user punya peran `ketua_lppm` atau `ketua_stmik` → tolak (mis. `403` / `400` "Akun Ketua LPPM/STMIK tidak dapat dihapus sendiri"), di samping cek "admin terakhir" yang sudah ada (`profil_akun.go`) | Sekarang hanya dicegah di tampilan; permintaan langsung ke API masih berhasil. Admin tetap bisa menghapus/menonaktifkan lewat Manajemen Pengguna. |
 
 ## Manajemen User → Penugasan Review (`frontend/src/pages/UserManagementPage.jsx`)
 
@@ -194,7 +198,8 @@ Data yang **menunggu API**:
 
 Menu baru per peran (fitur yang tidak ada di menu = dicabut di frontend): Admin = Akademik (Dokumen Masuk, Periode lihat
 saja), Dokumentasi (Manajemen Template, Cetak Dokumen), Pengguna, Backup Data; Ketua LPPM = Dokumen Masuk, Periode,
-Pengguna, Dokumentasi (Cetak Dokumen, **Luaran**); Ketua STMIK = Akademik (Pemantauan Proposal), **Monitor Pengguna**;
+Pengguna, Dokumentasi (Cetak Dokumen, **Luaran**); Ketua STMIK = Akademik (Daftar Dokumen › Proposal/Laporan, Arsip
+Periode), Statistik, Cetak Laporan, **Monitor Pengguna**;
 Dosen = Kegiatan, Arsip Kegiatan, Luaran, Undangan, Penugasan Review; Mahasiswa = Project Saya, Arsip Project, Undangan,
 Cetak Laporan. Dua fitur memindahkan akses ke peran yang belum diizinkan backend:
 
@@ -202,6 +207,15 @@ Cetak Laporan. Dua fitur memindahkan akses ke peran yang belum diizinkan backend
 |---|---|---|---|---|
 | W-44 | **Luaran** (Ketua LPPM › Dokumentasi › Luaran, `/luaran-dosen`) dan kartu **Luaran Dosen** di Cetak Dokumen Ketua | Daftar semua luaran + unduh CSV/ZIP untuk Ketua LPPM | Tambah `ketua_lppm` ke `authorize(...)` pada `GET /luaran`, `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip` (`luaran_admin.go`); `GET /luaran/:id/bukti` juga harus boleh untuk ketua | Sekarang 403 → halaman menampilkan "API belum ada". Admin tidak lagi punya menu Luaran. |
 | W-45 | **Monitor Pengguna** (Ketua STMIK, `/users`, tampilan Pengguna mode baca) | Daftar & detail pengguna (baca saja) | Tambah `ketua_stmik` ke `authorize(...)` pada `GET /users` dan `GET /users/:id` (`users.go`); tulis tetap admin/ketua | Sekarang 403 → "API belum ada". Tanpa aksi ubah status/peran/hapus. |
+
+## Riwayat penggunaan per user (Dashboard › Pintasan, Pencarian global)
+
+Sekarang memakai "SOP Frontend": riwayat disimpan di `localStorage` per user (`utils/riwayat.js`: `riwayatHalaman:<id>`,
+`riwayatCari:<id>`), sehingga hanya berlaku di peramban yang sama. Opsional — hanya perlu bila riwayat harus ikut di semua perangkat:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-47 | Pintasan dashboard (maks 4, yang terakhir digunakan dulu) dan "Terakhir dibuka" di pencarian global (maks 4) | Riwayat halaman yang dibuka & hasil pencarian yang dipilih, per user, lintas perangkat | `GET /users/profile/riwayat` → `{ halaman: [{ path, at }], cari: [{ to, title, subtitle, badge }] }`; `POST /users/profile/riwayat/halaman` `{ path }`; `POST /users/profile/riwayat/cari` `{ to, title, subtitle, badge }` (server simpan maks 50 halaman / 4 hasil cari); `DELETE /users/profile/riwayat/cari` | Opsional (prioritas rendah). Tanpa ini fitur tetap jalan, hanya tidak sinkron antarperangkat dan hilang bila data peramban dibersihkan. |
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 
