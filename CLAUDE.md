@@ -612,6 +612,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
 - `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
   `templates/` (`template-proposal.docx`, cadangan bila server belum punya template aktif — tautan Usulan = `components/TemplateProposalLink.jsx`), `legacy/` (sprite Vite, hanya `App.jsx`).
+- **Panel kiri Login/Register**: judul Login = "Platform Riset & Pengabdian Masyarakat untuk pengelolaan proposal, evaluasi, monitoring, dan
+  pelaporan."; di bawah garis kedua halaman hanya "© LPPM DevTeam 2026" (ikon `Copyright` lucide).
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
   (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan
   (frame desain): lencana muncul di tengah → naik → huruf L P P M naik bergiliran → subjudul "Lembaga Penelitian dan

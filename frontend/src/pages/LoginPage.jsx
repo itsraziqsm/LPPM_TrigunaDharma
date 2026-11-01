@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { CircleAlert, Eye, EyeOff } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
 
@@ -54,21 +54,14 @@ export default function LoginPage() {
 
         <section aria-labelledby="platform-title">
           <h2 id="platform-title" className="max-w-md font-serif text-[1.9375rem] font-medium leading-[1.25] text-white">
-            Masuk untuk melanjutkan proses penelitian dan pengabdian secara terstruktur.
-          </h2>
-          <p className="mt-5 max-w-sm text-base leading-relaxed text-white/60">
             Platform Riset &amp; Pengabdian Masyarakat untuk pengelolaan proposal, evaluasi, monitoring, dan pelaporan.
-          </p>
+          </h2>
         </section>
 
         <footer className="border-t border-white/10 pt-6">
-          <ul className="flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-white/55" aria-label="Fitur utama">
-            {['Proposal', 'Review', 'Laporan', 'Monitoring'].map(t => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-          <p className="mt-4 font-serif text-[0.9375rem] italic leading-relaxed text-white/45">
-            "Mendukung ekosistem penelitian yang inovatif dan berdampak bagi masyarakat."
+          <p className="flex items-center gap-1.5 text-sm text-white/55">
+            <Copyright className="size-4" aria-hidden="true" />
+            <span>LPPM DevTeam 2026</span>
           </p>
         </footer>
       </aside>

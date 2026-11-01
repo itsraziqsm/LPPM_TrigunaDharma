@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { Check, ChevronLeft, CircleAlert, Eye, EyeOff } from 'lucide-react'
+import { Check, ChevronLeft, CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
 
@@ -96,20 +96,9 @@ export default function RegisterPage() {
         </section>
 
         <footer className="border-t border-white/10 pt-6">
-          <p className="text-sm text-white/45">Tersedia untuk</p>
-          <ul className="mt-3 space-y-3">
-            {[
-              { label: 'Dosen', desc: 'Buat dan kelola proposal penelitian.' },
-              { label: 'Mahasiswa', desc: 'Bergabung sebagai anggota tim kegiatan.' },
-            ].map(item => (
-              <li key={item.label}>
-                <p className="text-sm font-semibold text-white">{item.label}</p>
-                <p className="text-sm text-white/55">{item.desc}</p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 font-serif text-[0.9375rem] italic leading-relaxed text-white/45">
-            "Bergabunglah dan jadilah bagian dari komunitas peneliti terbaik."
+          <p className="flex items-center gap-1.5 text-sm text-white/55">
+            <Copyright className="size-4" aria-hidden="true" />
+            <span>LPPM DevTeam 2026</span>
           </p>
         </footer>
       </aside>
