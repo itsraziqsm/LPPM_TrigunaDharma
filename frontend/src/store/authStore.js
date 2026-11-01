@@ -9,7 +9,9 @@ const useAuthStore = create((set, get) => ({
   loading: false,
   error: null,
 
-  login: async (email, password) => {
+  // opts.sebelumMasuk: dipanggil (ditunggu) setelah login berhasil & SEBELUM token disimpan — GuestRoute langsung
+  // mengalihkan ke /dashboard begitu token ada, jadi animasi outro tombol Masuk (LoginPage) berjalan di sini.
+  login: async (email, password, opts = {}) => {
     set({ loading: true, error: null })
     try {
       const { data } = await authApi.login(email, password)
@@ -18,6 +20,7 @@ const useAuthStore = create((set, get) => ({
       // meloncat) sempat terlihat di localhost. Hanya aktif saat `npm run dev` (import.meta.env.DEV = false di
       // build produksi). HAPUS blok ini bila tidak diperlukan lagi / sebelum rilis bila build dev dipakai di server.
       if (import.meta.env.DEV) await new Promise((r) => setTimeout(r, 750))
+      if (opts.sebelumMasuk) await opts.sebelumMasuk()
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
       // Simpan user dari login dulu, lalu langsung fetchMe untuk dapat hasTugasan

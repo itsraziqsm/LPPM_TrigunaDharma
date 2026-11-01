@@ -654,7 +654,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   di `authStore` (login/daftar) & `VerifyEmailPage`; form Login `noValidate` + validasi sendiri (tanpa tooltip peramban);
   interceptor `api/axios.js` tidak mencoba refresh/redirect untuk 401 dari `auth/login|register`.
   **Tombol "Masuk ke Dashboard"** saat memproses berubah bentuk: latar & teks memudar, muncul **tiga lingkaran kecil** di tengah yang
-  meloncat bergantian (`.titik-loncat` di `index.css`; pengganti spinner "Memproses..."). ⚠ `authStore.login` menambah **jeda 0,75 dtk
+  meloncat bergantian (`.titik-loncat` di `index.css`; pengganti spinner "Memproses..."). **Outro berhasil**: dua titik kiri mengecil hilang, titik kanan
+  membesar jadi pil hijau membulat "Berhasil" + centang yang tergambar (`.pil-isi`, `.centang-gambar`, 1,2 dtk; 0,4 dtk bila reduced-motion) —
+  dijalankan lewat `login(email, pw, { sebelumMasuk })` yang ditunggu **sebelum** token disimpan (GuestRoute langsung mengalihkan bila token ada). ⚠ `authStore.login` menambah **jeda 0,75 dtk
   hanya di dev** (`import.meta.env.DEV`) agar animasi terlihat di localhost — tidak aktif di build produksi; hapus blok itu bila tak diperlukan.
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
   (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan
