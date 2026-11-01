@@ -8,6 +8,7 @@ import { catatKunjungan } from '../utils/riwayat'
 import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
+import BantuanPage from './BantuanPage'
 import ProposalPage from './ProposalPage'
 import UndanganPage from './UndanganPage'
 import UndanganDetailPage from './UndanganDetailPage'
@@ -121,6 +122,7 @@ export default function DashboardLayout({ page, jenis }) {
     // Detail kegiatan: pengusul, anggota tim (dosen/mahasiswa), admin & ketua (baca saja).
     if (page === 'kegiatan-detail') return <KegiatanDetailPage jenis={jenis} />
     if (page === 'profil') return <ProfilePage />
+    if (page === 'bantuan') return <BantuanPage />
     if (page === 'notifikasi') return <NotifikasiPage />
     if (page === 'notifikasi-detail') return <NotifikasiDetailPage key={location.pathname} />
 

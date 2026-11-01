@@ -4,20 +4,33 @@ import { AppWindow, LifeBuoy, MessageSquareText, Search } from 'lucide-react'
 import SearchPopup from './SearchPopup'
 import useTampil from '../hooks/useTampil'
 import { alertDialog } from '../utils/dialog'
+import { NOMOR_ADMIN_WA, pesanKendala, tautanWhatsApp } from '../utils/hubungiAdmin'
+import { ROLE_LABEL } from '../pages/dashboard/format'
 import { cariGlobal, konteksPencarian } from '../utils/globalSearch'
 import useAuthStore from '../store/authStore'
 import { catatCari, hapusRiwayatCari, riwayatCari } from '../utils/riwayat'
 
 // Tombol Alat melayang (kanan bawah, ikon jendela) → panel kecil berisi 3 alat:
 //   1. Pencarian (Ctrl/⌘ + F) → popup pencarian global (halaman + data sesuai peran, utils/globalSearch.js)
-//   2. Bantuan (Ctrl/⌘ + H)       → placeholder (sistematika menyusul)
-//   3. Hubungi Admin (Ctrl/⌘ + M) → placeholder (sistematika menyusul)
+//   2. Bantuan (Ctrl/⌘ + H)       → halaman /bantuan (sementara 501)
+//   3. Hubungi Admin (Ctrl/⌘ + M) → WhatsApp admin (utils/hubungiAdmin.js) dengan pesan templat berisi
+//      jejak halaman saat ini, nama & peran pelapor; nomor dari env VITE_ADMIN_WA (W-50)
 // Pintasan tetap berfungsi walau panel tertutup. Panel: Esc / klik di luar = tutup.
 const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
 
-// Alat 2 & 3: placeholder sampai sistematikanya dibahas.
-const segera = (judul) =>
-  alertDialog({ tone: 'info', title: `${judul} segera hadir`, message: `Fitur ${judul} sedang disiapkan dan akan tersedia pada pembaruan berikutnya.` })
+// Alat 3: buka WhatsApp admin di tab baru dengan pesan templat.
+function hubungiAdmin(user) {
+  if (!NOMOR_ADMIN_WA) {
+    alertDialog({
+      tone: 'info',
+      title: 'Nomor admin belum diatur',
+      message: 'Nomor WhatsApp admin belum dikonfigurasi pada sistem. Silakan hubungi admin LPPM secara langsung.',
+    })
+    return
+  }
+  const peran = (user?.roles || []).map((r) => ROLE_LABEL[r?.name || r] || r?.name || r)[0]
+  window.open(tautanWhatsApp(pesanKendala({ nama: user?.fullName || user?.name, peran })), '_blank', 'noopener,noreferrer')
+}
 
 export default function GlobalSearch({ roleNames, isReviewer }) {
   const [open, setOpen] = useState(false)
@@ -29,7 +42,8 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
   const ctx = useMemo(() => konteksPencarian(roleKey.split(','), isReviewer), [roleKey, isReviewer])
   const fetchRecs = useCallback((q) => cariGlobal(q, ctx), [ctx])
   // Riwayat per user (maks 4 hasil terakhir dibuka), tampil saat kolom cari kosong.
-  const userId = useAuthStore((s) => s.user?.id)
+  const user = useAuthStore((s) => s.user)
+  const userId = user?.id
   const [recent, setRecent] = useState([])
   const buka = () => {
     setRecent(riwayatCari(userId))
@@ -38,8 +52,8 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
 
   const ALAT = [
     { kunci: 'f', label: 'Pencarian', desc: 'Cari halaman, proposal, laporan', icon: Search, jalankan: buka },
-    { kunci: 'h', label: 'Bantuan', desc: 'Panduan penggunaan sistem', icon: LifeBuoy, jalankan: () => segera('Bantuan') },
-    { kunci: 'm', label: 'Hubungi Admin', desc: 'Kirim pertanyaan atau kendala', icon: MessageSquareText, jalankan: () => segera('Hubungi Admin') },
+    { kunci: 'h', label: 'Bantuan', desc: 'Panduan penggunaan sistem', icon: LifeBuoy, jalankan: () => navigate('/bantuan') },
+    { kunci: 'm', label: 'Hubungi Admin', desc: 'Laporkan kendala lewat WhatsApp', icon: MessageSquareText, jalankan: () => hubungiAdmin(user) },
   ]
 
   // Pintasan Ctrl/⌘ + F/H/M — aktif walau panel tertutup.
@@ -49,8 +63,8 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
         setRecent(riwayatCari(userId))
         setOpen(true)
       },
-      h: () => segera('Bantuan'),
-      m: () => segera('Hubungi Admin'),
+      h: () => navigate('/bantuan'),
+      m: () => hubungiAdmin(user),
     }
     const onKey = (e) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return
@@ -62,7 +76,7 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [userId])
+  }, [userId, user, navigate])
 
   // Panel: tutup dengan Esc atau klik di luar.
   useEffect(() => {

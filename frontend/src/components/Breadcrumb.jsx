@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { setJejak } from '../utils/jejakSaatIni'
 
 // Breadcrumb bersama (gaya sama dengan breadcrumb halaman lain): "Home / … / halaman ini".
 // items: [{ label, to? }] — item terakhir = halaman saat ini (tanpa tautan). Home selalu pertama.
@@ -52,6 +53,12 @@ function JejakNavbar({ semua }) {
 
 export default function Breadcrumb({ items = [], className = '', size = 'sm' }) {
   const semua = [{ label: 'Home', to: '/dashboard' }, ...items]
+  // Catat jejak halaman yang tampil (dipakai Hubungi Admin pada tombol Alat).
+  const teks = semua.map((it) => it.label).join('\u0000')
+  useEffect(() => {
+    setJejak(teks.split('\u0000'))
+    return () => setJejak(null)
+  }, [teks])
   // Slot di bilah atas ponsel dipasang Sidebar; cari setelah render pertama.
   const [slot, setSlot] = useState(() => (typeof document !== 'undefined' ? document.getElementById(SLOT_ID) : null))
   useEffect(() => {

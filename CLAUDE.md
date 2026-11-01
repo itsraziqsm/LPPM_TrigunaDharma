@@ -269,7 +269,7 @@ npm run dev       # Vite, http://localhost:5173 (cocokkan CORS_ORIGIN backend)
 npm run build
 npm run lint      # baseline: 0 error, 2 peringatan lama
 ```
-Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/api/axios.js`).
+Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/api/axios.js`); nomor WhatsApp admin: `VITE_ADMIN_WA` (lihat `frontend/.env.example`).
 
 ### Arsitektur
 - `src/router/index.jsx` — `GuestRoute` (`/login`, `/register`), `/verify-email?token=` publik
@@ -278,7 +278,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/proposals`, `/users`, `/cetak-dokumen[/rekap-proposal|/surat-tugas]` (admin/ketua; `/export` lama
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
-  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id` (semua peran), `/undangan[/:id]`
+  `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id`, `/bantuan` (semua peran), `/undangan[/:id]`
   (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
@@ -557,8 +557,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Tombol Alat + pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
   **Alat** melayang kanan bawah (ikon jendela `AppWindow`, bulat; hover/fokus melebar jadi pil "Alat"; disembunyikan saat ada modal,
   `.global-search-fab` di `index.css`) → klik membuka **panel kecil** (`useTampil`, Esc/klik luar = tutup) berisi 3 alat dengan pintasan
-  yang **tetap aktif walau panel tertutup**: 1. **Pencarian** (Ctrl/⌘ + F), 2. **Bantuan** (Ctrl/⌘ + H), 3. **Hubungi Admin** (Ctrl/⌘ + M) —
-  2 & 3 masih placeholder (`alertDialog` "segera hadir", sistematika menyusul). Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
+  yang **tetap aktif walau panel tertutup**: 1. **Pencarian** (Ctrl/⌘ + F), 2. **Bantuan** (Ctrl/⌘ + H) → halaman `/bantuan` (`BantuanPage.jsx`,
+  semua peran, sementara `ErrorState` **501**), 3. **Hubungi Admin** (Ctrl/⌘ + M) → WhatsApp `wa.me` di tab baru (`utils/hubungiAdmin.js`) dengan
+  templat "Halo admin, saya mengalami kendala di "<jejak>", dimana ... / Terima kasih atas perhatiannya. / - <nama>, <peran pertama>"; jejak =
+  breadcrumb halaman yang tampil (`Breadcrumb.jsx` mencatat ke `utils/jejakSaatIni.js`, tanpa breadcrumb → path URL); nomor dari env
+  `VITE_ADMIN_WA` (`frontend/.env.example`; awalan 0 → 62; kosong → dialog "Nomor admin belum diatur") sampai API W-50 ada. Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc; kolom kosong = **riwayat per user** "Terakhir
   dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>`, + Hapus riwayat; tanpa API)). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen

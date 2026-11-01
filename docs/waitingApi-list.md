@@ -244,10 +244,20 @@ frontend memanggil `GET /mahasiswa/laporan-harian/:proposalId` untuk **setiap** 
 |---|---|---|---|---|
 | W-49 | Cetak Laporan mahasiswa (`/cetak-laporan`): daftar project siap cetak + "N laporan harian" | Jumlah laporan harian milik mahasiswa per project | Tambah field `jumlahLaporanHarian` (COUNT `LaporanHarian` per proposal untuk user yang login) di tiap item `GET /mahasiswa/laporan-harian/proposals` | Opsional (prioritas rendah). Setelah ada, frontend cukup satu permintaan untuk daftar dan memuat laporan hanya saat Cetak. |
 
+## Kontak admin (tombol Alat › Hubungi Admin)
+
+Hubungi Admin (Ctrl/⌘ + M) membuka WhatsApp (`wa.me`) dengan pesan templat (jejak halaman, nama & peran pelapor). Nomor admin
+sementara diambil dari env build frontend `VITE_ADMIN_WA` (`frontend/.env.example`), karena tidak ada endpoint yang bisa dibaca
+semua peran (`GET /users` hanya admin/ketua). Kosong → dialog "Nomor admin belum diatur".
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-50 | Tombol Alat › **Hubungi Admin** (semua peran) | Nomor WhatsApp admin/LPPM yang bisa diubah tanpa build ulang frontend | `GET /kontak-admin` (login, semua peran) → `{ whatsapp: "6281234567890", nama: "Admin LPPM", jamLayanan?: "Senin–Jumat 08.00–16.00" }`; diatur admin lewat `PATCH /kontak-admin` (atau tabel pengaturan umum) | Simpan nomor dalam format internasional tanpa `+`. Setelah ada, frontend memakai API ini dan `VITE_ADMIN_WA` jadi cadangan. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
 - Menu **Luaran** (`/luaran`, dosen) sudah ada tetapi menampilkan **501 Not Implemented**:
   fitur menunggu kelanjutan perkembangan dari Pihak Kampus (berkaitan dengan W-01).
-- Menu **Panduan** dari desain belum ada halamannya.
+- Menu **Panduan** dari desain belum ada halamannya; halaman **Bantuan** (`/bantuan`, tombol Alat / Ctrl+H) sudah ada tetapi masih **501** — sistematika panduan menyusul.
 - Halaman **Pengaturan** sudah ada di `/profil` (dibuka dari kartu nama di bawah sidebar).
