@@ -200,24 +200,8 @@ export default function RegisterPage() {
             </div>
           ) : null}
 
-          {/* Dua langkah: 1. Akun (email & password) → 2. Data dosen/mahasiswa. Bilah progres bergerak halus. */}
-          <ol className="mt-7 grid grid-cols-2 gap-3" aria-label="Langkah pendaftaran">
-            {LANGKAH.map((l, i) => (
-              <li key={l} aria-current={langkah === i ? 'step' : undefined}>
-                <span className="block h-1.5 overflow-hidden rounded-full bg-slate-200">
-                  <span
-                    className="block h-full rounded-full bg-navy-700 transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                    style={{ width: langkah >= i ? '100%' : '0%' }}
-                  />
-                </span>
-                <span className={`mt-2 block text-xs font-semibold ${langkah >= i ? 'text-navy-900' : 'text-slate-400'}`}>
-                  {i + 1}. {l}
-                </span>
-              </li>
-            ))}
-          </ol>
 
-          <form onSubmit={handleSubmit} className="mt-6 overflow-hidden" noValidate>
+          <form onSubmit={handleSubmit} className="mt-7 overflow-hidden" noValidate>
             <div key={langkah} className={arah === 'maju' ? 'langkah-maju' : 'langkah-mundur'}>
             {langkah === 0 ? (
             <div className="space-y-4">
@@ -325,13 +309,30 @@ export default function RegisterPage() {
             )}
             </div>
 
+            {/* Bilah progres langkah (1. Akun → 2. Data diri), tepat di atas tombol aksi; bergerak halus saat pindah langkah. */}
+            <ol className="mt-8 grid grid-cols-2 gap-3" aria-label="Langkah pendaftaran">
+              {LANGKAH.map((l, i) => (
+                <li key={l} aria-current={langkah === i ? 'step' : undefined}>
+                  <span className="block h-1.5 overflow-hidden rounded-full bg-slate-200">
+                    <span
+                      className="block h-full rounded-full bg-navy-700 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                      style={{ width: langkah >= i ? '100%' : '0%' }}
+                    />
+                  </span>
+                  <span className={`mt-2 block text-xs font-semibold ${langkah >= i ? 'text-navy-900' : 'text-slate-400'}`}>
+                    {i + 1}. {l}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
             {langkah === 0 ? (
-              <button type="button" onClick={lanjut} className="btn btn-primary mt-8 h-11 w-full text-[0.9375rem]">
+              <button type="button" onClick={lanjut} className="btn btn-primary mt-5 h-11 w-full text-[0.9375rem]">
                 Lanjut
                 <ChevronRight size={16} aria-hidden="true" />
               </button>
             ) : (
-              <div className="mt-8 grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+              <div className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                 <button type="button" onClick={kembali} className="btn btn-secondary h-11" disabled={loading}>
                   <ChevronLeft size={16} aria-hidden="true" />
                   Kembali

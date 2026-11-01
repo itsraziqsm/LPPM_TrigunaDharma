@@ -613,7 +613,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
   `templates/` (`template-proposal.docx`, cadangan bila server belum punya template aktif — tautan Usulan = `components/TemplateProposalLink.jsx`), `legacy/` (sprite Vite, hanya `App.jsx`).
 - **Daftar (satu identitas satu pendaftaran, W-48)** (`RegisterPage.jsx` + `utils/pendaftaran.js`): formulir **2 langkah** (pilihan Dosen/Mahasiswa
-  di atas; bilah progres 2 segmen dengan transisi lebar; 1. Akun = email + password → Lanjut (divalidasi dulu); 2. Data diri = nama + NIDN/NIRM +
+  di atas; bilah progres 2 segmen dengan transisi lebar **tepat di atas tombol aksi**; 1. Akun = email + password → Lanjut (divalidasi dulu); 2. Data diri = nama + NIDN/NIRM +
   prodi → Kembali / Daftar Sekarang; isi langkah berganti dengan animasi geser `.langkah-maju`/`.langkah-mundur` di `index.css`; galat server
   untuk email/password membawa kembali ke langkah 1; muat satu layar tanpa gulir di 1366×768). Validasi di frontend — email valid
   (di-*trim* & huruf kecil sebelum dikirim), **NIDN** wajib angka ≥ 10 digit, **NIRM** (label baru untuk field API `nim`) wajib tepat 10 digit
