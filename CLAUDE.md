@@ -419,7 +419,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `GET /periode`); periode = **folder** (`FolderPeriode`, `satuan="project"`: judul + jumlah project) dalam dropdown **per tahun**
   (`GrupTahun`, bawaan tertutup); klik folder → 3 project terbaru + Lihat lebih banyak → `/arsip-project/detail/:id`
   (ponsel: langsung detail); klik project → `/project/:jenis?id=`),
-  **Undangan Ikut Serta** (`/undangan`), **Cetak Laporan** (`/cetak-laporan`, `pages/cetak/CetakLaporanHarianPage.jsx`: daftar project +
+  **Undangan Ikut Serta** (`/undangan`), **Cetak Laporan** (`/cetak-laporan`, `pages/cetak/CetakLaporanHarianPage.jsx`: daftar project **yang punya ≥ 1 laporan harian**
+  (laporan tiap project dimuat paralel saat halaman dibuka lalu dipakai ulang saat cetak; jumlah per project = ApiPending W-49 opsional) +
   Cetak rekap → `GET /mahasiswa/laporan-harian/:id` → PDF `pages/cetak/laporanHarianPDF.js`, sama dengan rekap di Project Saya). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx` (`KepalaMasuk` = judul + breadcrumb lalu kartu

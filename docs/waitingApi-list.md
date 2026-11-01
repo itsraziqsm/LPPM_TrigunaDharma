@@ -235,6 +235,15 @@ Sekarang memakai "SOP Frontend": riwayat disimpan di `localStorage` per user (`u
 |---|---|---|---|---|
 | W-47 | Pintasan dashboard (maks 4, yang terakhir digunakan dulu) dan "Terakhir dibuka" di pencarian global (maks 4) | Riwayat halaman yang dibuka & hasil pencarian yang dipilih, per user, lintas perangkat | `GET /users/profile/riwayat` → `{ halaman: [{ path, at }], cari: [{ to, title, subtitle, badge }] }`; `POST /users/profile/riwayat/halaman` `{ path }`; `POST /users/profile/riwayat/cari` `{ to, title, subtitle, badge }` (server simpan maks 50 halaman / 4 hasil cari); `DELETE /users/profile/riwayat/cari` | Opsional (prioritas rendah). Tanpa ini fitur tetap jalan, hanya tidak sinkron antarperangkat dan hilang bila data peramban dibersihkan. |
 
+## Jumlah laporan harian per project (Mahasiswa › Cetak Laporan)
+
+Cetak Laporan mahasiswa hanya menampilkan project yang punya ≥ 1 laporan harian. Karena daftar project tidak memuat jumlahnya,
+frontend memanggil `GET /mahasiswa/laporan-harian/:proposalId` untuk **setiap** project (data dipakai ulang saat cetak). Opsional:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-49 | Cetak Laporan mahasiswa (`/cetak-laporan`): daftar project siap cetak + "N laporan harian" | Jumlah laporan harian milik mahasiswa per project | Tambah field `jumlahLaporanHarian` (COUNT `LaporanHarian` per proposal untuk user yang login) di tiap item `GET /mahasiswa/laporan-harian/proposals` | Opsional (prioritas rendah). Setelah ada, frontend cukup satu permintaan untuk daftar dan memuat laporan hanya saat Cetak. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
