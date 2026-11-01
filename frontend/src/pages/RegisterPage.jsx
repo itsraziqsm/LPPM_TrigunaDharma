@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { Check, ChevronLeft, CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
+import { bacaPendaftaran, rapikanEmail, simpanPendaftaran, validasiDaftar } from '../utils/pendaftaran'
 
 const EyeIcon = ({ open }) => open
   ? (
@@ -13,7 +14,7 @@ const EyeIcon = ({ open }) => open
     <EyeOff size={16} aria-hidden="true" />
   )
 
-const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, half }) => (
+const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, half, error, hint, inputMode, maxLength, autoComplete }) => (
   <label className={`block min-w-0 ${half ? 'sm:max-w-xs' : ''}`}>
     <span className="label">
       {label}
@@ -27,52 +28,82 @@ const Field = ({ label, name, type = 'text', value, onChange, placeholder, requi
       onChange={onChange}
       placeholder={placeholder}
       required={required}
+      inputMode={inputMode}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      aria-invalid={Boolean(error) || undefined}
     />
+    {error ? (
+      <span className="mt-1.5 block text-xs text-red-700">{error}</span>
+    ) : hint ? (
+      <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>
+    ) : null}
   </label>
 )
 
+// Satu identitas satu pendaftaran (W-48): validasi email/NIDN/NIRM di sini; status pendaftaran
+// sebelumnya dari kode galat server → halaman /register/terkirim atau Login.
+const PESAN_DUPLIKAT =
+  'Email, NIDN, atau NIRM ini sudah terdaftar. Bila pendaftaran Anda masih menunggu persetujuan, tunggu konfirmasi admin; bila sudah disetujui, silakan masuk.'
+
 export default function RegisterPage() {
   const { register, loading, error, clearError } = useAuthStore()
+  const navigate = useNavigate()
   const [role, setRole] = useState('dosen')
-  const [success, setSuccess] = useState(false)
   const scrollRef = useRef(null)
-  // Dua tampilan (formulir / berhasil) memakai <main> berbeda: pasang ulang Lenis saat berganti.
-  useLenis(scrollRef, { resetKey: success })
+  useLenis(scrollRef)
   const [showPwd, setShowPwd] = useState(false)
   const [form, setForm] = useState({ email: '', name: '', password: '', nidn: '', nim: '', programStudi: '', prodi: '' })
+  const [coba, setCoba] = useState(false) // tampilkan galat per kolom setelah mencoba kirim
+  const [galatServer, setGalatServer] = useState({})
+  const [duplikat, setDuplikat] = useState(false)
+  // Penanda di peramban ini (kenyamanan): pendaftaran sudah pernah terkirim → halaman "sudah terkirim".
+  const [sudahTerkirim] = useState(() => Boolean(bacaPendaftaran()))
 
-  const handleChange = (e) => { clearError(); setForm(f => ({ ...f, [e.target.name]: e.target.value })) }
+  const galatKlien = validasiDaftar(role, form)
+  const galat = (k) => (coba ? galatKlien[k] : null) || galatServer[k]
+
+  const handleChange = (e) => {
+    clearError()
+    setDuplikat(false)
+    const { name } = e.target
+    let { value } = e.target
+    // NIDN/NIRM hanya angka (NIRM maks. 10 digit).
+    if (name === 'nidn' || name === 'nim') value = value.replace(/\D/g, '').slice(0, name === 'nim' ? 10 : 20)
+    setGalatServer((g) => ({ ...g, [name]: undefined }))
+    setForm(f => ({ ...f, [name]: value }))
+  }
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setCoba(true)
+    if (Object.keys(galatKlien).length) return
+    const email = rapikanEmail(form.email)
     try {
       const payload = role === 'dosen'
-        ? { email: form.email, name: form.name, password: form.password, nidn: form.nidn, programStudi: form.programStudi }
-        : { email: form.email, name: form.name, password: form.password, nim: form.nim, prodi: form.prodi }
-      await register(role, payload)
-      setSuccess(true)
-    } catch { }
+        ? { email, name: form.name.trim(), password: form.password, nidn: form.nidn, programStudi: form.programStudi }
+        : { email, name: form.name.trim(), password: form.password, nim: form.nim, prodi: form.prodi }
+      const res = await register(role, payload)
+      simpanPendaftaran({ email, role, createdAt: res?.data?.createdAt })
+      navigate('/register/terkirim', { replace: true, state: { baru: true } })
+    } catch (err) {
+      if (err.code === 'PENDAFTARAN_MENUNGGU') {
+        clearError()
+        simpanPendaftaran({ email, role, createdAt: err.data?.createdAt })
+        navigate('/register/terkirim', { replace: true, state: { menunggu: true } })
+      } else if (err.code === 'AKUN_SUDAH_AKTIF') {
+        clearError()
+        navigate('/login', { replace: true, state: { flash: 'Akun dengan identitas ini sudah aktif. Silakan masuk.', email } })
+      } else if (err.status === 422 && err.fieldErrors) {
+        setGalatServer(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, [].concat(v).join(' ')])))
+      } else if (err.status === 409 && !err.code) {
+        // Backend lama (sebelum W-48): 409 umum "Resource already exists".
+        clearError()
+        setDuplikat(true)
+      }
+    }
   }
 
-  if (success) return (
-    <main ref={scrollRef} data-scroll-container className="fixed inset-0 grid place-items-center overflow-y-auto bg-canvas px-6">
-      <section className="rise w-full max-w-sm text-center" aria-labelledby="success-title">
-        <div className="mx-auto grid size-14 place-items-center rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
-          <Check size={26} strokeWidth={2.2} aria-hidden="true" />
-        </div>
-        <h2 id="success-title" className="mt-6 font-serif text-3xl font-medium text-navy-950">Pendaftaran Terkirim</h2>
-        <p className="mt-3 text-base text-slate-600">
-          Akun Anda sedang menunggu persetujuan admin.
-        </p>
-        <p className="mt-1 text-sm text-slate-500">
-          Anda akan dapat masuk setelah akun disetujui.
-        </p>
-        <Link to="/login" className="btn btn-secondary mt-8">
-          <ChevronLeft size={14} strokeWidth={2.5} aria-hidden="true" />
-          Kembali ke Login
-        </Link>
-      </section>
-    </main>
-  )
+  if (sudahTerkirim) return <Navigate to="/register/terkirim" replace />
 
   return (
     <main ref={scrollRef} data-scroll-container className="fixed inset-0 overflow-y-auto bg-white lg:grid lg:grid-cols-[minmax(24rem,34rem)_minmax(0,1fr)]">
@@ -123,21 +154,31 @@ export default function RegisterPage() {
                 key={t.key}
                 type="button"
                 className={`h-9 rounded-lg text-sm font-semibold transition-colors ${role === t.key ? 'bg-white text-navy-900 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-navy-900'}`}
-                onClick={() => { setRole(t.key); clearError() }}
+                onClick={() => { setRole(t.key); clearError(); setDuplikat(false); setGalatServer({}) }}
               >
                 {t.label}
               </button>
             ))}
           </div>
 
-          {error && (
+          {error || duplikat ? (
             <div className="mt-6 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-700" role="alert" aria-live="polite">
               <CircleAlert className="mt-0.5 shrink-0" size={16} aria-hidden="true" />
-              <span>{error}</span>
+              <span>
+                {duplikat ? PESAN_DUPLIKAT : error}
+                {duplikat ? (
+                  <>
+                    {' '}
+                    <Link to="/login" className="font-semibold underline">
+                      Masuk
+                    </Link>
+                  </>
+                ) : null}
+              </span>
             </div>
-          )}
+          ) : null}
 
-          <form onSubmit={handleSubmit} className="mt-6">
+          <form onSubmit={handleSubmit} className="mt-6" noValidate>
             <p className="text-sm font-semibold text-navy-900">Informasi Akun</p>
 
             <div className="mt-4 space-y-4">
@@ -148,6 +189,8 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="Nama lengkap Anda"
                 required
+                error={galat('name')}
+                autoComplete="name"
               />
 
               <Field
@@ -158,6 +201,8 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 placeholder="nama@institusi.ac.id"
                 required
+                error={galat('email')}
+                autoComplete="email"
               />
 
               <div>
@@ -173,6 +218,7 @@ export default function RegisterPage() {
                     placeholder="Min. 8 karakter"
                     autoComplete="new-password"
                     aria-label="Password"
+                    aria-invalid={Boolean(galat('password')) || undefined}
                   />
                   <button
                     type="button"
@@ -185,6 +231,7 @@ export default function RegisterPage() {
                     <span>{showPwd ? 'Sembunyikan' : 'Tampilkan'}</span>
                   </button>
                 </div>
+                {galat('password') ? <span className="mt-1.5 block text-xs text-red-700">{galat('password')}</span> : null}
               </div>
             </div>
 
@@ -199,7 +246,12 @@ export default function RegisterPage() {
                   name="nidn"
                   value={form.nidn}
                   onChange={handleChange}
-                  placeholder="Opsional"
+                  placeholder="Min. 10 digit"
+                  required
+                  inputMode="numeric"
+                  maxLength={20}
+                  error={galat('nidn')}
+                  hint="Hanya angka, minimal 10 digit."
                 />
                 <Field
                   label="Program Studi"
@@ -212,11 +264,16 @@ export default function RegisterPage() {
             ) : (
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
-                  label="NIM"
+                  label="NIRM"
                   name="nim"
                   value={form.nim}
                   onChange={handleChange}
-                  placeholder="Opsional"
+                  placeholder="10 digit"
+                  required
+                  inputMode="numeric"
+                  maxLength={10}
+                  error={galat('nim')}
+                  hint="Nomor Induk Registrasi Mahasiswa, 10 digit angka."
                 />
                 <Field
                   label="Prodi"

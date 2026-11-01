@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
 import { CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
+import { hapusPendaftaran } from '../utils/pendaftaran'
 
 const EyeIcon = ({ open }) => open
   ? (
@@ -16,7 +17,10 @@ const EyeIcon = ({ open }) => open
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login, loading, error, clearError } = useAuthStore()
-  const [form, setForm] = useState({ email: '', password: '' })
+  // Pesan dari halaman lain (mis. Daftar: AKUN_SUDAH_AKTIF, W-48) + email terisi.
+  const location = useLocation()
+  const flash = location.state?.flash
+  const [form, setForm] = useState({ email: location.state?.email || '', password: '' })
   const [showPwd, setShowPwd] = useState(false)
   const scrollRef = useRef(null)
   useLenis(scrollRef)
@@ -24,7 +28,12 @@ export default function LoginPage() {
   const handleChange = (e) => { clearError(); setForm(f => ({ ...f, [e.target.name]: e.target.value })) }
   const handleSubmit = async (e) => {
     e.preventDefault()
-    try { await login(form.email, form.password); navigate('/dashboard') } catch { }
+    try {
+      await login(form.email, form.password)
+      // Akun sudah aktif → penanda "pendaftaran terkirim" di peramban ini tidak relevan lagi.
+      hapusPendaftaran()
+      navigate('/dashboard')
+    } catch { }
   }
 
   useEffect(() => {
@@ -85,6 +94,12 @@ export default function LoginPage() {
           <p className="mt-2 text-base leading-relaxed text-slate-500 lg:hidden">
             Masuk ke akun Anda untuk melihat dokumen, meninjau progres, dan melanjutkan pengelolaan kegiatan penelitian maupun pengabdian masyarakat.
           </p>
+
+          {flash && !error ? (
+            <div className="mt-6 rounded-lg border border-navy-200 bg-navy-50 px-3.5 py-3 text-sm leading-relaxed text-navy-800 lg:mb-6 lg:mt-0" role="status">
+              {flash}
+            </div>
+          ) : null}
 
           {error && (
             <div className="mt-6 flex items-start gap-2.5 rounded-lg border lg:mb-6 lg:mt-0 border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-700" role="alert" aria-live="polite">

@@ -38,9 +38,16 @@ const useAuthStore = create((set, get) => ({
       set({ loading: false })
       return data
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registrasi gagal'
+      const res = err.response
+      const msg = res?.data?.message || 'Registrasi gagal'
       set({ error: msg, loading: false })
-      throw new Error(msg)
+      // Bawa status, kode (W-48: PENDAFTARAN_MENUNGGU | AKUN_SUDAH_AKTIF | IDENTITAS_BENTROK), data & galat per kolom (422).
+      const e = new Error(msg)
+      e.status = res?.status
+      e.code = res?.data?.code
+      e.data = res?.data?.data
+      e.fieldErrors = res?.data?.errors
+      throw e
     }
   },
 

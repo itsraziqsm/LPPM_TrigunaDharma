@@ -612,6 +612,14 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
 - `public/` per kategori (lihat `public/README.md`): `brand/` (logo), `images/errors/`,
   `templates/` (`template-proposal.docx`, cadangan bila server belum punya template aktif — tautan Usulan = `components/TemplateProposalLink.jsx`), `legacy/` (sprite Vite, hanya `App.jsx`).
+- **Daftar (satu identitas satu pendaftaran, W-48)** (`RegisterPage.jsx` + `utils/pendaftaran.js`): validasi di frontend — email valid
+  (di-*trim* & huruf kecil sebelum dikirim), **NIDN** wajib angka ≥ 10 digit, **NIRM** (label baru untuk field API `nim`) wajib tepat 10 digit
+  (input hanya angka); galat per kolom + galat 422 server. Berhasil → `/register/terkirim` (`PendaftaranTerkirimPage.jsx`, tamu: email tersamar,
+  peran, tanggal, status Menunggu + ApiPending untuk cek status, "Daftar dengan data lain" menghapus penanda) dan penanda `localStorage`
+  `pendaftaranTerkirim` (30 hari, kenyamanan saja: `/register` di peramban yang sama → halaman terkirim; dihapus saat login berhasil). Kode 409
+  dari server: `PENDAFTARAN_MENUNGGU` → halaman terkirim ("Sudah Terkirim"); `AKUN_SUDAH_AKTIF` → `/login` dengan `state.flash` + email terisi;
+  409 tanpa kode (backend lama) → pesan "Email, NIDN, atau NIRM ini sudah terdaftar…". `authStore.register` melempar galat ber-`status`, `code`,
+  `data`, `fieldErrors`.
 - **Login**: panel kiri = judul besar "Selamat Datang" + subjudul "Platform Riset & Pengabdian Masyarakat untuk pengelolaan proposal,
   evaluasi, monitoring, dan pelaporan."; panel kanan (desktop) **hanya formulir masuk** (+ tautan Daftar) di tengah vertikal — judul &
   deskripsi kanan hanya tampil di ponsel (panel kiri tersembunyi). Di bawah garis panel kiri Login & Register hanya "© LPPM DevTeam 2026"

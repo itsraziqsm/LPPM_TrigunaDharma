@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { PrivateRoute, GuestRoute } from './guards'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
+import PendaftaranTerkirimPage from '../pages/PendaftaranTerkirimPage'
 import DashboardLayout from '../pages/DashboardLayout'
 import ErrorPage from '../pages/ErrorPage'
 import VerifyEmailPage from '../pages/VerifyEmailPage'
@@ -13,6 +14,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/register/terkirim', element: <PendaftaranTerkirimPage /> },
     ],
   },
   {
