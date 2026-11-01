@@ -32,14 +32,14 @@ export default function DashboardScreen({
   else
     body = (
       <>
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
         <PintasanSection
           // Pintasan ber-`roles` hanya untuk peran itu (admin & Ketua LPPM berbagi adapter).
           shortcuts={(model.shortcuts || []).filter((s) => !s.roles || s.roles.includes(role))}
         >
           <KpiToneCards items={model.kpis} />
         </PintasanSection>
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
         <DashboardBody model={model} />
       </>
     )

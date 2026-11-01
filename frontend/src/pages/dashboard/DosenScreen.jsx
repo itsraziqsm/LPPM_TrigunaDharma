@@ -55,7 +55,7 @@ function DocCards({ cards, luaran }) {
     <ToneCardGrid label="Ringkasan dokumen">
         <ToneCard
           tone="green"
-          label="Dokumen Diterima"
+          label="Diterima"
           value={cards.diterima}
           hint={cards.total !== null ? `dari ${cards.total} proposal` : null}
           icon={ICONS.check}
@@ -63,7 +63,7 @@ function DocCards({ cards, luaran }) {
         />
         <ToneCard
           tone="red"
-          label="Dokumen Ditolak"
+          label="Ditolak"
           value={cards.ditolak}
           hint="Tidak lolos seleksi"
           icon={ICONS.cross}
@@ -71,7 +71,7 @@ function DocCards({ cards, luaran }) {
         />
         <ToneCard
           tone="yellow"
-          label="Dokumen Diproses"
+          label="Diproses"
           value={cards.diproses}
           hint={cards.revisi ? `${cards.revisi} perlu revisi` : 'Diajukan & direview'}
           icon={ICONS.timer}
@@ -79,7 +79,7 @@ function DocCards({ cards, luaran }) {
         />
         <ToneCard
           tone="blue"
-          label="Luaran Dapat Diklaim"
+          label="Luaran Diklaim"
           value={luaran ? luaran.dapatDiklaim : null}
           hint={luaran?.total != null ? `${luaran.tercapai} tercapai dari ${luaran.total} target` : 'Data belum termuat'}
           icon={ICONS.dollar}
@@ -115,18 +115,21 @@ function LatestProposal({ latest, unavailable }) {
           <span className={`badge shrink-0 self-start ${latest.status.className}`}>{latest.status.label}</span>
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          {[latest.jenis, latest.periode].filter(Boolean).join(' · ')}
+          {/* Jenis tidak diulang bila nama periode sudah memuatnya ("Penelitian Ganjil 2026"). */}
+          {[latest.periode && latest.jenis && latest.periode.toLowerCase().includes(latest.jenis.toLowerCase()) ? null : latest.jenis, latest.periode]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
 
         <div
-          className="mt-8"
+          className="mt-6 sm:mt-8"
           role="img"
           aria-label={`Tahap ${stage + 1} dari ${STAGES.length}: Tahapan ${STAGES[stage]}`}
         >
-          <div className="relative h-10">
-            <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-slate-200" />
+          <div className="relative h-6 sm:h-10">
+            <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200 sm:h-1.5" />
             <div
-              className={`absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full ${rejected ? 'bg-red-500' : 'bg-navy-700'}`}
+              className={`absolute left-0 top-1/2 h-1 -translate-y-1/2 sm:h-1.5 rounded-full ${rejected ? 'bg-red-500' : 'bg-navy-700'}`}
               style={{ width: `${fill}%` }}
             />
             <div className="absolute inset-0 grid grid-cols-4">
@@ -135,19 +138,20 @@ function LatestProposal({ latest, unavailable }) {
                   <span
                     className={`rounded-full ${
                       i === stage
-                        ? `size-10 ${rejected ? 'bg-red-500' : 'bg-navy-700'}`
+                        ? `size-6 sm:size-10 ${rejected ? 'bg-red-500' : 'bg-navy-700'}`
                         : i < stage
-                          ? 'size-6 bg-navy-700'
-                          : 'size-10 bg-slate-200'
+                          ? 'size-3.5 bg-navy-700 sm:size-6'
+                          : 'size-5 bg-slate-200 sm:size-10'
                     }`}
                   />
                 </div>
               ))}
             </div>
           </div>
-          <ol className="mt-4 grid grid-cols-4 gap-1.5 text-center text-[0.6875rem] leading-snug text-slate-700 sm:gap-2 sm:text-xs">
+          {/* Ponsel: hanya label tahap aktif (posisi tetap di bawah titiknya). */}
+          <ol className="mt-2 grid grid-cols-4 gap-1.5 text-center text-xs leading-snug text-slate-700 sm:mt-4 sm:gap-2">
             {STAGES.map((label, i) => (
-              <li key={label} className={i === stage ? 'font-semibold text-navy-900' : undefined}>
+              <li key={label} className={i === stage ? 'font-semibold text-navy-900' : 'max-sm:invisible'}>
                 <span className="max-sm:hidden">Tahapan </span>
                 {label.replace('/', '/\u200b')}
               </li>
@@ -155,7 +159,7 @@ function LatestProposal({ latest, unavailable }) {
           </ol>
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 max-sm:hidden">
             Tahap saat ini: <span className="font-semibold text-navy-800">{latest.stageLabel || STAGES[stage]}</span>
             {rejected ? ' · proposal ditolak' : ''}
           </p>
@@ -188,15 +192,16 @@ function LatestProposal({ latest, unavailable }) {
 }
 
 // ── Profil capaian ──────────────────────────────────────────────────────────
+// Ponsel: kartu ringkas 2 kolom tanpa ikon; kartu yang API-nya belum ada disembunyikan.
 function MetricCard({ label, value, icon: IconCmp, pending, hint }) {
   return (
-    <li className="flex items-center justify-between gap-4 rounded-xl bg-white px-6 py-5">
+    <li className={`flex items-center justify-between gap-4 rounded-xl bg-white px-4 py-3.5 sm:px-6 sm:py-5 ${pending ? 'max-sm:hidden' : ''}`}>
       <div className="min-w-0">
-        <p className="text-xl text-slate-900">{label}</p>
-        <p className="mt-2 text-xl font-medium tabular-nums lining-nums text-slate-900">{show(value)}</p>
+        <p className="text-sm text-slate-700 sm:text-xl sm:text-slate-900">{label}</p>
+        <p className="mt-1 text-lg font-medium tabular-nums lining-nums text-slate-900 sm:mt-2 sm:text-xl">{show(value)}</p>
         {pending ? <ApiPending className="mt-1.5" /> : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
       </div>
-      <span className="grid size-[4.5rem] shrink-0 place-items-center rounded-full bg-navy-800 text-white">
+      <span className="hidden size-[4.5rem] shrink-0 place-items-center rounded-full bg-navy-800 text-white sm:grid">
         <IconCmp className="size-9" aria-hidden="true" />
       </span>
     </li>
@@ -210,7 +215,7 @@ function ProfileMetrics({ user, penelitian, pengabdian, luaran, kepercayaan }) {
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
       <SectionTitle id="profil-capaian">Statistik Dosen</SectionTitle>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
         <MetricCard label="Jurnal" icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} hint="Luaran jurnal yang dapat diklaim" />
         <MetricCard
@@ -247,9 +252,10 @@ function profileValue(user, keys, format = (v) => v) {
   return { value: raw ? format(raw) : 'Belum diisi' }
 }
 
+// Isian yang API-nya belum ada disembunyikan di ponsel (penanda "API belum ada" tetap di desktop).
 function ProfileField({ label, field }) {
   return (
-    <div>
+    <div className={field.pending ? 'max-sm:hidden' : undefined}>
       <dt className="text-base text-slate-900">{label}</dt>
       <dd className="mt-1 pl-3 text-base text-navy-600">
         {field.pending ? (
@@ -264,22 +270,7 @@ function ProfileField({ label, field }) {
   )
 }
 
-function StatChip({ icon: IconCmp, value, label, pending }) {
-  return (
-    <li className="flex items-center gap-2.5">
-      <span className="grid size-12 shrink-0 place-items-center rounded-full bg-yellow-400 text-white">
-        <IconCmp className="size-6" aria-hidden="true" />
-      </span>
-      <span className="leading-tight">
-        <span className="block text-lg font-semibold tabular-nums lining-nums text-slate-950">{show(value)}</span>
-        <span className="block text-xs text-slate-700">{label}</span>
-        {pending ? <ApiPending className="mt-1" /> : null}
-      </span>
-    </li>
-  )
-}
-
-function DosenStats({ user, penelitian, pengabdian, luaran }) {
+function DosenStats({ user }) {
   const name = user?.fullName || user?.name || '—'
 
   const phone = profileValue(user, ['noHp', 'kontak'])
@@ -296,8 +287,16 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
       <SectionTitle id="statistik-dosen">Profil Dosen</SectionTitle>
       <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <article className="rounded-xl bg-white p-4 sm:p-5">
-          <div className="flex flex-col gap-5 sm:flex-row">
-            <UserAvatar user={user} className="size-28 text-4xl" rounded="rounded-xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${name}`} />
+          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+            {/* Foto = tautan ke Pengaturan akun (/profil). */}
+            <Link
+              to="/profil"
+              title="Buka pengaturan akun"
+              aria-label="Buka pengaturan akun"
+              className="shrink-0 rounded-xl transition-[box-shadow,opacity] duration-200 hover:opacity-90 hover:ring-4 hover:ring-navy-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+            >
+              <UserAvatar user={user} className="size-28 text-4xl" rounded="rounded-xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${name}`} />
+            </Link>
             <div className="min-w-0 space-y-1.5">
               <h3 className="break-words text-xl font-semibold text-navy-700">{name}</h3>
               <p className="text-base text-slate-900">
@@ -309,7 +308,7 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
                   jabatan.value
                 )}
               </p>
-              <p className="text-base text-slate-900">
+              <p className={`text-base text-slate-900 ${phone.pending ? 'max-sm:hidden' : ''}`}>
                 {phone.pending ? (
                   <span className="inline-flex items-center gap-2">
                     No. HP <ApiPending />
@@ -322,11 +321,6 @@ function DosenStats({ user, penelitian, pengabdian, luaran }) {
             </div>
           </div>
 
-          <ul className="mt-5 grid grid-cols-1 gap-4 rounded-xl bg-slate-100 px-5 py-4 sm:flex sm:flex-wrap sm:justify-around sm:gap-x-6">
-            <StatChip icon={ICONS.pengabdian} value={pengabdian} label="Pengabdian" />
-            <StatChip icon={ICONS.penelitian} value={penelitian} label="Penelitian" />
-            <StatChip icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} label="Jurnal Diterbitkan" />
-          </ul>
         </article>
 
         <article className="rounded-xl bg-white p-4 sm:p-5">
@@ -358,17 +352,17 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
     // Informasi → Profil Dosen → Statistik Dosen.
     body = (
       <>
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
         <PintasanSection shortcuts={model.shortcuts}>
           <DocCards cards={dosen.cards} luaran={dosen.luaran} />
         </PintasanSection>
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
         <LatestProposal latest={dosen.latest} unavailable={dosen.latestUnavailable} />
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
         <DashboardBody model={model} />
-        <hr className="pemisah" />
-        <DosenStats user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} />
-        <hr className="pemisah" />
+        <hr className="pemisah max-sm:hidden" />
+        <DosenStats user={user} />
+        <hr className="pemisah max-sm:hidden" />
         <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
       </>
     )

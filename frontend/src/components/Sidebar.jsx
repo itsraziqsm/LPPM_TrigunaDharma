@@ -370,7 +370,9 @@ export default function Sidebar() {
         >
           <Menu className="size-5" strokeWidth={1.6} aria-hidden="true" />
         </button>
-        <span className="font-serif text-lg font-medium tracking-wide text-white">LPPM</span>
+        {/* Breadcrumb halaman (portal dari components/Breadcrumb.jsx); merek "LPPM" hanya bila halaman tanpa breadcrumb. */}
+        <div id="jejak-navbar" className="min-w-0 flex-1 empty:hidden" />
+        <span className="font-serif text-lg font-medium tracking-wide text-white [#jejak-navbar:not(:empty)~&]:hidden">LPPM</span>
       </div>
 
       {/* ── Lonceng notifikasi (satu instance) ─────────────────────────── */}

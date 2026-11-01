@@ -54,15 +54,26 @@ export function HaloHeader({ now, name, roleLabel, loading, refreshing, updatedA
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 max-w-2xl">
           <p className="break-words text-[2rem] font-bold leading-tight text-navy-950">
-            <span aria-hidden="true">👋 </span>Halo {sapaan}!
+            Halo {sapaan}!
           </p>
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-slate-600">
             <span>{formatLongDate(now)}</span>
             {roleLabel ? <span className="badge badge-tag">{roleLabel}</span> : null}
+            {/* Ponsel: muat ulang cukup ikon di baris tanggal (baris "Diperbarui…" disembunyikan). */}
+            <button
+              type="button"
+              onClick={onReload}
+              disabled={loading || refreshing}
+              className="btn btn-ghost btn-sm px-2 sm:hidden"
+              aria-label="Muat ulang"
+              title={updatedAt ? `Muat ulang · diperbarui pukul ${formatClock(updatedAt)}` : 'Muat ulang'}
+            >
+              {refreshing ? <span className="spinner" aria-hidden="true" /> : <RefreshCw className="size-4" aria-hidden="true" />}
+            </button>
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:items-end">
+        <div className="flex w-full flex-col gap-2.5 max-sm:hidden lg:w-auto lg:items-end">
           <div className="flex items-center gap-2 text-xs text-slate-600 lg:justify-end">
             {updatedAt ? <span>Diperbarui pukul {formatClock(updatedAt)}</span> : null}
             <button type="button" onClick={onReload} disabled={loading || refreshing} className="btn btn-ghost btn-sm">

@@ -181,7 +181,8 @@ export function ItemList({ items }) {
             <h3 className="line-clamp-2 break-words text-base font-semibold leading-snug text-slate-900">
               {item.title}
             </h3>
-            <dl className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            {/* Ponsel: cukup judul + status & tanggal (jenis/periode disembunyikan). */}
+            <dl className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-sm max-sm:hidden">
               {item.meta.map((entry) => (
                 <div key={entry.label} className="flex min-w-0 gap-1.5">
                   <dt className="shrink-0 text-slate-500">{entry.label}</dt>
@@ -453,7 +454,6 @@ export function DashboardBody({ model }) {
         <div className="space-y-6">
           <Panel
             title="Perlu perhatian"
-            subtitle={attention.items.length > 1 ? 'Diurutkan dari yang paling mendesak' : undefined}
           >
             <ActionQueue items={attention.items} emptyDesc={attention.emptyDesc} />
           </Panel>

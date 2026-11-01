@@ -249,7 +249,6 @@ export function invitationAttention(invitations, label = 'undangan kerja sama') 
   if (invitations.length === 0) return []
 
   const first = invitations[0]
-  const title = first.proposal?.judul
   const from = first.proposal?.pengusul ? personName(first.proposal.pengusul) : null
   const more = invitations.length > 1 ? ` dan ${invitations.length - 1} undangan lainnya` : ''
 
@@ -258,7 +257,8 @@ export function invitationAttention(invitations, label = 'undangan kerja sama') 
       key: 'undangan',
       tone: 'warning',
       title: `${invitations.length} ${label} menunggu respons`,
-      detail: title ? sentence(`“${title}”${from ? ` dari ${from}` : ''}${more}`) : null,
+      // Judul kegiatan tidak dikutip lagi (ringkas); cukup pengirim + jumlah undangan lain.
+      detail: from ? sentence(`Dari ${from}${more}`) : more ? sentence(`${invitations.length - 1} undangan lainnya juga menunggu`) : null,
       to: '/undangan',
       cta: 'Tinjau undangan',
     },

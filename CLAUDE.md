@@ -305,7 +305,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Indonesia dipetakan ke satu kunci.
   **Semua peran memakai layout dashboard dosen** (`src/pages/dashboard/HaloLayout.jsx`) dengan **urutan bagian Beranda
   yang sama**: 1. **Halo** (`HaloHeader`: judul + breadcrumb, "Halo {nama}!" — `fullName` tanpa gelar depan/belakang
-  (`namaSapaan`), tanggal & peran, muat ulang; **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
+  (`namaSapaan`, tanpa emoji), tanggal & peran, muat ulang (ponsel: hanya ikon di baris tanggal); **tanpa** ringkasan "Anda memiliki…" dan tanpa tombol aksi) → 2. **Pintasan**
   (`PintasanSection`: `model.shortcuts` sebagai kartu **judul saja** (`desc` jadi tooltip) `ShortcutStrip` — baris digeser di ponsel,
   grid membungkus di desktop, hover = sedikit membesar (`scale-[1.03]`, `transition-[scale,…]`); isi pintasan mengikuti menu
   sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`); tampil **maks 4**
@@ -318,7 +318,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
-  (urutan di atas: Pintasan + kartu dokumen, Usulan Terakhir + tahapan (seluruh kartu = tautan ke `/kegiatan/:jenis/detail/:id`, `latest.to`), Informasi, Profil Dosen, Statistik Dosen). Data dari `adapters/dosen.js` (`model.dosen`).
+  (urutan di atas: Pintasan + kartu dokumen (label ringkas Diterima/Ditolak/Diproses/Luaran Diklaim), Usulan Terakhir + tahapan (seluruh kartu = tautan ke `/kegiatan/:jenis/detail/:id`, `latest.to`;
+  jenis tidak diulang bila nama periode memuatnya; ponsel: titik tahap kecil & hanya label tahap aktif), Informasi, Profil Dosen (foto = tautan ke
+  `/profil`, di tengah kartu di ponsel; tanpa angka mini), Statistik Dosen (ponsel: grid 2 kolom tanpa ikon)). **Ponsel (< sm)**: isian/kartu yang
+  API-nya belum ada (No. HP, Institusi, TTL, Sertifikasi) disembunyikan, garis pemisah dashboard disembunyikan, daftar "Proposal terbaru" hanya
+  judul + status & tanggal (`ItemList` menyembunyikan meta). "Perlu perhatian" tanpa subjudul & tanpa judul berkutip. Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
 - Menu **Kegiatan** (dosen) di `Sidebar.jsx` adalah grup bertingkat (item dengan `children`,
@@ -557,6 +561,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/users?id=`; mahasiswa: proposal tim (laporan harian). Kolom cari/filter di tiap halaman tetap
   seperti semula.
 - **Breadcrumb wajib di semua halaman semua peran**: komponen bersama `src/components/Breadcrumb.jsx` (`items: [{label, to?}]`, `size` `sm`|`base`;
+  **layar < lg**: breadcrumb halaman disembunyikan dan di-portal ke bilah atas ponsel `#jejak-navbar` (Sidebar: ikon menu + breadcrumb ringkas
+  maks 2 tingkat terakhir, "LPPM" hanya bila halaman tanpa breadcrumb);
   tidak ada lagi breadcrumb buatan tangan — semua halaman memakai komponen ini,
   "Home" → `/dashboard` otomatis di depan, item terakhir = halaman saat ini). Letak: kanan kepala halaman, baris sendiri
   rata kanan di atas judul, atau sebaris dengan tautan kembali di halaman detail. Halaman baru wajib memakainya. Jejak mengikuti

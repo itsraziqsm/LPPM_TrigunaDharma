@@ -90,9 +90,7 @@ export async function load({ withReviewerDigest }) {
       key: 'revisi',
       tone: 'warning',
       title: `${counts.revisi} proposal perlu direvisi`,
-      detail: first
-        ? `${sentence(`“${first.judul}”`)} Catatan revisi ada di detail proposal.`
-        : 'Catatan revisi ada di detail proposal.',
+      detail: 'Catatan revisi ada di detail proposal.',
       to: `/kegiatan/${first?.jenis || 'penelitian'}?status=revisi`,
       cta: 'Buka proposal',
     })
