@@ -554,9 +554,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   / `alertDialog({ title, message })` dari `src/utils/dialog.js` (Promise → `true/false`), dirender
   `<DialogHost />` (dipasang di `main.jsx`) dengan `src/components/ConfirmDialog.jsx` (gaya dialog
   Keluar; tone `danger|warning|primary|info|error`). ConfirmDialog juga bisa dipakai langsung.
-- **Pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
-  kaca pembesar melayang kanan bawah (bulat; hover/fokus melebar ke kiri jadi pil "Telusuri" + ikon; disembunyikan saat ada modal, `.global-search-fab` di
-  `index.css`) atau **Ctrl/⌘ + F** membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
+- **Tombol Alat + pencarian global** (`src/components/GlobalSearch.jsx`, dipasang di `DashboardLayout`): tombol
+  **Alat** melayang kanan bawah (ikon jendela `AppWindow`, bulat; hover/fokus melebar jadi pil "Alat"; disembunyikan saat ada modal,
+  `.global-search-fab` di `index.css`) → klik membuka **panel kecil** (`useTampil`, Esc/klik luar = tutup) berisi 3 alat dengan pintasan
+  yang **tetap aktif walau panel tertutup**: 1. **Pencarian** (Ctrl/⌘ + F), 2. **Bantuan** (Ctrl/⌘ + H), 3. **Hubungi Admin** (Ctrl/⌘ + M) —
+  2 & 3 masih placeholder (`alertDialog` "segera hadir", sistematika menyusul). Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc; kolom kosong = **riwayat per user** "Terakhir
   dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>`, + Hapus riwayat; tanpa API)). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
