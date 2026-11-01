@@ -167,15 +167,25 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn btn-primary h-11 w-full text-[0.9375rem]" disabled={loading}>
-              {loading
-                ? (
-                  <span className="flex items-center justify-center gap-2.5">
-                    <span className="spinner" aria-hidden="true" />
-                    Memproses...
-                  </span>
-                )
-                : 'Masuk ke Dashboard'}
+            {/* Saat memproses, tombol "berubah bentuk": latar & teks memudar, muncul tiga lingkaran kecil
+                di tengah yang meloncat bergantian (.titik-loncat di index.css). */}
+            <button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading}
+              className={`btn relative h-11 w-full overflow-hidden text-[0.9375rem] transition-[background-color,box-shadow,color] duration-300 ease-out motion-reduce:transition-none ${
+                loading ? 'pointer-events-none bg-transparent text-transparent shadow-none disabled:opacity-100' : 'btn-primary'
+              }`}
+            >
+              <span className={`transition-opacity duration-200 ${loading ? 'opacity-0' : 'opacity-100'}`}>Masuk ke Dashboard</span>
+              {loading ? (
+                <span className="absolute inset-0 flex items-center justify-center gap-2" role="status">
+                  <span className="sr-only">Memproses masuk…</span>
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} aria-hidden="true" className="titik-loncat size-3 rounded-full bg-navy-800" style={{ animationDelay: `${i * 0.06}s, ${0.3 + i * 0.15}s` }} />
+                  ))}
+                </span>
+              ) : null}
             </button>
           </form>
 

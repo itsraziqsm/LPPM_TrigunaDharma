@@ -14,6 +14,10 @@ const useAuthStore = create((set, get) => ({
     try {
       const { data } = await authApi.login(email, password)
       const { accessToken, refreshToken, user } = data.data
+      // ⚠ KHUSUS PENGEMBANGAN: jeda 0,75 dtk setelah login berhasil agar animasi tombol "Masuk" (tiga titik
+      // meloncat) sempat terlihat di localhost. Hanya aktif saat `npm run dev` (import.meta.env.DEV = false di
+      // build produksi). HAPUS blok ini bila tidak diperlukan lagi / sebelum rilis bila build dev dipakai di server.
+      if (import.meta.env.DEV) await new Promise((r) => setTimeout(r, 750))
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
       // Simpan user dari login dulu, lalu langsung fetchMe untuk dapat hasTugasan
