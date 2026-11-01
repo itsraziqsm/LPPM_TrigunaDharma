@@ -5,6 +5,8 @@ import useLenis from '../hooks/useLenis'
 import { ChevronLeft, ChevronRight, CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
+import TombolProses from '../components/TombolProses'
+import { tungguOutro } from '../utils/tungguOutro'
 import { bacaPendaftaran, rapikanEmail, simpanPendaftaran, validasiDaftar } from '../utils/pendaftaran'
 
 const EyeIcon = ({ open }) => open
@@ -51,6 +53,9 @@ const PESAN_DUPLIKAT =
 
 export default function RegisterPage() {
   const { register, loading, error, clearError } = useAuthStore()
+  // Outro pendaftaran berhasil (sama dengan Login): titik kanan → pil "Berhasil ✓", lalu ke halaman menunggu verifikasi.
+  const [berhasil, setBerhasil] = useState(false)
+  const proses = loading || berhasil
   const navigate = useNavigate()
   const [role, setRole] = useState('dosen')
   const scrollRef = useRef(null)
@@ -104,6 +109,8 @@ export default function RegisterPage() {
         : { email, name: form.name.trim(), password: form.password, nim: form.nim, prodi: form.prodi }
       const res = await register(role, payload)
       simpanPendaftaran({ email, role, createdAt: res?.data?.createdAt })
+      setBerhasil(true)
+      await tungguOutro()
       navigate('/register/terkirim', { replace: true, state: { baru: true } })
     } catch (err) {
       if (err.code === 'PENDAFTARAN_MENUNGGU') {
@@ -343,20 +350,13 @@ export default function RegisterPage() {
               </button>
             ) : (
               <div className="mt-5 grid grid-cols-[auto_minmax(0,1fr)] gap-3">
-                <button type="button" onClick={kembali} className="btn btn-secondary h-11" disabled={loading}>
+                <button type="button" onClick={kembali} className="btn btn-secondary h-11" disabled={proses}>
                   <ChevronLeft size={16} aria-hidden="true" />
                   Kembali
                 </button>
-                <button type="submit" className="btn btn-primary h-11 text-[0.9375rem]" disabled={loading}>
-                  {loading
-                    ? (
-                      <span className="flex items-center justify-center gap-2.5">
-                        <span className="spinner" aria-hidden="true" />
-                        Mendaftar...
-                      </span>
-                    )
-                    : 'Daftar Sekarang'}
-                </button>
+                <TombolProses proses={proses} berhasil={berhasil} className="h-11 text-[0.9375rem]" srProses="Mengirim pendaftaran…" srBerhasil="Pendaftaran terkirim">
+                  Daftar Sekarang
+                </TombolProses>
               </div>
             )}
           </form>

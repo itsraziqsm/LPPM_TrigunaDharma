@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
-import { Check, CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
+import { CircleAlert, Eye, EyeOff, Copyright } from 'lucide-react'
+import TombolProses from '../components/TombolProses'
+import { tungguOutro } from '../utils/tungguOutro'
 import LogoLppm from '../components/LogoLppm'
 import AuthIntro from '../components/AuthIntro'
 import { hapusPendaftaran } from '../utils/pendaftaran'
@@ -48,7 +50,7 @@ export default function LoginPage() {
       await login(email, form.password, {
         sebelumMasuk: async () => {
           setBerhasil(true)
-          await new Promise((r) => setTimeout(r, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 400 : 1200))
+          await tungguOutro()
         },
       })
       // Akun sudah aktif → penanda "pendaftaran terkirim" di peramban ini tidak relevan lagi.
@@ -175,51 +177,9 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Saat memproses, tombol "berubah bentuk": latar & teks memudar, muncul tiga lingkaran kecil di tengah yang
-                meloncat bergantian (.titik-loncat). Berhasil → dua titik kiri mengecil hilang, titik kanan membesar menjadi
-                pil "Berhasil" + centang yang tergambar (.centang-gambar) — lalu pindah ke Dashboard. */}
-            <button
-              type="submit"
-              disabled={proses}
-              aria-busy={proses}
-              className={`btn relative h-11 w-full overflow-hidden text-[0.9375rem] transition-[background-color,box-shadow,color] duration-300 ease-out motion-reduce:transition-none ${
-                proses ? 'pointer-events-none bg-transparent text-transparent shadow-none disabled:opacity-100' : 'btn-primary'
-              }`}
-            >
-              <span className={`transition-opacity duration-200 ${proses ? 'opacity-0' : 'opacity-100'}`}>Masuk ke Dashboard</span>
-              {proses ? (
-                <span className="absolute inset-0 flex items-center justify-center" role="status">
-                  <span className="sr-only">{berhasil ? 'Berhasil masuk' : 'Memproses masuk…'}</span>
-                  {[0, 1, 2].map((i) => {
-                    const pil = berhasil && i === 2
-                    const hilang = berhasil && i < 2
-                    return (
-                      <span
-                        key={i}
-                        aria-hidden="true"
-                        className={`flex items-center justify-center overflow-hidden rounded-full transition-[width,height,margin,opacity,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
-                          berhasil ? '' : 'titik-loncat'
-                        } ${
-                          pil
-                            ? 'mx-0 h-10 w-36 bg-emerald-600'
-                            : hilang
-                              ? 'mx-0 size-0 bg-navy-800 opacity-0'
-                              : 'mx-1 size-3 bg-navy-800'
-                        }`}
-                        style={berhasil ? undefined : { animationDelay: `${i * 0.06}s, ${0.3 + i * 0.15}s` }}
-                      >
-                        {pil ? (
-                          <span className="pil-isi flex items-center gap-2 whitespace-nowrap text-sm font-semibold text-white">
-                            Berhasil
-                            <Check className="centang-gambar size-[18px]" strokeWidth={2.75} aria-hidden="true" />
-                          </span>
-                        ) : null}
-                      </span>
-                    )
-                  })}
-                </span>
-              ) : null}
-            </button>
+            <TombolProses proses={proses} berhasil={berhasil} className="h-11 w-full text-[0.9375rem]" srProses="Memproses masuk…" srBerhasil="Berhasil masuk">
+              Masuk ke Dashboard
+            </TombolProses>
           </form>
 
           <p className="mt-8 text-center text-sm text-slate-500">

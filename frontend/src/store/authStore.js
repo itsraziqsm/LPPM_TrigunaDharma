@@ -43,6 +43,8 @@ const useAuthStore = create((set, get) => ({
     try {
       const fn = type === 'dosen' ? authApi.registerDosen : authApi.registerMahasiswa
       const { data } = await fn(formData)
+      // ⚠ KHUSUS PENGEMBANGAN: jeda 0,75 dtk agar animasi tombol "Daftar" terlihat di localhost (sama dengan login).
+      if (import.meta.env.DEV) await new Promise((r) => setTimeout(r, 750))
       set({ loading: false })
       return data
     } catch (err) {
