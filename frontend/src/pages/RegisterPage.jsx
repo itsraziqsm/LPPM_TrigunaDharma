@@ -170,12 +170,20 @@ export default function RegisterPage() {
             Daftar sebagai dosen atau mahasiswa untuk mengakses proses penelitian dan pengabdian masyarakat.
           </p>
 
-          <div className="mt-7 grid grid-cols-2 gap-1 rounded-[10px] bg-slate-100 p-1">
+          {/* Pilihan peran: kotak putih bergeser halus ke tombol aktif (translate, bukan pindah kelas latar). */}
+          <div className="relative mt-7 grid grid-cols-2 gap-1 rounded-[10px] bg-slate-100 p-1" role="group" aria-label="Daftar sebagai">
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.375rem)] rounded-lg bg-white shadow-sm ring-1 ring-slate-200 transition-[translate] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                role === 'mahasiswa' ? 'translate-x-[calc(100%+0.25rem)]' : 'translate-x-0'
+              }`}
+            />
             {[{ key: 'dosen', label: 'Dosen' }, { key: 'mahasiswa', label: 'Mahasiswa' }].map(t => (
               <button
                 key={t.key}
                 type="button"
-                className={`h-9 rounded-lg text-sm font-semibold transition-colors ${role === t.key ? 'bg-white text-navy-900 shadow-sm ring-1 ring-slate-200' : 'text-slate-500 hover:text-navy-900'}`}
+                aria-pressed={role === t.key}
+                className={`relative z-10 h-9 rounded-lg text-sm font-semibold transition-colors duration-300 ${role === t.key ? 'text-navy-900' : 'text-slate-500 hover:text-navy-900'}`}
                 onClick={() => { setRole(t.key); clearError(); setDuplikat(false); setGalatServer({}) }}
               >
                 {t.label}
