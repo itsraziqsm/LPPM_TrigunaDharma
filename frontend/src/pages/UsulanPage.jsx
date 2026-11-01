@@ -424,7 +424,12 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const periode = periodes.find((p) => String(p.id) === String(form.periodeId))
   const backTo = `/kegiatan/${jenisRoute || form.jenis}`
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  // Mengubah isian menghapus pesan galat server yang lama (mis. rumpun ilmu tidak tersedia yang sudah diperbaiki).
+  const set = (key) => (e) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+    setSaveError('')
+    setDraftMsg((m) => (m?.type === 'error' ? null : m))
+  }
   const addAnggota = (kind) => (u) => {
     // Ketua pengusul (akun yang sedang masuk) tidak boleh menjadi anggota timnya sendiri.
     if (u.id === user?.id) {

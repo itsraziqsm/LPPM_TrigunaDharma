@@ -9,20 +9,26 @@ import Breadcrumb from './Breadcrumb'
 //   kartu: [{ icon, tone: { tile, text }, value, label, to? }]
 // ---------------------------------------------------------------------------
 
+// Ketiga kartu selalu sama tinggi (grid + h-full); nilai panjang (mis. "Rp 30 jt") diperkecil di ponsel dan
+// tidak dipatah agar kartu tidak asimetris.
 export function StatusCard({ icon: Icon, tone, value, label, to }) {
+  const tampil = value === null || value === undefined ? '—' : value
+  const panjang = String(tampil).length > 4
   const body = (
     <>
       <span className={`grid size-10 place-items-center rounded-lg sm:size-16 sm:rounded-xl ${tone.tile}`}>
         <Icon className="size-5 sm:size-8" strokeWidth={1.8} aria-hidden="true" />
       </span>
-      <span className={`mt-2 font-serif text-2xl font-medium leading-none tabular-nums lining-nums sm:mt-3 sm:text-[2rem] ${tone.text}`}>
-        {value === null || value === undefined ? '—' : value}
+      <span
+        className={`mt-2 flex h-7 items-center whitespace-nowrap font-serif font-medium leading-none tabular-nums lining-nums sm:mt-3 sm:h-9 sm:text-[2rem] ${panjang ? 'text-lg' : 'text-2xl'} ${tone.text}`}
+      >
+        {tampil}
       </span>
       <span className="mt-1.5 text-xs leading-tight text-slate-500 sm:text-sm">{label}</span>
     </>
   )
-  const cls = 'card flex flex-col items-center px-2 py-3 text-center sm:px-5 sm:py-6'
-  return <li>{to ? <Link to={to} className={`${cls} transition-shadow hover:shadow-md`}>{body}</Link> : <div className={cls}>{body}</div>}</li>
+  const cls = 'card flex h-full flex-col items-center px-2 py-3 text-center sm:px-5 sm:py-6'
+  return <li className="min-w-0">{to ? <Link to={to} className={`${cls} transition-shadow hover:shadow-md`}>{body}</Link> : <div className={cls}>{body}</div>}</li>
 }
 
 export default function KepalaStatus({ judul, desc, crumbs, kartu, aksi = null, label }) {

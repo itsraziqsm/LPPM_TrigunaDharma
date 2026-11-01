@@ -196,9 +196,12 @@ export default function LaporanIsiPage({ jenis }) {
   const errors = useMemo(() => validate(form, file, laporan, links), [form, file, laporan, links])
   const current = STEPS[step].key
   const err = (k) => (showErrors[current] ? errors[k] : null)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
   const clearError = () => setMsg((m) => (m?.type === 'error' ? null : m))
+  // Mengubah isian menghapus pesan galat server yang lama (mis. rumpun ilmu tidak tersedia yang sudah diperbaiki).
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+    clearError()
+  }
   const goNext = () => {
     clearError()
     if ((STEP_FIELDS[current] || []).some((f) => errors[f])) {

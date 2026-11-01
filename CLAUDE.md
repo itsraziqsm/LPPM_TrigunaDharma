@@ -458,7 +458,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (sama dengan backend) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
   terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
-  semua wajib termasuk Realisasi Anggaran (Link Jurnal/Video = bagian luaran, opsional). Jenis kegiatan tidak bisa diubah (mengikuti
+  semua wajib termasuk Realisasi Anggaran (Link Jurnal/Video = bagian luaran, opsional). Mengubah isian (Usulan & Isi Laporan) menghapus pesan galat server lama (mis. rumpun ilmu tidak tersedia yang sudah
+  diperbaiki). Jenis kegiatan tidak bisa diubah (mengikuti
   route/menu Kegiatan; mode ubah memakai `jenis` proposal). Tombol **Simpan draf** di tengah
   Sebelumnya/Berikutnya (semua langkah): validasi longgar (backend tetap mensyaratkan judul ≥ 5 &
   abstrak ≥ 20), POST pertama lalu PATCH (`draftId`, URL diganti ke `/usulan/:id` lewat
@@ -579,7 +580,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Kepala ringkasan (M2)**: halaman yang **belum punya** kartu ringkasan memakai `KepalaMasuk` (3 kotak gaya Undangan): Backup Data,
   Cetak Dokumen, Luaran (Ketua), Notifikasi (selain Dokumen Masuk & Pengguna yang sudah). **Semua halaman Periode/Arsip & Cetak Laporan**
   (Periode admin/ketua, Arsip Kegiatan, Arsip Project, Arsip Periode Ketua STMIK, Cetak Laporan mahasiswa & Ketua STMIK) memakai **`KepalaStatus`** (`components/KepalaStatus.jsx`:
-  judul + deskripsi kiri, breadcrumb kanan, aksi, 3 `StatusCard` ikon berubin; nada di `utils/toneStatus.js`), sama dengan Kegiatan dosen. Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
+  judul + deskripsi kiri, breadcrumb kanan, aksi, 3 `StatusCard` ikon berubin — **selalu sama tinggi** (`h-full`, baris nilai tinggi
+  tetap, nilai panjang mis. "Rp 30 jt" diperkecil di ponsel & tidak dipatah); nada di `utils/toneStatus.js`), sama dengan Kegiatan dosen. Halaman yang sudah punya ringkasan sendiri tetap: Kegiatan & Project Saya (`StatusCard`), Pemantauan (4 kartu),
   Manajemen Template (kartu template aktif), Undangan & Penugasan Review.
 - **Garis pemisah section**: `<hr className="pemisah" />` (kelas `.pemisah` di `index.css`, garis tipis `slate-200`) di antara
   section halaman: Dashboard semua peran (Halo | Pintasan | [Usulan Terakhir] | Informasi | [Profil Dosen | Statistik Dosen]),
