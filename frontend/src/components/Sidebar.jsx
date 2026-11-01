@@ -418,6 +418,12 @@ export default function Sidebar() {
         aria-label="Navigasi"
         className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col bg-rail-soft text-navy-950 transition-[translate,width] duration-200 ease-out lg:relative lg:z-10 lg:h-dvh lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'lg:w-[4.5rem] lg:shadow-none' : ''} shadow-[6px_0_20px_-6px_rgba(13,28,63,0.28)]`}
       >
+        {/* Rail ciut (desktop): bayangan dalam di sisi kanan untuk kesan kedalaman; lapisan sendiri di atas latar
+            kedua bagian sidebar (bayangan inset pada <aside> akan tertutup latar anak). */}
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-y-0 right-0 z-20 hidden w-4 shadow-[inset_-7px_0_10px_-7px_rgba(13,28,63,0.32)] transition-opacity duration-200 motion-reduce:transition-none lg:block ${collapsed ? 'opacity-100' : 'opacity-0'}`}
+        />
         {/* Merek (saat diciutkan hanya logo; tombol buka ada di atas profil) */}
         <header className={`flex h-[4.5rem] shrink-0 items-center gap-3 px-5 pr-14 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
           <LogoLppm className="size-10 shrink-0" />

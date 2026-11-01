@@ -509,7 +509,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   garis brass yang **meluncur** ke item yang diklik — satu kotak `components/SorotNav.jsx` di belakang `a[aria-current=page]`, diukur ulang
   saat pindah halaman/grup membuka-menutup (ResizeObserver), memudar bila item aktif di grup tertutup, juga di rail ciut; tautan `z-10`) dan **bawah** gelap `bg-rail` (#0D1C3F: kartu profil, di bawahnya tombol
   "Keluar dari Sistem" selebar kartu profil, merah saat hover). Sisi kanan sidebar diberi
-  bayangan pemisah dari konten (dihapus saat sidebar diciutkan). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel. **Bilah atas ponsel melayang**: setelah wadah `data-scroll-container` digulir > 8 px
+  bayangan pemisah dari konten (dihapus saat sidebar diciutkan; rail ciut desktop diberi **bayangan dalam** di sisi kanan untuk kesan
+  kedalaman — `<span>` absolut `z-20` dengan `shadow-[inset_-7px_…]`, memudar masuk saat ciut). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel. **Bilah atas ponsel melayang**: setelah wadah `data-scroll-container` digulir > 8 px
   (listener `scroll` capture di `Sidebar`), bilah berubah jadi pil semi transparan ala iOS (`left/right/top-2`, `h-12`, `rounded-2xl`,
   `bg-rail/70` + `backdrop-blur-xl`, bayangan; transisi 300 ms, lonceng ikut bergeser); burger tetap membuka laci menu. Ruang bilah (`pt-14`)
   ada di dalam `<section>` penggulir `DashboardLayout` agar konten lewat di bawah bilah; halaman bergulir sendiri (`selfScrolling`: Pengguna admin/Ketua LPPM + Monitor Pengguna Ketua STMIK)
