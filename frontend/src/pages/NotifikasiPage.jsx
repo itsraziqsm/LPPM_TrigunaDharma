@@ -35,8 +35,8 @@ function FilterTab({ active, onClick, children }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`-mb-px inline-flex items-center gap-2 border-b-2 px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
-        active ? 'border-navy-800 text-navy-950' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-navy-900'
+      className={`-mb-px inline-flex items-center gap-2 rounded-t-lg border-b-2 px-3 pb-3 pt-2 text-base font-semibold transition-colors ${
+        active ? 'border-navy-800 bg-white text-navy-950 shadow-[0_-1px_0_0_theme(colors.slate.200),1px_0_0_0_theme(colors.slate.200),-1px_0_0_0_theme(colors.slate.200)]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:bg-white/60 hover:text-navy-900'
       }`}
     >
       {children}
@@ -188,7 +188,7 @@ export default function NotifikasiPage() {
         ]}
       />
 
-      <div role="tablist" aria-label="Filter notifikasi" className="flex gap-7 border-b border-slate-200">
+      <div role="tablist" aria-label="Filter notifikasi" className="flex gap-2 border-b border-slate-200">
         <FilterTab active={filter === 'semua'} onClick={() => setFilter('semua')}>
           Semua
         </FilterTab>

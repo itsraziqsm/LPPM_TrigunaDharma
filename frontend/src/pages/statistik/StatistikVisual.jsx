@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import AreaMemuat from '../../components/AreaMemuat'
 import { ClipboardCheck, Coins, FileCheck2, FileText, Users } from 'lucide-react'
 import { monitoringApi } from '../../api/monitoring'
@@ -73,6 +73,45 @@ function Panel({ judul, desc, aksi, children }) {
       </header>
       {children}
     </section>
+  )
+}
+
+// Pilihan jenis topik: kotak putih BERGESER ke tombol aktif (posisi & lebar diukur, karena lebar tiap tombol
+// berbeda); transisi `translate` + `width` 300 ms, hormati prefers-reduced-motion.
+function PilihTopik({ value, onChange }) {
+  const wadah = useRef(null)
+  const [kotak, setKotak] = useState(null) // { x, w }
+  useLayoutEffect(() => {
+    const ukur = () => {
+      const el = wadah.current?.querySelector('[aria-selected="true"]')
+      if (el) setKotak({ x: el.offsetLeft, w: el.offsetWidth })
+    }
+    ukur()
+    window.addEventListener('resize', ukur)
+    return () => window.removeEventListener('resize', ukur)
+  }, [value])
+  return (
+    <div ref={wadah} role="tablist" aria-label="Jenis topik" className="relative inline-flex rounded-lg bg-slate-100 p-1 text-sm">
+      {kotak ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 left-0 rounded-md bg-white shadow-sm transition-[translate,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          style={{ width: kotak.w, translate: `${kotak.x}px 0` }}
+        />
+      ) : null}
+      {TOPIK.map(([k, l]) => (
+        <button
+          key={k}
+          type="button"
+          role="tab"
+          aria-selected={value === k}
+          onClick={() => onChange(k)}
+          className={`relative z-10 rounded-md px-3 py-1 font-medium transition-colors duration-300 ${value === k ? 'text-navy-900' : 'text-slate-600 hover:text-navy-800'}`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -243,20 +282,7 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
           judul="Topik paling sering diangkat"
           desc="8 teratas dari proposal yang diajukan."
           aksi={
-            <div role="tablist" aria-label="Jenis topik" className="inline-flex rounded-lg bg-slate-100 p-1 text-sm">
-              {TOPIK.map(([k, l]) => (
-                <button
-                  key={k}
-                  type="button"
-                  role="tab"
-                  aria-selected={topik === k}
-                  onClick={() => setTopik(k)}
-                  className={`rounded-md px-3 py-1 font-medium transition-colors ${topik === k ? 'bg-white text-navy-900 shadow-sm' : 'text-slate-600 hover:text-navy-800'}`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
+            <PilihTopik value={topik} onChange={setTopik} />
           }
         >
           <BatangTopik items={topikItems} />

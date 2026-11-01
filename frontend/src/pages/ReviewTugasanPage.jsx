@@ -181,7 +181,7 @@ export default function ReviewTugasanPage() {
         </dl>
       </section>
 
-      <div role="tablist" aria-label="Jenis tugasan" className="flex gap-7 border-b border-slate-200">
+      <div role="tablist" aria-label="Jenis tugasan" className="flex gap-2 border-b border-slate-200">
         {[
           ['proposal', 'Proposal'],
           ['laporan', 'Laporan'],
@@ -192,8 +192,8 @@ export default function ReviewTugasanPage() {
             role="tab"
             aria-selected={tab === key}
             onClick={() => setParams(key === 'laporan' ? { tab: 'laporan' } : {})}
-            className={`-mb-px border-b-2 px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
-              tab === key ? 'border-navy-800 text-navy-950' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-navy-900'
+            className={`-mb-px rounded-t-lg border-b-2 px-3 pb-3 pt-2 text-base font-semibold transition-colors ${
+              tab === key ? 'border-navy-800 bg-white text-navy-950 shadow-[0_-1px_0_0_theme(colors.slate.200),1px_0_0_0_theme(colors.slate.200),-1px_0_0_0_theme(colors.slate.200)]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:bg-white/60 hover:text-navy-900'
             }`}
           >
             {label}

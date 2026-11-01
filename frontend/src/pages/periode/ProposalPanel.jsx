@@ -97,7 +97,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
 
                     {inline ? null : <CloseButton onClick={onClose} label="Tutup Panel" />}
                 </div>
-                <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-6">
+                <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-2">
                     {[['proposal', 'Proposal'], ['laporan', 'Laporan']].map(([key, label]) => (
                         <button
                             key={key}
@@ -105,7 +105,7 @@ export default function ProposalPanel({ periode, onClose, inline = false }) {
                             role="tab"
                             aria-selected={tipe === key}
                             onClick={() => switchTipe(key)}
-                            className={`-mb-5 border-b-2 pb-3 text-sm font-semibold transition-colors ${tipe === key ? 'border-navy-800 text-navy-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+                            className={`-mb-5 rounded-t-lg border-b-2 px-3 pb-3 pt-2 text-sm font-semibold transition-colors ${tipe === key ? 'border-navy-800 bg-navy-100 text-navy-900' : 'border-transparent text-slate-500 hover:bg-navy-50 hover:text-slate-800'}`}
                         >
                             {label}
                         </button>

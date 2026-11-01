@@ -34,7 +34,7 @@ export default function KartuNavy({ id, judul, desc, badge = null, aksi = null, 
 // Tab di kepala gelap KartuNavy (gaya tab Riwayat Kegiatan).
 export function TabNavy({ items, value, onChange, label }) {
   return (
-    <div role="tablist" aria-label={label} className="mt-4 flex gap-6">
+    <div role="tablist" aria-label={label} className="mt-4 flex gap-2">
       {items.map(([k, l]) => (
         <button
           key={k}
@@ -42,8 +42,8 @@ export function TabNavy({ items, value, onChange, label }) {
           role="tab"
           aria-selected={value === k}
           onClick={() => onChange(k)}
-          className={`border-b-[3px] px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
-            value === k ? 'border-brass-400 text-white' : 'border-transparent text-white/60 hover:border-white/30 hover:text-white'
+          className={`rounded-t-lg border-b-[3px] px-3 pb-3 pt-2 text-base font-semibold transition-colors ${
+            value === k ? 'border-brass-400 bg-white/15 text-white' : 'border-transparent text-white/60 hover:border-white/30 hover:bg-white/5 hover:text-white'
           }`}
         >
           {l}

@@ -198,8 +198,8 @@ function TipeTab({ active, onClick, children }) {
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={`border-b-[3px] px-0.5 pb-3 pt-1 text-base font-semibold transition-colors ${
-        active ? 'border-brass-400 text-white' : 'border-transparent text-white/60 hover:border-white/30 hover:text-white'
+      className={`rounded-t-lg border-b-[3px] px-3 pb-3 pt-2 text-base font-semibold transition-colors ${
+        active ? 'border-brass-400 bg-white/15 text-white' : 'border-transparent text-white/60 hover:border-white/30 hover:bg-white/5 hover:text-white'
       }`}
     >
       {children}
@@ -415,7 +415,7 @@ export default function KegiatanPage({ jenis }) {
               </button>
             ) : null}
           </div>
-          <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-6">
+          <div role="tablist" aria-label="Jenis dokumen" className="mt-4 flex gap-2">
             <TipeTab active={!isLaporan} onClick={() => switchTipe('proposal')}>
               Proposal
             </TipeTab>

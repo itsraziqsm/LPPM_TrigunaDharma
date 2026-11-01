@@ -607,6 +607,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (mis. `rowsTipe`, `dataTipe`, `list.tab`) agar kolom tidak tertukar. Dipakai Detail Periode (`ProposalPanel`), Proposal/Laporan Kegiatan,
   Pengguna, Luaran Dosen, Backup, Notifikasi, Riwayat & anggota tim Kegiatan, Penugasan Review, Statistik (tabel & diagram). Daftar baru wajib
   memakainya. **Avatar** (`UserAvatar`): inisial selalu tampil dulu, foto ditumpuk & memudar masuk setelah termuat (yang pernah termuat langsung tampil).
+- **Tab**: tab bergaris bawah menandai tab aktif dengan **latar lebih terang** (sudut atas membulat, `px-3`): di kepala navy (`TabNavy`,
+  `TipeTab` Kegiatan) `bg-white/15`; di halaman berlatar kanvas (Notifikasi, Penugasan Review) `bg-white` + bingkai tipis; di dalam kartu putih
+  (Detail Periode `ProposalPanel`) `bg-navy-100`. Toggle bergaya kotak di latar abu (Daftar: peran; Statistik: jenis topik `PilihTopik`)
+  memakai **kotak putih yang bergeser** (`translate` + `width` 300 ms; lebar tombol berbeda → diukur `offsetLeft/offsetWidth`).
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
