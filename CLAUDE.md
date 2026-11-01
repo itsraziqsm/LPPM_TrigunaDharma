@@ -512,7 +512,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   bayangan pemisah dari konten (dihapus saat sidebar diciutkan). Lonceng memakai warna gelap di `lg:` dan putih di bilah atas ponsel. **Bilah atas ponsel melayang**: setelah wadah `data-scroll-container` digulir > 8 px
   (listener `scroll` capture di `Sidebar`), bilah berubah jadi pil semi transparan ala iOS (`left/right/top-2`, `h-12`, `rounded-2xl`,
   `bg-rail/70` + `backdrop-blur-xl`, bayangan; transisi 300 ms, lonceng ikut bergeser); burger tetap membuka laci menu. Ruang bilah (`pt-14`)
-  ada di dalam `<section>` penggulir `DashboardLayout` agar konten lewat di bawah bilah; halaman bergulir sendiri (`selfScrolling`, Pengguna)
+  ada di dalam `<section>` penggulir `DashboardLayout` agar konten lewat di bawah bilah; halaman bergulir sendiri (`selfScrolling`: Pengguna admin/Ketua LPPM + Monitor Pengguna Ketua STMIK)
   tanpa `pt-14` di section — ruangnya (`h-14 lg:hidden`) dipasang di dalam penggulir halaman itu.
   Keluar selalu lewat dialog konfirmasi (`ConfirmDialog`, portal ke body). Status disimpan di
   `localStorage` (`sidebarCollapsed`). Di ponsel, Ctrl/⌘ + B membuka/menutup laci.

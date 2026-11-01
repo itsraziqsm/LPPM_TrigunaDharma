@@ -79,7 +79,8 @@ export default function DashboardLayout({ page, jenis }) {
   const ready = Boolean(user) && !loading
   // Manajemen User menggulir di area daftarnya sendiri (Lenis dipasang di sana),
   // jadi wadah luar dibuat setinggi layar tanpa Lenis.
-  const selfScrolling = isAdminOrKetua && page === 'users'
+  // Halaman dengan penggulir sendiri (Pengguna: admin, Ketua LPPM, Monitor Pengguna Ketua STMIK).
+  const selfScrolling = page === 'users' && (isAdminOrKetua || primaryRole === 'ketua_stmik')
   // Smooth scroll untuk area konten; dipasang ulang (dan kembali ke atas) saat
   // pindah halaman (URL).
   useLenis(scrollRef, {
