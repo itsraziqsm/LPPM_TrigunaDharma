@@ -126,6 +126,22 @@ const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: ['
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
 // Dosen atau mahasiswa: dari roles hasil pencarian, atau NIM pada data anggota.
+// Lengkapi data anggota draf (nim/nidn/roles → jenis dosen/mahasiswa) dari GET /dosen/proposals/members/search.
+async function cariDataAnggota(list) {
+  const hasil = await Promise.all(
+    list.map((a) => {
+      const id = a.user?.id ?? a.userId
+      const email = a.user?.email
+      if (!email) return null
+      return proposalDosenApi
+        .searchMembers(email)
+        .then((r) => (r.data.data || []).find((u) => u.id === id) || null)
+        .catch(() => null)
+    }),
+  )
+  return hasil.filter(Boolean)
+}
+
 function kindOf(u) {
   const roles = (u?.roles || []).map((r) => r.role?.name || r.name || r)
   if (roles.includes('mahasiswa') || u?.nim) return 'mahasiswa'
@@ -286,6 +302,17 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   }, [])
   const labelLuaran = (k) => jenisLuaran.find((j) => j.kode === k)?.label || LUARAN_JENIS[k] || k
   const [anggota, setAnggota] = useState([])
+  const lengkapiAnggota = (list, masihAktif) =>
+    cariDataAnggota(list).then((users) => {
+      if (!masihAktif() || !users.length) return
+      const byId = new Map(users.map((u) => [u.id, u]))
+      setAnggota((prev) =>
+        prev.map((a) => {
+          const u = byId.get(a.id)
+          return u ? { ...a, nidn: u.nidn ?? a.nidn, nim: u.nim ?? a.nim, roles: u.roles, kind: kindOf(u) } : a
+        }),
+      )
+    })
   const [luaranItems, setLuaranItems] = useState([])
   const [luaranOrig, setLuaranOrig] = useState([])
   const [file, setFile] = useState(null)
@@ -393,6 +420,9 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             kind: kindOf(a.user),
           })),
         )
+        // anggota[].user di respons proposal tidak memuat nim/nidn/roles → semua terbaca "dosen".
+        // Lengkapi lewat pencarian anggota (mengirim nim, nidn, roles): cari per email, cocokkan id.
+        lengkapiAnggota(p.anggota || [], () => alive)
         if (p.dokumenNama) setExistingDoc({ nama: p.dokumenNama, ukuran: p.dokumenUkuran })
         return luaranApi.byProposal(id).then((lr) => {
           if (!alive) return

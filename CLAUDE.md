@@ -461,7 +461,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. **Ketua pengusul (akun yang masuk) tidak bisa menjadi
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Saat draf dibuka, jenis anggota (dosen/mahasiswa) + NIDN/NIM dilengkapi
+  lewat `members/search?q=<email>` (respons proposal tidak memuat `nim`/`nidn`/peran — W-51). **Ketua pengusul (akun yang masuk) tidak bisa menjadi
   anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
   penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (sama dengan backend) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak

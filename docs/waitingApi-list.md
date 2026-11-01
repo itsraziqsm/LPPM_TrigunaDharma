@@ -254,6 +254,17 @@ semua peran (`GET /users` hanya admin/ketua). Kosong → dialog "Nomor admin bel
 |---|---|---|---|---|
 | W-50 | Tombol Alat › **Hubungi Admin** (semua peran) | Nomor WhatsApp admin/LPPM yang bisa diubah tanpa build ulang frontend | `GET /kontak-admin` (login, semua peran) → `{ whatsapp: "6281234567890", nama: "Admin LPPM", jamLayanan?: "Senin–Jumat 08.00–16.00" }`; diatur admin lewat `PATCH /kontak-admin` (atau tabel pengaturan umum) | Simpan nomor dalam format internasional tanpa `+`. Setelah ada, frontend memakai API ini dan `VITE_ADMIN_WA` jadi cadangan. |
 
+## Data anggota di respons proposal (Usulan › langkah Anggota)
+
+Respons proposal (`GET /dosen/proposals/:id`, `GET /proposals/:id`) memuat `anggota[].user` hanya `id, name, fullName, email, kontak, noHp`,
+tanpa `nim`, `nidn`, dan peran. Akibatnya, saat draf dibuka lagi, wizard Usulan tidak bisa membedakan dosen dan mahasiswa (dulu semua
+terbaca dosen sehingga aturan komposisi tim gagal). **Sudah ditangani di frontend**: tiap anggota dilengkapi lewat
+`GET /dosen/proposals/members/search?q=<email>` (mengirim `nim`, `nidn`, `roles`) lalu dicocokkan dengan `id`. Usulan perbaikan di API:
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-51 | Usulan (ubah draf/revisi) › langkah Anggota: panel Ketentuan tim, kolom NIDN/NIM | `nim`, `nidn`, dan peran tiap anggota | Tambah `u.nidn`, `u.nim` (+ `roles` lewat `attachUserRoles`) pada query anggota di `proposal_queries.go` (dan `laporan_kegiatan.go`) | Menghapus 1 permintaan pencarian per anggota saat membuka draf; anggota yang akunnya tidak lagi `approved` tidak muncul di pencarian sehingga tetap terbaca dosen sampai W-51 ada. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).
