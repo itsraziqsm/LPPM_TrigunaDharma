@@ -53,9 +53,12 @@ export default function LoginPage() {
         </header>
 
         <section aria-labelledby="platform-title">
-          <h2 id="platform-title" className="max-w-md font-serif text-[1.9375rem] font-medium leading-[1.25] text-white">
-            Platform Riset &amp; Pengabdian Masyarakat untuk pengelolaan proposal, evaluasi, monitoring, dan pelaporan.
+          <h2 id="platform-title" className="max-w-md font-serif text-[2.75rem] font-medium leading-[1.15] text-white">
+            Selamat Datang
           </h2>
+          <p className="mt-5 max-w-sm text-base leading-relaxed text-white/60">
+            Platform Riset &amp; Pengabdian Masyarakat untuk pengelolaan proposal, evaluasi, monitoring, dan pelaporan.
+          </p>
         </section>
 
         <footer className="border-t border-white/10 pt-6">
@@ -66,8 +69,8 @@ export default function LoginPage() {
         </footer>
       </aside>
 
-      {/* Panel kanan: formulir */}
-      <section className="flex min-h-full items-center justify-center px-6 py-12 sm:px-10" aria-labelledby="login-page-title">
+      {/* Panel kanan: hanya formulir masuk, di tengah vertikal (judul & sapaan ada di panel kiri; ponsel tetap tampil di sini). */}
+      <section className="flex min-h-full items-center justify-center px-6 py-12 sm:px-10" aria-label="Formulir masuk">
         <div className="rise w-full max-w-[22.5rem]">
           {/* Merek ringkas untuk layar kecil */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">
@@ -75,22 +78,22 @@ export default function LoginPage() {
             <span data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>
 
-          <h2 id="login-page-title" className="font-serif text-[2rem] font-medium leading-tight text-navy-950">
+          <h2 id="login-page-title" className="font-serif text-[2rem] font-medium leading-tight text-navy-950 lg:hidden">
             Selamat Datang
           </h2>
 
-          <p className="mt-2 text-base leading-relaxed text-slate-500">
+          <p className="mt-2 text-base leading-relaxed text-slate-500 lg:hidden">
             Masuk ke akun Anda untuk melihat dokumen, meninjau progres, dan melanjutkan pengelolaan kegiatan penelitian maupun pengabdian masyarakat.
           </p>
 
           {error && (
-            <div className="mt-6 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-700" role="alert" aria-live="polite">
+            <div className="mt-6 flex items-start gap-2.5 rounded-lg border lg:mb-6 lg:mt-0 border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-700" role="alert" aria-live="polite">
               <CircleAlert className="mt-0.5 shrink-0" size={16} aria-hidden="true" />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5 lg:mt-0">
             <div>
               <label htmlFor="email" className="label">Alamat Email</label>
               <input
