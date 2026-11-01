@@ -4,6 +4,7 @@ import { CircleAlert, CircleCheck } from 'lucide-react'
 import LogoLppm from '../components/LogoLppm'
 import { authApi } from '../api/auth'
 import useAuthStore from '../store/authStore'
+import { pesanDariGalat, terjemahkan } from '../utils/pesanGalat'
 import useLenis from '../hooks/useLenis'
 
 // Halaman publik /verify-email?token=... (link dari email verifikasi).
@@ -25,12 +26,12 @@ export default function VerifyEmailPage() {
     authApi
       .verifyEmail(token)
       .then((r) => {
-        setMessage(r.data?.message || 'Email berhasil diverifikasi')
+        setMessage(terjemahkan(r.data?.message) || 'Email berhasil diverifikasi')
         setState('success')
         useAuthStore.setState((st) => (st.user ? { user: { ...st.user, emailVerifiedAt: new Date().toISOString() } } : {}))
       })
       .catch((e) => {
-        setMessage(e.response?.data?.message || 'Token verifikasi tidak valid atau kedaluwarsa')
+        setMessage(pesanDariGalat(e, 'Token verifikasi tidak valid atau kedaluwarsa'))
         setState('error')
       })
   }, [token])

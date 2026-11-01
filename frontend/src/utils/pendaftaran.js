@@ -25,7 +25,7 @@ export function validasiDaftar(role, form) {
   if (!String(form.name || '').trim()) err.name = 'Nama lengkap wajib diisi.'
   const email = rapikanEmail(form.email)
   if (!email) err.email = 'Email wajib diisi.'
-  else if (!POLA_EMAIL.test(email)) err.email = 'Format email tidak valid (contoh: nama@institusi.ac.id).'
+  else if (!POLA_EMAIL.test(email)) err.email = 'Format email tidak valid (contoh: nama@email.com).'
   if (String(form.password || '').length < 8) err.password = 'Password minimal 8 karakter.'
   const aturan = ATURAN_ID[role]
   const id = String(form[aturan.field] || '')

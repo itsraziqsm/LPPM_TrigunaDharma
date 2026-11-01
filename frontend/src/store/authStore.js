@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { authApi } from '../api/auth'
+import { pesanDariGalat, terjemahkanKolom } from '../utils/pesanGalat'
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -24,7 +25,7 @@ const useAuthStore = create((set, get) => ({
       } catch { /* ignore, user dari login tetap tersimpan */ }
       return user
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login gagal'
+      const msg = pesanDariGalat(err, 'Login gagal. Coba lagi.')
       set({ error: msg, loading: false })
       throw new Error(msg)
     }
@@ -39,14 +40,14 @@ const useAuthStore = create((set, get) => ({
       return data
     } catch (err) {
       const res = err.response
-      const msg = res?.data?.message || 'Registrasi gagal'
+      const msg = pesanDariGalat(err, 'Pendaftaran gagal. Coba lagi.')
       set({ error: msg, loading: false })
       // Bawa status, kode (W-48: PENDAFTARAN_MENUNGGU | AKUN_SUDAH_AKTIF | IDENTITAS_BENTROK), data & galat per kolom (422).
       const e = new Error(msg)
       e.status = res?.status
       e.code = res?.data?.code
       e.data = res?.data?.data
-      e.fieldErrors = res?.data?.errors
+      e.fieldErrors = terjemahkanKolom(res?.data?.errors)
       throw e
     }
   },

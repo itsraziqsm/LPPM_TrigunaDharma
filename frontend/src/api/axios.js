@@ -19,7 +19,8 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    // Login & daftar tidak memakai token: 401 di sana adalah galat biasa, bukan sesi kedaluwarsa.
+    if (error.response?.status === 401 && !original._retry && !/^\/?auth\/(login|register)/.test(original.url || '')) {
       original._retry = true
       try {
         const refreshToken = localStorage.getItem('refreshToken')

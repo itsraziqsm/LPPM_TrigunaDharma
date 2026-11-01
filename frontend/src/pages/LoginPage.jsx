@@ -28,8 +28,21 @@ export default function LoginPage() {
   const handleChange = (e) => { clearError(); setForm(f => ({ ...f, [e.target.name]: e.target.value })) }
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // Validasi sendiri (form noValidate) agar pesan selalu berbahasa Indonesia, bukan tooltip bawaan peramban.
+    const email = form.email.trim()
+    const galat = !email
+      ? 'Email wajib diisi.'
+      : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+        ? 'Format email tidak valid (contoh: nama@email.com).'
+        : !form.password
+          ? 'Password wajib diisi.'
+          : null
+    if (galat) {
+      useAuthStore.setState({ error: galat })
+      return
+    }
     try {
-      await login(form.email, form.password)
+      await login(email, form.password)
       // Akun sudah aktif → penanda "pendaftaran terkirim" di peramban ini tidak relevan lagi.
       hapusPendaftaran()
       navigate('/dashboard')
@@ -92,7 +105,7 @@ export default function LoginPage() {
           </h2>
 
           <p className="mt-2 text-base leading-relaxed text-slate-500 lg:hidden">
-            Masuk ke akun Anda untuk melihat dokumen, meninjau progres, dan melanjutkan pengelolaan kegiatan penelitian maupun pengabdian masyarakat.
+            Platform Riset &amp; Pengabdian Masyarakat untuk pengelolaan proposal, evaluasi, monitoring, dan pelaporan.
           </p>
 
           {flash && !error ? (
@@ -108,7 +121,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5 lg:mt-0">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5 lg:mt-0" noValidate>
             <div>
               <label htmlFor="email" className="label">Alamat Email</label>
               <input

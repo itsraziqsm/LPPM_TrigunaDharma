@@ -635,7 +635,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`.auth-kiri-masuk` di `index.css`, 0,45 dtk) saat halaman dibuka — juga saat berpindah Login ↔ Daftar
   (halaman dipasang ulang); logo/judul `data-intro` tidak dianimasikan agar FLIP intro tetap benar. **Ponsel**: merek ringkas = lencana di
   tengah, teks "LPPM" di bawahnya, rata tengah (elemen lain tetap). Subjudul Daftar mengikuti peran terpilih (dosen/mahasiswa);
-  placeholder email `nama@email.com`, password daftar "Minimal 8 karakter".
+  placeholder email `nama@email.com`, password daftar "Minimal 8 karakter". Deskripsi Login di ponsel = teks "Platform Riset &…" (sama dengan panel kiri).
+  **Pesan galat auth selalu bahasa Indonesia**: `utils/pesanGalat.js` (`terjemahkan`, `pesanDariGalat`, `terjemahkanKolom`) menerjemahkan
+  pesan Inggris backend (Invalid credentials, Account not approved yet, rate limit, Validation error/zod per kolom, galat jaringan, dst.)
+  di `authStore` (login/daftar) & `VerifyEmailPage`; form Login `noValidate` + validasi sendiri (tanpa tooltip peramban);
+  interceptor `api/axios.js` tidak mencoba refresh/redirect untuk 401 dari `auth/login|register`.
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
   (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan
   (frame desain): lencana muncul di tengah → naik → huruf L P P M naik bergiliran → subjudul "Lembaga Penelitian dan
