@@ -148,7 +148,7 @@ export default function RegisterPage() {
           </p>
         </section>
 
-        <footer className="auth-kiri-masuk-lambat border-t border-white/10 pt-6">
+        <footer className="border-t border-white/10 pt-6">
           <p className="flex items-center gap-1.5 text-sm text-white/55">
             <Copyright className="size-4" aria-hidden="true" />
             <span>LPPM DevTeam 2026</span>
@@ -167,7 +167,9 @@ export default function RegisterPage() {
 
           <h2 id="register-page-title" className="font-serif text-[2rem] font-medium leading-tight text-navy-950">Buat Akun Baru</h2>
           <p className="mt-2 text-base leading-relaxed text-slate-500">
-            Daftar sebagai dosen atau mahasiswa untuk mengakses proses penelitian dan pengabdian masyarakat.
+            {role === 'dosen'
+              ? 'Daftar sebagai dosen untuk mengusulkan dan mengelola kegiatan penelitian dan pengabdian masyarakat.'
+              : 'Daftar sebagai mahasiswa untuk ikut serta dalam kegiatan penelitian dan pengabdian masyarakat.'}
           </p>
 
           {/* Pilihan peran: kotak putih bergeser halus ke tombol aktif (translate, bukan pindah kelas latar). */}
@@ -219,7 +221,7 @@ export default function RegisterPage() {
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="nama@institusi.ac.id"
+                placeholder="nama@email.com"
                 required
                 error={galat('email')}
                 autoComplete="email"
@@ -235,7 +237,7 @@ export default function RegisterPage() {
                     value={form.password}
                     onChange={handleChange}
                     required
-                    placeholder="Min. 8 karakter"
+                    placeholder="Minimal 8 karakter"
                     autoComplete="new-password"
                     aria-label="Password"
                     aria-invalid={Boolean(galat('password')) || undefined}

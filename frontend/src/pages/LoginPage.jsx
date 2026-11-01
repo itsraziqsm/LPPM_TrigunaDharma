@@ -70,7 +70,7 @@ export default function LoginPage() {
           </p>
         </section>
 
-        <footer className="auth-kiri-masuk-lambat border-t border-white/10 pt-6">
+        <footer className="border-t border-white/10 pt-6">
           <p className="flex items-center gap-1.5 text-sm text-white/55">
             <Copyright className="size-4" aria-hidden="true" />
             <span>LPPM DevTeam 2026</span>
@@ -119,7 +119,7 @@ export default function LoginPage() {
                 value={form.email}
                 onChange={handleChange}
                 required
-                placeholder="nama@institusi.ac.id"
+                placeholder="nama@email.com"
                 autoComplete="email"
               />
             </div>
