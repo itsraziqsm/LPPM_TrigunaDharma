@@ -319,8 +319,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
   (urutan di atas: Pintasan + kartu dokumen (label ringkas Diterima/Ditolak/Diproses/Luaran Diklaim), Usulan Terakhir + tahapan (seluruh kartu = tautan ke `/kegiatan/:jenis/detail/:id`, `latest.to`;
-  jenis tidak diulang bila nama periode memuatnya; ponsel: titik tahap kecil & hanya label tahap aktif), Informasi, Profil Dosen (foto = tautan ke
-  `/profil`, di tengah kartu di ponsel; tanpa angka mini), Statistik Dosen (ponsel: grid 2 kolom tanpa ikon)). **Ponsel (< sm)**: isian/kartu yang
+  jenis tidak diulang bila nama periode memuatnya; ponsel: titik tahap kecil & hanya label tahap aktif), Informasi, Profil Dosen (dua kartu 1:1 di desktop: identitas — foto = tautan ke
+  `/profil`, di tengah kartu di ponsel, isi rata tengah vertikal, jabatan kecil di atas nama serif besar, kontak kecil; Data Dosen — label kecil abu +
+  nilai tebal, 2 kolom; tanpa angka mini), Statistik Dosen (ponsel: grid 2 kolom tanpa ikon)). **Ponsel (< sm)**: isian/kartu yang
   API-nya belum ada (No. HP, Institusi, TTL, Sertifikasi) disembunyikan, garis pemisah dashboard disembunyikan, daftar "Proposal terbaru" hanya
   judul + status & tanggal (`ItemList` menyembunyikan meta). "Perlu perhatian" tanpa subjudul & tanpa judul berkutip. Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**

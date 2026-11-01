@@ -256,8 +256,8 @@ function profileValue(user, keys, format = (v) => v) {
 function ProfileField({ label, field }) {
   return (
     <div className={field.pending ? 'max-sm:hidden' : undefined}>
-      <dt className="text-base text-slate-900">{label}</dt>
-      <dd className="mt-1 pl-3 text-base text-navy-600">
+      <dt className="text-sm text-slate-500">{label}</dt>
+      <dd className="mt-0.5 text-base font-medium text-navy-900">
         {field.pending ? (
           <span className="inline-flex items-center gap-2">
             —<ApiPending />
@@ -285,21 +285,21 @@ function DosenStats({ user }) {
   return (
     <section aria-labelledby="statistik-dosen" className="space-y-3">
       <SectionTitle id="statistik-dosen">Profil Dosen</SectionTitle>
-      <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <article className="rounded-xl bg-white p-4 sm:p-5">
-          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl bg-slate-100 p-3 lg:grid-cols-2">
+        {/* Kartu identitas: isi di tengah secara vertikal (tanpa ruang kosong), foto mengisi tinggi kartu di layar lebar. */}
+        <article className="flex items-center rounded-xl bg-white p-4 sm:p-6">
+          <div className="flex w-full flex-col items-center gap-5 text-center sm:flex-row sm:gap-7 sm:text-left">
             {/* Foto = tautan ke Pengaturan akun (/profil). */}
             <Link
               to="/profil"
               title="Buka pengaturan akun"
               aria-label="Buka pengaturan akun"
-              className="shrink-0 rounded-xl transition-[box-shadow,opacity] duration-200 hover:opacity-90 hover:ring-4 hover:ring-navy-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+              className="shrink-0 rounded-2xl transition-[box-shadow,opacity] duration-200 hover:opacity-90 hover:ring-4 hover:ring-navy-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
             >
-              <UserAvatar user={user} className="size-28 text-4xl" rounded="rounded-xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${name}`} />
+              <UserAvatar user={user} className="size-28 text-4xl sm:size-32 sm:text-5xl" rounded="rounded-2xl" fallbackClassName="bg-navy-100 font-serif font-normal text-navy-800" alt={`Foto ${name}`} />
             </Link>
-            <div className="min-w-0 space-y-1.5">
-              <h3 className="break-words text-xl font-semibold text-navy-700">{name}</h3>
-              <p className="text-base text-slate-900">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-navy-600">
                 {jabatan.pending ? (
                   <span className="inline-flex items-center gap-2">
                     Jabatan fungsional <ApiPending />
@@ -308,24 +308,26 @@ function DosenStats({ user }) {
                   jabatan.value
                 )}
               </p>
-              <p className={`text-base text-slate-900 ${phone.pending ? 'max-sm:hidden' : ''}`}>
-                {phone.pending ? (
-                  <span className="inline-flex items-center gap-2">
-                    No. HP <ApiPending />
-                  </span>
-                ) : (
-                  phone.value
-                )}
-              </p>
-              <p className="break-all text-base text-slate-900">{user?.email || '—'}</p>
+              <h3 className="mt-1 break-words font-serif text-2xl font-medium leading-tight text-navy-950 lg:text-[2rem]">{name}</h3>
+              <div className="mt-3 space-y-1 text-sm text-slate-600 lg:mt-4 lg:text-base">
+                <p className={`tabular-nums ${phone.pending ? 'max-sm:hidden' : ''}`}>
+                  {phone.pending ? (
+                    <span className="inline-flex items-center gap-2">
+                      No. HP <ApiPending />
+                    </span>
+                  ) : (
+                    phone.value
+                  )}
+                </p>
+                <p className="break-all">{user?.email || '—'}</p>
+              </div>
             </div>
           </div>
-
         </article>
 
-        <article className="rounded-xl bg-white p-4 sm:p-5">
-          <h3 className="text-xl font-semibold text-navy-700">Data Dosen</h3>
-          <dl className="mt-3 space-y-3">
+        <article className="rounded-xl bg-white p-4 sm:p-6">
+          <h3 className="font-serif text-xl font-medium text-navy-950">Data Dosen</h3>
+          <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
             <ProfileField label="NIDN/NIDK" field={profileValue(user, ['nidn'])} />
             <ProfileField label="Institusi" field={profileValue(user, ['institusi'])} />
             <ProfileField label="Tempat Tanggal Lahir" field={ttl} />
