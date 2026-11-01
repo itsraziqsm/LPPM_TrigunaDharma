@@ -631,7 +631,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Login**: panel kiri = judul besar "Selamat Datang" + subjudul "Platform Riset & Pengabdian Masyarakat untuk pengelolaan proposal,
   evaluasi, monitoring, dan pelaporan."; panel kanan (desktop) **hanya formulir masuk** (+ tautan Daftar) di tengah vertikal — judul &
   deskripsi kanan hanya tampil di ponsel (panel kiri tersembunyi). Di bawah garis panel kiri Login & Register hanya "© LPPM DevTeam 2026"
-  (ikon `Copyright` lucide).
+  (ikon `Copyright` lucide). Isi panel kiri (teks `<section>` lalu footer, jeda 80 ms) masuk cepat dari kanan sambil memudar
+  (`.auth-kiri-masuk`/`.auth-kiri-masuk-lambat` di `index.css`, 0,45 dtk) saat halaman dibuka — juga saat berpindah Login ↔ Daftar
+  (halaman dipasang ulang); logo/judul `data-intro` tidak dianimasikan agar FLIP intro tetap benar. **Ponsel**: merek ringkas = lencana di
+  tengah, teks "LPPM" di bawahnya, rata tengah (elemen lain tetap).
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi
   (`sessionStorage.authIntroSelesai`), tidak diputar bila `prefers-reduced-motion`; klik/tombol apa pun = lewati. Urutan
   (frame desain): lencana muncul di tengah → naik → huruf L P P M naik bergiliran → subjudul "Lembaga Penelitian dan

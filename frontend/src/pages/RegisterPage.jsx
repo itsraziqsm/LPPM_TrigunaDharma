@@ -139,7 +139,7 @@ export default function RegisterPage() {
           <h1 data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
         </header>
 
-        <section aria-labelledby="register-context-title">
+        <section className="auth-kiri-masuk" aria-labelledby="register-context-title">
           <h2 id="register-context-title" className="max-w-md font-serif text-[1.9375rem] font-medium leading-[1.25] text-white">
             Bergabung dalam ekosistem riset dan pengabdian yang terstruktur.
           </h2>
@@ -148,7 +148,7 @@ export default function RegisterPage() {
           </p>
         </section>
 
-        <footer className="border-t border-white/10 pt-6">
+        <footer className="auth-kiri-masuk-lambat border-t border-white/10 pt-6">
           <p className="flex items-center gap-1.5 text-sm text-white/55">
             <Copyright className="size-4" aria-hidden="true" />
             <span>LPPM DevTeam 2026</span>
@@ -160,7 +160,7 @@ export default function RegisterPage() {
       <section className="flex min-h-full items-start justify-center px-6 py-12 sm:px-10 lg:items-center" aria-labelledby="register-page-title">
         <div className="rise w-full max-w-[26rem]">
           {/* Merek ringkas untuk layar kecil */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
+          <div className="mb-10 flex flex-col items-center gap-2 text-center lg:hidden">
             <LogoLppm className="size-10" data-intro="logo" />
             <span data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>

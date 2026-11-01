@@ -61,7 +61,7 @@ export default function LoginPage() {
           <h1 data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-white">LPPM</h1>
         </header>
 
-        <section aria-labelledby="platform-title">
+        <section className="auth-kiri-masuk" aria-labelledby="platform-title">
           <h2 id="platform-title" className="max-w-md font-serif text-[2.75rem] font-medium leading-[1.15] text-white">
             Selamat Datang
           </h2>
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </p>
         </section>
 
-        <footer className="border-t border-white/10 pt-6">
+        <footer className="auth-kiri-masuk-lambat border-t border-white/10 pt-6">
           <p className="flex items-center gap-1.5 text-sm text-white/55">
             <Copyright className="size-4" aria-hidden="true" />
             <span>LPPM DevTeam 2026</span>
@@ -82,7 +82,7 @@ export default function LoginPage() {
       <section className="flex min-h-full items-center justify-center px-6 py-12 sm:px-10" aria-label="Formulir masuk">
         <div className="rise w-full max-w-[22.5rem]">
           {/* Merek ringkas untuk layar kecil */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
+          <div className="mb-10 flex flex-col items-center gap-2 text-center lg:hidden">
             <LogoLppm className="size-10" data-intro="logo" />
             <span data-intro="title" className="font-serif text-2xl font-medium tracking-wide text-navy-950">LPPM</span>
           </div>

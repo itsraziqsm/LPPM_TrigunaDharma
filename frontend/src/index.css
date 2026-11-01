@@ -342,6 +342,28 @@
   animation: langkah-mundur 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Panel kiri Login/Register: masuk cepat dari kanan sambil memudar (saat halaman dibuka & saat berpindah
+   Login ↔ Daftar — kedua halaman dipasang ulang, jadi animasi masuk ini juga menjadi animasi perpindahan). */
+@keyframes auth-kiri-masuk {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  60% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.auth-kiri-masuk {
+  animation: auth-kiri-masuk 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.auth-kiri-masuk-lambat {
+  animation: auth-kiri-masuk 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
