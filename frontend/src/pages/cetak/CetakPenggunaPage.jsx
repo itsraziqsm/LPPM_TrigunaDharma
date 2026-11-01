@@ -7,6 +7,7 @@ import { clearCetakConfig, loadCetakConfig, saveCetakConfig } from '../../utils/
 import CetakBreadcrumb from './CetakBreadcrumb'
 import { PENGGUNA_KEY, PERAN_LABEL, penggunaRingkas } from './dokumen'
 import { ambilPengguna, penggunaPDF } from './cetakPengguna'
+import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
 // Konfigurasi "Cetak Tabel Pengguna" (Cetak Dokumen): semua peran, atau pilih ≥ 1 peran.
@@ -35,14 +36,17 @@ export default function CetakPenggunaPage() {
     const saved = saveCetakConfig(PENGGUNA_KEY, { semua: cfg.semua, roles: cfg.semua ? [] : cfg.roles })
     if (cetak) {
       setBusy(true)
+      siapkanTab()
       try {
         const users = await ambilPengguna(saved)
         if (!users.length) {
+          batalTab()
           alertDialog({ tone: 'info', title: 'Tidak ada data', message: 'Tidak ada pengguna dengan peran terpilih.' })
           return
         }
         penggunaPDF(users, penggunaRingkas(saved))
       } catch {
+        batalTab()
         alertDialog({ title: 'Gagal mencetak', message: 'Data pengguna tidak dapat dimuat. Coba lagi.' })
         return
       } finally {

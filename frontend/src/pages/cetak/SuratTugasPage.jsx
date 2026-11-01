@@ -169,7 +169,7 @@ export default function SuratTugasPage() {
         alertDialog({ title: 'Gagal membuat PDF', message: 'Silakan coba lagi.' })
         return
       }
-      setMsg({ ok: true, text: 'Konfigurasi disimpan dan surat tugas diunduh.' })
+      setMsg({ ok: true, text: 'Konfigurasi disimpan; pratinjau surat tugas dibuka di tab baru.' })
     } else {
       navigate('/cetak-dokumen', { state: { flash: 'Konfigurasi Surat Tugas disimpan.' } })
     }

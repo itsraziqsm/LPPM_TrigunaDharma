@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { tampilkanPdf } from './pratinjauPdf'
 
 const STATUS_COLOR = {
   Draft: [156, 163, 175],
@@ -166,5 +167,5 @@ export function exportToPDF(data, filter = {}) {
   })
 
   const filename = `Laporan-Proposal-LPPM-${new Date().toISOString().slice(0, 10)}.pdf`
-  doc.save(filename)
+  tampilkanPdf(doc, filename)
 }

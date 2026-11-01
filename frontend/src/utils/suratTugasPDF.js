@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { tanggalPanjang } from './cetakConfig'
+import { tampilkanPdf } from './pratinjauPdf'
 
 // Surat Tugas LPPM (A4 tegak) dari konfigurasi halaman Surat Tugas.
 // cfg: { nomor, tugas, kegiatan: { tipe, jenis, judul, periode }, petugas: [{ nama, identitas, peran }],
@@ -93,6 +94,6 @@ export function suratTugasPDF(cfg, { save = true } = {}) {
   if (cfg.penandatangan?.nidn) doc.text(`NIDN ${cfg.penandatangan.nidn}`, x, y + 5.5)
 
   const safe = (k.judul || 'kegiatan').replace(/[^\w\s-]/g, '').trim().slice(0, 40).replace(/\s+/g, '_')
-  if (save) doc.save(`Surat_Tugas_${safe}.pdf`)
+  if (save) tampilkanPdf(doc, `Surat_Tugas_${safe}`)
   return doc
 }

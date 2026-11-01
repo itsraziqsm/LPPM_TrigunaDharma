@@ -266,6 +266,9 @@ export default function PeriodePage() {
         ]}
       />
 
+      {/* Pemisah kepala | isi */}
+      <hr className="pemisah" />
+
       {/* Daftar Periode: folder per periode, dikelompokkan per tahun (components/FolderPeriode) */}
       <section aria-labelledby="daftar-periode" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

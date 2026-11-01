@@ -100,6 +100,9 @@ export default function ArsipPeriodeStmikPage() {
         ]}
       />
 
+      {/* Pemisah kepala | isi */}
+      <hr className="pemisah" />
+
       {failed ? (
         <div className="card px-6 py-14 text-center text-base text-red-600">Data periode gagal dimuat. Muat ulang halaman untuk mencoba lagi.</div>
       ) : memuat ? (

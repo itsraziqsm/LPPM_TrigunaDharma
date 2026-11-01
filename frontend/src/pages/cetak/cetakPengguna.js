@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { usersApi } from '../../api/users'
 import { PERAN_LABEL } from './dokumen'
+import { tampilkanPdf } from '../../utils/pratinjauPdf'
 
 // Cetak Tabel Pengguna: ambil semua halaman GET /users (maks. 100 per halaman, per peran
 // bila dipilih; digabung tanpa duplikat), lalu PDF tabel (jspdf + autotable).
@@ -72,5 +73,5 @@ export function penggunaPDF(users, ringkas) {
     columnStyles: { 0: { cellWidth: 10, halign: 'right' } },
   })
 
-  doc.save(`tabel-pengguna-${new Date().toISOString().slice(0, 10)}.pdf`)
+  tampilkanPdf(doc, `tabel-pengguna-${new Date().toISOString().slice(0, 10)}`)
 }

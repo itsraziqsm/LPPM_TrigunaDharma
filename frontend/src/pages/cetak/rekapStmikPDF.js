@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { tampilkanPdf } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
 // PDF Cetak Laporan Ketua STMIK (jspdf + autotable). Sumber data: GET /monitoring/proposals
@@ -114,7 +115,7 @@ export function rekapPeriodePDF({ periodes, proposals, denganDaftar, judulFile }
     }
   }
   kaki(doc, 'Rekap Kegiatan per Periode')
-  doc.save(`${judulFile || 'Rekap Kegiatan per Periode'}.pdf`)
+  tampilkanPdf(doc, judulFile || 'Rekap Kegiatan per Periode')
 }
 
 export function rekapTahunanPDF({ tahun, periodes, proposals }) {
@@ -136,7 +137,7 @@ export function rekapTahunanPDF({ tahun, periodes, proposals }) {
     columnStyles: kolomRingkas,
   })
   kaki(doc, `Rekap Kegiatan Tahun ${tahun}`)
-  doc.save(`Rekap Kegiatan Tahun ${tahun}.pdf`)
+  tampilkanPdf(doc, `Rekap Kegiatan Tahun ${tahun}`)
 }
 
 export function rekapAnggaranPDF({ keterangan, proposals }) {
@@ -174,5 +175,5 @@ export function rekapAnggaranPDF({ keterangan, proposals }) {
     columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 80 }, 6: { halign: 'right' }, 7: { halign: 'right' } },
   })
   kaki(doc, 'Rekap Anggaran Disetujui')
-  doc.save('Rekap Anggaran Disetujui.pdf')
+  tampilkanPdf(doc, 'Rekap Anggaran Disetujui')
 }

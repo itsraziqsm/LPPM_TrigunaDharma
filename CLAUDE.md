@@ -584,8 +584,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Garis pemisah section**: `<hr className="pemisah" />` (kelas `.pemisah` di `index.css`, garis tipis `slate-200`) di antara
   section halaman: Dashboard semua peran (Halo | Pintasan | [Usulan Terakhir] | Informasi | [Profil Dosen | Statistik Dosen]),
   Kegiatan dosen (kepala | aksi + Riwayat | sebagai anggota tim), Dokumentasi (Manajemen Template, Luaran Dosen, Cetak Dokumen +
-  sub-halamannya: Rekap Proposal, Surat Tugas per bagian, Tabel Pengguna, Luaran Dosen) dan Cetak Laporan. Halaman baru di grup
+  sub-halamannya: Rekap Proposal, Surat Tugas per bagian, Tabel Pengguna, Luaran Dosen) dan Cetak Laporan; halaman **Periode &
+  Arsip** (Periode, Arsip Kegiatan, Arsip Project, Arsip Periode) hanya **satu** garis antara kepala dan isi. Halaman baru di grup
   tersebut wajib memakainya.
+- **Cetak PDF = pratinjau di tab baru** (`utils/pratinjauPdf.js`): semua PDF jspdf Cetak Dokumen (Rekap Proposal `exportToPDF`, Surat
+  Tugas, Tabel Pengguna) & Cetak Laporan (rekap Ketua STMIK, laporan harian) memanggil `tampilkanPdf(doc, nama)` (judul PDF diisi,
+  blob dibuka di tab baru; popup diblokir → unduh biasa), bukan `doc.save`. Handler yang menunggu data (`await`) wajib memanggil
+  `siapkanTab()` sinkron di awal klik dan `batalTab()` bila gagal/kosong. Unduhan file server (ZIP/CSV luaran) tetap unduh.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).

@@ -397,7 +397,7 @@ export default function ExportPage() {
               ) : (
                 <DownloadIcon />
               )}
-              Unduh PDF
+              Pratinjau PDF
             </button>
           </div>
         )}

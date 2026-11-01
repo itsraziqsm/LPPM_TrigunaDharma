@@ -14,6 +14,7 @@ import { ambilPengguna, penggunaPDF } from './cetakPengguna'
 import { pesanBlob, unduhLuaran } from './cetakLuaran'
 import { KepalaMasuk } from '../../components/PeriodeAktif'
 import useJejakMenu from '../../hooks/useJejakMenu'
+import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
 // Cetak Dokumen (Admin & Ketua LPPM, route /cetak-dokumen; dulu Export/Print
@@ -99,14 +100,17 @@ export default function CetakDokumenPage() {
 
   const cetakPengguna = async () => {
     setPrinting('pengguna')
+    siapkanTab()
     try {
       const users = await ambilPengguna(pengguna)
       if (!users.length) {
+        batalTab()
         alertDialog({ tone: 'info', title: 'Tidak ada data', message: 'Tidak ada pengguna dengan peran terpilih.' })
         return
       }
       penggunaPDF(users, penggunaRingkas(pengguna))
     } catch {
+      batalTab()
       alertDialog({ title: 'Gagal mencetak tabel pengguna', message: 'Data pengguna tidak dapat dimuat. Coba lagi.' })
     } finally {
       setPrinting('')
@@ -129,6 +133,7 @@ export default function CetakDokumenPage() {
 
   const cetakRekap = async () => {
     setPrinting('rekap')
+    siapkanTab()
     try {
       const params = {}
       ;['periodeId', 'jenis', 'status', 'tahun'].forEach((k) => {
@@ -137,11 +142,13 @@ export default function CetakDokumenPage() {
       const res = await exportApi.getProposals(params)
       const data = res.data.data
       if (!data || data.total === 0) {
+        batalTab()
         alertDialog({ tone: 'info', title: 'Tidak ada data', message: 'Tidak ada proposal yang cocok dengan konfigurasi rekap. Ubah konfigurasi lalu coba lagi.' })
         return
       }
       exportToPDF(data, { periodeNama: rekap?.periodeNama || '', jenis: rekap?.jenis || '', status: rekap?.status || '', tahun: rekap?.tahun || '' })
     } catch {
+      batalTab()
       alertDialog({ title: 'Gagal mencetak rekap', message: 'Data rekapitulasi tidak dapat dimuat. Coba lagi.' })
     } finally {
       setPrinting('')

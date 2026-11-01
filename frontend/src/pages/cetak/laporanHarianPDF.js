@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { tampilkanPdf } from '../../utils/pratinjauPdf'
 
 // Rekap Laporan Harian (PDF, jspdf + autotable): dipakai Project Saya › Laporan Harian dan
 // Cetak Laporan mahasiswa (/cetak-laporan).
@@ -76,6 +77,6 @@ export function downloadRekap(laporan, judulProposal) {
     },
   })
 
-  doc.save(`Rekap Laporan Harian - ${judulProposal}.pdf`)
+  tampilkanPdf(doc, `Rekap Laporan Harian - ${judulProposal}`)
 }
 

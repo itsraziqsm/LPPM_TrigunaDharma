@@ -6,6 +6,7 @@ import { TONE } from '../../utils/toneStatus'
 import PanelCari from '../../components/PanelCari'
 import { alertDialog } from '../../utils/dialog'
 import { downloadRekap } from './laporanHarianPDF'
+import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
 // Mahasiswa › Cetak Laporan (/cetak-laporan): daftar project (GET /mahasiswa/laporan-harian/proposals),
@@ -34,15 +35,18 @@ export default function CetakLaporanHarianPage() {
 
   const cetak = async (p) => {
     setBusy(p.id)
+    siapkanTab()
     try {
       const r = await laporanHarianApi.getByProposal(p.id)
       const laporan = r.data.data || []
       if (!laporan.length) {
+        batalTab()
         alertDialog({ tone: 'info', title: 'Belum ada laporan', message: 'Project ini belum punya laporan harian untuk dicetak.' })
         return
       }
       downloadRekap(laporan, p.judul)
     } catch {
+      batalTab()
       alertDialog({ title: 'Gagal mencetak', message: 'Laporan harian tidak dapat dimuat. Coba lagi.' })
     } finally {
       setBusy(null)
