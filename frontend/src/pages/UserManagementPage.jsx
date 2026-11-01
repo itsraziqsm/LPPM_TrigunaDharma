@@ -927,6 +927,8 @@ export default function UserManagementPage({ readOnly = false }) {
     <div className="flex h-full min-h-0">
       {/* Area utama daftar */}
       <div ref={listScrollRef} data-scroll-container className="@container min-h-0 min-w-0 flex-1 overflow-y-auto">
+        {/* Ruang bilah atas ponsel di dalam penggulir ini, agar daftar lewat di bawah navbar melayang. */}
+        <div className="h-14 lg:hidden" aria-hidden="true" />
         <div ref={listContentRef} className="page space-y-6">
           {/* Kepala: judul + breadcrumb, lalu ringkasan (gaya Undangan) */}
           <KepalaMasuk

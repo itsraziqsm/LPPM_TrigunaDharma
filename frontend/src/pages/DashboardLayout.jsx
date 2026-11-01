@@ -252,9 +252,10 @@ export default function DashboardLayout({ page, jenis }) {
       <Sidebar />
 
       {/* Area konten: satu penggulir, latar kanvas tenang */}
-      {/* Ruang bilah atas ponsel ada DI DALAM penggulir agar konten lewat di bawah navbar melayang (tembus pandang). */}
+      {/* Ruang bilah atas ponsel ada DI DALAM penggulir agar konten lewat di bawah navbar melayang (tembus pandang);
+          halaman bergulir sendiri (Pengguna) memasang ruang itu di penggulirnya. */}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <section ref={scrollRef} data-scroll-container className="min-h-0 flex-1 overflow-y-auto pt-14 lg:pt-0">
+        <section ref={scrollRef} data-scroll-container className={`min-h-0 flex-1 overflow-y-auto ${selfScrolling ? '' : 'pt-14 lg:pt-0'}`}>
           <div ref={contentRef} className={selfScrolling ? 'h-full' : undefined}>
             {renderContent()}
           </div>
