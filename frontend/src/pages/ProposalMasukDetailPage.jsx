@@ -105,7 +105,7 @@ export default function ProposalMasukDetailPage() {
   }
 
   const hapusReviewer = async (reviewerId) => {
-    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus tugasan reviewer?', message: 'Reviewer ini tidak lagi ditugaskan menilai proposal.', confirmText: 'Ya, hapus' }))) return
+    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus tugasan reviewer?', message: 'Reviewer ini tidak lagi ditugaskan menilai proposal, dan tidak akan otomatis menilai laporannya.', confirmText: 'Ya, hapus' }))) return
     setBusy(true)
     try {
       await proposalApi.hapusReviewer(d.id, reviewerId)
@@ -372,6 +372,7 @@ export default function ProposalMasukDetailPage() {
               ) : null
             }
           >
+            <p className="mb-3 text-xs text-slate-500">Reviewer proposal juga otomatis menilai laporan kegiatan ini.</p>
             {tugasan.length === 0 ? (
               <p className="text-sm text-slate-500">Belum ada reviewer ditugaskan.</p>
             ) : (

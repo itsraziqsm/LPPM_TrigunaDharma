@@ -45,6 +45,7 @@ export default function KartuPenilaian({ tipe, id, review, terkunci = false }) {
             ) : null}
           </div>
         </dl>
+        {tipe === 'proposal' ? <p className="text-xs text-slate-500">Saat pengusul mengajukan laporan kegiatan ini, laporannya otomatis ditugaskan kepada Anda.</p> : null}
         <Link to={tautanForm(tipe, id)} className={`btn w-full ${done || terkunci ? 'btn-secondary' : 'btn-primary'}`}>
           {label}
           <ArrowRight className="size-4" aria-hidden="true" />

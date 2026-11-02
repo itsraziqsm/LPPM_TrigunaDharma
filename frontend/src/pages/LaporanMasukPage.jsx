@@ -67,7 +67,7 @@ export default function LaporanMasukPage() {
         desc={
           viewOnly
             ? 'Laporan dari periode aktif. Akses Admin: lihat dan hapus; penugasan reviewer dan keputusan oleh Ketua LPPM.'
-            : 'Laporan dari periode aktif yang perlu ditindaklanjuti: tugaskan reviewer dan beri keputusan.'
+            : 'Laporan dari periode aktif yang perlu ditindaklanjuti: reviewer proposal menilainya otomatis, Anda memberi keputusan.'
         }
         crumbs={[...induk, { label: 'Dokumen Masuk' }, { label: 'Laporan Kegiatan' }]}
         stats={[

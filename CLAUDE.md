@@ -513,7 +513,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
   `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Reviewer laporan =
   reviewer proposal asal (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan (status langsung `review`, pesan ajukan menyesuaikan); bila tidak
-  ada, dialog Tugaskan reviewer laporan (`LaporanMasukDetailPage`) tetap mencentang reviewer proposal asal yang tersedia.
+  ada, Ketua hanya bisa **Tugaskan pengganti** (laporan `diajukan` tanpa reviewer; dialog mencentang reviewer proposal asal yang tersedia).
+  **Review dimulai dari tahap proposal**: Ketua menugaskan reviewer hanya di proposal (`ProposalMasukDetailPage`, keterangan "juga otomatis menilai
+  laporan"); kartu Reviewer di detail laporan **baca saja** (lencana "Reviewer proposal", tanpa Hapus/Tugaskan); `KartuPenilaian` proposal memberi
+  tahu reviewer bahwa laporannya nanti otomatis ditugaskan kepadanya.
   **Dana (keputusan UAT)**: dana final = **dana disetujui reviewer**, final setelah review diselesaikan (tidak bisa dinegosiasi). Form laporan
   tetap menampilkan pendanaan: dana disetujui proposal asal (baca saja; dari draf penilaian proposal reviewer yang sama, lalu field backend)
   + realisasi anggaran. Rubrik sama untuk proposal & laporan, penelitian & pengabdian. **Statistik & pelaporan memakai dana disetujui saja,

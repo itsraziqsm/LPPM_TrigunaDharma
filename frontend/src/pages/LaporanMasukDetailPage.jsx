@@ -22,7 +22,7 @@ import BebanReviewer from '../components/BebanReviewer'
 // ---------------------------------------------------------------------------
 // Detail Laporan Kegiatan untuk Ketua LPPM / Admin (/laporan-masuk/detail/:id) — halaman,
 // bukan modal (dulu panel di /laporan-masuk?id=, kini dialihkan ke sini). GET /laporan/:id,
-// tugaskan/hapus reviewer (Ketua), keputusan status (PATCH /laporan/:id/status, Ketua),
+// reviewer = reviewer proposal (otomatis, W-55; Ketua hanya menugaskan pengganti bila kosong), keputusan status (PATCH /laporan/:id/status, Ketua),
 // Admin: lihat + hapus dengan izin Ketua (HapusDokumen).
 // ---------------------------------------------------------------------------
 
@@ -117,19 +117,6 @@ export default function LaporanMasukDetailPage() {
     }
   }
 
-  const unassign = async (reviewerId) => {
-    if (!(await confirmDialog({ tone: 'danger', title: 'Hapus tugasan reviewer?', message: 'Reviewer ini tidak lagi ditugaskan menilai laporan.', confirmText: 'Ya, hapus' }))) return
-    setBusy(true)
-    try {
-      await laporanApi.removeReviewer(laporan.id, reviewerId)
-      reload()
-    } catch (e) {
-      setMsg({ type: 'error', text: errorText(e, 'Gagal menghapus tugasan.') })
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const decide = async (e) => {
     e.preventDefault()
     if (!status) return
@@ -151,7 +138,11 @@ export default function LaporanMasukDetailPage() {
     }
   }
 
-  const canAssign = !viewOnly && !bacaSaja && laporan && (laporan.status === 'diajukan' || laporan.status === 'review')
+  // Reviewer laporan = reviewer proposal asal, ditugaskan otomatis saat laporan diajukan (W-55) — Ketua tidak lagi
+  // menugaskan/menghapus. Cadangan saja: laporan `diajukan` TANPA reviewer (reviewer proposal sudah dicabut perannya)
+  // → Ketua menugaskan pengganti.
+  const tanpaReviewer = laporan && (laporan.reviewerTugasan || []).length === 0
+  const canAssign = !viewOnly && !bacaSaja && laporan && laporan.status === 'diajukan' && tanpaReviewer
   // Laporan yang sudah disetujui berstatus final: status tidak bisa diubah lagi.
   const canDecide = !viewOnly && !bacaSaja && laporan && laporan.status !== 'draft' && laporan.status !== 'disetujui'
 
@@ -212,30 +203,31 @@ export default function LaporanMasukDetailPage() {
 
               <section className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold text-navy-950">Reviewer</h3>
+                  <div>
+                    <h3 className="text-base font-semibold text-navy-950">Reviewer</h3>
+                    <p className="text-xs text-slate-500">Sama dengan reviewer proposal, ditugaskan otomatis saat laporan diajukan.</p>
+                  </div>
                   {canAssign ? (
                     <button type="button" onClick={openReviewerPicker} className="btn btn-secondary btn-sm" disabled={busy}>
                       <UserPlus className="size-4" aria-hidden="true" />
-                      Tugaskan reviewer
+                      Tugaskan pengganti
                     </button>
                   ) : null}
                 </div>
                 {(laporan.reviewerTugasan || []).length === 0 ? (
                   <p className="text-sm text-slate-500">
                     {laporan.status === 'diajukan'
-                      ? 'Belum ada reviewer. Reviewer proposal asal tidak tersedia lagi (mis. perannya dicabut), tugaskan secara manual.'
-                      : 'Belum ada reviewer.'}
+                      ? 'Reviewer proposal asal tidak tersedia lagi (mis. perannya dicabut). Tugaskan reviewer pengganti agar laporan bisa dinilai.'
+                      : laporan.status === 'draft'
+                        ? 'Reviewer proposal akan ditugaskan otomatis saat laporan diajukan.'
+                        : 'Belum ada reviewer.'}
                   </p>
                 ) : (
                   <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
                     {laporan.reviewerTugasan.map((t) => (
                       <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                         <span className="flex min-w-0 items-center gap-2"><UserAvatar user={t.reviewer || { id: t.reviewerId }} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" /><span className="truncate">{t.reviewer?.fullName || t.reviewer?.name}</span></span>
-                        {viewOnly || bacaSaja ? null : (
-                          <button type="button" onClick={() => unassign(t.reviewerId ?? t.reviewer?.id)} className="btn btn-ghost btn-sm text-red-700" disabled={busy}>
-                            Hapus
-                          </button>
-                        )}
+                        <span className="shrink-0 rounded-md bg-navy-50 px-1.5 py-0.5 text-[11px] font-medium text-navy-700">Reviewer proposal</span>
                       </li>
                     ))}
                   </ul>
