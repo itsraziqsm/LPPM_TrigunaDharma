@@ -34,6 +34,7 @@ API, dikelompokkan per rilis:
 - **Bagian 28** — Kelompok kecil waiting list: W-43 (filter backup dihapus), W-44 (luaran untuk Ketua LPPM), W-45 (Monitor Pengguna Ketua STMIK), W-46 (Ketua tidak bisa hapus akun sendiri), W-49 (jumlah laporan harian), W-51 (NIDN/NIM/peran anggota), W-55 (reviewer laporan otomatis = reviewer proposal).
 - **Bagian 29** — W-47 riwayat halaman & pencarian per user, W-50 kontak admin (WhatsApp), W-52 reset password oleh admin (password sementara + wajib ganti), W-53 kategori/filter/ringkasan log aktivitas (+ log logout & login gagal).
 - **Bagian 30** — W-48 satu identitas satu pendaftaran (validasi NIDN/NIRM, 409 ber-`code`, daftar ulang, cek status), W-54 form penilaian reviewer (skor rubrik, dana disetujui = dana final, satu reviewer per proposal), W-42 konfigurasi cetak bersama + nomor & arsip surat tugas.
+- **Bagian 31** — W-56 kategori & pengirim notifikasi (filter `kategori`, ringkasan per kategori).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2699,4 +2700,48 @@ Body POST:
   proposal: pilih satu reviewer.
 - Cetak Dokumen: simpan konfigurasi lewat `PUT /cetak/konfigurasi/:dokumen`; Surat Tugas: `POST /surat-tugas`
   sebelum mencetak lalu cetak memakai `nomor` dari respons; riwayat dari `GET /surat-tugas?kegiatanId=`.
+
+## 31. Kategori & pengirim notifikasi (W-56)
+
+Migrasi `20261108000000_notifikasi_kategori_pengirim`: kolom `Notification.kategori` (kolom turunan dari `type`,
+data lama otomatis terisi) dan `Notification.pengirimId` (FK `User`, `NULL` = sistem/data lama).
+
+**Kategori** (sama dengan `KATEGORI_NOTIF` di frontend):
+
+| `kategori` | `type` |
+|---|---|
+| `kegiatan` | `proposal_diajukan`, `laporan_diajukan`, `laporan_diunggah` |
+| `keputusan` | `proposal_disetujui/ditolak/revisi`, `laporan_disetujui/ditolak/revisi` |
+| `review` | `reviewer_ditugaskan`, `review_selesai` |
+| `admin` | lainnya (`deletion_*`, `password_direset`, …) |
+
+**`GET /notifications`** — tiap item kini diakhiri `kategori` dan `pengirim`:
+
+```json
+{ "id": 2718, "userId": 9, "type": "laporan_disetujui", "judul": "…", "pesan": "…", "isRead": false, "refId": 1213,
+  "refType": "laporan", "createdAt": "…", "kategori": "keputusan", "pengirim": { "id": 2, "name": "…", "fullName": "…" } }
+```
+
+`pengirim` = user yang memicu aksi (Ketua yang memutuskan/menugaskan, dosen yang mengajukan laporan, reviewer yang
+menyelesaikan review, admin yang mereset password, …); `null` untuk notifikasi sistem atau yang dibuat sebelum fitur
+ini. Query baru `kategori=kegiatan|keputusan|review|admin` (lainnya → 400), bisa digabung dengan `onlyUnread`,
+`page`, `limit`; `meta.total` mengikuti filter, jadi paginasi per kategori berjalan normal.
+
+**`GET /notifications/ringkasan`** (login, milik user sendiri):
+
+```json
+{ "success": true, "message": "Ringkasan notifikasi fetched",
+  "data": { "belumDibaca": 5,
+            "perKategori": { "kegiatan": { "total": 12, "belumDibaca": 1 }, "keputusan": { "total": 8, "belumDibaca": 2 },
+                             "review": { "total": 20, "belumDibaca": 2 }, "admin": { "total": 3, "belumDibaca": 0 } } } }
+```
+
+Keempat kunci selalu ada dengan urutan tetap; `belumDibaca` = jumlah semua kategori (sama dengan `meta.total` dari
+`?onlyUnread=true`).
+
+### Untuk frontend
+
+- Filter Kategori: kirim `kategori=` ke server (hapus pemuatan 500 item + saring di peramban dan penanda ApiPending
+  W-56); jumlah per kategori/lencana dari `/notifications/ringkasan`.
+- Label "dari": pakai `pengirim.fullName || pengirim.name`; bila `null`, `pengirimFor` lama tetap jadi cadangan.
 

@@ -501,7 +501,7 @@ func (s *Server) updateProposalStatus(c *Ctx) error {
 			pesan += ". Catatan: " + catatan
 		}
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: existing.PengusulID, Type: notifType, Judul: "Proposal " + status, Pesan: pesan,
+			UserID: existing.PengusulID, PengirimID: c.user.UserID, Type: notifType, Judul: "Proposal " + status, Pesan: pesan,
 			RefID: id, RefType: "proposal",
 		}); err != nil {
 			return err

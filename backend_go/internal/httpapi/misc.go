@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"math"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,13 +12,14 @@ import (
 // Node: notification.*, dashboard.*, activityLog.*, export.* modules.
 
 const (
-	notificationColumns = "`id`,`userId`,`type`,`judul`,`pesan`,`isRead`,`refId`,`refType`,`createdAt`"
+	notificationColumns = "`id`,`userId`,`type`,`judul`,`pesan`,`isRead`,`refId`,`refType`,`createdAt`,`kategori`,`pengirimId` AS `__pengirimId`"
 	activityColumns     = "a.`id`,a.`userId`,a.`action`,a.`entityType`,a.`entityId`,a.`detail`,a.`proposalId`,a.`ipAddress`,a.`userAgent`,a.`createdAt`,a.`kategori`"
 )
 
 func (s *Server) registerNotificationRoutes() {
 	g := s.group("/api/v1/notifications", s.authenticate)
 	g.get("/", s.listNotifications)
+	g.get("/ringkasan", s.ringkasanNotifikasi) // baru (W-56)
 	g.patch("/read-all", s.markAllNotificationsRead)
 	g.patch("/:id/read", s.markNotificationRead)
 	g.delete("/:id", s.deleteNotification)
@@ -64,17 +66,55 @@ func (s *Server) listNotifications(c *Ctx) error {
 	if onlyUnread == "true" {
 		where += " AND `isRead` = FALSE"
 	}
+	// W-56 (Go saja): filter kategori.
+	if k, ok := c.queryValue("kategori"); ok && k != "" {
+		if !contains(kategoriNotifikasi, k) {
+			return httpError(http.StatusBadRequest, "kategori tidak valid. Pilihan: "+strings.Join(kategoriNotifikasi, ", "))
+		}
+		where += " AND `kategori` = ?"
+		args = append(args, k)
+	}
 	ctx := c.r.Context()
 	items, err := queryObjs(ctx, s.db, "SELECT "+notificationColumns+" FROM `Notification` WHERE "+where+" ORDER BY `createdAt` DESC LIMIT ? OFFSET ?",
 		append(append([]any{}, args...), take, skip)...)
 	if err != nil {
 		return err
 	}
+	// W-56 (Go saja): + kategori, pengirim {id,name,fullName} (null = sistem).
+	if err := attachOne(ctx, s.db, items, "__pengirimId", "pengirim", "SELECT `id` AS `__k`,`id`,`name`,`fullName` FROM `User` WHERE `id` IN (%s)"); err != nil {
+		return err
+	}
+	stripInternal(items)
 	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `Notification` WHERE "+where, args...)
 	if err != nil {
 		return err
 	}
 	return c.okMeta("Notifications fetched", items, page, limit, total)
+}
+
+var kategoriNotifikasi = []string{"kegiatan", "keputusan", "review", "admin"}
+
+// ringkasanNotifikasi: GET /notifications/ringkasan (W-56) → { belumDibaca, perKategori: { k: { total, belumDibaca } } }.
+func (s *Server) ringkasanNotifikasi(c *Ctx) error {
+	rows, err := queryObjs(c.r.Context(), s.db,
+		"SELECT `kategori`, COUNT(*) AS `total`, CAST(COALESCE(SUM(`isRead` = FALSE), 0) AS SIGNED) AS `belum` FROM `Notification` WHERE `userId` = ? GROUP BY `kategori`",
+		c.user.UserID)
+	if err != nil {
+		return err
+	}
+	per := O{}
+	var belum int64
+	for _, k := range kategoriNotifikasi {
+		entry := O{{"total", int64(0)}, {"belumDibaca", int64(0)}}
+		for _, r := range rows {
+			if r.Str("kategori") == k {
+				entry = O{{"total", r.Int64("total")}, {"belumDibaca", r.Int64("belum")}}
+				belum += r.Int64("belum")
+			}
+		}
+		per = append(per, KV{k, entry})
+	}
+	return c.ok("Ringkasan notifikasi fetched", O{{"belumDibaca", belum}, {"perKategori", per}})
 }
 
 func (s *Server) markNotificationRead(c *Ctx) error {

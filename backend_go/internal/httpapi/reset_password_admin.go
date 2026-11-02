@@ -114,7 +114,7 @@ func (s *Server) resetPasswordOlehAdmin(c *Ctx) error {
 			}
 		}
 		if err := s.createNotification(ctx, tx, notification{
-			UserID: id, Type: "password_direset", Judul: "Password Direset Admin",
+			UserID: id, PengirimID: c.user.UserID, Type: "password_direset", Judul: "Password Direset Admin",
 			Pesan: "Password akun Anda telah direset oleh Admin. Masuk dengan password sementara dari Admin lalu segera ganti password.",
 			RefID: id, RefType: "user",
 		}); err != nil {

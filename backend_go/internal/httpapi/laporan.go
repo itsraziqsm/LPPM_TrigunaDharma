@@ -150,7 +150,7 @@ func (s *Server) createLaporan(c *Ctx) error {
 	}
 	jenisText := fmt.Sprint(jenis)
 	if err := s.createNotification(ctx, s.db, notification{
-		UserID: proposal.PengusulID, Type: "laporan_diunggah", Judul: "Laporan Diunggah",
+		UserID: proposal.PengusulID, PengirimID: c.user.UserID, Type: "laporan_diunggah", Judul: "Laporan Diunggah",
 		Pesan: "Laporan " + jenisText + ` untuk "` + proposal.Judul + `" telah diunggah`,
 		RefID: proposalID, RefType: "proposal",
 	}); err != nil {

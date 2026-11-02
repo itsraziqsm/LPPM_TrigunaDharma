@@ -48,12 +48,14 @@ type notification struct {
 	Pesan   string
 	RefID   any
 	RefType any
+	// PengirimID: user yang memicu notifikasi (W-56); nil = sistem.
+	PengirimID any
 }
 
 func (s *Server) createNotification(ctx context.Context, q dbtx, n notification) error {
 	_, err := q.ExecContext(ctx,
-		"INSERT INTO `Notification` (`userId`,`type`,`judul`,`pesan`,`isRead`,`refId`,`refType`,`createdAt`) VALUES (?,?,?,?,?,?,?,?)",
-		n.UserID, n.Type, n.Judul, n.Pesan, false, n.RefID, n.RefType, s.nowMs())
+		"INSERT INTO `Notification` (`userId`,`type`,`judul`,`pesan`,`isRead`,`refId`,`refType`,`createdAt`,`pengirimId`) VALUES (?,?,?,?,?,?,?,?,?)",
+		n.UserID, n.Type, n.Judul, n.Pesan, false, n.RefID, n.RefType, s.nowMs(), n.PengirimID)
 	return err
 }
 

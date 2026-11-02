@@ -1,8 +1,8 @@
 package httpapi
 
 import (
-	"errors"
 	"database/sql"
+	"errors"
 	"net/http"
 	"regexp"
 	"strings"

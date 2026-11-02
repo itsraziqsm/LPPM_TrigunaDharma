@@ -71,7 +71,7 @@ func (s *Server) tugaskanReviewer(c *Ctx) error {
 	}
 	for _, rid := range reviewerIDs {
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: rid, Type: "reviewer_ditugaskan", Judul: "Tugas Review Baru",
+			UserID: rid, PengirimID: c.user.UserID, Type: "reviewer_ditugaskan", Judul: "Tugas Review Baru",
 			Pesan: `Anda ditugaskan untuk mereview proposal "` + proposal.Judul + `"`,
 			RefID: proposalID, RefType: "proposal",
 		}); err != nil {
@@ -312,7 +312,7 @@ func (s *Server) finalizeReview(c *Ctx) error {
 		return err
 	}
 	if err := s.createNotification(ctx, s.db, notification{
-		UserID: pengusulID, Type: "review_selesai", Judul: "Review Selesai",
+		UserID: pengusulID, PengirimID: c.user.UserID, Type: "review_selesai", Judul: "Review Selesai",
 		Pesan: `Proposal "` + judul + `" telah selesai direview`,
 		RefID: proposalID, RefType: "proposal",
 	}); err != nil {

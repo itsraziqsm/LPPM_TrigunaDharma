@@ -607,7 +607,7 @@ func (s *Server) submitLaporanKegiatan(c *Ctx) error {
 		}
 		for _, rid := range reviewerIDs {
 			if err := s.createNotification(ctx, tx, notification{
-				UserID: rid, Type: "reviewer_ditugaskan", Judul: "Tugas Review Laporan",
+				UserID: rid, PengirimID: c.user.UserID, Type: "reviewer_ditugaskan", Judul: "Tugas Review Laporan",
 				Pesan: `Anda ditugaskan untuk mereview laporan "` + l.Judul + `"`,
 				RefID: l.ID, RefType: "laporan",
 			}); err != nil {
@@ -625,7 +625,7 @@ func (s *Server) submitLaporanKegiatan(c *Ctx) error {
 	}
 	for _, uid := range ketua {
 		if err := s.createNotification(ctx, tx, notification{
-			UserID: uid, Type: "laporan_diajukan", Judul: "Laporan Diajukan",
+			UserID: uid, PengirimID: c.user.UserID, Type: "laporan_diajukan", Judul: "Laporan Diajukan",
 			Pesan: pesanKetua, RefID: l.ID, RefType: "laporan",
 		}); err != nil {
 			return err
@@ -782,7 +782,7 @@ func (s *Server) updateLaporanKegiatanStatus(c *Ctx) error {
 			pesan += ". Catatan: " + catatan
 		}
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: l.PengusulID, Type: notifType, Judul: "Laporan " + status, Pesan: pesan,
+			UserID: l.PengusulID, PengirimID: c.user.UserID, Type: notifType, Judul: "Laporan " + status, Pesan: pesan,
 			RefID: l.ID, RefType: "laporan",
 		}); err != nil {
 			return err
@@ -838,7 +838,7 @@ func (s *Server) tugaskanLaporanReviewer(c *Ctx) error {
 	}
 	for _, rid := range ids {
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: rid, Type: "reviewer_ditugaskan", Judul: "Tugas Review Laporan",
+			UserID: rid, PengirimID: c.user.UserID, Type: "reviewer_ditugaskan", Judul: "Tugas Review Laporan",
 			Pesan: `Anda ditugaskan untuk mereview laporan "` + l.Judul + `"`,
 			RefID: l.ID, RefType: "laporan",
 		}); err != nil {
@@ -964,7 +964,7 @@ func (s *Server) finalizeLaporanReview(c *Ctx) error {
 		return err
 	}
 	if err := s.createNotification(ctx, s.db, notification{
-		UserID: l.PengusulID, Type: "review_selesai", Judul: "Review Laporan Selesai",
+		UserID: l.PengusulID, PengirimID: c.user.UserID, Type: "review_selesai", Judul: "Review Laporan Selesai",
 		Pesan: `Laporan "` + l.Judul + `" telah selesai direview`,
 		RefID: l.ID, RefType: "laporan",
 	}); err != nil {

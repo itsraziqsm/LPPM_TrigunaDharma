@@ -15,6 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
+| W-56 | Notifikasi: filter Kategori, label "dari", jumlah per kategori | Item `GET /notifications` + `kategori` & `pengirim {id,name,fullName}` (null = sistem); filter `?kategori=` (meta.total sesuai filter); `GET /notifications/ringkasan` → `{ belumDibaca, perKategori: { k: { total, belumDibaca } } }` (`new-api.md` bagian 31) | Hapus pemuatan 500 + saring di peramban; `pengirimFor` jadi cadangan bila `pengirim` null. |
 | — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
@@ -294,9 +295,7 @@ Keputusan LPPM (disetujui/ditolak/revisi), Review (penugasan & hasil review), Ad
 lainnya). Kategori & "dari" diturunkan dari `type` karena backend tidak menyimpannya; saat kategori dipilih, frontend memuat hingga
 500 notifikasi terbaru lalu menyaring di peramban (paginasi tidak tersedia untuk kategori).
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-56 | Notifikasi: filter Kategori, label "dari <pengirim>", jumlah per kategori | Kategori & pengirim per notifikasi, filter & hitung di server | Kolom `Notification.kategori` (ENUM `kegiatan`, `keputusan`, `review`, `admin`, diisi `createNotification` dari `type`; backfill) + `pengirimId` (FK `User`, NULL = sistem) diisi user yang memicu aksi; `GET /notifications?kategori=` (+ `meta.total` sesuai filter) dan `GET /notifications/ringkasan` → `{ belumDibaca, perKategori: { kegiatan: { total, belumDibaca }, … } }`; respons item + `kategori`, `pengirim: { id, name, fullName }` | Frontend memakai pemetaan `type` sampai field ini ada. Opsional: notifikasi revisi/keputusan juga ke anggota tim, dan email untuk keputusan. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

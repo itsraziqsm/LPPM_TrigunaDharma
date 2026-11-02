@@ -316,7 +316,7 @@ func (s *Server) requestPeriodeDeletion(c *Ctx) error {
 	}
 	for _, userID := range targets {
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: userID, Type: "deletion_request", Judul: "Permintaan Penghapusan Periode",
+			UserID: userID, PengirimID: c.user.UserID, Type: "deletion_request", Judul: "Permintaan Penghapusan Periode",
 			Pesan: `Ada permintaan penghapusan periode "` + periode.Str("nama") + `". Masuk ke halaman Periode untuk menyetujui atau membatalkan.`,
 			RefID: requestID, RefType: "PeriodeDeletionRequest",
 		}); err != nil {
@@ -385,7 +385,7 @@ func (s *Server) approvePeriodeDeletion(c *Ctx) error {
 		return err
 	}
 	if err := s.createNotification(ctx, s.db, notification{
-		UserID: requesterID, Type: "deletion_approved", Judul: "Periode Berhasil Dihapus",
+		UserID: requesterID, PengirimID: c.user.UserID, Type: "deletion_approved", Judul: "Periode Berhasil Dihapus",
 		Pesan: `Periode "` + periodeName + `" telah dihapus setelah disetujui.`,
 		RefID: requestID, RefType: "PeriodeDeletionRequest",
 	}); err != nil {
@@ -419,7 +419,7 @@ func (s *Server) cancelPeriodeDeletion(c *Ctx) error {
 	}
 	if requesterID != c.user.UserID {
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: requesterID, Type: "deletion_cancelled", Judul: "Permintaan Penghapusan Dibatalkan",
+			UserID: requesterID, PengirimID: c.user.UserID, Type: "deletion_cancelled", Judul: "Permintaan Penghapusan Dibatalkan",
 			Pesan: `Permintaan penghapusan periode "` + periodeName + `" telah dibatalkan.`,
 			RefID: requestID, RefType: "PeriodeDeletionRequest",
 		}); err != nil {
@@ -486,7 +486,7 @@ func (s *Server) deletePeriodeLangsung(c *Ctx) error {
 			continue
 		}
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: p.requesterID, Type: "deletion_approved", Judul: "Periode Berhasil Dihapus",
+			UserID: p.requesterID, PengirimID: c.user.UserID, Type: "deletion_approved", Judul: "Periode Berhasil Dihapus",
 			Pesan: `Periode "` + periode.Str("nama") + `" telah dihapus oleh Ketua LPPM.`,
 			RefID: p.id, RefType: "PeriodeDeletionRequest",
 		}); err != nil {

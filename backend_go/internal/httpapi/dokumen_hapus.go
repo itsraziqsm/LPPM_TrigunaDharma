@@ -174,7 +174,7 @@ func (s *Server) requestDokumenHapus(tipe string) step {
 		}
 		for _, uid := range ketua {
 			if err := s.createNotification(ctx, s.db, notification{
-				UserID: uid, Type: "deletion_request", Judul: "Permintaan Penghapusan " + tipeLabel(tipe),
+				UserID: uid, PengirimID: c.user.UserID, Type: "deletion_request", Judul: "Permintaan Penghapusan " + tipeLabel(tipe),
 				Pesan: `Admin meminta penghapusan ` + strings.ToLower(tipeLabel(tipe)) + ` "` + judul + `". Alasan: ` + alasan,
 				RefID: reqID, RefType: "DokumenDeletionRequest",
 			}); err != nil {
@@ -320,7 +320,7 @@ func (s *Server) approveDokumenHapus(c *Ctx) error {
 	}
 	for uid, pesan := range notify {
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: uid, Type: "deletion_approved", Judul: tipeLabel(tipe) + " Dihapus", Pesan: pesan,
+			UserID: uid, PengirimID: c.user.UserID, Type: "deletion_approved", Judul: tipeLabel(tipe) + " Dihapus", Pesan: pesan,
 			RefID: reqID, RefType: "DokumenDeletionRequest",
 		}); err != nil {
 			return err
@@ -371,7 +371,7 @@ func (s *Server) cancelDokumenHapus(c *Ctx) error {
 			pesan += " Catatan: " + s
 		}
 		if err := s.createNotification(ctx, s.db, notification{
-			UserID: requester, Type: "deletion_cancelled", Judul: "Permintaan Penghapusan Ditolak", Pesan: pesan,
+			UserID: requester, PengirimID: c.user.UserID, Type: "deletion_cancelled", Judul: "Permintaan Penghapusan Ditolak", Pesan: pesan,
 			RefID: reqID, RefType: "DokumenDeletionRequest",
 		}); err != nil {
 			return err

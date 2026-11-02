@@ -901,12 +901,28 @@ expect("mhs baca proposal anggota tetap", req("GET", f"/api/v1/proposals/{pid}",
 
 # notifications
 b = expect("notifications", req("GET", "/api/v1/notifications?limit=2", dosen1), 200, "Notifications fetched")
-check("notif shape", list(b["data"][0].keys()) == ["id", "userId", "type", "judul", "pesan", "isRead", "refId", "refType", "createdAt"] and b["meta"]["limit"] == 2, b)
+check("notif shape", list(b["data"][0].keys()) == ["id", "userId", "type", "judul", "pesan", "isRead", "refId", "refType", "createdAt", "kategori", "pengirim"] and b["meta"]["limit"] == 2, b)
+n0 = b["data"][0]
+KAT = {"proposal_diajukan": "kegiatan", "laporan_diajukan": "kegiatan", "laporan_diunggah": "kegiatan", "reviewer_ditugaskan": "review", "review_selesai": "review",
+       **{f"{a}_{b}": "keputusan" for a in ("proposal", "laporan") for b in ("disetujui", "ditolak", "revisi")}}
+check("notif kategori & pengirim (W-56)", n0["kategori"] == KAT.get(n0["type"], "admin") and n0["pengirim"] is not None and list(n0["pengirim"].keys()) == ["id", "name", "fullName"] and n0["pengirim"]["id"] != dosen1User["id"], n0)
+r = expect("notif ringkasan (W-56)", req("GET", "/api/v1/notifications/ringkasan", dosen1), 200, "Ringkasan notifikasi fetched")["data"]
+check("notif ringkasan shape", list(r.keys()) == ["belumDibaca", "perKategori"] and list(r["perKategori"].keys()) == ["kegiatan", "keputusan", "review", "admin"] and r["belumDibaca"] == sum(v["belumDibaca"] for v in r["perKategori"].values()), r)
+check("notif ringkasan = onlyUnread total", r["belumDibaca"] == req("GET", "/api/v1/notifications?onlyUnread=true&limit=1", dosen1)[1]["meta"]["total"], r)
+for k in ["kegiatan", "keputusan", "review", "admin"]:
+    b = req("GET", f"/api/v1/notifications?kategori={k}&limit=100", dosen1)[1]
+    check(f"notif filter {k}", b["meta"]["total"] == r["perKategori"][k]["total"] and all(x["kategori"] == k for x in b["data"]), (k, b["meta"], r["perKategori"][k]))
+b = req("GET", "/api/v1/notifications?kategori=review&onlyUnread=true&limit=100", dosen1)[1]
+check("notif filter kategori + onlyUnread", b["meta"]["total"] == r["perKategori"]["review"]["belumDibaca"] and all(not x["isRead"] for x in b["data"]), b["meta"])
+expect("notif kategori salah", req("GET", "/api/v1/notifications?kategori=x", dosen1), 400)
+n = req("GET", "/api/v1/notifications?kategori=review&limit=50", rev1)[1]["data"]
+check("notif penugasan dari ketua", any(x["type"] == "reviewer_ditugaskan" and x["pengirim"] and x["pengirim"]["id"] != rev1User["id"] for x in n), n[:2])
 nid = b["data"][0]["id"]
 expect("notif read", req("PATCH", f"/api/v1/notifications/{nid}/read", dosen1), 200, "Notification marked as read")
 b = req("GET", "/api/v1/notifications?onlyUnread=true&limit=100", dosen1)[1]
 check("onlyUnread", all(not x["isRead"] for x in b["data"]) and nid not in [x["id"] for x in b["data"]])
 expect("notif read all", req("PATCH", "/api/v1/notifications/read-all", dosen1), 200, "All notifications marked as read")
+check("notif ringkasan setelah baca semua", req("GET", "/api/v1/notifications/ringkasan", dosen1)[1]["data"]["belumDibaca"] == 0)
 expect("notif delete", req("DELETE", f"/api/v1/notifications/{nid}", dosen1), 200, "Notification deleted")
 
 # activity logs, dashboard, export

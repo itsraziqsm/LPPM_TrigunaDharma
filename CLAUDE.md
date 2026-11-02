@@ -20,7 +20,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
 - `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53, pendaftaran satu identitas/form penilaian & dana disetujui/surat tugas W-48/54/42) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53, pendaftaran satu identitas/form penilaian & dana disetujui/surat tugas W-48/54/42, kategori & pengirim notifikasi W-56) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -36,7 +36,7 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp`/`nidn`/`nim`/`roles` di `anggota[].user`
    dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`); login & `/auth/me` + `wajibGantiPassword`;
    log aktivitas + field `kategori`; proposal & laporan + `danaDisetujui`, review + `skor`/`totalSkor`/`rataSkor`/`danaDisetujui`;
-   pendaftaran mewajibkan `nidn`/`nim` dan identitas ganda → 409 ber-`code`;
+   pendaftaran mewajibkan `nidn`/`nim` dan identitas ganda → 409 ber-`code`; notifikasi + `kategori`/`pengirim`;
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
    (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
@@ -138,7 +138,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
 | `/luaran` | `/jenis` (daftar jenis, jurnal & poster prioritas), `/stats` (+ `poster`), `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan); admin & Ketua LPPM (W-44): `GET /` (semua luaran + filter), `/unduh-csv`, `/unduh-zip` (bukti + daftar-luaran.csv, maks 1000) | pengusul tulis; baca = akses proposal; admin+ketua unduh |
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
-| `/notifications` | list, read-all, `/:id/read`, delete | login |
+| `/notifications` | list (+ `kategori`, `pengirim`; filter `?kategori=kegiatan\|keputusan\|review\|admin`), `/ringkasan` (belum dibaca per kategori, W-56), read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua); filter `kategori`, `search`, `dari`/`sampai` (YYYY-MM-DD WIB); `/ringkasan` (admin, ketua) | |
 | `/cetak/konfigurasi/:dokumen` | GET/PUT konfigurasi bersama (`rekap-proposal`, `surat-tugas`, `tabel-pengguna`, `luaran-dosen`; disimpan di `Pengaturan` `cetak.*`) | admin, ketua |
@@ -231,7 +231,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   `proposal_revisi`, `reviewer_ditugaskan`, `review_selesai`, `laporan_diunggah`,
   `deletion_request`, `deletion_approved`, `deletion_cancelled`, `laporan_diajukan`,
   `laporan_disetujui`, `laporan_ditolak`, `laporan_revisi`, `password_direset` (notifikasi laporan memakai
-  `refType: "laporan"`).
+  `refType: "laporan"`). `Notification.kategori` = kolom turunan dari `type` (kegiatan|keputusan|review|admin, W-56);
+  `pengirimId` = user pemicu (`PengirimID` di `notification`, diisi `c.user.UserID` di semua pembuat notifikasi; NULL = sistem).
 - Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`, `kategori` dari awalan action lewat
   `kategoriLog` di `log_aktivitas.go`: auth|akun|proposal|review|laporan|dokumen|periode|template|luaran|backup|sistem);
   `LOGIN`, `LOGIN_GAGAL` (email terdaftar saja), `LOGOUT`, `LOGOUT_ALL` ikut dicatat.
@@ -257,7 +258,7 @@ ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
 `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
 `ReviewerTugasan`, `ProposalReview` (+ `danaDisetujui`), `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
-`Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `DokumenDeletionRequest` (permintaan hapus proposal/laporan:
+`Notification` (+ `kategori` turunan, `pengirimId`), `ActivityLog`, `PeriodeDeletionRequest`, `DokumenDeletionRequest` (permintaan hapus proposal/laporan:
 `kegiatanId` SET NULL setelah terhapus, salinan `judul`/`jenis`/`pengusulId`, `alasan`, `catatan`, status
 pending|approved|rejected|cancelled), `BackupLog`, `TemplateProposal` (versi template
 proposal: `jenis` umum|penelitian|pengabdian, `tahun`, blob, `isAktif` satu per jenis), `_prisma_migrations`.

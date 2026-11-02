@@ -52,7 +52,7 @@ func (s *Server) registerUserRoutes() {
 	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
 	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.
 	g.patch("/:id/roles", authorize("admin", "ketua_lppm"), validateBody(assignRoleSchema), s.assignRoles)
-	s.registerReviewerAksesRoutes(g) // baru: /:id/reviewer (GET, PATCH), /:id/reviewer/force-revoke
+	s.registerReviewerAksesRoutes(g)                                                                                    // baru: /:id/reviewer (GET, PATCH), /:id/reviewer/force-revoke
 	g.post("/:id/reset-password", authorize("admin"), validateBody(resetPasswordAdminSchema), s.resetPasswordOlehAdmin) // baru (W-52)
 	g.delete("/:id", authorize("admin"), s.deleteUser)
 }

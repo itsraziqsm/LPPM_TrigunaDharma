@@ -500,7 +500,7 @@ func (s *Server) forceRevokeReviewer(c *Ctx) error {
 			}
 			if exists == 0 {
 				if err := s.createNotification(ctx, tx, notification{
-					UserID: rid, Type: "reviewer_ditugaskan", Judul: "Tugas Review Baru",
+					UserID: rid, PengirimID: c.user.UserID, Type: "reviewer_ditugaskan", Judul: "Tugas Review Baru",
 					Pesan: "Anda ditugaskan untuk mereview " + label + ` "` + t.Str("judul") + `" (dialihkan oleh Ketua LPPM)`,
 					RefID: itemID, RefType: label,
 				}); err != nil {
