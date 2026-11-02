@@ -189,13 +189,20 @@ func (s *Server) loadLaporanKegiatan(ctx context.Context, detail bool, tail stri
 	}
 	if detail {
 		grouped, err := attachMany(ctx, s.db, items, "__proposalId", "anggota",
-			"SELECT a.`proposalId` AS `__k`,a.`id`,a.`peran`,a.`statusUndangan`,u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp` "+
+			"SELECT a.`proposalId` AS `__k`,a.`id`,a.`peran`,a.`statusUndangan`,u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp`,u.`nidn` AS `u_nidn`,u.`nim` AS `u_nim` "+
 				"FROM `ProposalAnggota` a JOIN `User` u ON u.`id` = a.`userId` WHERE a.`proposalId` IN (%s) ORDER BY a.`id` ASC")
 		if err != nil {
 			return nil, err
 		}
 		for _, list := range grouped {
 			nestColumns(list, "u_", "user")
+		}
+		lists := make([][]O, 0, len(grouped))
+		for _, list := range grouped {
+			lists = append(lists, list)
+		}
+		if err := attachAnggotaUserRoles(ctx, s.db, lists...); err != nil {
+			return nil, err
 		}
 	}
 	grouped, err := attachMany(ctx, s.db, items, "id", "reviewerTugasan",
@@ -567,30 +574,92 @@ func (s *Server) submitLaporanKegiatan(c *Ctx) error {
 	}
 	ctx := c.r.Context()
 	now := s.nowMs()
-	if err := s.updateKegiatan(ctx, s.db, l.ID, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
+	// Baru (W-55): reviewer laporan = reviewer proposal asal yang masih berperan reviewer.
+	reviewerIDs, err := s.reviewerProposalAsal(ctx, l)
+	if err != nil {
 		return err
+	}
+	status := "diajukan"
+	if len(reviewerIDs) > 0 {
+		status = "review"
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := s.updateKegiatan(ctx, tx, l.ID, "`status` = ?, `submittedAt` = ?, `updatedAt` = ?", status, now, now); err != nil {
+		return err
+	}
+	if len(reviewerIDs) > 0 {
+		args := make([]any, 0, len(reviewerIDs)*3)
+		for _, rid := range reviewerIDs {
+			args = append(args, l.ID, rid, now)
+		}
+		if _, err := tx.ExecContext(ctx, sqlb.InsertIgnoreRows("ReviewerTugasan", tugasanCols, len(reviewerIDs)), args...); err != nil {
+			return err
+		}
+		for _, rid := range reviewerIDs {
+			if err := s.createNotification(ctx, tx, notification{
+				UserID: rid, Type: "reviewer_ditugaskan", Judul: "Tugas Review Laporan",
+				Pesan: `Anda ditugaskan untuk mereview laporan "` + l.Judul + `"`,
+				RefID: l.ID, RefType: "laporan",
+			}); err != nil {
+				return err
+			}
+		}
 	}
 	ketua, err := s.ketuaUserIDs(ctx)
 	if err != nil {
 		return err
 	}
+	pesanKetua := `Laporan "` + l.Judul + `" telah diajukan dan menunggu penugasan reviewer`
+	if len(reviewerIDs) > 0 {
+		pesanKetua = `Laporan "` + l.Judul + `" telah diajukan dan otomatis ditugaskan ke reviewer proposal asal`
+	}
 	for _, uid := range ketua {
-		if err := s.createNotification(ctx, s.db, notification{
+		if err := s.createNotification(ctx, tx, notification{
 			UserID: uid, Type: "laporan_diajukan", Judul: "Laporan Diajukan",
-			Pesan: `Laporan "` + l.Judul + `" telah diajukan dan menunggu penugasan reviewer`,
-			RefID: l.ID, RefType: "laporan",
+			Pesan: pesanKetua, RefID: l.ID, RefType: "laporan",
 		}); err != nil {
 			return err
 		}
 	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	if err := s.logLaporan(ctx, c, l, "submit", `Laporan "`+l.Judul+`" diajukan`); err != nil {
 		return err
+	}
+	if len(reviewerIDs) > 0 {
+		if err := s.logLaporan(ctx, c, l, "reviewer.tugaskan", `Reviewer proposal asal otomatis ditugaskan ke laporan "`+l.Judul+`"`); err != nil {
+			return err
+		}
 	}
 	laporan, err := s.laporanResponse(ctx, l.ID, false)
 	if err != nil {
 		return err
 	}
 	return c.ok("Laporan berhasil diajukan", laporan)
+}
+
+// reviewerProposalAsal: reviewer yang ditugaskan di proposal asal laporan, masih berperan
+// reviewer & approved, dan bukan pengusul (W-55).
+func (s *Server) reviewerProposalAsal(ctx context.Context, l *laporanRow) ([]int64, error) {
+	rows, err := queryObjs(ctx, s.db,
+		"SELECT DISTINCT t.`reviewerId` FROM `ReviewerTugasan` t JOIN `User` u ON u.`id` = t.`reviewerId`"+
+			" WHERE t.`proposalId` = ? AND t.`reviewerId` <> ? AND u.`status` = 'approved'"+
+			" AND EXISTS (SELECT 1 FROM `UserRole` ur JOIN `Role` r ON r.`id` = ur.`roleId` WHERE ur.`userId` = u.`id` AND r.`name` = 'reviewer')"+
+			" ORDER BY t.`reviewerId`",
+		l.ProposalID, l.PengusulID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.Int64("reviewerId"))
+	}
+	return ids, nil
 }
 
 func (s *Server) deleteLaporanKegiatan(c *Ctx) error {

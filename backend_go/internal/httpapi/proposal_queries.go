@@ -100,13 +100,20 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 		anggotaCols += ",a.`statusUndangan`"
 	}
 	grouped, err := attachMany(ctx, q, items, "id", "anggota",
-		"SELECT a.`proposalId` AS `__k`,"+anggotaCols+",u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp` "+
+		"SELECT a.`proposalId` AS `__k`,"+anggotaCols+",u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`kontak` AS `u_kontak`,u.`noHp` AS `u_noHp`,u.`nidn` AS `u_nidn`,u.`nim` AS `u_nim` "+
 			"FROM `ProposalAnggota` a JOIN `User` u ON u.`id` = a.`userId` WHERE a.`proposalId` IN (%s) ORDER BY a.`id` ASC")
 	if err != nil {
 		return nil, err
 	}
 	for _, list := range grouped {
 		nestColumns(list, "u_", "user")
+	}
+	lists := make([][]O, 0, len(grouped))
+	for _, list := range grouped {
+		lists = append(lists, list)
+	}
+	if err := attachAnggotaUserRoles(ctx, q, lists...); err != nil {
+		return nil, err
 	}
 
 	tugasanCols := "t.`id`"

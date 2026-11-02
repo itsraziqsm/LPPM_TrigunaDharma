@@ -209,6 +209,10 @@ func (s *Server) deleteOwnAccount(c *Ctx) error {
 	if err != nil {
 		return err
 	}
+	// Baru (W-46): akun Ketua LPPM/STMIK tidak bisa dihapus sendiri; harus lewat Admin.
+	if hasAnyRole(roles, "ketua_lppm", "ketua_stmik") {
+		return httpError(http.StatusForbidden, "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin.")
+	}
 	if hasAnyRole(roles, "admin") {
 		others, err := countRows(ctx, s.db,
 			"SELECT COUNT(*) FROM `User` u JOIN `UserRole` ur ON ur.`userId` = u.`id` JOIN `Role` r ON r.`id` = ur.`roleId` WHERE r.`name` = 'admin' AND u.`status` = 'approved' AND u.`id` <> ?", uid)

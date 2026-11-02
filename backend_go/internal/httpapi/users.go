@@ -45,9 +45,9 @@ func (s *Server) registerUserRoutes() {
 	g.post("/profile/foto", multerImage("file"), s.uploadProfileFoto)              // baru (W-07)
 	g.delete("/profile/foto", s.deleteProfileFoto)                                 // baru (W-07)
 	g.patch("/profile/password", s.changePassword)
-	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(paginationSchema), s.getUsers)
+	g.get("/", authorize("admin", "ketua_lppm", "ketua_stmik"), s.validateQuery(paginationSchema), s.getUsers)
 	g.get("/kandidat-reviewer", authorize("admin", "ketua_lppm"), s.listKandidatReviewer) // baru, sebelum /:id
-	g.get("/:id", authorize("admin", "ketua_lppm"), s.getUser)
+	g.get("/:id", authorize("admin", "ketua_lppm", "ketua_stmik"), s.getUser)
 	g.patch("/:id/status", authorize("admin"), validateBody(updateUserStatusSchema), s.updateUserStatus)
 	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.
 	g.patch("/:id/roles", authorize("admin", "ketua_lppm"), validateBody(assignRoleSchema), s.assignRoles)
@@ -89,6 +89,31 @@ func attachUserRoles(ctx context.Context, q dbtx, users []O, idKey string) error
 			roles = []any{}
 		}
 		users[i].Set("roles", roles)
+	}
+	return nil
+}
+
+// attachAnggotaUserRoles menambah roles ke objek `user` bertingkat di tiap anggota (W-51).
+func attachAnggotaUserRoles(ctx context.Context, q dbtx, lists ...[]O) error {
+	users := []O{}
+	for _, list := range lists {
+		for _, a := range list {
+			if u, ok := a.Get("user").(O); ok {
+				users = append(users, u)
+			}
+		}
+	}
+	if err := attachUserRoles(ctx, q, users, "id"); err != nil {
+		return err
+	}
+	i := 0
+	for _, list := range lists {
+		for j := range list {
+			if _, ok := list[j].Get("user").(O); ok {
+				list[j].Set("user", users[i])
+				i++
+			}
+		}
 	}
 	return nil
 }

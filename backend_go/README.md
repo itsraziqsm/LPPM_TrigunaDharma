@@ -268,9 +268,14 @@ Hasil pemindaian, perbaikan per aturan gosec, versi dependensi, dan aturan untuk
 21. Akses anggota tim: dosen yang diundang (`pending`) boleh **membaca** seluruh proposal & file; semua
     anggota (pending/diterima) **hanya baca** — aksi tulis `/proposals/...` → 403 (Node: anggota diterima
     bisa menulis). Detail undangan + `aksesPenuh`. Lihat `new-api.md` bagian 27.
-22. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
+22. Kelompok kecil waiting list (lihat `new-api.md` bagian 28): `GET /users[/:id]` juga untuk `ketua_stmik`
+    (baca); `GET /luaran`, `/luaran/unduh-csv|zip` juga untuk `ketua_lppm`; `DELETE /users/profile/me` menolak
+    Ketua LPPM/STMIK (403); `GET /backup?status=dihapus`; `jumlahLaporanHarian` di
+    `/mahasiswa/laporan-harian/proposals`; `nidn`, `nim`, `roles` di `anggota[].user`; laporan yang diajukan
+    otomatis ditugaskan ke reviewer proposal asal (status langsung `review`).
+23. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
     klien sehingga perilaku 304 tidak berubah. Lihat `SECURITY.md`.
-23. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+24. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

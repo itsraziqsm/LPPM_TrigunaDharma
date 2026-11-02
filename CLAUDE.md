@@ -20,7 +20,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
 - `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -33,7 +33,7 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    `throw new Error()` → **HTTP 500** lewat `plainError`). Komentar `// Node: ...` di tiap
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
    Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
-   `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp` di `anggota[].user`
+   `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp`/`nidn`/`nim`/`roles` di `anggota[].user`
    dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`);
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
@@ -121,7 +121,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | Grup | Endpoint utama | Akses |
 |---|---|---|
 | `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
-| `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua; status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
+| `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password; Ketua LPPM/STMIK → 403), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua+ketua_stmik (W-45, baca); status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update, DELETE `/:id` (hapus langsung + password); `deletion-request` (+ approve/cancel) | baca: semua; create/update/DELETE: ketua; deletion-request: admin; approve: ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
@@ -130,10 +130,10 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ `GET /:id` detail untuk penerima: `aksesPenuh` → lengkap + `dokumenUtama` untuk dosen diundang/anggota diterima, selain itu ringkas; + PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
-| `/mahasiswa/laporan-harian` | proposals, `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
+| `/mahasiswa/laporan-harian` | proposals (+ `jumlahLaporanHarian` milik user), `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
 | `/reviewer/my-tugasan` | tugasan review **proposal** milik user | hanya peran reviewer (cek DB) |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
-| `/luaran` | `/jenis` (daftar jenis, jurnal & poster prioritas), `/stats` (+ `poster`), `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan); admin: `GET /` (semua luaran + filter), `/unduh-csv`, `/unduh-zip` (bukti + daftar-luaran.csv, maks 1000) | pengusul tulis; baca = akses proposal; admin unduh |
+| `/luaran` | `/jenis` (daftar jenis, jurnal & poster prioritas), `/stats` (+ `poster`), `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan); admin & Ketua LPPM (W-44): `GET /` (semua luaran + filter), `/unduh-csv`, `/unduh-zip` (bukti + daftar-luaran.csv, maks 1000) | pengusul tulis; baca = akses proposal; admin+ketua unduh |
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
@@ -142,7 +142,7 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/proposals/:id/deletion-request`, `/laporan/:id/deletion-request`, `/dokumen/deletion-request` | admin minta hapus dokumen yang sudah diajukan (`{password, alasan}`, GET = permintaan menunggu); daftar (`?status=&tipe=`); Ketua `/:requestId/approve` (`{password}`, hapus proposal + laporannya) / `/cancel` (admin batal, Ketua tolak) | admin / ketua |
 | `/monitoring` | `/ringkasan`, `/proposals` (`status`, `urut`, paginasi; + `tahapan`, `anggaran`, `laporan`), `/dosen` (dosen pengusul + perStatus/perJenis/anggaran); filter `periodeId`, `tahun`, `jenis`, `search`, `termasukDraft` (bawaan tanpa draft) | ketua_stmik, ketua, admin |
 | `/template-proposal` | `/aktif?jenis=` + `/aktif/unduh?jenis=` (**publik**, jatuh ke `umum`); list, POST multipart (file DOCX/PDF + `jenis`/`tahun`/`keterangan`, langsung aktif), `/:id/unduh`, `/:id/aktifkan`, DELETE `/:id` (aktif → 409) | publik / admin |
-| `/backup` | log (`?sumber=sistem\|admin&status=`), `/jadwal`, POST manual (202, latar; 409 bila ada yang berjalan), `/:id`, `/:id/download` (.sql.gz), DELETE `/:id` (hapus file, log tetap) | admin |
+| `/backup` | log (`?sumber=sistem\|admin&status=berjalan\|berhasil\|gagal\|dihapus`; berhasil = file masih ada), `/jadwal`, POST manual (202, latar; 409 bila ada yang berjalan), `/:id`, `/:id/download` (.sql.gz), DELETE `/:id` (hapus file, log tetap) | admin |
 
 ### Aturan bisnis penting
 - Status proposal: `draft → diajukan → review → revisi|disetujui|ditolak`.
@@ -182,11 +182,12 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   `luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `metodePenelitian` (khusus laporan
   penelitian); `kataKunci` laporan bisa diubah terpisah dari proposal. Status sama dengan proposal. Edit/upload saat
   `draft`/`revisi`; submit wajib `luaranTercapai` + dokumen (file/URL) dan menotifikasi semua
-  ketua; ketua/admin menugaskan reviewer (hanya `diajukan`/`review`, bukan pengusul) → `review`;
+  ketua; **submit otomatis menugaskan reviewer proposal asal** (masih berperan reviewer, approved, bukan pengusul) → status
+  `review` + notifikasi `reviewer_ditugaskan` (W-55; tanpa reviewer tersisa tetap `diajukan`); ketua/admin menugaskan reviewer (hanya `diajukan`/`review`, bukan pengusul) → `review`;
   reviewer simpan/finalisasi (hanya saat `review`); ketua/admin set status. Tugasan & review
   laporan memakai `ReviewerTugasan`/`ProposalReview` dengan `proposalId` = id laporan;
   `/reviewer/my-tugasan` menyaring hanya tipe proposal.
-- Hapus akun sendiri (`DELETE /users/profile/me`): bukan hapus fisik — status `rejected`,
+- Hapus akun sendiri (`DELETE /users/profile/me`; Ketua LPPM/STMIK ditolak 403, harus lewat Admin): bukan hapus fisik — status `rejected`,
   refresh token dicabut, profil dianonimkan ("Pengguna Dihapus", `deleted-<id>@deleted.invalid`),
   foto dihapus, undangan pending → ditolak, `deletedAt` diisi; admin terakhir tidak boleh.
 - Foto profil: JPG/PNG/WebP maks 2 MB (`multerImage`, magic bytes), blob di tabel `UserFoto`;
@@ -360,7 +361,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Menu per peran** (`Sidebar.jsx`; fitur yang tidak ada di menu = dicabut, route jatuh ke dashboard). Sidebar mendukung **3 tingkat**
   (`NavGroup` rekursif, `daunMenu` = tautan daun untuk rail ciut). **Ketua LPPM** (`KETUA_NAV_ITEMS`): Dashboard · Dokumen Masuk
   (Proposal/Laporan Kegiatan) · Periode · **Pengguna** · **Dokumentasi** (Cetak Dokumen, **Luaran** `/luaran-dosen` — backend GET /luaran &
-  unduhan masih khusus admin → 403 = ApiPending W-44). **Admin** (`ADMIN_NAV_ITEMS`): Dashboard · **Akademik** (Dokumen Masuk
+  unduhan kini terbuka untuk ketua_lppm (W-44 tersedia); penanda ApiPending di frontend tinggal dihapus). **Admin** (`ADMIN_NAV_ITEMS`): Dashboard · **Akademik** (Dokumen Masuk
   (`DOKUMEN_MASUK`), Periode lihat saja) · **Dokumentasi** (Manajemen Template, Cetak Dokumen) · Pengguna · Backup Data (Luaran &
   Pemantauan dicabut). **Pengguna** (`/users`, `UserManagementPage` judul "Manajemen Pengguna": kepala `KepalaMasuk` + panel cari kolom cari · Filter (Peran, Status akun) · Cari, "Filter aktif" hanya bila ada) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
   Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti per item; tombol Unduh CSV & ZIP
@@ -390,8 +391,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Cetak Laporan** (`pages/cetak/CetakRekapStmikPage.jsx`, `/cetak-laporan` — rute sama dengan mahasiswa, dipilih per peran; PDF
   `pages/cetak/rekapStmikPDF.js`: rekap kegiatan per periode (satu/semua, opsional daftar proposal), rekap tahunan (+ per jenis), rekap
   anggaran disetujui (filter tahun & jenis, + realisasi laporan); agregat dihitung di peramban), **Monitor Pengguna** (`/users` →
-  `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users belum untuk ketua_stmik → 403 = ApiPending
-  W-45). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
+  `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users kini terbuka untuk ketua_stmik (W-45 tersedia; penanda ApiPending di frontend tinggal dihapus). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
   Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
 - **Periode** (`PeriodePage`): kepala `KepalaStatus` (gaya Status Penelitian dosen; prop `aksi` = tombol Tambah Periode untuk Ketua; kartu Total Periode, Periode Aktif, Total Kegiatan).
   Daftar periode = **folder** (`components/FolderPeriode.jsx`: `FolderPeriode` tema terang — bidang atas navy (penelitian) /

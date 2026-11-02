@@ -31,6 +31,7 @@ API, dikelompokkan per rilis:
 - **Bagian 25** — Luaran prioritas **jurnal & poster** (jenis baru `poster`) + admin mengunduh luaran dosen (daftar, CSV, ZIP).
 - **Bagian 26** — Rumpun ilmu difokuskan ke **bidang komputer** (validasi di proposal & laporan, rumpun ilmu laporan bisa diubah).
 - **Bagian 27** — Dosen yang diundang bisa **membaca seluruh detail & file proposal** (tanpa ubah); semua anggota tim hanya baca.
+- **Bagian 28** — Kelompok kecil waiting list: W-43 (filter backup dihapus), W-44 (luaran untuk Ketua LPPM), W-45 (Monitor Pengguna Ketua STMIK), W-46 (Ketua tidak bisa hapus akun sendiri), W-49 (jumlah laporan harian), W-51 (NIDN/NIM/peran anggota), W-55 (reviewer laporan otomatis = reviewer proposal).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2296,3 +2297,99 @@ Endpoint `/dosen/proposals/:id` (ubah/ajukan/hapus) tetap khusus pengusul (pesan
   (`dokumenUtama.unduhUrl`), lalu Terima/Tolak. Hapus penanda `ApiPending` W-35 untuk dosen.
 - **Detail Kegiatan** (`KegiatanDetailPage.jsx`) untuk anggota: mode baca saja — sembunyikan tombol
   Lanjutkan/Ajukan/Hapus/Unggah lampiran/laporan kemajuan untuk non-pengusul (backend menolak 403).
+
+## 28. Kelompok kecil waiting list (W-43–46, W-49, W-51, W-55)
+
+Tanpa migrasi database. Semua perubahan bersifat menambah (field/akses baru); bentuk respons lama tetap.
+
+### W-43 — Filter backup "Dihapus"
+
+`GET /backup?status=` kini menerima `berjalan | berhasil | gagal | dihapus`.
+
+| `status` | Arti |
+|---|---|
+| `dihapus` | file backup sudah dihapus (`dihapusAt` terisi), apa pun status awalnya |
+| `berhasil` | backup berhasil **dan filenya masih ada** (`dihapusAt` null) — sebelumnya ikut menampilkan yang filenya sudah dihapus |
+| `berjalan`, `gagal` | sama seperti sebelumnya |
+
+Nilai lain → 422. Bentuk item log tidak berubah (`status` tetap `berhasil`; tandai "Dihapus" dari `dihapusAt`
+atau `fileTersedia: false`).
+
+### W-44 — Luaran dosen untuk Ketua LPPM
+
+`GET /luaran`, `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip` (bagian 25) kini boleh untuk **`admin` dan
+`ketua_lppm`** (sebelumnya admin saja). Parameter & bentuk respons sama. `GET /luaran/:id/bukti` sudah
+boleh untuk Ketua (akses baca proposal). Peran lain tetap 403.
+
+### W-45 — Monitor Pengguna untuk Ketua STMIK
+
+`GET /users` (daftar + filter + paginasi) dan `GET /users/:id` kini boleh untuk **`admin`, `ketua_lppm`,
+`ketua_stmik`**. Ketua STMIK hanya baca: ubah status/peran/reviewer, hapus, dan `GET /users/kandidat-reviewer`
+tetap 403.
+
+### W-46 — Ketua tidak bisa menghapus akun sendiri
+
+`DELETE /users/profile/me` untuk user yang punya peran `ketua_lppm` atau `ketua_stmik` (setelah password
+benar) → **403**:
+
+```json
+{ "success": false, "message": "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin." }
+```
+
+Urutan cek: validasi body (422) → password salah (400) → Ketua (403) → admin terakhir (400).
+
+### W-49 — Jumlah laporan harian per project
+
+Setiap item `GET /mahasiswa/laporan-harian/proposals` mendapat field baru di akhir:
+
+```json
+{ "anggotaId": 12, "peran": "anggota", "id": 855, "judul": "...", "jenis": "penelitian", "status": "disetujui",
+  "pengusul": { "id": 3, "name": "...", "fullName": "..." },
+  "periode": { "id": 1, "nama": "...", "tahun": 2026 },
+  "jumlahLaporanHarian": 4 }
+```
+
+`jumlahLaporanHarian` = jumlah laporan harian **milik mahasiswa yang login** di proposal itu (sama dengan
+panjang `GET /mahasiswa/laporan-harian/:proposalId`). Cetak Laporan cukup menyaring `jumlahLaporanHarian > 0`.
+
+### W-51 — NIDN, NIM, dan peran anggota
+
+`anggota[].user` di semua respons proposal (`GET /proposals[/:id]`, `/proposals/my`, `/dosen/proposals[/:id]`,
+`as-member`, dll.) dan detail laporan (`GET /laporan/:id`) kini:
+
+```json
+"user": { "id": 11, "name": "...", "fullName": "...", "email": "...", "kontak": null, "noHp": null,
+          "nidn": "0123456789", "nim": null, "roles": [ { "role": { "name": "dosen" } } ] }
+```
+
+`nidn`/`nim` `null` bila kosong; `roles` bentuknya sama dengan `GET /users` (bisa lebih dari satu peran,
+mis. dosen + reviewer). Frontend tidak perlu lagi memanggil `members/search` per anggota saat membuka draf.
+
+### W-55 — Reviewer laporan otomatis = reviewer proposal asal
+
+`POST /laporan/:id/submit`: setelah validasi lama lolos, backend mencari reviewer yang dulu ditugaskan di
+**proposal asal** (`ReviewerTugasan` dengan `proposalId` = proposal) yang **masih** berperan `reviewer`,
+berstatus `approved`, dan bukan pengusul.
+
+- **Ada** → semuanya ditugaskan ke laporan (tugasan yang sudah ada tidak digandakan), status laporan langsung
+  **`review`**, tiap reviewer mendapat notifikasi `reviewer_ditugaskan` (`refType: "laporan"`), dan Ketua
+  mendapat `laporan_diajukan` dengan pesan "… otomatis ditugaskan ke reviewer proposal asal". Activity log
+  `laporan_kegiatan.reviewer.tugaskan` ikut dicatat.
+- **Tidak ada** (mis. reviewer sudah dicabut perannya) → seperti sebelumnya: status `diajukan`, Ketua
+  menugaskan manual lewat `POST /laporan/:id/reviewers`.
+
+Respons tetap `"Laporan berhasil diajukan"` + objek laporan; periksa `status` dan `reviewerTugasan` untuk
+mengetahui apakah reviewer sudah ditugaskan. Ketua/Admin tetap bisa menambah atau menghapus reviewer
+laporan seperti biasa. Pengajuan ulang setelah `revisi` juga menugaskan ulang reviewer proposal (status
+kembali `review`).
+
+### Untuk frontend
+
+- Daftar Backup: aktifkan opsi filter **Dihapus** (`status=dihapus`).
+- Luaran Dosen & Cetak Dokumen › Luaran Dosen (Ketua LPPM), Monitor Pengguna (Ketua STMIK): hapus penanda
+  `ApiPending` W-44/W-45.
+- Cetak Laporan mahasiswa: pakai `jumlahLaporanHarian` (W-49), muat laporan hanya saat Cetak.
+- Usulan › Anggota: ambil jenis anggota & NIDN/NIM dari `anggota[].user` (W-51).
+- Laporan Kegiatan: dialog Tugaskan reviewer biasanya tidak diperlukan lagi bila status sudah `review`; tetap
+  tampilkan untuk laporan berstatus `diajukan` (W-55).
+

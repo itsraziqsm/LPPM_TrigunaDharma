@@ -28,7 +28,8 @@ func (s *Server) laporanHarianProposals(c *Ctx) error {
 	rows, err := queryObjs(ctx, s.db,
 		"SELECT a.`id` AS `anggotaId`, a.`peran`, p.`id`, p.`judul`, p.`jenis`, p.`status`,"+
 			" u.`id` AS `u_id`, u.`name` AS `u_name`, u.`fullName` AS `u_fullName`,"+
-			" pe.`id` AS `pe_id`, pe.`nama` AS `pe_nama`, pe.`tahun` AS `pe_tahun`"+
+			" pe.`id` AS `pe_id`, pe.`nama` AS `pe_nama`, pe.`tahun` AS `pe_tahun`,"+
+			" (SELECT COUNT(*) FROM `LaporanHarian` lh WHERE lh.`proposalId` = p.`id` AND lh.`userId` = a.`userId`) AS `jumlahLaporanHarian`"+
 			" FROM `ProposalAnggota` a JOIN `Proposal` p ON p.`id` = a.`proposalId` JOIN `User` u ON u.`id` = p.`pengusulId`"+
 			" LEFT JOIN `Periode` pe ON pe.`id` = p.`periodeId`"+
 			" WHERE a.`userId` = ? AND a.`statusUndangan` = 'diterima' ORDER BY a.`createdAt` DESC",

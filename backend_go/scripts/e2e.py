@@ -407,7 +407,8 @@ expect("delete dokumen", req("DELETE", f"/api/v1/proposals/dokumen/{did}", dosen
 # laporan harian
 b = expect("lh proposals", req("GET", "/api/v1/mahasiswa/laporan-harian/proposals", mhs1), 200, "Proposals fetched")
 x = [p for p in b["data"] if p["id"] == pid][0]
-check("lh proposals shape", list(x.keys()) == ["anggotaId", "peran", "id", "judul", "jenis", "status", "pengusul", "periode"], x)
+check("lh proposals shape", list(x.keys()) == ["anggotaId", "peran", "id", "judul", "jenis", "status", "pengusul", "periode", "jumlahLaporanHarian"], x)
+check("lh jumlahLaporanHarian (W-49)", isinstance(x["jumlahLaporanHarian"], int) and x["jumlahLaporanHarian"] >= 0, x)
 expect("lh forbidden role", req("GET", "/api/v1/mahasiswa/laporan-harian/proposals", dosen1), 403)
 expect("lh unknown path still 403", req("GET", "/api/v1/mahasiswa/laporan-harian/a/b/c", dosen1), 403)
 expect("lh not member", req("GET", f"/api/v1/mahasiswa/laporan-harian/{pid}", mhs2), 403, "Anda bukan anggota proposal ini")
@@ -460,7 +461,9 @@ check("laporan download by anggota", st == 200 and content == PDF, st)
 expect("laporan detail stranger", req("GET", f"/api/v1/laporan/{lapId}", dosen5), 403)
 expect("laporan assign before submit", req("POST", f"/api/v1/laporan/{lapId}/reviewers", ketua, {"reviewerIds": [rev1User["id"]]}), 400, "Laporan harus berstatus diajukan atau review untuk ditugaskan reviewer")
 b = expect("laporan submit", req("POST", f"/api/v1/laporan/{lapId}/submit", dosen1), 200, "Laporan berhasil diajukan")
-check("laporan diajukan", b["data"]["status"] == "diajukan" and b["data"]["submittedAt"] is not None, b["data"])
+check("laporan submit auto reviewer proposal (W-55)", b["data"]["status"] == "review" and b["data"]["submittedAt"] is not None and [t["reviewer"]["id"] for t in b["data"]["reviewerTugasan"]] == [rev1User["id"]], b["data"])
+n = req("GET", "/api/v1/notifications?limit=50", rev1)[1]["data"]
+check("rev1 notif laporan otomatis (W-55)", any(x["type"] == "reviewer_ditugaskan" and x["refId"] == lapId and x["refType"] == "laporan" for x in n), n[:3])
 check("tahapan seleksi lanjutan", tah() == "seleksi_lanjutan", tah())
 n = req("GET", "/api/v1/notifications?limit=50", ketua)[1]["data"]
 check("ketua laporan notif", any(x["type"] == "laporan_diajukan" and x["refId"] == lapId and x["refType"] == "laporan" for x in n), n[:3])
@@ -594,6 +597,7 @@ delId = b["data"]["id"]
 expect("approve for delete", req("PATCH", f"/api/v1/users/{delId}/status", admin, {"status": "approved"}), 200)
 st, b, *_ = req("POST", "/api/v1/auth/login", body={"email": delEmail, "password": "password123"})
 delTok, delRefresh = b["data"]["accessToken"], b["data"]["refreshToken"]
+expect("ketua hapus akun sendiri (W-46)", req("DELETE", "/api/v1/users/profile/me", ketua, {"password": "ketua123456"}), 403, "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin.")
 expect("delete account no password", req("DELETE", "/api/v1/users/profile/me", delTok, {}), 422)
 expect("delete account wrong password", req("DELETE", "/api/v1/users/profile/me", delTok, {"password": "salah12345"}), 400, "Password salah")
 expect("delete account", req("DELETE", "/api/v1/users/profile/me", delTok, {"password": "password123"}), 200, "Akun berhasil dihapus")
@@ -710,7 +714,7 @@ expect("kata kunci not array", req("PATCH", f"/api/v1/dosen/proposals/{kp['id']}
 b = expect("kata kunci clear", req("PATCH", f"/api/v1/dosen/proposals/{kp['id']}", dosen5, {"kataKunci": []}), 200)
 check("kata kunci empty array", b["data"]["kataKunci"] == [] and b["data"]["rumpunIlmu"] == "Teknik Informatika", b["data"])
 b = req("GET", f"/api/v1/proposals/{pid}", dosen1)[1]["data"]
-check("anggota user kontak", list(b["anggota"][0]["user"].keys()) == ["id", "name", "fullName", "email", "kontak", "noHp"] and "alamat" not in b["anggota"][0]["user"], b["anggota"][0])
+check("anggota user kontak", list(b["anggota"][0]["user"].keys()) == ["id", "name", "fullName", "email", "kontak", "noHp", "nidn", "nim", "roles"] and isinstance(b["anggota"][0]["user"]["roles"], list) and "alamat" not in b["anggota"][0]["user"], b["anggota"][0])
 expect("delete kata kunci proposal", req("DELETE", f"/api/v1/dosen/proposals/{kp['id']}", dosen5), 200)
 
 # ── W-26 detail mitra pengabdian ──
@@ -953,6 +957,10 @@ expect("backup 404", req("GET", "/api/v1/backup/999999", admin), 404, "Log backu
 b = expect("backup delete", req("DELETE", f"/api/v1/backup/{bk}", admin), 200, "File backup berhasil dihapus")
 check("backup deleted log kept", b["data"]["dihapusAt"] is not None and b["data"]["fileTersedia"] is False and b["data"]["dihapusOleh"]["id"] == adminUser["id"], b["data"])
 expect("backup download deleted", req("GET", f"/api/v1/backup/{bk}/download", admin), 410, "File backup sudah dihapus")
+b = req("GET", "/api/v1/backup?status=dihapus&limit=100", admin)[1]
+check("backup filter dihapus (W-43)", any(x["id"] == bk for x in b["data"]) and all(x["dihapusAt"] is not None for x in b["data"]), b["data"][:2])
+b = req("GET", "/api/v1/backup?status=berhasil&limit=100", admin)[1]
+check("backup filter berhasil tanpa dihapus (W-43)", all(x["id"] != bk and x["dihapusAt"] is None and x["status"] == "berhasil" for x in b["data"]), b["data"][:2])
 expect("backup delete again", req("DELETE", f"/api/v1/backup/{bk}", admin), 409, "File backup sudah dihapus")
 check("backup activity", any(x["action"] == "backup.manual" for x in req("GET", "/api/v1/activity-logs/my?limit=20", admin)[1]["data"]))
 
@@ -1102,7 +1110,10 @@ check("stmik role", [r["role"]["name"] for r in b["data"]["roles"]] == ["ketua_s
 stmik, _, stmikUser = login(em, "password123")
 check("stmik me roles", stmikUser["roles"] == ["ketua_stmik"], stmikUser)
 expect("stmik ketua tidak bisa beri role", req("PATCH", f"/api/v1/users/{sid}/roles", ketua, {"roles": ["ketua_stmik"]}), 403)
-expect("stmik users list forbidden", req("GET", "/api/v1/users", stmik), 403)
+b = expect("stmik users list (W-45)", req("GET", "/api/v1/users?limit=5", stmik), 200)
+expect("stmik user detail (W-45)", req("GET", f"/api/v1/users/{b['data'][0]['id']}", stmik), 200)
+expect("stmik ubah status user forbidden", req("PATCH", f"/api/v1/users/{sid}/status", stmik, {"status": "approved"}), 403)
+expect("stmik hapus akun sendiri (W-46)", req("DELETE", "/api/v1/users/profile/me", stmik, {"password": "password123"}), 403, "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin.")
 b = expect("stmik proposals list", req("GET", "/api/v1/proposals?limit=5", stmik), 200, "Proposals fetched")
 anyPid = b["data"][0]["id"]
 expect("stmik proposal detail", req("GET", f"/api/v1/proposals/{anyPid}", stmik), 200)
@@ -1155,7 +1166,9 @@ b = expect("luaran poster", req("POST", "/api/v1/luaran", dosen5, {"proposalId":
 check("luaran poster jenis", b["data"]["jenis"] == "poster", b["data"])
 req("POST", "/api/v1/luaran", dosen5, {"proposalId": pp, "jenis": "hki", "target": "Hak cipta"})
 expect("admin luaran dosen forbidden", req("GET", "/api/v1/luaran", dosen1), 403)
-expect("admin luaran ketua forbidden", req("GET", "/api/v1/luaran", ketua), 403)
+expect("luaran list ketua (W-44)", req("GET", "/api/v1/luaran?limit=5", ketua), 200, "Luaran fetched")
+st, _, hdrs, _ = req("GET", "/api/v1/luaran/unduh-csv", ketua)
+check("luaran csv ketua (W-44)", st == 200, st)
 b = expect("admin luaran list", req("GET", f"/api/v1/luaran?proposalId={pp}", admin), 200, "Luaran fetched")
 check("admin luaran prioritas dulu", [x["jenis"] for x in b["data"]] == ["poster", "hki"] and b["meta"]["total"] == 2, b["data"])
 it0 = b["data"][0]

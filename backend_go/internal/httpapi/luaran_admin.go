@@ -56,9 +56,9 @@ const luaranAdminSelect = "SELECT lk.`id`,lk.`jenis`,lk.`target`,lk.`targetTangg
 
 func (s *Server) registerLuaranAdminRoutes(g *mount) {
 	g.get("/jenis", s.luaranJenisList)
-	g.get("/", authorize("admin"), s.validateQuery(luaranAdminListSchema), s.luaranAdminList)
-	g.get("/unduh-csv", authorize("admin"), s.validateQuery(luaranAdminUnduhSchema), s.luaranAdminCSV)
-	g.get("/unduh-zip", authorize("admin"), s.validateQuery(luaranAdminUnduhSchema), s.luaranAdminZip)
+	g.get("/", authorize("admin", "ketua_lppm"), s.validateQuery(luaranAdminListSchema), s.luaranAdminList)
+	g.get("/unduh-csv", authorize("admin", "ketua_lppm"), s.validateQuery(luaranAdminUnduhSchema), s.luaranAdminCSV)
+	g.get("/unduh-zip", authorize("admin", "ketua_lppm"), s.validateQuery(luaranAdminUnduhSchema), s.luaranAdminZip)
 }
 
 func (s *Server) luaranJenisList(c *Ctx) error {

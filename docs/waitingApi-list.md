@@ -10,12 +10,18 @@ Node, API baru didokumentasikan di `backend_go/new-api.md`, lihat `CLAUDE.md`).
 
 ## API sudah tersedia — tinggal disambungkan di frontend
 
-Endpoint di bawah sudah ada di backend (`backend_go/new-api.md` bagian 16.5) tetapi **belum
+Endpoint di bawah sudah ada di backend (`backend_go/new-api.md`, bagian disebut per baris) tetapi **belum
 disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah disambungkan".
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
+| W-43 | Daftar Backup: opsi filter **Dihapus** | `GET /backup?status=dihapus` (`dihapusAt` terisi); `status=berhasil` kini hanya yang filenya masih ada (`new-api.md` bagian 28) | Aktifkan opsi "Dihapus", hapus `ApiPending`. |
+| W-44 | Luaran (Ketua LPPM, `/luaran-dosen`) + Cetak Dokumen › Luaran Dosen | `GET /luaran`, `/luaran/unduh-csv`, `/luaran/unduh-zip` kini `admin` + `ketua_lppm` (bagian 28) | Hapus penanda 403/`ApiPending`. |
+| W-45 | Monitor Pengguna (Ketua STMIK, `/users` baca saja) | `GET /users`, `GET /users/:id` kini juga `ketua_stmik`; tulis tetap 403 (bagian 28) | Hapus `ApiPending`. |
+| W-46 | Pengaturan › Zona Berbahaya (Ketua LPPM & Ketua STMIK) | `DELETE /users/profile/me` → 403 "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin." (bagian 28) | Tampilan sudah menyembunyikan formulir; cukup tampilkan pesan 403 bila muncul. |
+| W-49 | Cetak Laporan mahasiswa: jumlah laporan harian per project | Field `jumlahLaporanHarian` di tiap item `GET /mahasiswa/laporan-harian/proposals` (milik user login) (bagian 28) | Saring `> 0`, muat laporan hanya saat Cetak. |
+| W-51 | Usulan › langkah Anggota (NIDN/NIM, jenis anggota) | `anggota[].user` kini memuat `nidn`, `nim`, `roles` di semua respons proposal & detail laporan (bagian 28) | Hentikan `members/search` per anggota saat membuka draf. |
+| W-55 | Laporan Kegiatan › Tugaskan reviewer | `POST /laporan/:id/submit` otomatis menugaskan reviewer proposal asal (masih berperan reviewer) → status `review`; bila tidak ada tetap `diajukan` (bagian 28) | Dialog Tugaskan hanya perlu untuk laporan `diajukan`; centang otomatis boleh tetap. |
 
 ### Sudah disambungkan
 
@@ -145,9 +151,7 @@ Data yang **sudah** tersambung ke API yang ada:
 
 Data yang **menunggu API**:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-46 | Zona Berbahaya › Hapus akun: **Ketua LPPM & Ketua STMIK tidak bisa menghapus akun sendiri** (frontend menyembunyikan formulir, diganti keterangan "Hubungi Admin") | Larangan juga ditegakkan di server | `DELETE /users/profile/me`: bila user punya peran `ketua_lppm` atau `ketua_stmik` → tolak (mis. `403` / `400` "Akun Ketua LPPM/STMIK tidak dapat dihapus sendiri"), di samping cek "admin terakhir" yang sudah ada (`profil_akun.go`) | Sekarang hanya dicegah di tampilan; permintaan langsung ke API masih berhasil. Admin tetap bisa menghapus/menonaktifkan lewat Manajemen Pengguna. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Manajemen User → Penugasan Review (`frontend/src/pages/UserManagementPage.jsx`)
 
@@ -190,9 +194,7 @@ frontend dari `dihapusAt` (backup tetap `status: berhasil` di backend).
 
 Data yang **menunggu API**:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-43 | Opsi filter status **Dihapus** di Daftar Backup (sekarang nonaktif, "API belum ada") | Saring backup yang filenya sudah dihapus; sebaliknya "Berhasil" sebaiknya hanya yang filenya masih ada | `GET /backup?status=dihapus` (= `dihapusAt IS NOT NULL`); `status=berhasil` → `dihapusAt IS NULL`. Alternatif: parameter `fileTersedia=true\|false`. Opsional: field turunan `status: "dihapus"` di respons log | Tanpa ini filter "Berhasil" ikut menampilkan backup yang filenya sudah dihapus. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Hak akses menu per peran (perubahan menu Oktober 2026)
 
@@ -203,10 +205,7 @@ Periode), Statistik, Cetak Laporan, **Monitor Pengguna**;
 Dosen = Kegiatan, Arsip Kegiatan, Luaran, Undangan, Penugasan Review; Mahasiswa = Project Saya, Arsip Project, Undangan,
 Cetak Laporan. Dua fitur memindahkan akses ke peran yang belum diizinkan backend:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-44 | **Luaran** (Ketua LPPM › Dokumentasi › Luaran, `/luaran-dosen`) dan kartu **Luaran Dosen** di Cetak Dokumen Ketua | Daftar semua luaran + unduh CSV/ZIP untuk Ketua LPPM | Tambah `ketua_lppm` ke `authorize(...)` pada `GET /luaran`, `GET /luaran/unduh-csv`, `GET /luaran/unduh-zip` (`luaran_admin.go`); `GET /luaran/:id/bukti` juga harus boleh untuk ketua | Sekarang 403 → halaman menampilkan "API belum ada". Admin tidak lagi punya menu Luaran. |
-| W-45 | **Monitor Pengguna** (Ketua STMIK, `/users`, tampilan Pengguna mode baca) | Daftar & detail pengguna (baca saja) | Tambah `ketua_stmik` ke `authorize(...)` pada `GET /users` dan `GET /users/:id` (`users.go`); tulis tetap admin/ketua | Sekarang 403 → "API belum ada". Tanpa aksi ubah status/peran/hapus. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Registrasi — satu identitas satu pendaftaran (`frontend/src/pages/RegisterPage.jsx`, `/register`)
 
@@ -240,9 +239,7 @@ Sekarang memakai "SOP Frontend": riwayat disimpan di `localStorage` per user (`u
 Cetak Laporan mahasiswa hanya menampilkan project yang punya ≥ 1 laporan harian. Karena daftar project tidak memuat jumlahnya,
 frontend memanggil `GET /mahasiswa/laporan-harian/:proposalId` untuk **setiap** project (data dipakai ulang saat cetak). Opsional:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-49 | Cetak Laporan mahasiswa (`/cetak-laporan`): daftar project siap cetak + "N laporan harian" | Jumlah laporan harian milik mahasiswa per project | Tambah field `jumlahLaporanHarian` (COUNT `LaporanHarian` per proposal untuk user yang login) di tiap item `GET /mahasiswa/laporan-harian/proposals` | Opsional (prioritas rendah). Setelah ada, frontend cukup satu permintaan untuk daftar dan memuat laporan hanya saat Cetak. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Kontak admin (tombol Alat › Hubungi Admin)
 
@@ -261,9 +258,7 @@ tanpa `nim`, `nidn`, dan peran. Akibatnya, saat draf dibuka lagi, wizard Usulan 
 terbaca dosen sehingga aturan komposisi tim gagal). **Sudah ditangani di frontend**: tiap anggota dilengkapi lewat
 `GET /dosen/proposals/members/search?q=<email>` (mengirim `nim`, `nidn`, `roles`) lalu dicocokkan dengan `id`. Usulan perbaikan di API:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-51 | Usulan (ubah draf/revisi) › langkah Anggota: panel Ketentuan tim, kolom NIDN/NIM | `nim`, `nidn`, dan peran tiap anggota | Tambah `u.nidn`, `u.nim` (+ `roles` lewat `attachUserRoles`) pada query anggota di `proposal_queries.go` (dan `laporan_kegiatan.go`) | Menghapus 1 permintaan pencarian per anggota saat membuka draf; anggota yang akunnya tidak lagi `approved` tidak muncul di pencarian sehingga tetap terbaca dosen sampai W-51 ada. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Reset password oleh Admin (Manajemen Pengguna)
 
@@ -297,7 +292,6 @@ tidak terlihat Ketua. Kolom lama `nilaiRelevansi/Metodologi/Anggaran/Luaran` tid
 | ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
 |---|---|---|---|---|
 | W-54 | Form Penilaian: skor per komponen + catatan singkat, dana disetujui; ringkasan di Detail (reviewer) & Hasil review (Ketua/pengusul) | Skor 1–5 per komponen, catatan singkat, dana disetujui per review | Tabel `ReviewSkor` (`reviewId` FK `ProposalReview` CASCADE, `kode` VARCHAR(40), `skor` TINYINT 1–5, `catatan` VARCHAR(200), unik `reviewId+kode`); kolom `ProposalReview.danaDisetujui` DECIMAL(15,2) NULL. `POST /proposals/:id/reviews` & `/laporan/:id/reviews` menerima `skor: [{kode, skor, catatan?}]` + `danaDisetujui` (proposal saja; 400 bila > `anggaran` atau < 0); respons review (+ `myReview` di tugasan, `GET /proposals/:id/reviews`) mengirim `skor`, `totalSkor`, `rataSkor`, `danaDisetujui`. `/finalize` menolak (400) bila skor belum lengkap, `rekomendasi` kosong, atau `danaDisetujui` kosong pada proposal (`ditolak` → 0). Opsional: rubrik di master (`GET /master/rubrik-review?jenis=&tipe=` → `[{kode,label,urutan}]`) agar pengabdian & laporan punya komponen sendiri | Kode komponen frontend: `judul`, `relevansi`, `latar`, `kebaruan`, `pustaka`, `konsistensi`, `kelayakan`. **Keputusan pendanaan**: bila reviewer > 1, perlu aturan dana final (rata-rata / terendah / dipilih Ketua) dan kolom `anggaranDisetujui` di proposal agar Statistik, Rekap anggaran & Surat Tugas memakai dana disetujui (sekarang memakai `anggaran` usulan). |
-| W-55 | Laporan Kegiatan › Tugaskan reviewer | Reviewer laporan = reviewer proposal asal (hasil UAT) | Saat laporan **diajukan** (`POST /laporan/:id/submit`), salin `ReviewerTugasan` proposal asal (`proposalId`) yang masih berperan `reviewer` ke laporan, set status `review`, notifikasi `reviewer_ditugaskan`; bila tidak ada → tetap `diajukan` (Ketua menugaskan manual) | Sementara frontend: dialog Tugaskan reviewer laporan otomatis mencentang & menaruh paling atas reviewer proposal asal (lencana "Reviewer proposal"), Ketua cukup klik Tugaskan. |
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

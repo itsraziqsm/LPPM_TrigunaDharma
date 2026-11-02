@@ -37,7 +37,7 @@ var backupListQuerySchema = zObj(
 	withDefault("page", zNum().Coerce().Int().Min(1), float64(1)),
 	withDefault("limit", zNum().Coerce().Int().Min(1).Max(100), float64(10)),
 	optional("sumber", zEnumOf("sistem", "admin")),
-	optional("status", zEnumOf("berjalan", "berhasil", "gagal")),
+	optional("status", zEnumOf("berjalan", "berhasil", "gagal", "dihapus")),
 )
 
 func (s *Server) registerBackupRoutes() {
@@ -327,11 +327,21 @@ func (s *Server) listBackup(c *Ctx) error {
 	page, limit := q["page"].(float64), q["limit"].(float64)
 	where := []string{}
 	args := []any{}
-	for _, f := range []string{"sumber", "status"} {
-		if v, ok := q[f].(string); ok {
-			where = append(where, "b.`"+f+"` = ?")
-			args = append(args, v)
-		}
+	if v, ok := q["sumber"].(string); ok {
+		where = append(where, "b.`sumber` = ?")
+		args = append(args, v)
+	}
+	// status=dihapus (W-43): file sudah dihapus; status=berhasil hanya yang filenya masih ada.
+	switch v, _ := q["status"].(string); v {
+	case "":
+	case "dihapus":
+		where = append(where, "b.`dihapusAt` IS NOT NULL")
+	case "berhasil":
+		where = append(where, "b.`status` = ? AND b.`dihapusAt` IS NULL")
+		args = append(args, v)
+	default:
+		where = append(where, "b.`status` = ?")
+		args = append(args, v)
 	}
 	cond := ""
 	if len(where) > 0 {
