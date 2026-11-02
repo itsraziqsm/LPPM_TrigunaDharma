@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, CalendarDays, Clock, Trash2, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, CalendarDays, Clock, Tags, Trash2, UserRound } from 'lucide-react'
 import { notificationApi } from '../api/notification'
 import { proposalApi } from '../api/proposal'
 import { laporanApi } from '../api/laporan'
@@ -9,7 +9,7 @@ import { periodeApi } from '../api/periode'
 import useAuthStore from '../store/authStore'
 import { confirmDialog } from '../utils/dialog'
 import { notifyNotificationsChanged } from '../utils/notificationEvents'
-import { DEFAULT_META, TYPE_META, getRoleNames, pengirimFor, targetFor } from '../utils/notifikasi'
+import { DEFAULT_META, TYPE_META, getRoleNames, kategoriNotif, pengirimFor, targetFor } from '../utils/notifikasi'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 import { timeAgo } from './dashboard/format'
 
@@ -255,6 +255,7 @@ export default function NotifikasiDetailPage() {
               <Row icon={UserRound} label="Dari">
                 {relatedState === 'loading' && ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'].includes(notif.type) ? '…' : pengirim}
               </Row>
+              <Row icon={Tags} label="Kategori">{kategoriNotif(notif).label}</Row>
               <Row icon={CalendarDays} label="Tanggal">{tanggalPanjang(notif.createdAt)}</Row>
               <Row icon={Clock} label="Waktu">{jam(notif.createdAt)}</Row>
             </dl>

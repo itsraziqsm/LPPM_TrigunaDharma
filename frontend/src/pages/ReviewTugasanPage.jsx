@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import LaporanTugasan from './laporan/LaporanTugasan'
 import { reviewerApi } from '../api/reviewer'
 import Breadcrumb from '../components/Breadcrumb'
+import { EVENT_TUGASAN, hitungTugasanReview } from '../utils/tugasanReview'
 import { FileText } from 'lucide-react'
 
 // Penugasan Review: daftar tugasan; detail & form penilaian di halaman sendiri
@@ -147,11 +148,19 @@ export default function ReviewTugasanPage() {
   useEffect(() => { fetchTugasan() }, [fetchTugasan])
 
   const totalPages = Math.ceil(total / limit)
-  const selesai = tugasan.filter(t => t.myReview?.isDone).length
-  const belum = tugasan.filter(t => !t.myReview?.isDone).length
-  // Ringkasan tab Laporan dilaporkan oleh LaporanTugasan (onRingkasan).
-  const [ringkasanLaporan, setRingkasanLaporan] = useState(null)
-  const ringkasan = tab === 'laporan' ? ringkasanLaporan : loading ? null : { total, belum, selesai }
+  // Ringkasan per tab dari SEMUA halaman tugasan (utils/tugasanReview.js); dihitung ulang saat review diselesaikan.
+  const [hitung, setHitung] = useState(null)
+  useEffect(() => {
+    let alive = true
+    const muat = () => hitungTugasanReview().then((h) => alive && setHitung(h))
+    muat()
+    window.addEventListener(EVENT_TUGASAN, muat)
+    return () => {
+      alive = false
+      window.removeEventListener(EVENT_TUGASAN, muat)
+    }
+  }, [])
+  const ringkasan = hitung ? hitung[tab] : null
 
   return (
     <div className="page space-y-6">
@@ -170,12 +179,12 @@ export default function ReviewTugasanPage() {
         <dl className="grid shrink-0 grid-cols-3 gap-3 lg:w-[30rem]">
           {[
             { label: 'Total Penugasan', value: ringkasan?.total },
-            { label: 'Belum Selesai', value: ringkasan?.belum },
+            { label: 'Belum Selesai', value: ringkasan?.belum, sorot: ringkasan?.belum > 0 },
             { label: 'Selesai Direview', value: ringkasan?.selesai },
           ].map((k) => (
-            <div key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <dt className="text-xs font-medium text-slate-500 sm:text-sm">{k.label}</dt>
-              <dd className="mt-1 font-serif text-2xl font-medium text-navy-950 tabular-nums">{k.value ?? '—'}</dd>
+            <div key={k.label} className={`rounded-lg border px-4 py-3 ${k.sorot ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
+              <dt className={`text-xs font-medium sm:text-sm ${k.sorot ? 'text-amber-800' : 'text-slate-500'}`}>{k.label}</dt>
+              <dd className={`mt-1 font-serif text-2xl font-medium tabular-nums ${k.sorot ? 'text-amber-900' : 'text-navy-950'}`}>{k.value ?? '—'}</dd>
             </div>
           ))}
         </dl>
@@ -196,13 +205,21 @@ export default function ReviewTugasanPage() {
               tab === key ? 'border-navy-800 bg-white text-navy-950 shadow-[0_-1px_0_0_theme(colors.slate.200),1px_0_0_0_theme(colors.slate.200),-1px_0_0_0_theme(colors.slate.200)]' : 'border-transparent text-slate-500 hover:border-slate-300 hover:bg-white/60 hover:text-navy-900'
             }`}
           >
-            {label}
+            <span className="flex items-center gap-2">
+              {label}
+              {hitung?.[key]?.belum > 0 ? (
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail" title={`${hitung[key].belum} belum selesai`}>
+                  {hitung[key].belum}
+                  <span className="sr-only"> belum selesai</span>
+                </span>
+              ) : null}
+            </span>
           </button>
         ))}
       </div>
 
       {tab === 'laporan' ? (
-        <LaporanTugasan onRingkasan={setRingkasanLaporan} />
+        <LaporanTugasan />
       ) : (
         <>
       {/* Daftar penugasan — ganti halaman: daftar lama tetap tampil pudar (tanpa kedip). */}

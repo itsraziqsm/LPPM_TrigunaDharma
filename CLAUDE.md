@@ -517,8 +517,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   laporan periode lama dilihat di **Periode** → panel periode (`periode/ProposalPanel.jsx`) tab **Laporan**
   (bawaan Disetujui, klik → `/laporan-masuk?id=`); panel `?id=`: tugaskan reviewer, keputusan status; status `disetujui` final,
   form keputusan disembunyikan — sama dengan tombol Ubah Status di `ProposalPage` yang nonaktif), reviewer di tab
-  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). **Penugasan Review** hanya daftar (kepala = judul lalu satu kartu ringkasan teks + 3 kotak Total/Belum Selesai/Selesai, sama
-  dengan Undangan; angka per tab, tab Laporan lewat `LaporanTugasan onRingkasan`); tombol
+  Laporan `ReviewTugasanPage` (`?tab=laporan`, `pages/laporan/LaporanTugasan.jsx`). **Penugasan Review** hanya daftar (kepala = judul lalu satu kartu ringkasan teks + 3 kotak Total/Belum Selesai (disorot amber bila > 0)/Selesai,
+  sama dengan Undangan; angka per tab dari **semua halaman** tugasan lewat `utils/tugasanReview.js` `hitungTugasanReview` — belum = review belum final pada
+  item `diajukan`/`review`; tab Proposal/Laporan diberi lencana jumlah belum selesai; menu sidebar **Penugasan Review** diberi lencana total belum selesai
+  (`badge: 'review'`), dihitung ulang lewat event `segarkanTugasanReview()` saat review diselesaikan); tombol
   Mulai/Lanjutkan/Lihat & Nilai membuka halaman detail di `src/pages/review/`: `ReviewProposalPage` (`/proposals/detail/:id`:
   abstrak, info, mitra, target luaran, lampiran `readOnly`, dokumen utama, tim, riwayat + form) dan `ReviewLaporanPage`
   (`/laporan-masuk/detail/:id`: isi laporan, dokumen, capaian luaran + form; terkunci bila laporan bukan `review`); form
@@ -588,7 +590,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   judul, status, pengusul, periode, tanggal, catatan revisi), panel Informasi (Dari = `pengirimFor`, karena backend
   tidak menyimpan pengirim; tanggal & waktu WIB), Hapus. Helper bersama di `src/utils/notifikasi.js`
   (`TYPE_META`, `targetFor`, `pengirimFor`).
-- `/notifikasi` (`NotifikasiPage.jsx`): daftar per rentang waktu, filter Semua/Belum dibaca,
+- `/notifikasi` (`NotifikasiPage.jsx`): daftar per rentang waktu, filter Semua/Belum dibaca + **Kategori** menurut pengirim/jenis kegiatan
+  (`utils/notifikasi.js` `KATEGORI_NOTIF`/`kategoriNotif`: Kegiatan · Keputusan LPPM · Review · Admin & sistem; kategori dipilih → hingga 500 terbaru
+  dimuat lalu disaring di peramban, ApiPending W-56), tiap item + label kategori & "dari <pengirim>" (`pengirimFor`; lonceng & detail ikut menampilkan kategori),
   tandai dibaca/semua, hapus, muat lebih banyak, tautan ke halaman terkait sesuai peran
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.
   Lonceng & halaman disinkronkan lewat `src/utils/notificationEvents.js`; jumlah belum dibaca

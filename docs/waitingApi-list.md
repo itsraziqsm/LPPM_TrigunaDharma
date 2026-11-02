@@ -287,6 +287,17 @@ tidak terlihat Ketua. Kolom lama `nilaiRelevansi/Metodologi/Anggaran/Luaran` tid
 
 Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
+## Kategori & pengirim notifikasi (`/notifikasi`, lonceng)
+
+Notifikasi kini punya filter **Kategori** di frontend (`utils/notifikasi.js` `KATEGORI_NOTIF`): Kegiatan (pengusul: diajukan/diunggah),
+Keputusan LPPM (disetujui/ditolak/revisi), Review (penugasan & hasil review), Admin & sistem (hapus dokumen/periode, reset password,
+lainnya). Kategori & "dari" diturunkan dari `type` karena backend tidak menyimpannya; saat kategori dipilih, frontend memuat hingga
+500 notifikasi terbaru lalu menyaring di peramban (paginasi tidak tersedia untuk kategori).
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-56 | Notifikasi: filter Kategori, label "dari <pengirim>", jumlah per kategori | Kategori & pengirim per notifikasi, filter & hitung di server | Kolom `Notification.kategori` (ENUM `kegiatan`, `keputusan`, `review`, `admin`, diisi `createNotification` dari `type`; backfill) + `pengirimId` (FK `User`, NULL = sistem) diisi user yang memicu aksi; `GET /notifications?kategori=` (+ `meta.total` sesuai filter) dan `GET /notifications/ringkasan` → `{ belumDibaca, perKategori: { kegiatan: { total, belumDibaca }, … } }`; respons item + `kategori`, `pengirim: { id, name, fullName }` | Frontend memakai pemetaan `type` sampai field ini ada. Opsional: notifikasi revisi/keputusan juga ke anggota tim, dan email untuk keputusan. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

@@ -6,6 +6,7 @@ import { notificationApi } from '../api/notification'
 import { Bell, X } from 'lucide-react'
 import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
 import { timeAgo } from '../pages/dashboard/format'
+import { kategoriNotif } from '../utils/notifikasi'
 
 const DROPDOWN_WIDTH = 320
 
@@ -161,7 +162,10 @@ export default function NotificationBell() {
                                         {n.judul}
                                     </p>
                                     <p className="mt-0.5 text-xs text-slate-500 leading-relaxed line-clamp-2">{n.pesan}</p>
-                                    <p className="mt-1 text-xs text-slate-400">{timeAgo(n.createdAt)}</p>
+                                    <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-400">
+                                      <span className="rounded bg-slate-100 px-1 py-px font-medium text-slate-600">{kategoriNotif(n).label}</span>
+                                      {timeAgo(n.createdAt)}
+                                    </p>
                                 </div>
                                 <button
                                     onClick={(e) => handleDelete(n.id, e)}

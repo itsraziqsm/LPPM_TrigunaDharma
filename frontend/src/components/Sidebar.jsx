@@ -9,6 +9,7 @@ import UserAvatar from './UserAvatar'
 import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
 import { Archive, Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
+import { EVENT_TUGASAN, hitungTugasanReview } from '../utils/tugasanReview'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -157,7 +158,7 @@ const MAHASISWA_NAV_ITEMS = [
 
 const REVIEWER_NAV_ITEMS = [
   {
-    path: '/penugasan', label: 'Penugasan Review', icon: (
+    path: '/penugasan', label: 'Penugasan Review', badge: 'review', icon: (
       <ClipboardCheck className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
     )
   },
@@ -276,6 +277,8 @@ export default function Sidebar() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const [pendingCount, setPendingCount] = useState(0)
+  // Review belum selesai (proposal + laporan) → lencana menu Penugasan Review.
+  const [reviewBelum, setReviewBelum] = useState(0)
   const [mobileOpen, setMobileOpen] = useState(false)
   // Bilah atas ponsel melayang (pil semi transparan ala iOS) setelah wadah gulir halaman digulir.
   const [melayang, setMelayang] = useState(false)
@@ -346,6 +349,20 @@ export default function Sidebar() {
     window.addEventListener('invitation-badge-refresh', fetchCount)
     return () => window.removeEventListener('invitation-badge-refresh', fetchCount)
   }, [isDosenOrMahasiswa])
+
+  useEffect(() => {
+    if (!isReviewer) return undefined
+    let alive = true
+    const hitung = () => hitungTugasanReview().then((h) => alive && setReviewBelum(h.belum))
+    hitung()
+    window.addEventListener(EVENT_TUGASAN, hitung)
+    return () => {
+      alive = false
+      window.removeEventListener(EVENT_TUGASAN, hitung)
+    }
+  }, [isReviewer])
+  // badge: true = undangan menunggu; 'review' = review belum selesai.
+  const jumlahLencana = (item) => (item.badge === 'review' ? reviewBelum : item.badge ? pendingCount : 0)
 
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -464,9 +481,12 @@ export default function Sidebar() {
                   {item.label}
                 </span>
 
-                {item.badge && pendingCount > 0 && (
-                  <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail">
-                    {pendingCount}
+                {jumlahLencana(item) > 0 && (
+                  <span
+                    className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail"
+                    title={item.badge === 'review' ? `${jumlahLencana(item)} review belum selesai` : `${jumlahLencana(item)} undangan menunggu`}
+                  >
+                    {jumlahLencana(item)}
                   </span>
                 )}
               </NavLink>
@@ -491,7 +511,7 @@ export default function Sidebar() {
                     className={railItemClass}
                   >
                     {item.icon}
-                    {item.badge && pendingCount > 0 && (
+                    {jumlahLencana(item) > 0 && (
                       <span className="absolute right-1 top-1 size-2 rounded-full bg-brass-400 ring-2 ring-rail-soft" aria-hidden="true" />
                     )}
                   </NavLink>

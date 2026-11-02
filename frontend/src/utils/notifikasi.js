@@ -5,6 +5,7 @@ import {
   CircleX,
   ClipboardCheck,
   FileUp,
+  KeyRound,
   PencilLine,
   Send,
   Trash2,
@@ -31,7 +32,21 @@ export const TYPE_META = {
   deletion_request: { icon: Trash2, tone: 'bg-red-50 text-red-700', label: 'Permintaan hapus' },
   deletion_approved: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan disetujui' },
   deletion_cancelled: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan ditolak/dibatalkan' },
+  password_direset: { icon: KeyRound, tone: 'bg-amber-50 text-amber-700', label: 'Password direset' },
 }
+
+// Kategori notifikasi menurut pengirim & jenis kegiatannya (backend belum menyimpan kategori/pengirim — W-56):
+//   kegiatan  = aktivitas pengusul (proposal/laporan diajukan, laporan diunggah)
+//   keputusan = keputusan LPPM (Ketua/Admin) atas proposal & laporan
+//   review    = penugasan & hasil review (reviewer)
+//   admin     = tindakan Admin/Ketua atas data & akun (hapus dokumen/periode, reset password), juga jenis lain
+export const KATEGORI_NOTIF = [
+  { key: 'kegiatan', label: 'Kegiatan', types: ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'] },
+  { key: 'keputusan', label: 'Keputusan LPPM', types: ['proposal_disetujui', 'proposal_ditolak', 'proposal_revisi', 'laporan_disetujui', 'laporan_ditolak', 'laporan_revisi'] },
+  { key: 'review', label: 'Review', types: ['reviewer_ditugaskan', 'review_selesai'] },
+  { key: 'admin', label: 'Admin & sistem', types: [] },
+]
+export const kategoriNotif = (n) => KATEGORI_NOTIF.find((k) => k.types.includes(n?.type)) || KATEGORI_NOTIF[3]
 export const DEFAULT_META = { icon: Bell, tone: 'bg-slate-100 text-slate-600', label: 'Notifikasi' }
 
 export function getRoleNames(roles) {
@@ -48,6 +63,8 @@ export function pengirimFor(n, related) {
   if (n.type === 'review_selesai') return 'Reviewer'
   if (n.type === 'deletion_request') return 'Admin LPPM'
   if (n.type?.startsWith('deletion_')) return 'Ketua LPPM'
+  if (n.type === 'password_direset') return 'Admin LPPM'
+  if (n.type === 'reviewer_ditugaskan' && n.refType === 'laporan') return 'Sistem (reviewer proposal)'
   return 'LPPM (Ketua/Admin)'
 }
 

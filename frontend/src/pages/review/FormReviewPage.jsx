@@ -13,6 +13,7 @@ import { KOMPONEN, REKOMENDASI, SKOR, angkaId, bacaDraf, hapusDraf, hitungSkor, 
 import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { danaFinal } from '../../utils/danaKegiatan'
 import { cariTugasan } from './cariTugasan'
+import { segarkanTugasanReview } from '../../utils/tugasanReview'
 
 // ---------------------------------------------------------------------------
 // Form Penilaian Reviewer — halaman sendiri (/penugasan/nilai/proposal|laporan/:id), mengikuti
@@ -226,6 +227,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
       const r = await src.final(id)
       setState((s) => ({ ...s, review: { ...(s.review || {}), ...payload(), ...(r.data?.data || {}), isDone: true } }))
       setMsg({ ok: true, text: 'Review telah diselesaikan.' })
+      segarkanTugasanReview()
     } catch (e) {
       setMsg({ ok: false, text: formEl('Gagal menyelesaikan review.')(e) })
     } finally {

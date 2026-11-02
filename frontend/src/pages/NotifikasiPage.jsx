@@ -7,14 +7,17 @@ import { notificationApi } from '../api/notification'
 import useAuthStore from '../store/authStore'
 import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
 import { daysSince, formatDate, timeAgo } from './dashboard/format'
-import { DEFAULT_META, TYPE_META, getRoleNames, targetFor } from '../utils/notifikasi'
+import { DEFAULT_META, KATEGORI_NOTIF, TYPE_META, getRoleNames, kategoriNotif, pengirimFor, targetFor } from '../utils/notifikasi'
+import { semuaHalaman } from '../utils/semuaHalaman'
 
 // ---------------------------------------------------------------------------
 // Halaman Notifikasi (/notifikasi), dibuka dari "Lihat semua notifikasi" di
 // (judul / "Lihat detail" → halaman detail /notifikasi/:id, NotifikasiDetailPage)
 // dropdown lonceng. Data: GET /notifications (page, limit, onlyUnread) +
 // PATCH /:id/read, PATCH /read-all, DELETE /:id. Perubahan di halaman ini
-// dan di lonceng saling diberitahukan lewat utils/notificationEvents.
+// dan di lonceng saling diberitahukan lewat utils/notificationEvents. Filter **Kategori** (pengirim/jenis kegiatan,
+// utils/notifikasi.js KATEGORI_NOTIF): backend belum punya filter kategori (W-56) → saat kategori dipilih, hingga
+// 500 notifikasi terbaru dimuat lalu disaring di peramban.
 // ---------------------------------------------------------------------------
 
 const LIMIT = 20
@@ -49,6 +52,7 @@ export default function NotifikasiPage() {
   const roles = getRoleNames(user?.roles)
 
   const [filter, setFilter] = useState('semua')
+  const [kategori, setKategori] = useState('')
   const [items, setItems] = useState([])
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -73,12 +77,18 @@ export default function NotifikasiPage() {
     let alive = true
     setLoading(true)
     setFailed(false)
-    notificationApi
-      .getAll({ page: 1, limit: LIMIT, ...(onlyUnread ? { onlyUnread: true } : {}) })
-      .then((r) => {
+    const params = onlyUnread ? { onlyUnread: true } : {}
+    const muat = kategori
+      ? semuaHalaman(notificationApi.getAll, params, 5).then(({ items: semua }) => {
+          const cocok = semua.filter((n) => kategoriNotif(n).key === kategori)
+          return { rows: cocok, total: cocok.length }
+        })
+      : notificationApi.getAll({ page: 1, limit: LIMIT, ...params }).then((r) => ({ rows: r.data.data || [], total: Number(r.data.meta?.total) || 0 }))
+    muat
+      .then(({ rows, total: t }) => {
         if (!alive) return
-        setItems(r.data.data || [])
-        setTotal(Number(r.data.meta?.total) || 0)
+        setItems(rows)
+        setTotal(t)
         setPage(1)
       })
       .catch(() => alive && setFailed(true))
@@ -87,7 +97,7 @@ export default function NotifikasiPage() {
     return () => {
       alive = false
     }
-  }, [onlyUnread, tick, loadUnreadTotal])
+  }, [onlyUnread, kategori, tick, loadUnreadTotal])
 
   useEffect(() => {
     const onChange = (e) => {
@@ -202,6 +212,23 @@ export default function NotifikasiPage() {
         </FilterTab>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Kategori notifikasi">
+        <span className="mr-1 text-sm font-medium text-slate-600">Kategori</span>
+        {[{ key: '', label: 'Semua' }, ...KATEGORI_NOTIF].map((k) => (
+          <button
+            key={k.key || 'semua'}
+            type="button"
+            aria-pressed={kategori === k.key}
+            onClick={() => setKategori(k.key)}
+            className={`inline-flex h-8 items-center rounded-lg border px-3 text-sm font-medium transition-colors ${
+              kategori === k.key ? 'border-navy-800 bg-navy-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {k.label}
+          </button>
+        ))}
+      </div>
+
       {/* Muat ulang (filter/setelah aksi): daftar lama tetap tampil pudar — tanpa kedip. */}
       <AreaMemuat memuat={loading && items.length > 0}>
       {loading && items.length === 0 ? (
@@ -231,7 +258,7 @@ export default function NotifikasiPage() {
             <BellOff className="size-6" strokeWidth={1.5} aria-hidden="true" />
           </span>
           <h2 className="mt-4 text-lg font-semibold text-navy-950">
-            {onlyUnread ? 'Tidak ada notifikasi belum dibaca' : 'Belum ada notifikasi'}
+            {kategori ? `Tidak ada notifikasi ${KATEGORI_NOTIF.find((k) => k.key === kategori)?.label}${onlyUnread ? ' yang belum dibaca' : ''}` : onlyUnread ? 'Tidak ada notifikasi belum dibaca' : 'Belum ada notifikasi'}
           </h2>
           <p className="mx-auto mt-1.5 max-w-sm text-base text-slate-500">
             Kabar tentang proposal, review, laporan, dan periode akan muncul di sini.
@@ -269,6 +296,10 @@ export default function NotifikasiPage() {
                         </div>
                         <p className="mt-0.5 break-words text-sm leading-relaxed text-slate-600">{n.pesan}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                          <span className="inline-flex items-center gap-1.5 text-slate-500">
+                            <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-medium text-slate-700">{kategoriNotif(n).label}</span>
+                            dari {pengirimFor(n)}
+                          </span>
                           <time dateTime={n.createdAt} title={formatDate(n.createdAt, { dateStyle: 'full' })} className="text-slate-500">
                             {timeAgo(n.createdAt)}
                           </time>
@@ -313,7 +344,7 @@ export default function NotifikasiPage() {
             </section>
           ))}
 
-          {items.length < total ? (
+          {!kategori && items.length < total ? (
             <div className="flex flex-col items-center gap-2">
               <button type="button" onClick={loadMore} disabled={loadingMore} className="btn btn-secondary">
                 {loadingMore ? 'Memuat...' : 'Muat lebih banyak'}
