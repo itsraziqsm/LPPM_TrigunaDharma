@@ -5,10 +5,12 @@ import { proposalApi } from '../../api/proposal'
 import { laporanApi } from '../../api/laporan'
 import { periodeApi } from '../../api/periode'
 import useAuthStore from '../../store/authStore'
-import ApiPending from '../../components/ApiPending'
 import { FieldError, Required } from '../../components/Wizard'
 import { alertDialog, confirmDialog } from '../../utils/dialog'
-import { clearCetakConfig, loadCetakConfig, saveCetakConfig } from '../../utils/cetakConfig'
+import { clearCetakConfig, loadCetakConfig, muatCetakConfig, saveCetakConfig, tanggalPanjang } from '../../utils/cetakConfig'
+import { cetakApi } from '../../api/cetak'
+import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
+import { cetakDariArsip, pesanSurat, terbitkanSuratTugas } from '../../utils/suratTugas'
 import { suratTugasPDF } from '../../utils/suratTugasPDF'
 import CetakBreadcrumb from './CetakBreadcrumb'
 import { SURAT_TUGAS_KEY, suratTugasData } from './dokumen'
@@ -22,8 +24,9 @@ import { SURAT_TUGAS_KEY, suratTugasData } from './dokumen'
 //   tanggal  ← tanggalMulai/tanggalSelesai periode (GET /periode/:id)
 //   alamat   ← alamat mitra (pengabdian) atau kampus
 // Data: GET /proposals?status=disetujui, GET /laporan, GET /proposals/:id,
-// GET /laporan/:id. Konfigurasi & nomor surat belum punya endpoint → disimpan di
-// peramban (utils/cetakConfig, ApiPending W-42). PDF dibuat di frontend (jspdf).
+// GET /laporan/:id. Konfigurasi bersama di server (PUT /cetak/konfigurasi/surat-tugas, W-42). Cetak = POST
+// /surat-tugas (nomor otomatis 001/ST/LPPM/<romawi>/<tahun> + arsip) lalu PDF (jspdf) memakai nomor itu; arsip
+// kegiatan terpilih (GET /surat-tugas?kegiatanId=) bisa dicetak ulang dengan nomor yang sama.
 // ---------------------------------------------------------------------------
 
 const KAMPUS = 'Kampus STMIK Triguna Dharma, Jl. A.H. Nasution No. 73 F, Medan'
@@ -74,6 +77,37 @@ export default function SuratTugasPage() {
     return EMPTY
   })
   const [options, setOptions] = useState({ proposal: null, laporan: null })
+  const [arsip, setArsip] = useState(null)
+  const [arsipTick, setArsipTick] = useState(0)
+  const [mencetak, setMencetak] = useState(false)
+
+  // Konfigurasi bersama dari server menimpa cache peramban.
+  useEffect(() => {
+    let alive = true
+    muatCetakConfig(SURAT_TUGAS_KEY).then((saved) => {
+      if (!alive || !saved) return
+      // Isian penandatangan yang kosong di server tidak menimpa bawaan (Ketua yang sedang masuk).
+      const ttd = Object.fromEntries(Object.entries(saved.penandatangan || {}).filter(([, v]) => v))
+      setCfg((c) => ({ ...EMPTY, ...saved, penandatangan: { ...EMPTY.penandatangan, ...c.penandatangan, ...ttd } }))
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  // Arsip surat tugas untuk kegiatan terpilih.
+  const kegiatanId = cfg.kegiatan?.id
+  useEffect(() => {
+    if (!kegiatanId) return undefined
+    let alive = true
+    cetakApi
+      .daftarSuratTugas({ kegiatanId, limit: 20 })
+      .then((r) => alive && setArsip(r.data.data || []))
+      .catch(() => alive && setArsip([]))
+    return () => {
+      alive = false
+    }
+  }, [kegiatanId, arsipTick])
   const [inheriting, setInheriting] = useState(false)
   const [showErrors, setShowErrors] = useState(false)
   const [msg, setMsg] = useState(null)
@@ -154,22 +188,28 @@ export default function SuratTugasPage() {
     }
   }
 
-  const simpan = (andPrint) => {
+  const simpan = async (andPrint) => {
     setShowErrors(true)
     if (Object.keys(errors).length) {
       setMsg({ ok: false, text: 'Lengkapi isian yang ditandai.' })
       return
     }
+    if (andPrint) siapkanTab()
     const saved = saveCetakConfig(SURAT_TUGAS_KEY, cfg)
     setCfg(saved)
     if (andPrint) {
+      setMencetak(true)
       try {
-        suratTugasPDF(suratTugasData(saved))
-      } catch {
-        alertDialog({ title: 'Gagal membuat PDF', message: 'Silakan coba lagi.' })
-        return
+        const { surat, cetak } = await terbitkanSuratTugas(suratTugasData(saved))
+        suratTugasPDF(cetak)
+        setArsipTick((t) => t + 1)
+        setMsg({ ok: true, text: `Surat tugas ${surat.nomor || ''} diterbitkan dan diarsipkan; pratinjau dibuka di tab baru.` })
+      } catch (e) {
+        batalTab()
+        alertDialog({ title: 'Gagal menerbitkan surat tugas', message: pesanSurat(e, 'Silakan coba lagi.') })
+      } finally {
+        setMencetak(false)
       }
-      setMsg({ ok: true, text: 'Konfigurasi disimpan; pratinjau surat tugas dibuka di tab baru.' })
     } else {
       navigate('/cetak-dokumen', { state: { flash: 'Konfigurasi Surat Tugas disimpan.' } })
     }
@@ -377,13 +417,9 @@ export default function SuratTugasPage() {
         </header>
         <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
           <div>
-            <label htmlFor="st-nomor" className="label">
-              Nomor surat
-            </label>
-            <input id="st-nomor" className="input" value={cfg.nomor} onChange={set('nomor')} placeholder="mis. 012/LPPM/ST/X/2026" />
-            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              Diisi manual. Penomoran otomatis & arsip surat: <ApiPending />
-            </p>
+            <p className="label">Nomor surat</p>
+            <p className="input flex items-center bg-slate-50 text-slate-500">Otomatis saat dicetak</p>
+            <p className="mt-1.5 text-xs text-slate-500">Format 001/ST/LPPM/XI/2026 — berurut per tahun; setiap cetak tercatat di arsip.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -424,9 +460,48 @@ export default function SuratTugasPage() {
         </div>
       </section>
 
-      <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        Konfigurasi disimpan di peramban ini. Simpan di server agar sama di semua perangkat: <ApiPending />
-      </p>
+      {cfg.kegiatan ? (
+        <section className="card">
+          <header className="border-b border-slate-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-navy-950">Arsip surat tugas kegiatan ini</h2>
+          </header>
+          {arsip === null ? (
+            <p className="px-6 py-5 text-sm text-slate-500">Memuat arsip…</p>
+          ) : arsip.length === 0 ? (
+            <p className="px-6 py-5 text-sm text-slate-500">Belum ada surat tugas yang diterbitkan untuk kegiatan ini.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {arsip.map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+                  <span className="min-w-0">
+                    <span className="block font-medium tabular-nums text-slate-900">{a.nomor}</span>
+                    <span className="block text-xs text-slate-500">
+                      {tanggalPanjang(a.createdAt)}
+                      {a.dibuatOleh ? ` · oleh ${a.dibuatOleh.fullName || a.dibuatOleh.name}` : ''} · {(a.petugas || []).length} petugas
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm border border-slate-200"
+                    onClick={() => {
+                      try {
+                        suratTugasPDF(cetakDariArsip({ ...a, judulKegiatan: a.judulKegiatan }, cfg.kota))
+                      } catch {
+                        alertDialog({ title: 'Gagal membuat PDF', message: 'Silakan coba lagi.' })
+                      }
+                    }}
+                  >
+                    <Printer className="size-4" aria-hidden="true" />
+                    Cetak ulang
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      <p className="text-xs text-slate-500">Konfigurasi tersimpan di server dan sama untuk semua Admin & Ketua LPPM.</p>
 
       <div className="flex flex-wrap items-center gap-2">
         <Link to="/cetak-dokumen" className="btn btn-secondary">
@@ -442,9 +517,9 @@ export default function SuratTugasPage() {
           <Save className="size-4" aria-hidden="true" />
           Simpan konfigurasi
         </button>
-        <button type="button" onClick={() => simpan(true)} className="btn btn-primary">
+        <button type="button" onClick={() => simpan(true)} className="btn btn-primary" disabled={mencetak}>
           <Printer className="size-4" aria-hidden="true" />
-          Simpan & cetak
+          {mencetak ? 'Menerbitkan…' : 'Simpan & terbitkan'}
         </button>
       </div>
     </div>

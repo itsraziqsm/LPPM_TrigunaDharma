@@ -1,7 +1,44 @@
-// Konfigurasi dokumen cetak (Cetak Dokumen). Backend belum punya endpoint untuk
-// menyimpan konfigurasi/arsip dokumen (docs/waitingApi-list.md W-42), jadi
-// "SOP Frontend": disimpan di localStorage peramban ini saja.
+import { cetakApi } from '../api/cetak'
+
+// Konfigurasi dokumen cetak (Cetak Dokumen) — satu konfigurasi bersama untuk semua Admin/Ketua di server
+// (W-42: GET/PUT /cetak/konfigurasi/:dokumen). localStorage = cache agar halaman langsung terisi:
+//   loadCetakConfig(key)   — sinkron dari cache
+//   muatCetakConfig(key)   — ambil dari server, timpa cache, kembalikan nilai (null bila belum pernah disimpan)
+//   saveCetakConfig(key,v) — tulis cache + PUT di latar; clearCetakConfig(key) — kosongkan (PUT null)
 const PREFIX = 'cetakDokumen:'
+const DOKUMEN = { rekapProposal: 'rekap-proposal', suratTugas: 'surat-tugas', tabelPengguna: 'tabel-pengguna', luaranDosen: 'luaran-dosen' }
+
+const tulisCache = (key, value) => {
+  try {
+    if (value == null) localStorage.removeItem(PREFIX + key)
+    else localStorage.setItem(PREFIX + key, JSON.stringify(value))
+  } catch {
+    /* abaikan */
+  }
+}
+
+export async function muatCetakConfig(key) {
+  const dok = DOKUMEN[key]
+  if (!dok) return loadCetakConfig(key)
+  try {
+    const r = await cetakApi.getKonfigurasi(dok)
+    const d = r.data.data || {}
+    const value = d.konfigurasi ? { ...d.konfigurasi, savedAt: d.updatedAt || d.konfigurasi.savedAt, savedBy: d.updatedBy?.fullName || d.updatedBy?.name || null } : null
+    tulisCache(key, value)
+    return value
+  } catch {
+    return loadCetakConfig(key)
+  }
+}
+
+const kirim = (key, value) => {
+  const dok = DOKUMEN[key]
+  if (!dok) return
+  const isi = value ? Object.fromEntries(Object.entries(value).filter(([k]) => k !== 'savedAt' && k !== 'savedBy')) : null
+  cetakApi.putKonfigurasi(dok, isi).catch(() => {
+    /* tetap tersimpan di cache peramban ini */
+  })
+}
 
 export function loadCetakConfig(key) {
   try {
@@ -14,20 +51,14 @@ export function loadCetakConfig(key) {
 
 export function saveCetakConfig(key, data) {
   const value = { ...data, savedAt: new Date().toISOString() }
-  try {
-    localStorage.setItem(PREFIX + key, JSON.stringify(value))
-  } catch {
-    /* penyimpanan tidak tersedia: abaikan */
-  }
+  tulisCache(key, value)
+  kirim(key, value)
   return value
 }
 
 export function clearCetakConfig(key) {
-  try {
-    localStorage.removeItem(PREFIX + key)
-  } catch {
-    /* abaikan */
-  }
+  tulisCache(key, null)
+  kirim(key, null)
 }
 
 // Tanggal panjang Indonesia dari 'YYYY-MM-DD' atau ISO.

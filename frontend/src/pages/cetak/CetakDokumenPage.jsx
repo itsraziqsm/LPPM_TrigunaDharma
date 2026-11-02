@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Award, CircleCheck, Download, CircleDashed, FileSpreadsheet, FileSignature, Printer, Settings2, Users } from 'lucide-react'
 import { exportApi } from '../../api/export'
-import ApiPending from '../../components/ApiPending'
 import { exportToPDF } from '../../utils/exportPDF'
 import { alertDialog } from '../../utils/dialog'
-import { loadCetakConfig } from '../../utils/cetakConfig'
+import { loadCetakConfig, muatCetakConfig } from '../../utils/cetakConfig'
+import { pesanSurat, terbitkanSuratTugas } from '../../utils/suratTugas'
 import { suratTugasPDF } from '../../utils/suratTugasPDF'
 import useAuthStore from '../../store/authStore'
 import { getRoleNames } from '../../utils/roles'
@@ -24,7 +24,8 @@ import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 //   2. Surat Tugas           → /cetak-dokumen/surat-tugas
 //   3. Tabel Pengguna        → /cetak-dokumen/tabel-pengguna (semua / pilih peran)
 //   4. Luaran Dosen (Ketua)  → /cetak-dokumen/luaran-dosen (ZIP bukti &/atau CSV + filter)
-// Konfigurasi disimpan di peramban (utils/cetakConfig; endpoint W-42 belum ada).
+// Konfigurasi bersama di server (utils/cetakConfig → /cetak/konfigurasi/:dokumen, W-42; cache peramban). Cetak Surat
+// Tugas = POST /surat-tugas (nomor otomatis + arsip) lalu PDF bernomor.
 // ---------------------------------------------------------------------------
 
 const waktu = (iso) =>
@@ -86,10 +87,23 @@ function DokumenCard({ icon: Icon, title, desc, status, detail, configureTo, onP
 export default function CetakDokumenPage() {
   const location = useLocation()
   const [flash] = useState(() => location.state?.flash || null)
-  const [rekap] = useState(() => loadCetakConfig(REKAP_KEY))
-  const [surat] = useState(() => loadCetakConfig(SURAT_TUGAS_KEY))
-  const [pengguna] = useState(() => loadCetakConfig(PENGGUNA_KEY))
-  const [luaran] = useState(() => loadCetakConfig(LUARAN_KEY))
+  const [rekap, setRekap] = useState(() => loadCetakConfig(REKAP_KEY))
+  const [surat, setSurat] = useState(() => loadCetakConfig(SURAT_TUGAS_KEY))
+  const [pengguna, setPengguna] = useState(() => loadCetakConfig(PENGGUNA_KEY))
+  const [luaran, setLuaran] = useState(() => loadCetakConfig(LUARAN_KEY))
+  useEffect(() => {
+    let alive = true
+    Promise.all([REKAP_KEY, SURAT_TUGAS_KEY, PENGGUNA_KEY, LUARAN_KEY].map((k) => muatCetakConfig(k))).then(([a, b, c, d]) => {
+      if (!alive) return
+      setRekap(a)
+      setSurat(b)
+      setPengguna(c)
+      setLuaran(d)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
   const [printing, setPrinting] = useState('')
   // Luaran Dosen (GET /luaran/unduh-*) hanya untuk Ketua LPPM (Admin dicabut); backend terbuka untuk
   // admin & Ketua LPPM (W-44).
@@ -155,13 +169,17 @@ export default function CetakDokumenPage() {
     }
   }
 
-  const cetakSurat = () => {
+  // Setiap cetak menerbitkan nomor baru + arsip (POST /surat-tugas).
+  const cetakSurat = async () => {
     if (!surat) return
+    siapkanTab()
     setPrinting('surat')
     try {
-      suratTugasPDF(suratTugasData(surat))
-    } catch {
-      alertDialog({ title: 'Gagal membuat surat tugas', message: 'Periksa konfigurasi lalu coba lagi.' })
+      const { cetak } = await terbitkanSuratTugas(suratTugasData(surat))
+      suratTugasPDF(cetak)
+    } catch (e) {
+      batalTab()
+      alertDialog({ title: 'Gagal membuat surat tugas', message: pesanSurat(e, 'Periksa konfigurasi lalu coba lagi.') })
     } finally {
       setPrinting('')
     }
@@ -194,7 +212,7 @@ export default function CetakDokumenPage() {
           icon={FileSpreadsheet}
           title="Export Rekapitulasi Proposal"
           desc="Rekap proposal per periode, jenis, dan status — PDF (cetak) atau Excel dari halaman konfigurasi."
-          status={<StatusBadge ready={Boolean(rekap)} readyText={`Dikonfigurasi · ${waktu(rekap?.savedAt)}`} emptyText="Bawaan (semua data)" />}
+          status={<StatusBadge ready={Boolean(rekap)} readyText={`Dikonfigurasi · ${waktu(rekap?.savedAt)}${rekap?.savedBy ? ` · ${rekap.savedBy}` : ''}`} emptyText="Bawaan (semua data)" />}
           detail={rekapRingkas(rekap)}
           configureTo="/cetak-dokumen/rekap-proposal"
           onPrint={cetakRekap}
@@ -204,7 +222,7 @@ export default function CetakDokumenPage() {
           icon={FileSignature}
           title="Buat Surat Tugas"
           desc="Surat tugas untuk tim pengusul berdasarkan proposal atau laporan kegiatan."
-          status={<StatusBadge ready={Boolean(surat)} readyText={`Dikonfigurasi · ${waktu(surat?.savedAt)}`} emptyText="Belum dikonfigurasi" />}
+          status={<StatusBadge ready={Boolean(surat)} readyText={`Dikonfigurasi · ${waktu(surat?.savedAt)}${surat?.savedBy ? ` · ${surat.savedBy}` : ''}`} emptyText="Belum dikonfigurasi" />}
           detail={surat?.kegiatan ? `${surat.kegiatan.judul}${surat.nomor ? ` · No. ${surat.nomor}` : ''}` : null}
           configureTo="/cetak-dokumen/surat-tugas"
           onPrint={cetakSurat}
@@ -238,8 +256,8 @@ export default function CetakDokumenPage() {
         ) : null}
       </ul>
 
-      <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        Konfigurasi tersimpan di peramban ini saja. Penyimpanan di server & arsip dokumen tercetak: <ApiPending />
+      <p className="text-xs text-slate-500">
+        Konfigurasi tersimpan di server dan sama untuk semua Admin & Ketua LPPM. Setiap cetak Surat Tugas mendapat nomor otomatis dan tercatat di arsip.
       </p>
     </div>
   )

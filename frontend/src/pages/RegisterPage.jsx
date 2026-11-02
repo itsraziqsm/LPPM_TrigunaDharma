@@ -111,12 +111,12 @@ export default function RegisterPage() {
       simpanPendaftaran({ email, role, createdAt: res?.data?.createdAt })
       setBerhasil(true)
       await tungguOutro()
-      navigate('/register/terkirim', { replace: true, state: { baru: true } })
+      navigate('/register/terkirim', { replace: true, state: { baru: true, email } })
     } catch (err) {
       if (err.code === 'PENDAFTARAN_MENUNGGU') {
         clearError()
         simpanPendaftaran({ email, role, createdAt: err.data?.createdAt })
-        navigate('/register/terkirim', { replace: true, state: { menunggu: true } })
+        navigate('/register/terkirim', { replace: true, state: { menunggu: true, email } })
       } else if (err.code === 'AKUN_SUDAH_AKTIF') {
         clearError()
         navigate('/login', { replace: true, state: { flash: 'Akun dengan identitas ini sudah aktif. Silakan masuk.', email } })

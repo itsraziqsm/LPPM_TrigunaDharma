@@ -15,9 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-48 | Formulir Daftar + halaman "Pendaftaran sudah terkirim" | Validasi `email` (trim + huruf kecil), `nidn` wajib ≥ 10 digit, `nim` (NIRM) wajib 10 digit (422); identitas ganda → 409 `code` `PENDAFTARAN_MENUNGGU` (+ `data.email` tersamar, `createdAt`) / `AKUN_SUDAH_AKTIF` / `IDENTITAS_BENTROK`; akun `rejected` boleh daftar ulang (201, id lama); `POST /auth/register/status` `{email}` → `{status}` (`new-api.md` bagian 30.1) | Hapus ApiPending cek status di halaman Terkirim. NIDN/NIRM baru di Pengaturan juga dicek formatnya (400). |
-| W-54 | Form Penilaian (skor, catatan singkat, dana disetujui), hasil review, statistik dana | `skor` + `danaDisetujui` di `POST /proposals|laporan/:id/reviews`; respons review + `skor`, `totalSkor`, `rataSkor`, `danaDisetujui`; finalisasi wajib 7 skor + rekomendasi (+ dana proposal, ditolak → 0); `danaDisetujui` di semua respons proposal/laporan, `/monitoring/proposals`, `/export/proposals`; `anggaranDisetujui` monitoring dari dana itu; `GET /reviewer/rubrik`; **satu reviewer per proposal** (bagian 30.2) | Wajib disambungkan: tanpa `skor`, Selesaikan review ditolak 400. Ganti draf localStorage `utils/rubrikReview.js`; `utils/danaKegiatan.js` pakai `danaDisetujui`. Dialog Tugaskan reviewer proposal: satu pilihan. |
-| W-42 | Cetak Dokumen: konfigurasi di server, nomor surat otomatis, arsip surat tugas | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`, `tabel-pengguna`, `luaran-dosen`); `POST /surat-tugas` → `{id, nomor: "001/ST/LPPM/XI/2026", …}`; `GET /surat-tugas?kegiatanId=&tahun=`, `GET /surat-tugas/:id` (bagian 30.3) | Admin & Ketua LPPM. Cetak memakai `nomor` dari respons POST; localStorage boleh tetap sebagai cadangan. |
+| — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
 
@@ -25,6 +23,9 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 
 | ID | Disambungkan di |
 |---|---|
+| W-54 | Form Penilaian: nilai awal dari `myReview`, Simpan/Selesaikan mengirim `skor[]` + `danaDisetujui` (proposal; terkunci setelah diputuskan); `KartuPenilaian` & `ReviewList` (Ketua/pengusul) menampilkan rata-rata, kelayakan, skor per komponen, dana; `utils/danaKegiatan.js` memakai `danaDisetujui` kegiatan; dialog Tugaskan proposal = satu reviewer |
+| W-48 | Halaman Terkirim: **Cek status** → `POST /auth/register/status` (email lengkap dari state navigasi atau diketik); 409 `code` sudah ditangani sejak awal |
+| W-42 | Cetak Dokumen: konfigurasi 4 dokumen dimuat dari & disimpan ke `/cetak/konfigurasi/:dokumen` (localStorage = cache); Surat Tugas: cetak = `POST /surat-tugas` (nomor otomatis) + arsip per kegiatan dengan Cetak ulang |
 | W-43 | Daftar Backup: opsi filter **Dihapus** aktif (`status=dihapus`) |
 | W-44 | Luaran Dosen & Cetak Dokumen › Luaran Dosen (Ketua LPPM): penanda 403/ApiPending dihapus |
 | W-45 | Monitor Pengguna (Ketua STMIK): penanda 403/ApiPending dihapus |

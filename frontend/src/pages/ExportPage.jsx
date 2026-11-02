@@ -5,7 +5,7 @@ import { periodeApi } from '../api/periode'
 import { exportToPDF } from '../utils/exportPDF'
 import { exportToExcel } from '../utils/exportExcel'
 import { FileDown, Save, Search } from 'lucide-react'
-import { loadCetakConfig, saveCetakConfig } from '../utils/cetakConfig'
+import { loadCetakConfig, muatCetakConfig, saveCetakConfig } from '../utils/cetakConfig'
 import { REKAP_KEY } from './cetak/dokumen'
 import CetakBreadcrumb from './cetak/CetakBreadcrumb'
 
@@ -279,6 +279,16 @@ function savedFilter() {
 export default function ExportPage() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState(savedFilter)
+  // Konfigurasi bersama di server (W-42) menimpa cache peramban.
+  useEffect(() => {
+    let alive = true
+    muatCetakConfig(REKAP_KEY).then((c) => {
+      if (alive && c) setFilter({ periodeId: c.periodeId || '', jenis: c.jenis || '', status: c.status || '', tahun: c.tahun || '' })
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
   const [periodes, setPeriodes] = useState([])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)

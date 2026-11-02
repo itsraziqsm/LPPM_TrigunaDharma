@@ -4,7 +4,7 @@ import { ArrowLeft, Download, RotateCcw, Save } from 'lucide-react'
 import { periodeApi } from '../../api/periode'
 import { FieldError } from '../../components/Wizard'
 import { alertDialog } from '../../utils/dialog'
-import { clearCetakConfig, loadCetakConfig, saveCetakConfig } from '../../utils/cetakConfig'
+import { clearCetakConfig, loadCetakConfig, muatCetakConfig, saveCetakConfig } from '../../utils/cetakConfig'
 import CetakBreadcrumb from './CetakBreadcrumb'
 import { LUARAN_FILTER, LUARAN_KEY } from './dokumen'
 import { pesanBlob, unduhLuaran } from './cetakLuaran'
@@ -46,6 +46,15 @@ export default function CetakLuaranPage() {
   const [periodes, setPeriodes] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  // Konfigurasi bersama di server (W-42) menimpa cache peramban.
+  useEffect(() => {
+    let alive = true
+    muatCetakConfig(LUARAN_KEY).then((s) => alive && s && setCfg({ ...EMPTY, ...s, filter: { ...KOSONG, ...(s.filter || {}) } }))
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     periodeApi

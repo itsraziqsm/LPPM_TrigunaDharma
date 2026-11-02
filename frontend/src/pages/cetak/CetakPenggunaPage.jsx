@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer, RotateCcw, Save } from 'lucide-react'
 import { FieldError } from '../../components/Wizard'
 import { alertDialog } from '../../utils/dialog'
-import { clearCetakConfig, loadCetakConfig, saveCetakConfig } from '../../utils/cetakConfig'
+import { clearCetakConfig, loadCetakConfig, muatCetakConfig, saveCetakConfig } from '../../utils/cetakConfig'
 import CetakBreadcrumb from './CetakBreadcrumb'
 import { PENGGUNA_KEY, PERAN_LABEL, penggunaRingkas } from './dokumen'
 import { ambilPengguna, penggunaPDF } from './cetakPengguna'
@@ -12,7 +12,7 @@ import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 // ---------------------------------------------------------------------------
 // Konfigurasi "Cetak Tabel Pengguna" (Cetak Dokumen): semua peran, atau pilih ≥ 1 peran.
 // Data GET /users (per peran bila dipilih); PDF di frontend (cetakPengguna.js).
-// Konfigurasi di peramban (utils/cetakConfig, W-42).
+// Konfigurasi bersama di server (utils/cetakConfig → PUT /cetak/konfigurasi/tabel-pengguna, W-42; cache peramban).
 // ---------------------------------------------------------------------------
 
 const PERAN = Object.keys(PERAN_LABEL)
@@ -21,6 +21,13 @@ const EMPTY = { semua: true, roles: [] }
 export default function CetakPenggunaPage() {
   const navigate = useNavigate()
   const [cfg, setCfg] = useState(() => ({ ...EMPTY, ...(loadCetakConfig(PENGGUNA_KEY) || {}) }))
+  useEffect(() => {
+    let alive = true
+    muatCetakConfig(PENGGUNA_KEY).then((c) => alive && c && setCfg({ ...EMPTY, ...c }))
+    return () => {
+      alive = false
+    }
+  }, [])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 

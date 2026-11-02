@@ -10,6 +10,10 @@ export const authApi = {
   registerMahasiswa: (data) =>
     api.post('/auth/register/mahasiswa', data),
 
+  // Cek status pendaftaran (publik, W-48) → { status: pending|approved|rejected|tidak_ada, createdAt? }
+  registerStatus: (email) =>
+    api.post('/auth/register/status', { email }),
+
   logout: (refreshToken) =>
     api.post('/auth/logout', { refreshToken }),
 

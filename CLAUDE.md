@@ -471,9 +471,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `ExportPage.jsx` lama (`/cetak-dokumen/rekap-proposal`, + "Simpan konfigurasi" filter); Cetak =
   `GET /export/proposals` + `exportToPDF`. (2) **Surat Tugas** → `SuratTugasPage`: pilih proposal
   disetujui/laporan, tugas/petugas (pengusul + anggota)/tanggal (periode)/alamat (mitra atau kampus)
-  diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi di `localStorage`
-  (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip: API W-42
-  sudah tersedia (`/cetak/konfigurasi/:dokumen`, `/surat-tugas`), frontend belum menyambungkan. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
+  diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi **bersama di server** (W-42,
+  `utils/cetakConfig.js`: `muatCetakConfig` GET saat halaman dibuka, `saveCetakConfig` PUT di latar, localStorage = cache; kunci di `pages/cetak/dokumen.js`);
+  cetak Surat Tugas (halaman konfigurasi & kartu Cetak Dokumen) = `POST /surat-tugas` → **nomor otomatis** `001/ST/LPPM/<romawi>/<tahun>` lalu PDF
+  (`utils/suratTugas.js`), **arsip** kegiatan terpilih (`GET /surat-tugas?kegiatanId=`) + Cetak ulang bernomor sama. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
   peran → `GET /users` semua halaman (per peran, digabung) → PDF `pages/cetak/cetakPengguna.js`. (4) **Luaran Dosen** (Ketua LPPM; unduhan terbuka W-44;
   `CetakLuaranPage`, `/cetak-dokumen/luaran-dosen`): keluaran ZIP bukti &/atau CSV (≥ 1) + filter Luaran Dosen kecuali jenis
   luaran & prioritas → `GET /luaran/unduh-zip|unduh-csv` (`pages/cetak/cetakLuaran.js`). Kunci & ringkasan di `pages/cetak/dokumen.js`.
@@ -527,17 +528,21 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   skor 1–5 + catatan singkat → total/rata-rata/kelayakan otomatis → B. Catatan reviewer → C. Rekomendasi (Diterima/Diterima dengan perbaikan/
   Ditolak, saran "Sesuai skor") + **dana disetujui ditentukan reviewer** (proposal; ≤ dana diusulkan, isi cepat %, ditolak → Rp 0); ringkasan
   melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
-  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage; API **W-54** sudah tersedia (`skor`, `danaDisetujui`, finalisasi mewajibkan skor lengkap; satu reviewer per proposal) — frontend belum menyambungkan. Reviewer laporan =
+  `utils/rubrikReview.js` (kode komponen = `GET /reviewer/rubrik`): semua tersimpan di server (W-54) — nilai awal dari `myReview`, Simpan draf &
+  Selesaikan mengirim `skor[{kode,skor,catatan}]` + `danaDisetujui` (proposal; terkunci bila proposal sudah diputuskan; server menolak finalisasi bila
+  skor < 7/rekomendasi/dana kosong); draf localStorage lama hanya migrasi sekali. Hasil review (`ReviewList` di `laporan/shared.jsx`, Ketua/pengusul):
+  rata-rata + kelayakan, skor per komponen + catatan, rekomendasi, dana disetujui. **Satu reviewer per proposal** (dialog Tugaskan pilihan tunggal,
+  tombol hanya bila belum ada reviewer; ganti = hapus lalu tugaskan). Reviewer laporan =
   reviewer proposal asal (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan (status langsung `review`, pesan ajukan menyesuaikan); bila tidak
   ada, Ketua hanya bisa **Tugaskan pengganti** (laporan `diajukan` tanpa reviewer; dialog mencentang reviewer proposal asal yang tersedia).
   **Review dimulai dari tahap proposal**: Ketua menugaskan reviewer hanya di proposal (`ProposalMasukDetailPage`, keterangan "juga otomatis menilai
   laporan"); kartu Reviewer di detail laporan **baca saja** (lencana "Reviewer proposal", tanpa Hapus/Tugaskan); `KartuPenilaian` proposal memberi
   tahu reviewer bahwa laporannya nanti otomatis ditugaskan kepadanya.
   **Dana (keputusan UAT)**: dana final = **dana disetujui reviewer**, final setelah review diselesaikan (tidak bisa dinegosiasi). Form laporan
-  tetap menampilkan pendanaan: dana disetujui proposal asal (baca saja; dari draf penilaian proposal reviewer yang sama, lalu field backend)
+  tetap menampilkan pendanaan: dana disetujui proposal asal (baca saja, field `danaDisetujui` laporan)
   + realisasi anggaran. Rubrik sama untuk proposal & laporan, penelitian & pengabdian. **Statistik & pelaporan memakai dana disetujui saja,
-  proposal yang belum disetujui tidak dihitung** — helper `utils/danaKegiatan.js` (`danaFinal`, `totalDana`, `danaSementara`; tanpa field
-  `danaDisetujui` = sementara `anggaran` proposal disetujui + ApiPending, W-54): Statistik (kartu & batang "Dana disetujui", baris anggaran
+  proposal yang belum disetujui tidak dihitung** — helper `utils/danaKegiatan.js` (`danaFinal`, `totalDana`, `danaSementara`; field `danaDisetujui` kegiatan, W-54;
+  cadangan backend lama tanpa field = `anggaran` + ApiPending): Statistik (kartu & batang "Dana disetujui", baris anggaran
   diajukan dihapus), tabel Pemantauan (kolom Dana disetujui), rekap PDF Ketua STMIK (kolom "Total anggaran" dihapus), dashboard Ketua STMIK
   (kartu Dana disetujui), detail proposal Ketua/Kegiatan (Dana diusulkan + Dana disetujui), detail laporan ("Dana disetujui / realisasi").
   Notifikasi `reviewer_ditugaskan` menuju halaman detail ini. Buka dokumen utama: `utils/dokumenUtama.js`. Blok bersama
@@ -680,7 +685,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   untuk email/password membawa kembali ke langkah 1; muat satu layar tanpa gulir di 1366×768). Validasi di frontend — email valid
   (di-*trim* & huruf kecil sebelum dikirim), **NIDN** wajib angka ≥ 10 digit, **NIRM** (label baru untuk field API `nim`) wajib tepat 10 digit
   (input hanya angka); galat per kolom + galat 422 server. Berhasil → `/register/terkirim` (`PendaftaranTerkirimPage.jsx`, tamu: email tersamar,
-  peran, tanggal, status Menunggu + cek status (API `POST /auth/register/status` W-48 sudah tersedia, frontend belum menyambungkan), "Daftar dengan data lain" menghapus penanda) dan penanda `localStorage`
+  peran, tanggal, status + **Cek status** (`POST /auth/register/status`, W-48; email lengkap dari state navigasi atau diketik), "Daftar dengan data lain" menghapus penanda) dan penanda `localStorage`
   `pendaftaranTerkirim` (30 hari, kenyamanan saja: `/register` di peramban yang sama → halaman terkirim; dihapus saat login berhasil). Kode 409
   dari server: `PENDAFTARAN_MENUNGGU` → halaman terkirim ("Sudah Terkirim"); `AKUN_SUDAH_AKTIF` → `/login` dengan `state.flash` + email terisi;
   409 tanpa kode (backend lama) → pesan "Email, NIDN, atau NIRM ini sudah terdaftar…". `authStore.register` melempar galat ber-`status`, `code`,
