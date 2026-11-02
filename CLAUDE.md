@@ -59,6 +59,7 @@ go run ./cmd/seed-tahap-1       # laporan contoh untuk proposal disetujui (statu
 go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahasiswa (tanpa -yes = pratinjau)
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/seed-proposal [-reset|-dry-run]  # proposal + laporan contoh SEMUA status (17 per dosen1 & dosen2, 3 per dosen3–5; aman diulang)
+go run ./cmd/truncate-data [-yes] [-produksi]  # TRUNCATE semua tabel kecuali User/UserRole/Role/_prisma_migrations (tanpa -yes = pratinjau; produksi wajib -produksi)
 go run ./cmd/server             # default PORT=3000
 go test ./...                   # unit test tanpa DB (config, database, sqlb, httpapi/compat_test)
 sh scripts/security-scan.sh     # go vet + go test + gosec + govulncheck (gosec 0 temuan; lihat SECURITY.md)

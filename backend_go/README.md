@@ -129,6 +129,27 @@ laporan kemajuan/akhir, dokumen, laporan harian, item luaran (CASCADE dari `Kegi
 notifikasi yang merujuknya ikut dihapus; log aktivitas tetap (proposalId menjadi NULL).
 Di Docker: `docker compose exec app /app/hapus-proposal-mahasiswa -yes`.
 
+### Kosongkan data kecuali akun user (uji ulang dari awal)
+
+```bash
+go run ./cmd/truncate-data                  # pratinjau: tabel & jumlah baris yang akan dikosongkan
+go run ./cmd/truncate-data -yes             # kosongkan permanen (BACKUP dulu)
+go run ./cmd/truncate-data -yes -produksi   # wajib bila NODE_ENV=production
+```
+
+Yang dipertahankan hanya `User`, `UserRole`, `Role` (akun bisa login dengan email & password yang sama) dan
+`_prisma_migrations`. **Semua tabel lain di-TRUNCATE** (id mulai dari 1): proposal/laporan & relasinya,
+review & skor, notifikasi, log aktivitas, periode, master data (program studi, rumpun ilmu, bidang, luaran,
+jenis mitra), foto profil, pengaturan (kontak admin, konfigurasi cetak), template proposal, surat tugas, log
+backup, refresh token & token reset/verifikasi (semua user login ulang); `wajibGantiPassword` dikosongkan.
+Daftar tabel diambil dari database, jadi tabel dari migrasi baru ikut dikosongkan. File backup di
+`BACKUP_DIR` tidak disentuh. Di Docker: `docker compose exec app /app/truncate-data -yes`.
+
+Setelahnya: `go run ./cmd/seed` (aman diulang) mengisi lagi program studi & periode contoh, lalu
+`go run ./cmd/seed-proposal` bila perlu proposal contoh. **Master rumpun ilmu, bidang, luaran, dan jenis mitra
+tidak diisi ulang** (asalnya dari migrasi): sampai admin menambahkannya lewat `POST /master/:kategori`, dropdown
+form proposal kosong dan proposal/laporan yang mengirim `rumpunIlmu` ditolak 400.
+
 ### Seed tahap 1: laporan atas proposal disetujui
 
 ```bash
@@ -155,6 +176,7 @@ cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui
 cmd/hapus-proposal-mahasiswa  hapus proposal yang ketua pengusulnya mahasiswa
 cmd/seed-email    6 akun contoh @email.com, satu per peran (termasuk ketua_stmik)
 cmd/seed-proposal proposal & laporan contoh semua status (fokus dosen1 & dosen2)
+cmd/truncate-data kosongkan semua data kecuali akun user (User, UserRole, Role)
 migrations/     salinan prisma/migrations dari project Node
 internal/config     pembacaan .env
 internal/database   koneksi MySQL (parsing DATABASE_URL gaya Prisma, UTC)
