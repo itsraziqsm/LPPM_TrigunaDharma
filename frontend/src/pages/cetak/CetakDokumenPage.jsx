@@ -91,8 +91,8 @@ export default function CetakDokumenPage() {
   const [pengguna] = useState(() => loadCetakConfig(PENGGUNA_KEY))
   const [luaran] = useState(() => loadCetakConfig(LUARAN_KEY))
   const [printing, setPrinting] = useState('')
-  // Luaran Dosen (GET /luaran/unduh-*) hanya untuk Ketua LPPM (Admin dicabut); backend masih khusus
-  // admin → 403 sampai W-44.
+  // Luaran Dosen (GET /luaran/unduh-*) hanya untuk Ketua LPPM (Admin dicabut); backend terbuka untuk
+  // admin & Ketua LPPM (W-44).
   const isKetua = getRoleNames(useAuthStore((st) => st.user)?.roles)[0] === 'ketua_lppm'
   const induk = useJejakMenu('dokumentasi')
   // Konfigurasi tersimpan per kartu yang tampil (untuk kotak ringkasan).
@@ -124,7 +124,7 @@ export default function CetakDokumenPage() {
     } catch (e) {
       alertDialog({
         title: 'Unduhan gagal',
-        message: e.response?.status === 403 ? 'Akses unduh luaran untuk Ketua LPPM belum tersedia di server (W-44).' : await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.'),
+        message: e.response?.status === 403 ? 'Anda tidak memiliki akses untuk mengunduh luaran.' : await pesanBlob(e, 'File tidak dapat diunduh. Coba lagi.'),
       })
     } finally {
       setPrinting('')

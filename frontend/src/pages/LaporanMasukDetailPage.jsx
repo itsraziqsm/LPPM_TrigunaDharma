@@ -56,7 +56,8 @@ export default function LaporanMasukDetailPage() {
   const [catatan, setCatatan] = useState('')
   const [reviewers, setReviewers] = useState(null)
   const [picked, setPicked] = useState([])
-  // Reviewer proposal asal = reviewer laporan (UAT); otomatis dipilih di dialog Tugaskan (W-55).
+  // Reviewer proposal asal = reviewer laporan (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan;
+  // bila tidak ada (dicabut), dialog Tugaskan tetap mencentang reviewer proposal asal yang tersedia.
   const [dariProposal, setDariProposal] = useState(new Set())
   const [tick, setTick] = useState(0)
 
@@ -220,7 +221,11 @@ export default function LaporanMasukDetailPage() {
                   ) : null}
                 </div>
                 {(laporan.reviewerTugasan || []).length === 0 ? (
-                  <p className="text-sm text-slate-500">Belum ada reviewer.</p>
+                  <p className="text-sm text-slate-500">
+                    {laporan.status === 'diajukan'
+                      ? 'Belum ada reviewer. Reviewer proposal asal tidak tersedia lagi (mis. perannya dicabut), tugaskan secara manual.'
+                      : 'Belum ada reviewer.'}
+                  </p>
                 ) : (
                   <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
                     {laporan.reviewerTugasan.map((t) => (

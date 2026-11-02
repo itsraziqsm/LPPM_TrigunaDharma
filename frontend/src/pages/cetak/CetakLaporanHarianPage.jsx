@@ -6,13 +6,13 @@ import { TONE } from '../../utils/toneStatus'
 import PanelCari from '../../components/PanelCari'
 import { alertDialog } from '../../utils/dialog'
 import { downloadRekap } from './laporanHarianPDF'
+import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
 // Mahasiswa › Cetak Laporan (/cetak-laporan): hanya project yang punya ≥ 1 laporan harian (bisa dicetak).
-// Daftar project (GET /mahasiswa/laporan-harian/proposals) tidak memuat jumlah laporan, jadi laporan tiap
-// project dimuat sekali (GET /mahasiswa/laporan-harian/:proposalId, paralel) lalu dipakai ulang saat
-// Cetak → PDF rekap (laporanHarianPDF.js, sama dengan tombol rekap di Project Saya). Jumlah di daftar
-// project = ApiPending W-49 (opsional, menghemat permintaan).
+// Daftar project = GET /mahasiswa/laporan-harian/proposals disaring `jumlahLaporanHarian > 0` (W-49); laporan
+// dimuat hanya saat Cetak (GET /mahasiswa/laporan-harian/:proposalId) → PDF rekap (laporanHarianPDF.js, sama
+// dengan tombol rekap di Project Saya).
 // ---------------------------------------------------------------------------
 
 const JENIS_LABEL = { penelitian: 'Penelitian', pengabdian: 'Pengabdian' }
@@ -21,7 +21,6 @@ export default function CetakLaporanHarianPage() {
   // projects = project yang punya laporan harian: [{ ...project, laporan: [...] }]
   const [projects, setProjects] = useState(null)
   const [failed, setFailed] = useState(false)
-  const [sebagianGagal, setSebagianGagal] = useState(false)
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(null)
 
@@ -29,35 +28,29 @@ export default function CetakLaporanHarianPage() {
     let alive = true
     laporanHarianApi
       .getMyProposals()
-      .then(async (r) => {
-        const semua = r.data.data || []
-        const hasil = await Promise.allSettled(semua.map((p) => laporanHarianApi.getByProposal(p.id)))
-        if (!alive) return
-        const gagal = hasil.some((h) => h.status === 'rejected')
-        if (gagal && hasil.every((h) => h.status === 'rejected') && semua.length) {
-          setFailed(true)
-          return
-        }
-        setSebagianGagal(gagal)
-        setProjects(
-          semua
-            .map((p, i) => ({ ...p, laporan: hasil[i].status === 'fulfilled' ? hasil[i].value.data.data || [] : [] }))
-            .filter((p) => p.laporan.length > 0),
-        )
-      })
+      .then((r) => alive && setProjects((r.data.data || []).filter((p) => Number(p.jumlahLaporanHarian) > 0)))
       .catch(() => alive && setFailed(true))
     return () => {
       alive = false
     }
   }, [])
 
-  // Laporan sudah dimuat saat halaman dibuka → langsung jadi PDF (tanpa menunggu, jadi tanpa siapkanTab).
-  const cetak = (p) => {
+  // Laporan dimuat hanya saat Cetak → pratinjau PDF di tab baru (siapkanTab sinkron sebelum menunggu data).
+  const cetak = async (p) => {
+    siapkanTab()
     setBusy(p.id)
     try {
-      downloadRekap(p.laporan, p.judul)
+      const r = await laporanHarianApi.getByProposal(p.id)
+      const laporan = r.data.data || []
+      if (!laporan.length) {
+        batalTab()
+        alertDialog({ title: 'Belum ada laporan', message: 'Project ini belum punya laporan harian untuk dicetak.' })
+        return
+      }
+      downloadRekap(laporan, p.judul)
     } catch {
-      alertDialog({ title: 'Gagal mencetak', message: 'PDF laporan harian tidak dapat dibuat. Coba lagi.' })
+      batalTab()
+      alertDialog({ title: 'Gagal mencetak', message: 'Laporan harian tidak dapat dimuat atau PDF tidak dapat dibuat. Coba lagi.' })
     } finally {
       setBusy(null)
     }
@@ -84,12 +77,6 @@ export default function CetakLaporanHarianPage() {
 
       <PanelCari id="cetak-lh" value={search} onChange={setSearch} onSubmit={() => {}} placeholder="Cari judul project atau nama dosen pengusul" />
 
-      {sebagianGagal ? (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800" role="status">
-          Laporan harian sebagian project gagal dimuat, sehingga project tersebut tidak ditampilkan. Muat ulang halaman untuk mencoba lagi.
-        </p>
-      ) : null}
-
       {failed ? (
         <div className="card px-6 py-12 text-center text-base text-red-600">Daftar project gagal dimuat.</div>
       ) : projects === null ? (
@@ -103,7 +90,7 @@ export default function CetakLaporanHarianPage() {
               <span className="min-w-0">
                 <span className="block font-medium text-slate-900">{p.judul}</span>
                 <span className="mt-0.5 block text-sm text-slate-500">
-                  {[JENIS_LABEL[p.jenis] || p.jenis, p.periode?.nama, `Dosen pengusul: ${p.pengusul?.fullName || p.pengusul?.name || '—'}`, `${p.laporan.length} laporan harian`].filter(Boolean).join(' · ')}
+                  {[JENIS_LABEL[p.jenis] || p.jenis, p.periode?.nama, `Dosen pengusul: ${p.pengusul?.fullName || p.pengusul?.name || '—'}`, `${p.jumlahLaporanHarian} laporan harian`].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <button type="button" onClick={() => cetak(p)} disabled={busy === p.id} className="btn btn-secondary btn-sm">

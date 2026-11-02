@@ -8,13 +8,12 @@ import { alertDialog } from '../utils/dialog'
 import { simpanBlob } from '../utils/unduhBlob'
 import { pesanBlob } from './cetak/cetakLuaran'
 import { KepalaMasuk } from '../components/PeriodeAktif'
-import ApiPending from '../components/ApiPending'
 import PanelCari from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
 // ---------------------------------------------------------------------------
 // Luaran Dosen (Ketua LPPM › Dokumentasi › Luaran, /luaran-dosen; Admin dicabut) — W-38, new-api.md bagian 25.2.
-// Backend GET /luaran & unduhan masih khusus admin → bagi Ketua 403 sampai W-44 tersedia.
+// Backend GET /luaran & unduhan terbuka untuk admin & Ketua LPPM (W-44, new-api.md bagian 28).
 // Tabel GET /luaran (filter + paginasi; prioritas jurnal & poster di atas), unduh satu
 // bukti (GET /luaran/:id/bukti, blob). Unduh CSV & semua bukti (ZIP) dipindah ke Cetak Dokumen
 // → Luaran Dosen (pages/cetak/CetakLuaranPage).
@@ -218,7 +217,7 @@ export default function LuaranDosenPage() {
           <p className="px-5 py-10 text-center text-sm text-slate-500">Memuat luaran…</p>
         ) : state.failed === 'akses' ? (
           <p className="flex flex-wrap items-center justify-center gap-2 px-5 py-10 text-center text-sm text-slate-600">
-            Akses daftar luaran untuk Ketua LPPM belum tersedia di server (W-44). <ApiPending />
+            Anda tidak memiliki akses ke daftar luaran.
           </p>
         ) : state.failed ? (
           <p className="px-5 py-10 text-center text-sm text-red-700">Daftar luaran gagal dimuat.</p>

@@ -126,7 +126,7 @@ const STEP_FIELDS = { identitas: ['judul', 'periodeId', 'anggaran'], anggota: ['
 const rupiah = (v) => (v ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
 // Dosen atau mahasiswa: dari roles hasil pencarian, atau NIM pada data anggota.
-// Lengkapi data anggota draf (nim/nidn/roles → jenis dosen/mahasiswa) dari GET /dosen/proposals/members/search.
+// Cadangan backend lama (sebelum W-51): lengkapi nim/nidn/roles anggota draf dari GET /dosen/proposals/members/search.
 async function cariDataAnggota(list) {
   const hasil = await Promise.all(
     list.map((a) => {
@@ -416,13 +416,14 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             nim: a.user?.nim,
             kontak: a.user?.kontak,
             noHp: a.user?.noHp,
+            roles: a.user?.roles,
             peran: a.peran || 'anggota',
             kind: kindOf(a.user),
           })),
         )
-        // anggota[].user di respons proposal tidak memuat nim/nidn/roles → semua terbaca "dosen".
-        // Lengkapi lewat pencarian anggota (mengirim nim, nidn, roles): cari per email, cocokkan id.
-        lengkapiAnggota(p.anggota || [], () => alive)
+        // anggota[].user kini memuat nidn, nim & roles (W-51). Cadangan untuk backend lama (tanpa `roles`):
+        // lengkapi lewat pencarian anggota per email, cocokkan id.
+        lengkapiAnggota((p.anggota || []).filter((a) => !Array.isArray(a.user?.roles)), () => alive)
         if (p.dokumenNama) setExistingDoc({ nama: p.dokumenNama, ukuran: p.dokumenUkuran })
         return luaranApi.byProposal(id).then((lr) => {
           if (!alive) return

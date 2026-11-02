@@ -8,7 +8,6 @@ import { ClipboardCheck, X } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../utils/dialog'
 import useLenis from '../hooks/useLenis'
 import { KepalaMasuk } from '../components/PeriodeAktif'
-import ApiPending from '../components/ApiPending'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import UserAvatar from '../components/UserAvatar'
 
@@ -803,8 +802,8 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-// readOnly = Monitor Pengguna (Ketua STMIK): daftar & detail tanpa aksi apa pun. Backend GET /users
-// masih khusus admin & Ketua LPPM → 403 sampai W-45 tersedia.
+// readOnly = Monitor Pengguna (Ketua STMIK): daftar & detail tanpa aksi apa pun (GET /users & /users/:id
+// terbuka untuk ketua_stmik, W-45).
 export default function UserManagementPage({ readOnly = false }) {
   const { user: me } = useAuthStore()
   const myRoles = getRoleNames(me?.roles)
@@ -1002,7 +1001,7 @@ export default function UserManagementPage({ readOnly = false }) {
             ) : error ? (
               error === 'akses' ? (
                 <p className="flex flex-wrap items-center justify-center gap-2 px-6 py-14 text-center text-base text-slate-600">
-                  Akses daftar pengguna untuk Ketua STMIK belum tersedia di server (W-45). <ApiPending />
+                  Anda tidak memiliki akses ke daftar pengguna.
                 </p>
               ) : (
                 <p className="px-6 py-14 text-center text-base text-red-600">{error}</p>

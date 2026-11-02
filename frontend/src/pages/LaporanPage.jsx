@@ -192,8 +192,13 @@ function LaporanDetail({ id, jenis }) {
     setMsg(null)
     try {
       await laporanApi.submit(laporan.id)
-      setLaporan((await laporanApi.getById(laporan.id)).data.data)
-      setMsg({ type: 'success', text: 'Laporan berhasil diajukan dan menunggu validasi LPPM.' })
+      const baru = (await laporanApi.getById(laporan.id)).data.data
+      setLaporan(baru)
+      // W-55: reviewer proposal asal otomatis ditugaskan → status langsung `review`.
+      setMsg({
+        type: 'success',
+        text: baru.status === 'review' ? 'Laporan berhasil diajukan dan langsung diteruskan ke reviewer proposal Anda.' : 'Laporan berhasil diajukan dan menunggu validasi LPPM.',
+      })
     } catch (e) {
       setMsg({ type: 'error', text: errorText(e, 'Laporan gagal diajukan.') })
     } finally {

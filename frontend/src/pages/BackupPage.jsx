@@ -77,7 +77,7 @@ export default function BackupPage() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [sumber, setSumber] = useState('')
-  const [status, setStatus] = useState('') // berjalan|berhasil|gagal; "dihapus" menunggu API (W-43)
+  const [status, setStatus] = useState('') // berjalan|berhasil (file masih ada)|gagal|dihapus (W-43)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [tick, setTick] = useState(0)
@@ -324,10 +324,7 @@ export default function BackupPage() {
             <option value="berjalan">Berjalan</option>
             <option value="berhasil">Berhasil</option>
             <option value="gagal">Gagal</option>
-            {/* W-43: backend belum bisa menyaring backup yang filenya dihapus */}
-            <option value="dihapus" disabled>
-              Dihapus (API belum ada)
-            </option>
+            <option value="dihapus">Dihapus</option>
           </select>
           <button type="button" onClick={refresh} className="btn btn-ghost btn-sm" title="Muat ulang">
             <RefreshCw className="size-4" aria-hidden="true" />
