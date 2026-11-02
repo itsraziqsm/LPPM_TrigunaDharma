@@ -112,12 +112,12 @@ func (s *Server) monitoringRingkasan(c *Ctx) error {
 	includeDraft := q["termasukDraft"] == "true"
 	row, err := queryObj(ctx, s.db,
 		"SELECT COUNT(*) AS `jumlah`, COUNT(DISTINCT p.`pengusulId`) AS `dosen`, SUM(p.`anggaran`) AS `total`,"+
-			" SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`anggaran` END) AS `disetujui`,"+statusCountCols()+monitoringFrom+cond, args...)
+			" SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`danaDisetujui` END) AS `disetujui`,"+statusCountCols()+monitoringFrom+cond, args...)
 	if err != nil {
 		return err
 	}
 	jenisRows, err := queryObjs(ctx, s.db,
-		"SELECT p.`jenis`, COUNT(*) AS `jumlah`, SUM(p.`anggaran`) AS `total`, SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`anggaran` END) AS `disetujui`"+
+		"SELECT p.`jenis`, COUNT(*) AS `jumlah`, SUM(p.`anggaran`) AS `total`, SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`danaDisetujui` END) AS `disetujui`"+
 			monitoringFrom+cond+" GROUP BY p.`jenis`", args...)
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (s *Server) monitoringProposals(c *Ctx) error {
 		order = "COALESCE(u.`fullName`, u.`name`) ASC, p.`id` DESC"
 	}
 	rows, err := queryObjs(ctx, s.db,
-		"SELECT p.`id`,p.`judul`,p.`jenis`,p.`status`,p.`anggaran`,p.`submittedAt`,p.`approvedAt`,p.`createdAt`,p.`updatedAt`,"+
+		"SELECT p.`id`,p.`judul`,p.`jenis`,p.`status`,p.`anggaran`,p.`danaDisetujui`,p.`submittedAt`,p.`approvedAt`,p.`createdAt`,p.`updatedAt`,"+
 			"u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`nidn` AS `u_nidn`,u.`programStudi` AS `u_programStudi`,"+
 			"pe.`id` AS `pe_id`,pe.`nama` AS `pe_nama`,pe.`tahun` AS `pe_tahun`,"+
 			"l.`id` AS `l_id`,l.`status` AS `l_status`,l.`realisasiAnggaran` AS `l_realisasiAnggaran`,"+
@@ -191,6 +191,7 @@ func (s *Server) monitoringProposals(c *Ctx) error {
 			{"status", r.Get("status")},
 			{"tahapan", O{{"kode", t.kode}, {"label", t.label}, {"urutan", int64(idx + 1)}}},
 			{"anggaran", r.Get("anggaran")},
+			{"danaDisetujui", r.Get("danaDisetujui")}, // W-54
 			{"submittedAt", r.Get("submittedAt")},
 			{"approvedAt", r.Get("approvedAt")},
 			{"createdAt", r.Get("createdAt")},
@@ -217,7 +218,7 @@ func (s *Server) monitoringDosen(c *Ctx) error {
 	rows, err := queryObjs(ctx, s.db,
 		"SELECT u.`id` AS `u_id`,u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`email` AS `u_email`,u.`nidn` AS `u_nidn`,u.`programStudi` AS `u_programStudi`,u.`jabatanFungsional` AS `u_jabatanFungsional`,"+
 			"COUNT(*) AS `jumlah`, COUNT(CASE WHEN p.`jenis` = 'penelitian' THEN 1 END) AS `penelitian`, COUNT(CASE WHEN p.`jenis` = 'pengabdian' THEN 1 END) AS `pengabdian`,"+
-			"SUM(p.`anggaran`) AS `total`, SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`anggaran` END) AS `disetujui`, MAX(p.`submittedAt`) AS `terakhir`,"+statusCountCols()+
+			"SUM(p.`anggaran`) AS `total`, SUM(CASE WHEN p.`status` = 'disetujui' THEN p.`danaDisetujui` END) AS `disetujui`, MAX(p.`submittedAt`) AS `terakhir`,"+statusCountCols()+
 			monitoringFrom+cond+" GROUP BY u.`id`,u.`name`,u.`fullName`,u.`email`,u.`nidn`,u.`programStudi`,u.`jabatanFungsional`"+
 			" ORDER BY `jumlah` DESC, COALESCE(u.`fullName`, u.`name`) ASC LIMIT ? OFFSET ?",
 		append(args, int64(limit), int64((page-1)*limit))...)

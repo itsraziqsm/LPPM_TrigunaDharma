@@ -90,6 +90,9 @@ type zString struct {
 	datetime bool
 	offset   bool
 	date     bool
+	lower    bool           // Go saja: huruf kecil (setelah trim)
+	pattern  *regexp.Regexp // Go saja: pola wajib
+	patMsg   string
 }
 
 func zStr() *zString { return &zString{min: -1} }
@@ -100,6 +103,11 @@ func (z *zString) Email() *zString                { z.email = true; return z }
 func (z *zString) URL(msg string) *zString        { z.url, z.urlMsg = true, msg; return z }
 func (z *zString) Datetime(offset bool) *zString  { z.datetime, z.offset = true, offset; return z }
 func (z *zString) Date() *zString                 { z.date = true; return z }
+func (z *zString) Lower() *zString                { z.lower = true; return z }
+func (z *zString) Regex(re *regexp.Regexp, msg string) *zString {
+	z.pattern, z.patMsg = re, msg
+	return z
+}
 
 func jsLength(s string) int { return len(utf16.Encode([]rune(s))) }
 
@@ -145,7 +153,14 @@ func (z *zString) parse(value any, present bool, path []any, issues *[]zIssue) (
 	if z.trim {
 		s = strings.TrimSpace(s)
 	}
+	if z.lower {
+		s = strings.ToLower(s)
+	}
 	status := zValid
+	if z.pattern != nil && !z.pattern.MatchString(s) {
+		*issues = append(*issues, zIssue{code: "invalid_string", path: path, message: z.patMsg, extra: O{{"validation", "regex"}}})
+		status = zDirty
+	}
 	if z.min >= 0 && jsLength(s) < z.min {
 		msg := z.minMsg
 		if msg == "" {
@@ -345,6 +360,14 @@ func (zBoolean) parse(value any, present bool, path []any, issues *[]zIssue) (an
 		return nil, zAborted
 	}
 	return b, zValid
+}
+
+// zPassthrough (Go saja) menerima nilai apa pun apa adanya; validasinya dilakukan handler
+// (dipakai untuk struktur bertingkat seperti `skor` review, W-54).
+type zPassthrough struct{}
+
+func (zPassthrough) parse(value any, present bool, path []any, issues *[]zIssue) (any, int) {
+	return value, zValid
 }
 
 type zEnum struct{ values []string }

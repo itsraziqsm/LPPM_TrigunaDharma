@@ -15,7 +15,9 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
+| W-48 | Formulir Daftar + halaman "Pendaftaran sudah terkirim" | Validasi `email` (trim + huruf kecil), `nidn` wajib ≥ 10 digit, `nim` (NIRM) wajib 10 digit (422); identitas ganda → 409 `code` `PENDAFTARAN_MENUNGGU` (+ `data.email` tersamar, `createdAt`) / `AKUN_SUDAH_AKTIF` / `IDENTITAS_BENTROK`; akun `rejected` boleh daftar ulang (201, id lama); `POST /auth/register/status` `{email}` → `{status}` (`new-api.md` bagian 30.1) | Hapus ApiPending cek status di halaman Terkirim. NIDN/NIRM baru di Pengaturan juga dicek formatnya (400). |
+| W-54 | Form Penilaian (skor, catatan singkat, dana disetujui), hasil review, statistik dana | `skor` + `danaDisetujui` di `POST /proposals|laporan/:id/reviews`; respons review + `skor`, `totalSkor`, `rataSkor`, `danaDisetujui`; finalisasi wajib 7 skor + rekomendasi (+ dana proposal, ditolak → 0); `danaDisetujui` di semua respons proposal/laporan, `/monitoring/proposals`, `/export/proposals`; `anggaranDisetujui` monitoring dari dana itu; `GET /reviewer/rubrik`; **satu reviewer per proposal** (bagian 30.2) | Wajib disambungkan: tanpa `skor`, Selesaikan review ditolak 400. Ganti draf localStorage `utils/rubrikReview.js`; `utils/danaKegiatan.js` pakai `danaDisetujui`. Dialog Tugaskan reviewer proposal: satu pilihan. |
+| W-42 | Cetak Dokumen: konfigurasi di server, nomor surat otomatis, arsip surat tugas | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`, `tabel-pengguna`, `luaran-dosen`); `POST /surat-tugas` → `{id, nomor: "001/ST/LPPM/XI/2026", …}`; `GET /surat-tugas?kegiatanId=&tahun=`, `GET /surat-tugas/:id` (bagian 30.3) | Admin & Ketua LPPM. Cetak memakai `nomor` dari respons POST; localStorage boleh tetap sebagai cadangan. |
 
 ### Sudah disambungkan
 
@@ -187,9 +189,7 @@ Data yang **sudah** tersambung:
 
 Data yang **menunggu API** (sementara "SOP Frontend": konfigurasi disimpan di `localStorage` lewat `utils/cetakConfig.js`):
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-42 | Simpan konfigurasi dokumen di server; **nomor surat otomatis** & **arsip surat tugas** yang sudah dicetak | Konfigurasi per dokumen (bersama untuk semua Admin/Ketua), penomoran berurutan, riwayat surat | `GET/PUT /cetak/konfigurasi/:dokumen` (`rekap-proposal`, `surat-tugas`); `POST /surat-tugas` `{ kegiatanId, tipe, tugas, petugas[], tanggalMulai, tanggalSelesai, alamat, penandatangan }` → `{ id, nomor, createdAt }`; `GET /surat-tugas?kegiatanId=` | Saat ini konfigurasi hanya di peramban yang dipakai dan nomor surat diisi manual. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Backup Data (`frontend/src/pages/BackupPage.jsx`, route `/backup`, Admin)
 
@@ -219,11 +219,9 @@ peramban/server; IP dipakai bersama satu kampus). Satu orang hanya bisa punya sa
 boleh setelah pendaftaran sebelumnya **ditolak**. Saat ini kolom `email`, `nidn`, `nim` sudah UNIQUE di DB, tetapi duplikat
 hanya menghasilkan 409 umum "Resource already exists" dan akun `rejected` tidak bisa mendaftar ulang sama sekali.
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-48 | Formulir Daftar (dosen & mahasiswa) + halaman baru **"Pendaftaran sudah terkirim"** | Validasi identitas lebih ketat & jawaban yang membedakan status pendaftaran sebelumnya | **1. Validasi** `POST /auth/register/dosen` & `/register/mahasiswa` (422 `{"errors":{"field":["pesan"]}}`): `email` wajib, format valid (sudah `zStr().Email()`; tambah: di-*trim* & huruf kecil sebelum disimpan/dicek agar unik tanpa beda huruf, tanpa spasi, domain ber-TLD); `nidn` **wajib** untuk dosen, hanya angka, **minimal 10 digit** (`^\d{10,}$`); `nim` **wajib** untuk mahasiswa, kini berarti **NIRM**, tepat **10 digit** (`^\d{10}$`). Nama field JSON & kolom DB tetap `nim` (kompatibel; label UI "NIRM"). **2. Cek identitas sebelum INSERT** (cari `User` dengan email ATAU nidn/nim yang sama): status `pending` → **409** `{ success:false, code:"PENDAFTARAN_MENUNGGU", message:"Pendaftaran dengan identitas ini sudah terkirim dan menunggu persetujuan admin.", data:{ email:"bu***@kampus.ac.id", createdAt } }`; status `approved` → **409** `code:"AKUN_SUDAH_AKTIF"` ("Akun sudah aktif, silakan masuk."); status `rejected` → **boleh daftar ulang**: perbarui baris lama (password baru, profil, peran, `status='pending'`, `createdAt/updatedAt`) lalu balas **201** seperti pendaftaran baru; email milik satu user tetapi NIDN/NIRM milik user lain → **409** `code:"IDENTITAS_BENTROK"`. **3. (Opsional)** `POST /auth/register/status` `{ email }` → `{ status: "pending"\|"approved"\|"rejected"\|"tidak_ada" }` dengan `authLimiter`, untuk tombol "Cek status pendaftaran" | Field `code` dipakai frontend untuk memilih tampilan (halaman "sudah terkirim" vs "silakan masuk") tanpa mencocokkan teks pesan. Akun hapus-sendiri (`deletedAt`, status `rejected`, email dianonimkan): kosongkan juga `nidn`/`nim` saat anonimisasi agar orangnya bisa mendaftar lagi. Aturan format yang sama sebaiknya juga berlaku di `PATCH /users/profile/me` (ubah NIDN/NIRM) dan saat admin mengubah data. Data lama yang belum memenuhi format **tidak** diubah otomatis. Endpoint status (3) membuka kemungkinan menebak email terdaftar; batasi lajunya atau ganti dengan pengiriman status lewat email. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
-**Frontend sudah dibuat (November 2026)** — tinggal menunggu backend: label "NIM" → **"NIRM"** (10 digit), NIDN
+**Frontend sudah dibuat (November 2026)**; backend W-48 kini tersedia (cek status & daftar ulang setelah ditolak sudah berlaku, tinggal disambungkan): label "NIM" → **"NIRM"** (10 digit), NIDN
 min. 10 digit (hanya angka, `inputMode="numeric"`), email divalidasi sebelum kirim; halaman **"Pendaftaran sudah terkirim —
 menunggu persetujuan admin"** setelah daftar berhasil atau saat API menjawab `PENDAFTARAN_MENUNGGU`; `AKUN_SUDAH_AKTIF` → arahkan
 ke Login dengan pesan; penanda di `localStorage` hanya untuk kenyamanan (buka `/register` di peramban yang sama → langsung ke
@@ -286,9 +284,7 @@ singkat), total & rata-rata (≥ 4,0 layak lanjut, 3,0–3,9 layak dengan revisi
 disimpan sebagai draf `localStorage` (`formReview:<userId>:<tipe>:<id>`, `utils/rubrikReview.js`) — hanya di peramban reviewer itu dan
 tidak terlihat Ketua. Kolom lama `nilaiRelevansi/Metodologi/Anggaran/Luaran` tidak dipakai form baru.
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-54 | Form Penilaian: skor per komponen + catatan singkat, dana disetujui; ringkasan di Detail (reviewer) & Hasil review (Ketua/pengusul) | Skor 1–5 per komponen, catatan singkat, dana disetujui per review | Tabel `ReviewSkor` (`reviewId` FK `ProposalReview` CASCADE, `kode` VARCHAR(40), `skor` TINYINT 1–5, `catatan` VARCHAR(200), unik `reviewId+kode`); kolom `ProposalReview.danaDisetujui` DECIMAL(15,2) NULL. `POST /proposals/:id/reviews` & `/laporan/:id/reviews` menerima `skor: [{kode, skor, catatan?}]` + `danaDisetujui` (proposal saja; 400 bila > `anggaran` atau < 0); respons review (+ `myReview` di tugasan, `GET /proposals/:id/reviews`) mengirim `skor`, `totalSkor`, `rataSkor`, `danaDisetujui`. `/finalize` menolak (400) bila skor belum lengkap, `rekomendasi` kosong, atau `danaDisetujui` kosong pada proposal (`ditolak` → 0). Opsional: rubrik di master (`GET /master/rubrik-review?jenis=&tipe=` → `[{kode,label,urutan}]`) agar pengabdian & laporan punya komponen sendiri | Kode komponen frontend: `judul`, `relevansi`, `latar`, `kebaruan`, `pustaka`, `konsistensi`, `kelayakan` (rubrik sama untuk penelitian, pengabdian, dan laporan sampai ada rubrik lain). **Keputusan UAT pendanaan**: dana final = dana disetujui **reviewer**, tidak bisa dinegosiasi/diubah (Ketua pun tidak) setelah review difinalisasi → simpan juga di kegiatan, mis. kolom `danaDisetujui` di Penelitian/Pengabdian yang diisi saat finalisasi review proposal, dikirim di **semua** respons proposal & laporan (laporan = dana proposal asal; `GET /proposals`, `/proposals/:id`, `/dosen/proposals*`, `/laporan*`, `/monitoring/proposals`, `/export/proposals`). **Statistik/pelaporan hanya memakai dana disetujui; proposal yang belum disetujui tidak dihitung**: `/monitoring/ringkasan` & `/monitoring/dosen` `anggaranDisetujui` = jumlah `danaDisetujui` proposal `disetujui` (`totalAnggaran` diajukan tidak lagi ditampilkan). Frontend sudah memakai `utils/danaKegiatan.js` (`danaFinal`, `totalDana`): selama field belum ada, nilainya sementara = `anggaran` proposal disetujui + penanda ApiPending. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Elemen desain yang belum dibuat (bukan soal API)
 

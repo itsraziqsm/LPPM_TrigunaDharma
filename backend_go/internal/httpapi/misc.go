@@ -365,7 +365,7 @@ func (s *Server) exportProposals(c *Ctx) error {
 	}
 	ctx := c.r.Context()
 	proposals, err := queryObjs(ctx, s.db,
-		"SELECT p.`id`,p.`judul`,p.`jenis`,p.`status`,p.`anggaran`,p.`submittedAt`,p.`approvedAt`,p.`createdAt`,p.`catatanRevisi`,"+
+		"SELECT p.`id`,p.`judul`,p.`jenis`,p.`status`,p.`anggaran`,p.`danaDisetujui`,p.`submittedAt`,p.`approvedAt`,p.`createdAt`,p.`catatanRevisi`,"+
 			"u.`name` AS `u_name`,u.`fullName` AS `u_fullName`,u.`nidn` AS `u_nidn`,u.`programStudi` AS `u_programStudi`,"+
 			"pe.`nama` AS `pe_nama`,pe.`tahun` AS `pe_tahun`"+
 			" FROM `Proposal` p JOIN `User` u ON u.`id` = p.`pengusulId` LEFT JOIN `Periode` pe ON pe.`id` = p.`periodeId`"+
@@ -420,6 +420,11 @@ func (s *Server) exportProposals(c *Ctx) error {
 			f, _ := strconv.ParseFloat(string(d), 64)
 			anggaran = formatIDNumber(f)
 		}
+		danaDisetujui := "-" // W-54: dana final dari reviewer
+		if d, ok := p.Get("danaDisetujui").(Decimal); ok {
+			f, _ := strconv.ParseFloat(string(d), 64)
+			danaDisetujui = formatIDNumber(f)
+		}
 		names := func(list []O, withPeran bool) string {
 			parts := make([]string, 0, len(list))
 			for _, item := range list {
@@ -472,6 +477,7 @@ func (s *Server) exportProposals(c *Ctx) error {
 			{"programStudi", programStudi},
 			{"periode", periode},
 			{"anggaran", anggaran},
+			{"danaDisetujui", danaDisetujui},
 			{"anggota", names(anggota[id], true)},
 			{"reviewer", names(reviewers[id], false)},
 			{"jumlahReview", int64(len(reviews[id]))},

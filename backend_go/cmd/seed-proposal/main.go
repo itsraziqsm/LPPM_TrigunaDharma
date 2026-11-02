@@ -460,6 +460,10 @@ func (c *ctx) buatProposal(pengusul user, email string, s skenario, judul string
 		"pengusulId", "periodeId", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 	args := []any{id, "proposal", judul, abstrak, s.status, anggaran, luaranTeks, rumpunIlmu[c.n%len(rumpunIlmu)], nullIfEmpty(bidang), string(kk), catatan,
 		pengusul.id, c.periode[s.jenis], submitted, approved, created, now}
+	if s.status == "disetujui" { // W-54: dana final = dana disetujui reviewer
+		cols = append(cols, "danaDisetujui")
+		args = append(args, anggaran)
+	}
 	if s.status != "draft" {
 		cols = append(cols, "dokumenNama", "dokumenMime", "dokumenUkuran", "dokumenBlob")
 		args = append(args, "Proposal - "+truncate(judul, 150)+".pdf", "application/pdf", len(pdfKecil), pdfKecil)
@@ -541,8 +545,19 @@ func (c *ctx) buatProposal(pengusul user, email string, s skenario, judul string
 			case "ditolak":
 				rek, cat = "ditolak", "Topik kurang relevan dengan bidang fokus."
 			}
-			if _, err := tx.Exec("INSERT INTO `ProposalReview` (`proposalId`,`reviewerId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-				id, rid, "80", "78", "82", "85", cat, rek, done, created.Add(96*time.Hour), now); err != nil {
+			var dana any // W-54: dana disetujui reviewer
+			switch {
+			case rek == "ditolak":
+				dana = "0.00"
+			case done:
+				dana = anggaran
+			}
+			res, err := tx.Exec("INSERT INTO `ProposalReview` (`proposalId`,`reviewerId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone`,`danaDisetujui`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+				id, rid, "80", "78", "82", "85", cat, rek, done, dana, created.Add(96*time.Hour), now)
+			if err != nil {
+				return 0, err
+			}
+			if err := seedSkor(tx, res, rek); err != nil {
 				return 0, err
 			}
 			if done {
@@ -649,8 +664,12 @@ func (c *ctx) buatLaporan(tx *sql.Tx, pid int64, table string, pengusul user, s 
 			if s.laporan == "review" {
 				rek, done = "disetujui", false
 			}
-			if _, err := tx.Exec("INSERT INTO `ProposalReview` (`proposalId`,`reviewerId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-				lid, rid, "84", "80", "83", "86", "Laporan sesuai rencana; periksa kelengkapan bukti luaran.", rek, done, created.Add(7*24*time.Hour), now); err != nil {
+			res, err := tx.Exec("INSERT INTO `ProposalReview` (`proposalId`,`reviewerId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone`,`createdAt`,`updatedAt`) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+				lid, rid, "84", "80", "83", "86", "Laporan sesuai rencana; periksa kelengkapan bukti luaran.", rek, done, created.Add(7*24*time.Hour), now)
+			if err != nil {
+				return err
+			}
+			if err := seedSkor(tx, res, rek); err != nil {
 				return err
 			}
 		}
@@ -677,4 +696,26 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return string(r[:n])
+}
+
+// seedSkor mengisi 7 komponen rubrik form penilaian (W-54) untuk review yang baru dibuat.
+func seedSkor(tx *sql.Tx, res sql.Result, rekomendasi string) error {
+	reviewID, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	skor := map[string]int{"disetujui": 4, "revisi": 3, "ditolak": 2}[rekomendasi]
+	if skor == 0 {
+		skor = 4
+	}
+	for i, kode := range []string{"judul", "relevansi", "latar", "kebaruan", "pustaka", "konsistensi", "kelayakan"} {
+		n := skor
+		if i%3 == 0 && skor < 5 {
+			n++
+		}
+		if _, err := tx.Exec("INSERT INTO `ReviewSkor` (`reviewId`,`kode`,`skor`,`catatan`) VALUES (?,?,?,NULL)", reviewID, kode, n); err != nil {
+			return err
+		}
+	}
+	return nil
 }

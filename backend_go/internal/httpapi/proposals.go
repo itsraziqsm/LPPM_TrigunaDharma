@@ -53,6 +53,8 @@ var (
 		optional("nilaiLuaran", zStr()),
 		optional("catatan", zStr()),
 		optional("rekomendasi", zEnumOf("disetujui", "revisi", "ditolak")),
+		optional("skor", zPassthrough{}),          // W-54
+		optional("danaDisetujui", zPassthrough{}), // W-54, proposal saja
 	)
 	updateLaporanSchema = zObj(
 		required("jenis", zEnumOf("kemajuan", "akhir")),

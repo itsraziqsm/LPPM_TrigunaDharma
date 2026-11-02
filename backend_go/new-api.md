@@ -33,6 +33,7 @@ API, dikelompokkan per rilis:
 - **Bagian 27** — Dosen yang diundang bisa **membaca seluruh detail & file proposal** (tanpa ubah); semua anggota tim hanya baca.
 - **Bagian 28** — Kelompok kecil waiting list: W-43 (filter backup dihapus), W-44 (luaran untuk Ketua LPPM), W-45 (Monitor Pengguna Ketua STMIK), W-46 (Ketua tidak bisa hapus akun sendiri), W-49 (jumlah laporan harian), W-51 (NIDN/NIM/peran anggota), W-55 (reviewer laporan otomatis = reviewer proposal).
 - **Bagian 29** — W-47 riwayat halaman & pencarian per user, W-50 kontak admin (WhatsApp), W-52 reset password oleh admin (password sementara + wajib ganti), W-53 kategori/filter/ringkasan log aktivitas (+ log logout & login gagal).
+- **Bagian 30** — W-48 satu identitas satu pendaftaran (validasi NIDN/NIRM, 409 ber-`code`, daftar ulang, cek status), W-54 form penilaian reviewer (skor rubrik, dana disetujui = dana final, satu reviewer per proposal), W-42 konfigurasi cetak bersama + nomor & arsip surat tugas.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2536,4 +2537,166 @@ tidak terpengaruh filter.
   `wajibGantiPassword` → halaman ganti password.
 - Log Aktivitas: filter Kategori & Cari pakai query server (`kategori`, `search`, `dari`, `sampai`), kartu dari
   `/activity-logs/ringkasan`; `utils/kategoriLog.js` bisa diganti field `kategori`.
+
+## 30. Pendaftaran satu identitas, form penilaian & dana disetujui, surat tugas (W-48, W-54, W-42)
+
+Migrasi: `20261107000000_review_skor_dana` (tabel `ReviewSkor`, kolom `danaDisetujui` di `ProposalReview`,
+`Penelitian`, `Pengabdian`, VIEW `Proposal`/`Laporan` dibuat ulang) dan `20261107000100_surat_tugas` (tabel
+`SuratTugas`). Konfigurasi cetak memakai tabel `Pengaturan` (bagian 29.2).
+
+> **Perubahan perilaku yang perlu diperhatikan frontend**
+> 1. `POST /auth/register/dosen` kini **mewajibkan `nidn`**, `/register/mahasiswa` **mewajibkan `nim`** (NIRM).
+> 2. `POST /proposals/:id/reviews/finalize` dan `/laporan/:id/reviews/finalize` menolak (400) bila skor rubrik
+>    belum lengkap — Form Penilaian **harus mengirim `skor`** (dan `danaDisetujui` untuk proposal) ke server.
+> 3. Satu proposal hanya bisa punya **satu reviewer** (`POST /proposals/:id/reviewers`).
+
+### 30.1 W-48 — Satu identitas satu pendaftaran
+
+**Validasi** (422 `{"errors":{"field":["pesan"]}}`, sama dengan validasi lain):
+
+| Field | Aturan | Pesan |
+|---|---|---|
+| `email` | di-*trim* & huruf kecil sebelum dicek/disimpan, format email | `Invalid email` |
+| `nidn` (dosen) | **wajib**, hanya angka, minimal 10 digit | `NIDN wajib berupa angka minimal 10 digit` |
+| `nim` (mahasiswa, label UI "NIRM") | **wajib**, tepat 10 digit angka | `NIRM wajib tepat 10 digit angka` |
+
+Field kosong → `Required`. Nama field JSON & kolom DB tetap `nim`.
+
+**Cek identitas sebelum menyimpan** (user dengan email ATAU NIDN/NIRM yang sama):
+
+| Kondisi | Respons |
+|---|---|
+| belum ada | 201 seperti biasa |
+| status `pending` | **409** `{ "success": false, "code": "PENDAFTARAN_MENUNGGU", "message": "Pendaftaran dengan identitas ini sudah terkirim dan menunggu persetujuan admin.", "data": { "email": "bu***@kampus.ac.id", "createdAt": "…" } }` |
+| status `approved` | **409** `{ "success": false, "code": "AKUN_SUDAH_AKTIF", "message": "Akun sudah aktif, silakan masuk.", "data": { "email": "bu***@kampus.ac.id" } }` |
+| status `rejected` | **201** — baris lama dipakai ulang: email, password, nama, profil (field yang tidak dikirim dikosongkan), peran diganti sesuai formulir, `status = pending`, `createdAt/updatedAt` baru, verifikasi email & penanda wajib ganti password direset. `data.id` = id lama. |
+| email milik satu user, NIDN/NIRM milik user lain | **409** `{ "success": false, "code": "IDENTITAS_BENTROK", "message": "Email dan NIDN/NIRM ini terdaftar pada akun yang berbeda. Hubungi admin LPPM." }` |
+
+Akun yang dihapus pemiliknya sudah dianonimkan (email `deleted-…`, `nidn`/`nim` dikosongkan), jadi orangnya bisa
+mendaftar lagi dengan identitas yang sama.
+
+**Cek status** — `POST /auth/register/status` (publik, rate limit seperti login: 10 per 15 menit per IP)
+body `{ "email" }` → `{ "status": "pending" | "approved" | "rejected" | "tidak_ada", "createdAt"? }`
+(`createdAt` hanya bila ada). Email salah format → 422.
+
+**Profil:** `PATCH /users/profile/me` menolak (400, pesan yang sama) NIDN/NIRM **baru** yang tidak sesuai format;
+nilai lama yang tidak diubah dibiarkan walau belum sesuai format. Data lama tidak diubah otomatis.
+
+### 30.2 W-54 — Form penilaian reviewer & dana disetujui
+
+**Satu reviewer per proposal.** `POST /proposals/:id/reviewers`: lebih dari satu id berbeda → 400
+`"Proposal hanya dapat direview oleh satu reviewer"`; proposal sudah punya reviewer lain → 409 `"Proposal sudah
+memiliki reviewer. Hapus tugasan reviewer lama sebelum menugaskan reviewer lain."` (hapus dulu lewat
+`DELETE /proposals/:id/reviewers/:reviewerId`). Menugaskan ulang reviewer yang sama tetap boleh. Laporan tidak
+dibatasi (reviewer laporan otomatis = reviewer proposal, W-55).
+
+**Rubrik** — `GET /reviewer/rubrik` (login) → `[{ "kode", "label", "urutan" }]`, sama untuk penelitian, pengabdian,
+dan laporan: `judul`, `relevansi`, `latar`, `kebaruan`, `pustaka`, `konsistensi`, `kelayakan`.
+
+**Simpan review** — `POST /proposals/:id/reviews` & `POST /laporan/:id/reviews` menerima field baru (semua opsional
+saat simpan draf):
+
+```json
+{ "catatan": "…", "rekomendasi": "disetujui",
+  "skor": [ { "kode": "judul", "skor": 4, "catatan": "Fokus" }, { "kode": "relevansi", "skor": 5 } ],
+  "danaDisetujui": 12000000 }
+```
+
+- `skor`: bila dikirim **mengganti semua** skor review itu (boleh sebagian saat draf). `kode` harus dari rubrik,
+  tidak boleh ganda; `skor` bilangan bulat 1–5; `catatan` maks 200 karakter. Pelanggaran → 400
+  (`"skor[0].kode tidak dikenal"`, `"Skor judul harus bilangan bulat 1–5"`, …).
+- `danaDisetujui` (**proposal saja**; di laporan → 400): angka ≥ 0 (string angka juga diterima), `null` = kosongkan,
+  tidak boleh melebihi `anggaran` proposal (400 `"Dana disetujui tidak boleh melebihi dana yang diusulkan"`).
+  Proposal yang sudah `disetujui`/`ditolak` → 400 `"Proposal sudah diputuskan; dana disetujui tidak dapat diubah"`.
+- Seperti sebelumnya, simpan ulang mereset `isDone=false`.
+
+**Respons review** (simpan, finalisasi, `GET /proposals/:id/reviews`, `reviews` di detail proposal/laporan,
+`GET /laporan/:id/reviews`, `myReview` di `/reviewer/my-tugasan` & `/laporan/tugasan`) kini diakhiri:
+
+```json
+"skor": [ { "kode": "judul", "skor": 4, "catatan": "Fokus" }, … ],
+"totalSkor": 28, "rataSkor": 4.0, "danaDisetujui": "12000000"
+```
+
+`skor` urut rubrik (`[]` bila belum ada), `rataSkor` = total ÷ jumlah komponen terisi (2 desimal, `null` bila
+kosong), `danaDisetujui` string desimal atau `null` (selalu `null` untuk review laporan). Kelayakan (≥ 4,0 / 3,0–3,9
+/ < 3,0) tetap dihitung frontend.
+
+**Finalisasi** (`/reviews/finalize`) → 400 bila: skor belum 7 komponen (`"Skor belum lengkap: 2 dari 7 komponen
+terisi"`), `rekomendasi` kosong, atau (proposal) `danaDisetujui` kosong — kecuali rekomendasi `ditolak`, yang otomatis
+memakai dana **0**. Saat review proposal difinalisasi, dana itu disalin ke kegiatan sebagai **dana final**
+(tidak diubah lagi setelah proposal `disetujui`/`ditolak`; Ketua tidak punya endpoint untuk mengubahnya).
+
+**`danaDisetujui` di kegiatan** — field baru setelah `anggaran` di semua respons proposal (`GET /proposals`,
+`/proposals/:id`, `/proposals/my`, `/dosen/proposals*`, `as-member`, …) dan laporan (`/laporan*`, = dana proposal
+asal), plus `GET /monitoring/proposals` dan `GET /export/proposals` (diformat seperti `anggaran`). `null` bila belum
+ada review proposal yang difinalisasi. Migrasi mengisi proposal yang **sudah** `disetujui` sebelum fitur ini dengan
+`danaDisetujui = anggaran`.
+
+**Statistik** — `anggaranDisetujui` di `GET /monitoring/ringkasan` (+ `perJenis`) dan `GET /monitoring/dosen` kini =
+jumlah `danaDisetujui` proposal berstatus `disetujui` (sebelumnya jumlah `anggaran`). Proposal yang belum disetujui,
+atau disetujui tanpa review berdana, tidak menambah angka ini. `totalAnggaran` (diajukan) tetap dikirim.
+
+`cmd/seed-proposal` kini mengisi skor rubrik, dana disetujui review, dan dana final proposal disetujui.
+
+### 30.3 W-42 — Konfigurasi cetak bersama & surat tugas
+
+Semua endpoint di bagian ini: **admin & ketua_lppm** (lainnya 403).
+
+**Konfigurasi dokumen cetak** (satu konfigurasi bersama untuk semua Admin/Ketua):
+
+| Method | Path | Body / respons |
+|---|---|---|
+| GET | `/cetak/konfigurasi/:dokumen` | `{ dokumen, konfigurasi, updatedAt, updatedBy }` |
+| PUT | `/cetak/konfigurasi/:dokumen` | `{ "konfigurasi": { … } }` (objek bebas, maks 8000 byte JSON; `null` = kosongkan) |
+
+`:dokumen` ∈ `rekap-proposal`, `surat-tugas`, `tabel-pengguna`, `luaran-dosen` (lainnya 404). Padanan kunci
+`localStorage` frontend: `rekapProposal`, `suratTugas`, `tabelPengguna`, `luaranDosen`. Isi `konfigurasi` disimpan
+apa adanya (frontend menentukan bentuknya); belum pernah disimpan → `konfigurasi: null`.
+
+**Surat tugas** (arsip + nomor otomatis):
+
+| Method | Path | Keterangan |
+|---|---|---|
+| POST | `/surat-tugas` | buat surat & ambil nomor → 201 |
+| GET | `/surat-tugas` | arsip: `?kegiatanId=`, `?tahun=`, `page`, `limit` (maks 100), terbaru dulu |
+| GET | `/surat-tugas/:id` | detail |
+
+Body POST:
+
+```json
+{ "kegiatanId": 855, "tugas": "melaksanakan kegiatan penelitian",
+  "petugas": [ { "nama": "Dr. Budi", "identitas": "0100000001", "peran": "Ketua" } ],
+  "tanggalMulai": "2026-11-03", "tanggalSelesai": "2026-12-20", "alamat": "Kampus STMIK Triguna Dharma",
+  "penandatangan": { "nama": "Dr. …", "nidn": "0101010101", "jabatan": "Ketua LPPM" } }
+```
+
+- `kegiatanId` = id proposal (**harus `disetujui`**) atau laporan; `tipe` ditentukan dari kegiatannya (bila dikirim
+  harus cocok). `tugas` wajib (maks 2000), `alamat` wajib (maks 1000), `tanggalMulai` wajib `YYYY-MM-DD`,
+  `tanggalSelesai` opsional dan tidak boleh sebelum `tanggalMulai`, `petugas` 1–50 orang (`nama` wajib maks 200,
+  `identitas` maks 50, `peran` maks 100 — kirim hanya petugas yang dicentang), `penandatangan.nama` wajib.
+  Galat → 400; kegiatan tidak ada → 404.
+- **Nomor otomatis**: `001/ST/LPPM/XI/2026` — urut 3 digit, reset tiap tahun, bulan romawi & tahun dari waktu dibuat
+  (zona `BACKUP_ZONA`, bawaan WIB). Aman dibuat bersamaan (unik `tahun+urut`).
+- Respons/item arsip:
+
+```json
+{ "id": 3, "nomor": "003/ST/LPPM/XI/2026", "tahun": 2026, "urut": 3, "kegiatanId": 855, "tipe": "proposal", "jenis": "penelitian",
+  "judulKegiatan": "…", "tugas": "…", "petugas": [ … ], "tanggalMulai": "2026-11-03", "tanggalSelesai": "2026-12-20",
+  "alamat": "…", "penandatangan": { … }, "dibuatOleh": { "id": 2, "name": "…", "fullName": "…" }, "createdAt": "…" }
+```
+
+  `judulKegiatan` disalin saat dibuat; bila kegiatan dihapus `kegiatanId` menjadi `null`, arsip tetap ada.
+  Dicatat di log aktivitas (`dokumen.surat_tugas`, kategori `dokumen`).
+
+### Untuk frontend
+
+- Daftar: tangani `code` 409 (`PENDAFTARAN_MENUNGGU`, `AKUN_SUDAH_AKTIF`, `IDENTITAS_BENTROK`); tombol cek status di
+  halaman Terkirim → `POST /auth/register/status`.
+- Form Penilaian: kirim `skor` + `danaDisetujui` (proposal) saat Simpan draf/Selesaikan, baca kembali dari `myReview`
+  (bukan localStorage); hasil review Ketua/pengusul dari `reviews[].skor/totalSkor/rataSkor/danaDisetujui`;
+  `utils/danaKegiatan.js` memakai field `danaDisetujui` kegiatan (hapus ApiPending W-54). Dialog Tugaskan reviewer
+  proposal: pilih satu reviewer.
+- Cetak Dokumen: simpan konfigurasi lewat `PUT /cetak/konfigurasi/:dokumen`; Surat Tugas: `POST /surat-tugas`
+  sebelum mencetak lalu cetak memakai `nomor` dari respons; riwayat dari `GET /surat-tugas?kegiatanId=`.
 

@@ -61,6 +61,7 @@ func (m *mount) get(p string, s ...step)    { m.handle(http.MethodGet, p, s...) 
 func (m *mount) post(p string, s ...step)   { m.handle(http.MethodPost, p, s...) }
 func (m *mount) patch(p string, s ...step)  { m.handle(http.MethodPatch, p, s...) }
 func (m *mount) delete(p string, s ...step) { m.handle(http.MethodDelete, p, s...) }
+func (m *mount) put(p string, s ...step)    { m.handle(http.MethodPut, p, s...) }
 
 func splitPattern(pattern string) []string {
 	parts := strings.Split(strings.Trim(pattern, "/"), "/")

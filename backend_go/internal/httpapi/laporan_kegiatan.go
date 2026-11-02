@@ -27,7 +27,7 @@ import (
 // sama, dengan proposalId = id laporan (id unik global dari `Kegiatan`).
 
 var (
-	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "metodePenelitian",
+	laporanScalars = []string{"id", "tipe", "proposalId", "judul", "abstrak", "jenis", "status", "anggaran", "danaDisetujui", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "luaranTercapai", "ringkasanHasil", "realisasiAnggaran", "metodePenelitian",
 		"catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"}
 
 	laporanListQuerySchema = zObj(
@@ -221,6 +221,9 @@ func (s *Server) loadLaporanKegiatan(ctx context.Context, detail bool, tail stri
 		}
 		for _, list := range grouped {
 			nestColumns(list, "r_", "reviewer")
+			if err := lengkapiReview(ctx, s.db, list); err != nil { // W-54
+				return nil, err
+			}
 		}
 	}
 	stripInternal(items)
@@ -401,6 +404,9 @@ func (s *Server) myLaporanTugasan(c *Ctx) error {
 			"SELECT `id`,`proposalId` AS `laporanId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone` FROM `ProposalReview` WHERE `reviewerId` = ? AND `proposalId` IN ("+placeholders(len(ids))+")",
 			append([]any{reviewerID}, idArgs(ids)...)...)
 		if err != nil {
+			return err
+		}
+		if err := lengkapiReview(ctx, s.db, rows); err != nil { // W-54
 			return err
 		}
 		for _, row := range rows {
@@ -883,6 +889,9 @@ func (s *Server) getLaporanReviews(c *Ctx) error {
 	}
 	stripInternal(reviews)
 	nestColumns(reviews, "r_", "reviewer")
+	if err := lengkapiReview(c.r.Context(), s.db, reviews); err != nil { // W-54
+		return err
+	}
 	return c.ok("Review laporan fetched", reviews)
 }
 
@@ -914,7 +923,11 @@ func (s *Server) submitLaporanReview(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	review, err := s.upsertReview(c, l.ID, c.user.UserID)
+	target, err := s.reviewTargetOf(c.r.Context(), l.ID, false)
+	if err != nil {
+		return err
+	}
+	review, err := s.upsertReview(c, l.ID, c.user.UserID, target)
 	if err != nil {
 		return err
 	}
@@ -937,11 +950,17 @@ func (s *Server) finalizeLaporanReview(c *Ctx) error {
 		return httpError(http.StatusBadRequest, "Simpan review terlebih dahulu sebelum finalisasi")
 	}
 	ctx := c.r.Context()
+	if _, err := s.cekReviewLengkap(ctx, review.Int64("id"), &reviewTarget{}); err != nil { // W-54
+		return err
+	}
 	if _, err := s.db.ExecContext(ctx, "UPDATE `ProposalReview` SET `isDone` = ?, `updatedAt` = ? WHERE `id` = ?", true, s.nowMs(), review.Int64("id")); err != nil {
 		return err
 	}
 	review, err = s.reviewByKey(c, l.ID, c.user.UserID)
 	if err != nil {
+		return err
+	}
+	if review, err = lengkapiSatuReview(ctx, s.db, review); err != nil {
 		return err
 	}
 	if err := s.createNotification(ctx, s.db, notification{

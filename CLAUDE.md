@@ -20,7 +20,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
 - `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53, pendaftaran satu identitas/form penilaian & dana disetujui/surat tugas W-48/54/42) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -35,7 +35,8 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
    `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp`/`nidn`/`nim`/`roles` di `anggota[].user`
    dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`); login & `/auth/me` + `wajibGantiPassword`;
-   log aktivitas + field `kategori`;
+   log aktivitas + field `kategori`; proposal & laporan + `danaDisetujui`, review + `skor`/`totalSkor`/`rataSkor`/`danaDisetujui`;
+   pendaftaran mewajibkan `nidn`/`nim` dan identitas ganda → 409 ber-`code`;
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
    (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
@@ -121,24 +122,26 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 ### Endpoint (`/api/v1`, semua butuh Bearer token kecuali auth publik & `/health`)
 | Grup | Endpoint utama | Akses |
 |---|---|---|
-| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`, `wajibGantiPassword`), verify-email/resend (login), verify-email (publik) | publik / login |
+| `/auth` | login, refresh, logout, logout-all, register/dosen (`nidn` wajib ≥ 10 digit), register/mahasiswa (`nim`/NIRM wajib 10 digit), register/status (`{email}` → status, rate limit), forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`, `wajibGantiPassword`), verify-email/resend (login), verify-email (publik) | publik / login |
 | `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password; Ketua LPPM/STMIK → 403), profile/export (file JSON), profile/foto (POST multipart / DELETE), profile/riwayat (GET; POST `/halaman` `{path}`, POST `/cari`, DELETE `/cari`; maks 50/4, W-47), `/:id/reset-password` (POST admin, `{password}` admin → `passwordSementara` sekali tampil, W-52), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua+ketua_stmik (W-45, baca); status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update, DELETE `/:id` (hapus langsung + password); `deletion-request` (+ approve/cancel) | baca: semua; create/update/DELETE: ketua; deletion-request: admin; approve: ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
-| `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
+| `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin; **maks 1 reviewer per proposal**, lain → 409); simpan (+ `skor`, `danaDisetujui`) & finalisasi review (reviewer; skor 7 komponen + rekomendasi + dana wajib) | |
 | `/proposals/:id/laporan`, `/laporan/:id[/download]` | laporan `kemajuan`/`akhir` (file atau URL) | dosen/mhs; admin edit/hapus |
 | `/proposals/:id/dokumen`, `/dokumen/:id[/download]` | dokumen lampiran | dosen/mhs; admin hapus |
 | `/dosen/proposals` | stats (`?jenis=`, + key `review`), `as-member` (proposal orang lain tempat user anggota `diterima`), members/search, invitations (+ `GET /:id` detail untuk penerima: `aksesPenuh` → lengkap + `dokumenUtama` untuk dosen diundang/anggota diterima, selain itu ringkas; + PATCH respon), CRUD + submit | dosen; mahasiswa hanya invitations & as-member |
 | `/program-studi` | list (`?semua=true` termasuk nonaktif), create, `/:id` update/delete | GET publik; tulis admin |
 | `/master/:kategori` | `rumpun-ilmu`, `bidang`, `luaran`, `jenis-mitra`: list (`?jenis=`, `?semua=true`), create, `/:id` update/delete | GET login; tulis admin |
 | `/mahasiswa/laporan-harian` | proposals (+ `jumlahLaporanHarian` milik user), `/:proposalId` list/create (upload/link GDrive), dokumen/:id, delete | mahasiswa anggota |
-| `/reviewer/my-tugasan` | tugasan review **proposal** milik user | hanya peran reviewer (cek DB) |
+| `/reviewer/my-tugasan` | tugasan review **proposal** milik user; `/reviewer/rubrik` (7 komponen, login) | hanya peran reviewer (cek DB) |
 | `/laporan` | list (admin, ketua), `/my`, `/eligible`, `/tugasan`, create, detail, update, submit, delete, `/:id/dokumen` upload/download, `/:id/status` (ketua/admin), `/:id/reviewers` (+ `DELETE /:reviewerId`), `/:id/reviews` (+ `/finalize`) | lihat `backend_go/new-api.md` |
 | `/luaran` | `/jenis` (daftar jenis, jurnal & poster prioritas), `/stats` (+ `poster`), `/proposal/:proposalId`, create, `/:id` update/delete (target: proposal draft/revisi), `/:id/capaian`, `/:id/bukti` upload/download (capaian: proposal disetujui & laporan belum diajukan); admin & Ketua LPPM (W-44): `GET /` (semua luaran + filter), `/unduh-csv`, `/unduh-zip` (bukti + daftar-luaran.csv, maks 1000) | pengusul tulis; baca = akses proposal; admin+ketua unduh |
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
 | `/activity-logs` | `/my`; list semua (admin, ketua); filter `kategori`, `search`, `dari`/`sampai` (YYYY-MM-DD WIB); `/ringkasan` (admin, ketua) | |
+| `/cetak/konfigurasi/:dokumen` | GET/PUT konfigurasi bersama (`rekap-proposal`, `surat-tugas`, `tabel-pengguna`, `luaran-dosen`; disimpan di `Pengaturan` `cetak.*`) | admin, ketua |
+| `/surat-tugas` | POST (nomor otomatis `001/ST/LPPM/<bulan romawi>/<tahun>`, urut per tahun; proposal disetujui/laporan), GET arsip (`?kegiatanId=&tahun=`), `/:id` | admin, ketua |
 | `/kontak-admin` | GET (`whatsapp`, `nama`, `jamLayanan`), PATCH (nomor dinormalisasi `62…`) | GET login semua peran; PATCH admin |
 | `/export/proposals` | data export | admin, ketua |
 | `/proposals/:id/deletion-request`, `/laporan/:id/deletion-request`, `/dokumen/deletion-request` | admin minta hapus dokumen yang sudah diajukan (`{password, alasan}`, GET = permintaan menunggu); daftar (`?status=&tipe=`); Ketua `/:requestId/approve` (`{password}`, hapus proposal + laporannya) / `/cancel` (admin batal, Ketua tolak) | admin / ketua |
@@ -176,6 +179,12 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 - Review: nilai (`nilaiRelevansi/Metodologi/Anggaran/Luaran`) bertipe **TEXT**,
   `rekomendasi` ∈ `disetujui|revisi|ditolak`; simpan ulang mereset `isDone=false`;
   finalisasi set `isDone=true` dan memberi notifikasi `review_selesai` ke pengusul.
+  **Form penilaian (W-54, `review_skor.go`)**: `skor` [{kode, skor 1–5, catatan ≤ 200}] per rubrik (`judul, relevansi,
+  latar, kebaruan, pustaka, konsistensi, kelayakan`, tabel `ReviewSkor`, mengganti semua saat dikirim); `danaDisetujui`
+  (proposal saja, 0 ≤ dana ≤ anggaran, terkunci setelah proposal diputuskan). Finalisasi mewajibkan 7 skor + rekomendasi
+  (+ dana untuk proposal; `ditolak` → 0) dan menyalin dana ke kegiatan = **dana final** (`Penelitian/Pengabdian.danaDisetujui`;
+  laporan = dana proposal asal lewat VIEW). **Satu proposal satu reviewer.** Statistik `anggaranDisetujui` = jumlah
+  `danaDisetujui` proposal `disetujui`.
 - Laporan kemajuan/akhir (`LaporanProposal`, fitur lama tanpa review) hanya untuk proposal
   `disetujui`; wajib file atau `dokumenUrl`.
 - **Laporan** (baris `tipe='laporan'` di Penelitian/Pengabdian, endpoint `/laporan`): dibuat
@@ -189,6 +198,12 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   reviewer simpan/finalisasi (hanya saat `review`); ketua/admin set status. Tugasan & review
   laporan memakai `ReviewerTugasan`/`ProposalReview` dengan `proposalId` = id laporan;
   `/reviewer/my-tugasan` menyaring hanya tipe proposal.
+- **Pendaftaran (W-48, `pendaftaran.go`)**: email di-trim + huruf kecil, `nidn` ≥ 10 digit / `nim` (NIRM) 10 digit wajib;
+  identitas (email ATAU NIDN/NIRM) sudah ada → 409 `code` `PENDAFTARAN_MENUNGGU` (pending, + email tersamar & createdAt) /
+  `AKUN_SUDAH_AKTIF` (approved) / `IDENTITAS_BENTROK` (email & nomor milik user berbeda); user `rejected` → baris lama dipakai
+  ulang (201, status pending, peran & profil diganti). NIDN/NIRM baru di profil dicek format yang sama.
+- **Surat tugas (W-42, `surat_tugas.go`)**: arsip `SuratTugas` (salinan judul, petugas & penandatangan JSON), nomor unik per
+  (`tahun`,`urut`) dalam transaksi; konfigurasi cetak bersama di `Pengaturan` `cetak.<dokumen>`.
 - Hapus akun sendiri (`DELETE /users/profile/me`; Ketua LPPM/STMIK ditolak 403, harus lewat Admin): bukan hapus fisik — status `rejected`,
   refresh token dicabut, profil dianonimkan ("Pengguna Dihapus", `deleted-<id>@deleted.invalid`),
   foto dihapus, undangan pending → ditolak, `deletedAt` diisi; admin terakhir tidak boleh.
@@ -230,17 +245,17 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 ### Database (MySQL/MariaDB)
 Tabel: `Role` (`name` ENUM admin|ketua_lppm|ketua_stmik|dosen|reviewer|mahasiswa), `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`, `wajibGantiPassword`),
 `EmailVerificationToken`, `UserRiwayat` (riwayat halaman/cari per user, W-47), `Pengaturan` (key-value,
-mis. `kontak_admin.*`, W-50), `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
+mis. `kontak_admin.*`, `cetak.*`, W-50/W-42), `ReviewSkor` (skor rubrik per review, W-54), `SuratTugas` (arsip surat tugas, W-42), `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
 (`kategori` rumpun_ilmu|bidang|luaran|jenis_mitra, `nama` unik per kategori, `jenisKegiatan` NULL = keduanya,
 `jenisLuaran`, `urutan`, `isAktif`), `UserFoto`
 (foto profil: `userId` PK, blob, mime, ukuran), `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
 (`jenis`: penelitian|pengabdian, `isAktif`), `Kegiatan` (registri id global: `jenis`, `tipe`),
 `Penelitian` dan `Pengabdian` (kolom identik: kolom proposal lama tanpa `jenis` + `tipe`
 ENUM('proposal','laporan'), `proposalId` (laporan → proposal asal), `luaran`,
-`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `rumpunIlmu`, `bidang`, `kataKunci`; plus `skema` dan `metodePenelitian` (laporan) hanya di Penelitian dan
+`luaranTercapai`, `ringkasanHasil`, `realisasiAnggaran`, `rumpunIlmu`, `bidang`, `kataKunci`, `danaDisetujui` (dana final, W-54); plus `skema` dan `metodePenelitian` (laporan) hanya di Penelitian dan
 `mitra`, `mitraJenis`, `mitraAlamat`, `mitraKontak`, `mitraKebutuhan` hanya di Pengabdian), `ProgramStudi` (master: `nama` unik, `jenjang`, `isAktif`;
 `User.programStudi/prodi` tetap teks bebas), `ProposalAnggota`,
-`ReviewerTugasan`, `ProposalReview`, `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
+`ReviewerTugasan`, `ProposalReview` (+ `danaDisetujui`), `LaporanProposal`, `DokumenLampiran`, `LaporanHarian`,
 `Notification`, `ActivityLog`, `PeriodeDeletionRequest`, `DokumenDeletionRequest` (permintaan hapus proposal/laporan:
 `kegiatanId` SET NULL setelah terhapus, salinan `judul`/`jenis`/`pengusulId`, `alasan`, `catatan`, status
 pending|approved|rejected|cancelled), `BackupLog`, `TemplateProposal` (versi template
@@ -456,8 +471,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `GET /export/proposals` + `exportToPDF`. (2) **Surat Tugas** → `SuratTugasPage`: pilih proposal
   disetujui/laporan, tugas/petugas (pengusul + anggota)/tanggal (periode)/alamat (mitra atau kampus)
   diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi di `localStorage`
-  (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip =
-  ApiPending W-42. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
+  (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip: API W-42
+  sudah tersedia (`/cetak/konfigurasi/:dokumen`, `/surat-tugas`), frontend belum menyambungkan. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
   peran → `GET /users` semua halaman (per peran, digabung) → PDF `pages/cetak/cetakPengguna.js`. (4) **Luaran Dosen** (Ketua LPPM; unduhan terbuka W-44;
   `CetakLuaranPage`, `/cetak-dokumen/luaran-dosen`): keluaran ZIP bukti &/atau CSV (≥ 1) + filter Luaran Dosen kecuali jenis
   luaran & prioritas → `GET /luaran/unduh-zip|unduh-csv` (`pages/cetak/cetakLuaran.js`). Kunci & ringkasan di `pages/cetak/dokumen.js`.
@@ -511,7 +526,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   skor 1–5 + catatan singkat → total/rata-rata/kelayakan otomatis → B. Catatan reviewer → C. Rekomendasi (Diterima/Diterima dengan perbaikan/
   Ditolak, saran "Sesuai skor") + **dana disetujui ditentukan reviewer** (proposal; ≤ dana diusulkan, isi cepat %, ditolak → Rp 0); ringkasan
   melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
-  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Reviewer laporan =
+  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage; API **W-54** sudah tersedia (`skor`, `danaDisetujui`, finalisasi mewajibkan skor lengkap; satu reviewer per proposal) — frontend belum menyambungkan. Reviewer laporan =
   reviewer proposal asal (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan (status langsung `review`, pesan ajukan menyesuaikan); bila tidak
   ada, Ketua hanya bisa **Tugaskan pengganti** (laporan `diajukan` tanpa reviewer; dialog mencentang reviewer proposal asal yang tersedia).
   **Review dimulai dari tahap proposal**: Ketua menugaskan reviewer hanya di proposal (`ProposalMasukDetailPage`, keterangan "juga otomatis menilai
@@ -664,7 +679,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   untuk email/password membawa kembali ke langkah 1; muat satu layar tanpa gulir di 1366×768). Validasi di frontend — email valid
   (di-*trim* & huruf kecil sebelum dikirim), **NIDN** wajib angka ≥ 10 digit, **NIRM** (label baru untuk field API `nim`) wajib tepat 10 digit
   (input hanya angka); galat per kolom + galat 422 server. Berhasil → `/register/terkirim` (`PendaftaranTerkirimPage.jsx`, tamu: email tersamar,
-  peran, tanggal, status Menunggu + ApiPending untuk cek status, "Daftar dengan data lain" menghapus penanda) dan penanda `localStorage`
+  peran, tanggal, status Menunggu + cek status (API `POST /auth/register/status` W-48 sudah tersedia, frontend belum menyambungkan), "Daftar dengan data lain" menghapus penanda) dan penanda `localStorage`
   `pendaftaranTerkirim` (30 hari, kenyamanan saja: `/register` di peramban yang sama → halaman terkirim; dihapus saat login berhasil). Kode 409
   dari server: `PENDAFTARAN_MENUNGGU` → halaman terkirim ("Sudah Terkirim"); `AKUN_SUDAH_AKTIF` → `/login` dengan `state.flash` + email terisi;
   409 tanpa kode (backend lama) → pesan "Email, NIDN, atau NIRM ini sudah terdaftar…". `authStore.register` melempar galat ber-`status`, `code`,

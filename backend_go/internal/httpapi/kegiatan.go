@@ -28,7 +28,7 @@ var kegiatanTable = map[string]string{
 
 // kegiatanColumns are the physical columns shared by Penelitian/Pengabdian
 // (used when a row moves to the other table; skema/mitra are table-specific).
-const kegiatanColumns = "`id`,`tipe`,`proposalId`,`judul`,`abstrak`,`status`,`anggaran`,`luaran`,`rumpunIlmu`,`bidang`,`kataKunci`,`luaranTercapai`,`ringkasanHasil`,`realisasiAnggaran`,`catatanRevisi`,`pengusulId`,`periodeId`," +
+const kegiatanColumns = "`id`,`tipe`,`proposalId`,`judul`,`abstrak`,`status`,`anggaran`,`danaDisetujui`,`luaran`,`rumpunIlmu`,`bidang`,`kataKunci`,`luaranTercapai`,`ringkasanHasil`,`realisasiAnggaran`,`catatanRevisi`,`pengusulId`,`periodeId`," +
 	"`dokumenUrl`,`dokumenNama`,`dokumenMime`,`dokumenUkuran`,`dokumenBlob`,`submittedAt`,`approvedAt`,`createdAt`,`updatedAt`"
 
 type kegiatanRef struct {

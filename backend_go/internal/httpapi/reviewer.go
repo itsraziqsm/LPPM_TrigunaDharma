@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"lppm-backend-go/internal/sqlb"
 )
@@ -18,6 +20,7 @@ func (s *Server) registerReviewerRoutes() {
 	g := s.group("/api/v1/reviewer", s.authenticate)
 	// Go saja: hanya user berperan reviewer (dicek di DB).
 	g.get("/my-tugasan", s.requireReviewerRole, s.myTugasan)
+	g.get("/rubrik", s.getRubrikReview) // baru (W-54)
 }
 
 func (s *Server) tugaskanReviewer(c *Ctx) error {
@@ -46,6 +49,10 @@ func (s *Server) tugaskanReviewer(c *Ctx) error {
 	}
 	// Go saja: hanya user approved yang berperan reviewer.
 	if err := s.ensureReviewerCandidates(ctx, reviewerIDs); err != nil {
+		return err
+	}
+	// W-54 (Go saja): satu proposal hanya direview satu reviewer (dana final dari keputusannya).
+	if err := s.cekSatuReviewer(ctx, proposalID, reviewerIDs); err != nil {
 		return err
 	}
 	now := s.nowMs()
@@ -127,6 +134,9 @@ func (s *Server) getReviewsByProposal(c *Ctx) error {
 		return err
 	}
 	nestColumns(reviews, "r_", "reviewer")
+	if err := lengkapiReview(ctx, s.db, reviews); err != nil { // W-54
+		return err
+	}
 	return c.ok("Reviews fetched", reviews)
 }
 
@@ -149,7 +159,11 @@ func (s *Server) submitReview(c *Ctx) error {
 	if assigned == 0 {
 		return plainError("Anda tidak ditugaskan untuk mereview proposal ini")
 	}
-	review, err := s.upsertReview(c, proposalID, reviewerID)
+	target, err := s.reviewTargetOf(ctx, proposalID, true)
+	if err != nil {
+		return err
+	}
+	review, err := s.upsertReview(c, proposalID, reviewerID, target)
 	if err != nil {
 		return err
 	}
@@ -164,45 +178,89 @@ func (s *Server) submitReview(c *Ctx) error {
 
 // upsertReview creates or updates the reviewer's ProposalReview row for a
 // proposal or laporan id (saving again resets isDone) and returns it.
-func (s *Server) upsertReview(c *Ctx, proposalID, reviewerID int64) (O, error) {
+// W-54 (Go saja): + `skor` (ReviewSkor) dan `danaDisetujui` (proposal saja).
+func (s *Server) upsertReview(c *Ctx, proposalID, reviewerID int64, target *reviewTarget) (O, error) {
 	ctx := c.r.Context()
 	body := c.bodyMap()
+	extra, err := parseReviewExtra(body, target)
+	if err != nil {
+		return nil, err
+	}
 	fields := []string{"nilaiRelevansi", "nilaiMetodologi", "nilaiAnggaran", "nilaiLuaran", "catatan", "rekomendasi"}
 	now := s.nowMs()
 	existing, err := s.reviewByKey(c, proposalID, reviewerID)
 	if err != nil {
 		return nil, err
 	}
-	if existing == nil {
-		cols := []string{"proposalId", "reviewerId"}
-		args := []any{proposalID, reviewerID}
-		for _, f := range fields {
-			if v, ok := body[f]; ok {
-				cols = append(cols, f)
-				args = append(args, v)
-			}
-		}
-		cols = append(cols, "isDone", "createdAt", "updatedAt")
-		args = append(args, false, now, now)
-		if _, err := s.db.ExecContext(ctx, sqlb.Insert("ProposalReview", cols), args...); err != nil {
-			return nil, err
-		}
-	} else {
-		cols := []string{}
-		args := []any{}
-		for _, f := range fields {
-			if v, ok := body[f]; ok {
-				cols = append(cols, f)
-				args = append(args, v)
-			}
-		}
-		cols = append(cols, "isDone", "updatedAt")
-		args = append(args, false, now, existing.Int64("id"))
-		if _, err := s.db.ExecContext(ctx, sqlb.UpdateByID("ProposalReview", cols), args...); err != nil {
-			return nil, err
+	cols := []string{}
+	args := []any{}
+	for _, f := range fields {
+		if v, ok := body[f]; ok {
+			cols = append(cols, f)
+			args = append(args, v)
 		}
 	}
-	return s.reviewByKey(c, proposalID, reviewerID)
+	if extra.adaDana {
+		cols = append(cols, "danaDisetujui")
+		args = append(args, extra.dana)
+	}
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		var reviewID int64
+		if existing == nil {
+			cols = append([]string{"proposalId", "reviewerId"}, cols...)
+			args = append([]any{proposalID, reviewerID}, args...)
+			cols = append(cols, "isDone", "createdAt", "updatedAt")
+			args = append(args, false, now, now)
+			res, err := tx.ExecContext(ctx, sqlb.Insert("ProposalReview", cols), args...)
+			if err != nil {
+				return err
+			}
+			if reviewID, err = res.LastInsertId(); err != nil {
+				return err
+			}
+		} else {
+			reviewID = existing.Int64("id")
+			cols = append(cols, "isDone", "updatedAt")
+			args = append(args, false, now, reviewID)
+			if _, err := tx.ExecContext(ctx, sqlb.UpdateByID("ProposalReview", cols), args...); err != nil {
+				return err
+			}
+		}
+		if extra.adaSkor {
+			return simpanSkor(ctx, tx, reviewID, extra.skor)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	review, err := s.reviewByKey(c, proposalID, reviewerID)
+	if err != nil {
+		return nil, err
+	}
+	return lengkapiSatuReview(ctx, s.db, review)
+}
+
+// cekSatuReviewer (W-54): maksimal satu reviewer per proposal; menugaskan ulang reviewer yang
+// sama tetap boleh.
+func (s *Server) cekSatuReviewer(ctx context.Context, proposalID int64, reviewerIDs []int64) error {
+	unik := map[int64]bool{}
+	for _, id := range reviewerIDs {
+		unik[id] = true
+	}
+	if len(unik) > 1 {
+		return httpError(http.StatusBadRequest, "Proposal hanya dapat direview oleh satu reviewer")
+	}
+	for id := range unik {
+		lain, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ReviewerTugasan` WHERE `proposalId` = ? AND `reviewerId` <> ?", proposalID, id)
+		if err != nil {
+			return err
+		}
+		if lain > 0 {
+			return httpError(http.StatusConflict, "Proposal sudah memiliki reviewer. Hapus tugasan reviewer lama sebelum menugaskan reviewer lain.")
+		}
+	}
+	return nil
 }
 
 func (s *Server) finalizeReview(c *Ctx) error {
@@ -224,11 +282,33 @@ func (s *Server) finalizeReview(c *Ctx) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, "UPDATE `ProposalReview` SET `isDone` = ?, `updatedAt` = ? WHERE `id` = ?", true, s.nowMs(), reviewID); err != nil {
+	// W-54 (Go saja): skor lengkap + rekomendasi + dana disetujui wajib; dana jadi dana final kegiatan.
+	target, err := s.reviewTargetOf(ctx, proposalID, true)
+	if err != nil {
+		return err
+	}
+	dana, err := s.cekReviewLengkap(ctx, reviewID, target)
+	if err != nil {
+		return err
+	}
+	now := s.nowMs()
+	err = s.withTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, "UPDATE `ProposalReview` SET `isDone` = ?, `danaDisetujui` = ?, `updatedAt` = ? WHERE `id` = ?", true, dana, now, reviewID); err != nil {
+			return err
+		}
+		if target.status == "disetujui" || target.status == "ditolak" {
+			return nil // sudah diputuskan: dana final tidak berubah
+		}
+		return s.updateKegiatan(ctx, tx, proposalID, "`danaDisetujui` = ?", dana)
+	})
+	if err != nil {
 		return err
 	}
 	review, err := queryObj(ctx, s.db, "SELECT "+reviewColumns+" FROM `ProposalReview` WHERE `id` = ?", reviewID)
 	if err != nil {
+		return err
+	}
+	if review, err = lengkapiSatuReview(ctx, s.db, review); err != nil {
 		return err
 	}
 	if err := s.createNotification(ctx, s.db, notification{
@@ -295,6 +375,9 @@ func (s *Server) myTugasan(c *Ctx) error {
 			"SELECT `id`,`proposalId`,`nilaiRelevansi`,`nilaiMetodologi`,`nilaiAnggaran`,`nilaiLuaran`,`catatan`,`rekomendasi`,`isDone` FROM `ProposalReview` WHERE `reviewerId` = ? AND `proposalId` IN ("+placeholders(len(proposalIDs))+") ORDER BY `id` ASC",
 			append([]any{reviewerID}, idArgs(proposalIDs)...)...)
 		if err != nil {
+			return err
+		}
+		if err := lengkapiReview(ctx, s.db, rows); err != nil { // W-54
 			return err
 		}
 		for _, row := range rows {

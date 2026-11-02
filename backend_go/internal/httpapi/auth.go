@@ -44,12 +44,13 @@ var (
 		required("email", zStr().Email()),
 		required("password", zStr().Min(6, "")),
 	)
+	// W-48 (Go saja): email di-trim & huruf kecil; NIDN wajib ≥ 10 digit; NIRM (field `nim`) wajib tepat 10 digit.
 	registerDosenSchema = zObj(
-		required("email", zStr().Email()),
+		required("email", zStr().Trim().Lower().Email()),
 		required("name", zStr().Min(2, "")),
 		optional("fullName", zStr()),
 		required("password", zStr().Min(8, "")),
-		optional("nidn", zStr()),
+		required("nidn", zStr().Trim().Regex(nidnRe, pesanNIDN)),
 		optional("tempatLahir", zStr()),
 		optional("tanggalLahir", zStr().Datetime(false)),
 		optional("institusi", zStr()),
@@ -58,11 +59,11 @@ var (
 		optional("kontak", zStr()),
 	)
 	registerMahasiswaSchema = zObj(
-		required("email", zStr().Email()),
+		required("email", zStr().Trim().Lower().Email()),
 		required("name", zStr().Min(2, "")),
 		optional("fullName", zStr()),
 		required("password", zStr().Min(8, "")),
-		optional("nim", zStr()),
+		required("nim", zStr().Trim().Regex(nirmRe, pesanNIRM)),
 		optional("prodi", zStr()),
 		optional("noHp", zStr()),
 		optional("alamat", zStr()),
@@ -83,6 +84,7 @@ func (s *Server) registerAuthRoutes() {
 	g.post("/logout-all", s.authenticate, s.logoutAll)
 	g.post("/register/dosen", s.registerLimiter, validateBody(registerDosenSchema), s.registerDosen)
 	g.post("/register/mahasiswa", s.registerLimiter, validateBody(registerMahasiswaSchema), s.registerMahasiswa)
+	g.post("/register/status", s.authLimiter, validateBody(registerStatusSchema), s.registerStatus) // baru (W-48)
 	g.post("/forgot-password", s.authLimiter, validateBody(forgotPasswordSchema), s.forgotPassword)
 	g.post("/reset-password", s.authLimiter, validateBody(resetPasswordSchema), s.resetPassword)
 	g.get("/me", s.authenticate, s.me)
@@ -321,6 +323,18 @@ func (s *Server) registerUser(c *Ctx, role string, optionalFields []string) erro
 	roleID, err := s.roleID(ctx, s.db, role)
 	if err != nil {
 		return err
+	}
+	// W-48: satu identitas satu pendaftaran (cek sebelum INSERT).
+	idField := "nidn"
+	if role == "mahasiswa" {
+		idField = "nim"
+	}
+	lama, err := s.cekIdentitasDaftar(c, body, idField)
+	if err != nil {
+		return err
+	}
+	if lama != 0 {
+		return s.daftarUlang(c, lama, roleID, hash, optionalFields)
 	}
 	now := s.nowMs()
 	columns := []string{"email", "name", "password", "status", "createdAt", "updatedAt"}

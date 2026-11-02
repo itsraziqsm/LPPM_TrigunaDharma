@@ -382,6 +382,17 @@ func (s *Server) updateProfile(c *Ctx) error {
 		return err
 	}
 	body := c.bodyMap()
+	// W-48 (Go saja): NIDN/NIRM baru harus memenuhi format pendaftaran (nilai lama dibiarkan).
+	var nidnLama, nimLama sql.NullString
+	if err := s.db.QueryRowContext(ctx, "SELECT `nidn`,`nim` FROM `User` WHERE `id` = ?", id).Scan(&nidnLama, &nimLama); err != nil {
+		return err
+	}
+	if err := cekNomorIdentitas("nidn", body["nidn"], nidnLama); err != nil {
+		return err
+	}
+	if err := cekNomorIdentitas("nim", body["nim"], nimLama); err != nil {
+		return err
+	}
 	cols := []string{}
 	args := []any{}
 	for _, field := range profileFields {

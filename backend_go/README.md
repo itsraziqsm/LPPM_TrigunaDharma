@@ -277,9 +277,15 @@ Hasil pemindaian, perbaikan per aturan gosec, versi dependensi, dan aturan untuk
     `/kontak-admin` (GET semua peran, PATCH admin; tabel `Pengaturan`), `POST /users/:id/reset-password`
     (password sementara + `wajibGantiPassword` di login & `/auth/me`), kolom `kategori` di log aktivitas + filter
     `kategori`/`search`/`dari`/`sampai` + `GET /activity-logs/ringkasan`; `LOGIN_GAGAL`, `LOGOUT`, `LOGOUT_ALL` ikut dicatat.
-24. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
+24. W-48/W-54/W-42 (lihat `new-api.md` bagian 30): pendaftaran mewajibkan `nidn` (≥ 10 digit) / `nim` (NIRM, 10 digit),
+    email di-*trim* & huruf kecil, identitas ganda → 409 ber-`code` (Node: 409 "Resource already exists"), akun
+    `rejected` boleh daftar ulang, `POST /auth/register/status`; review menerima `skor` rubrik + `danaDisetujui`,
+    finalisasi mewajibkan skor lengkap (+ dana untuk proposal), satu reviewer per proposal, `danaDisetujui` di
+    respons proposal/laporan/monitoring/export dan `anggaranDisetujui` dari dana itu; `/cetak/konfigurasi/:dokumen`
+    dan `/surat-tugas` (nomor otomatis `001/ST/LPPM/XI/2026`).
+25. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
     klien sehingga perilaku 304 tidak berubah. Lihat `SECURITY.md`.
-25. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+26. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

@@ -25,7 +25,7 @@ type proposalShape struct {
 var (
 	// proposal.service.ts → proposalSelect
 	proposalListShape = proposalShape{
-		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:      []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "danaDisetujui", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "dokumenNama", "dokumenMime", "dokumenUkuran", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols: []string{"id", "name", "fullName", "email", "programStudi", "nidn"},
 		periodeCols:  []string{"id", "nama", "tahun"},
 		tugasanRevID: true,
@@ -40,7 +40,7 @@ var (
 	}
 	// Proposaldosen.service.ts → proposalDosenSelect
 	proposalDosenShape = proposalShape{
-		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
+		scalars:       []string{"id", "tipe", "judul", "abstrak", "jenis", "status", "anggaran", "danaDisetujui", "luaran", "skema", "mitra", "mitraJenis", "mitraAlamat", "mitraKontak", "mitraKebutuhan", "rumpunIlmu", "bidang", "kataKunci", "catatanRevisi", "dokumenUrl", "submittedAt", "approvedAt", "createdAt", "updatedAt"},
 		pengusulCols:  []string{"id", "name", "fullName", "email", "nidn", "programStudi"},
 		periodeCols:   []string{"id", "nama", "tahun", "jenis"},
 		anggotaStatus: true,
@@ -147,6 +147,9 @@ func (s *Server) loadProposals(ctx context.Context, q dbtx, shape proposalShape,
 		}
 		for _, list := range grouped {
 			nestColumns(list, "r_", "reviewer")
+			if err := lengkapiReview(ctx, q, list); err != nil { // W-54
+				return nil, err
+			}
 		}
 		if _, err := attachMany(ctx, q, items, "id", "laporan",
 			"SELECT `proposalId` AS `__k`,"+laporanColumns+" FROM `LaporanProposal` WHERE `proposalId` IN (%s) ORDER BY `id` ASC"); err != nil {
