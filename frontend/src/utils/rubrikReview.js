@@ -3,10 +3,9 @@
 // Penelitian Mandiri"): 7 komponen substansi, skor 1–5 + catatan singkat per komponen,
 // total & rata-rata, keterangan kelayakan, rekomendasi, dan dana disetujui (proposal).
 //
-// Backend baru menyimpan `catatan` + `rekomendasi` (ProposalReview). Skor per komponen,
-// catatan singkat, dan dana disetujui BELUM punya API (W-54) → disimpan sebagai draf di
-// localStorage per reviewer & item (`formReview:<userId>:<tipe>:<id>`). Rubrik pengabdian
-// & laporan belum ada formulirnya → sementara memakai komponen yang sama.
+// Semua tersimpan di server (W-54): skor `skor[{kode,skor,catatan}]`, `danaDisetujui`, `catatan`, `rekomendasi`;
+// kode komponen sama dengan GET /reviewer/rubrik (sama untuk penelitian, pengabdian, dan laporan). Draf localStorage
+// lama (`formReview:<userId>:<tipe>:<id>`, sebelum W-54) hanya dibaca sekali sebagai nilai awal lalu dihapus.
 // ---------------------------------------------------------------------------
 
 export const KOMPONEN = [
@@ -47,10 +46,13 @@ export function hitungSkor(skor = {}) {
   return { total, rata, terisi: nilai.length, lengkap: nilai.length === KOMPONEN.length, kelayakan: kelayakan(rata) }
 }
 
+// `skor` review dari server ([{kode, skor}]) → { kode: skor } untuk hitungSkor.
+export const petaSkor = (review) => Object.fromEntries((review?.skor || []).map((x) => [x.kode, Number(x.skor)]))
+
 export const angkaId = (n, digit = 1) => (n == null ? '—' : n.toLocaleString('id-ID', { minimumFractionDigits: digit, maximumFractionDigits: digit }))
 export const rupiahId = (v) => (v || v === 0 ? `Rp ${Number(v).toLocaleString('id-ID')}` : '—')
 
-// ── draf lokal (sampai W-54) ────────────────────────────────────────────────
+// ── draf lokal lama (sebelum W-54; hanya dibaca untuk migrasi) ─────────────
 const kunci = (userId, tipe, id) => `formReview:${userId}:${tipe}:${id}`
 
 export function bacaDraf(userId, tipe, id) {
@@ -63,10 +65,10 @@ export function bacaDraf(userId, tipe, id) {
   }
 }
 
-export function simpanDraf(userId, tipe, id, data) {
+export function hapusDraf(userId, tipe, id) {
   try {
-    localStorage.setItem(kunci(userId, tipe, id), JSON.stringify({ ...data, disimpanAt: new Date().toISOString() }))
+    localStorage.removeItem(kunci(userId, tipe, id))
   } catch {
-    /* penyimpanan peramban tidak tersedia — skor tidak tersimpan */
+    /* abaikan */
   }
 }

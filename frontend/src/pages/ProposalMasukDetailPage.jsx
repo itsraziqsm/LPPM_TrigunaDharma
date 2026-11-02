@@ -365,14 +365,16 @@ export default function ProposalMasukDetailPage() {
             icon={UserPlus}
             title={`Reviewer (${tugasan.length})`}
             action={
-              canAssign ? (
+              canAssign && tugasan.length === 0 ? (
                 <button type="button" onClick={bukaPicker} className="btn btn-secondary btn-sm" disabled={busy}>
                   Tugaskan
                 </button>
               ) : null
             }
           >
-            <p className="mb-3 text-xs text-slate-500">Reviewer proposal juga otomatis menilai laporan kegiatan ini.</p>
+            <p className="mb-3 text-xs text-slate-500">
+              Satu reviewer per proposal; reviewer ini juga otomatis menilai laporan kegiatannya.{canAssign && tugasan.length ? ' Untuk mengganti, hapus reviewer lama lalu tugaskan yang baru.' : ''}
+            </p>
             {tugasan.length === 0 ? (
               <p className="text-sm text-slate-500">Belum ada reviewer ditugaskan.</p>
             ) : (
@@ -403,10 +405,11 @@ export default function ProposalMasukDetailPage() {
                       <li key={k.id}>
                         <label className="flex items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-white">
                           <input
-                            type="checkbox"
+                            type="radio"
+                            name="pilih-reviewer"
                             className="mt-0.5 accent-navy-700"
-                            checked={picked.includes(k.id)}
-                            onChange={(e) => setPicked((p) => (e.target.checked ? [...p, k.id] : p.filter((x) => x !== k.id)))}
+                            checked={picked[0] === k.id}
+                            onChange={() => setPicked([k.id])}
                           />
                           <span className="min-w-0">
                             <span className="block font-medium text-slate-900">{nama(k)}</span>
@@ -419,7 +422,7 @@ export default function ProposalMasukDetailPage() {
                 )}
                 <div className="mt-3 flex gap-2">
                   <button type="button" onClick={tugaskan} disabled={busy || picked.length === 0} className="btn btn-primary btn-sm">
-                    Tugaskan ({picked.length})
+                    Tugaskan reviewer
                   </button>
                   <button type="button" onClick={() => setKandidat(null)} className="btn btn-ghost btn-sm">
                     Batal

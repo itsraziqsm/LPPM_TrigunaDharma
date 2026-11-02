@@ -1,17 +1,14 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, ClipboardCheck } from 'lucide-react'
-import useAuthStore from '../../store/authStore'
-import { KOMPONEN, angkaId, bacaDraf, hitungSkor, labelRekomendasi, rupiahId, tautanForm } from '../../utils/rubrikReview'
+import { KOMPONEN, angkaId, hitungSkor, labelRekomendasi, petaSkor, rupiahId, tautanForm } from '../../utils/rubrikReview'
 
 // Ringkasan penilaian reviewer di halaman detail proposal/laporan + tautan ke halaman
-// Form Penilaian (/penugasan/nilai/:tipe/:id). Skor & dana dari draf lokal (W-54).
+// Form Penilaian (/penugasan/nilai/:tipe/:id). Skor & dana dari `myReview` (W-54).
 
 export default function KartuPenilaian({ tipe, id, review, terkunci = false }) {
-  const userId = useAuthStore((s) => s.user?.id)
-  const draf = bacaDraf(userId, tipe, id)
-  const h = hitungSkor(draf?.skor)
+  const h = hitungSkor(petaSkor(review))
   const done = review?.isDone === true
-  const rekomendasi = review?.rekomendasi || draf?.rekomendasi
+  const rekomendasi = review?.rekomendasi
   const label = done ? 'Lihat hasil penilaian' : terkunci ? 'Lihat form penilaian' : h.terisi || review ? 'Lanjutkan penilaian' : 'Isi form penilaian'
 
   return (
@@ -40,7 +37,7 @@ export default function KartuPenilaian({ tipe, id, review, terkunci = false }) {
             {tipe === 'proposal' ? (
               <div>
                 <dt className="text-xs text-slate-500">Dana disetujui</dt>
-                <dd className="font-medium text-navy-900">{draf?.danaDisetujui === '' || draf?.danaDisetujui == null ? '—' : rupiahId(rekomendasi === 'ditolak' ? 0 : draf.danaDisetujui)}</dd>
+                <dd className="font-medium text-navy-900">{review?.danaDisetujui == null ? '—' : rupiahId(review.danaDisetujui)}</dd>
               </div>
             ) : null}
           </div>

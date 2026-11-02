@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, ClipboardCheck, Coins, MessageSquareText, Printer, Save, Send, Sparkles } from 'lucide-react'
 import { proposalApi } from '../../api/proposal'
@@ -6,11 +6,10 @@ import { reviewerApi } from '../../api/reviewer'
 import { laporanApi } from '../../api/laporan'
 import useAuthStore from '../../store/authStore'
 import Breadcrumb from '../../components/Breadcrumb'
-import ApiPending from '../../components/ApiPending'
 import UserAvatar from '../../components/UserAvatar'
 import { confirmDialog } from '../../utils/dialog'
 import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
-import { KOMPONEN, REKOMENDASI, SKOR, angkaId, bacaDraf, hitungSkor, labelRekomendasi, rupiahId, simpanDraf } from '../../utils/rubrikReview'
+import { KOMPONEN, REKOMENDASI, SKOR, angkaId, bacaDraf, hapusDraf, hitungSkor, labelRekomendasi, rupiahId } from '../../utils/rubrikReview'
 import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { danaFinal } from '../../utils/danaKegiatan'
 import { cariTugasan } from './cariTugasan'
@@ -21,8 +20,10 @@ import { cariTugasan } from './cariTugasan'
 // skor 1–5 + catatan singkat) → total, rata-rata & kelayakan otomatis → B. Catatan reviewer →
 // C. Rekomendasi (+ dana disetujui: proposal = ditentukan reviewer, ≤ dana diusulkan, final setelah
 // review selesai; laporan = dana disetujui proposal asal + realisasi, baca saja).
-// Server: POST /proposals|laporan/:id/reviews {catatan, rekomendasi} (+ /finalize).
-// Skor, catatan singkat & dana disetujui = draf lokal sampai API W-54 (utils/rubrikReview.js).
+// Server (W-54, new-api.md bagian 30.2): POST /proposals|laporan/:id/reviews {catatan, rekomendasi, skor[{kode,skor,catatan}],
+// danaDisetujui (proposal)} lalu /finalize (server menolak bila skor < 7, rekomendasi kosong, atau dana proposal kosong;
+// ditolak → dana 0). Nilai awal dari `myReview` tugasan; draf lokal lama (sebelum W-54) hanya dipakai sekali bila server
+// belum punya skor, lalu dihapus setelah tersimpan.
 // ---------------------------------------------------------------------------
 
 const SUMBER = {
@@ -56,13 +57,22 @@ const nama = (u) => u?.fullName || u?.name || '—'
 const hanyaAngka = (s) => String(s ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '')
 const formEl = (msg) => (e) => (e.response?.data?.errors ? Object.values(e.response.data.errors).flat().join(' ') : e.response?.data?.message || msg)
 
-function formAwal(review, draf) {
+function formAwal(review, drafLama) {
+  const dariServer = Array.isArray(review?.skor) && review.skor.length > 0
+  const skor = {}
+  const catatanSkor = {}
+  for (const x of review?.skor || []) {
+    skor[x.kode] = Number(x.skor)
+    if (x.catatan) catatanSkor[x.kode] = x.catatan
+  }
+  const d = dariServer ? null : drafLama
+  const dana = review?.danaDisetujui ?? d?.danaDisetujui
   return {
-    skor: draf?.skor || {},
-    catatanSkor: draf?.catatanSkor || {},
-    catatan: review?.catatan ?? draf?.catatan ?? '',
-    rekomendasi: review?.rekomendasi ?? draf?.rekomendasi ?? '',
-    danaDisetujui: draf?.danaDisetujui ?? '',
+    skor: d?.skor || skor,
+    catatanSkor: d?.catatanSkor || catatanSkor,
+    catatan: review?.catatan ?? d?.catatan ?? '',
+    rekomendasi: review?.rekomendasi ?? d?.rekomendasi ?? '',
+    danaDisetujui: dana == null || dana === '' ? '' : String(Math.round(Number(dana))),
   }
 }
 
@@ -75,7 +85,6 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
   const [cobaFinal, setCobaFinal] = useState(false)
-  const siapSimpanLokal = useRef(false)
 
   useEffect(() => {
     let alive = true
@@ -91,16 +100,6 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
       alive = false
     }
   }, [id, tipe, src, user?.id])
-
-  // Draf lokal tersimpan otomatis setiap kali form berubah (setelah termuat).
-  useEffect(() => {
-    if (!form || !user?.id) return
-    if (!siapSimpanLokal.current) {
-      siapSimpanLokal.current = true
-      return
-    }
-    simpanDraf(user.id, tipe, id, form)
-  }, [form, user?.id, tipe, id])
 
   const hasil = useMemo(() => hitungSkor(form?.skor), [form?.skor])
 
@@ -151,10 +150,10 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   const dana = ditolak ? 0 : form.danaDisetujui === '' ? null : Number(form.danaDisetujui)
   const danaLebih = pakaiDana && dana != null && diusulkan > 0 && dana > diusulkan
   const persenDana = pakaiDana && dana != null && diusulkan > 0 ? Math.round((dana / diusulkan) * 100) : null
-  // Laporan: dana = dana disetujui proposal asal (baca saja). Reviewer proposal = reviewer laporan, jadi draf
-  // penilaian proposalnya di peramban ini dipakai dulu; selain itu field backend / dana diusulkan (W-54).
-  const drafAsal = tipe === 'laporan' ? bacaDraf(user?.id, 'proposal', item.proposalId) : null
-  const danaLaporan = tipe === 'laporan' ? (drafAsal?.danaDisetujui !== '' && drafAsal?.danaDisetujui != null ? Number(drafAsal.danaDisetujui) : danaFinal(item)) : null
+  // Laporan: dana = dana disetujui proposal asal (field `danaDisetujui` laporan, baca saja).
+  const danaLaporan = tipe === 'laporan' ? danaFinal(item) : null
+  // Proposal yang sudah diputuskan: dana final, server menolak perubahan.
+  const danaTerkunci = pakaiDana && (item.status === 'disetujui' || item.status === 'ditolak')
   const saran = hasil.kelayakan?.saran
 
   const ubah = (patch) => {
@@ -172,18 +171,33 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   ].filter(Boolean)
 
   const payload = () => {
-    const p = {}
+    const p = {
+      skor: KOMPONEN.filter((k) => Number(form.skor[k.kode]) >= 1).map((k) => ({
+        kode: k.kode,
+        skor: Number(form.skor[k.kode]),
+        ...(form.catatanSkor[k.kode]?.trim() ? { catatan: form.catatanSkor[k.kode].trim().slice(0, 200) } : {}),
+      })),
+    }
     if (form.catatan.trim()) p.catatan = form.catatan.trim()
     if (form.rekomendasi) p.rekomendasi = form.rekomendasi
+    if (pakaiDana && !danaTerkunci) p.danaDisetujui = dana
     return p
   }
 
+  // Simpan ke server; respons = review terbaru (skor, totalSkor, rataSkor, danaDisetujui).
+  const kirim = async () => {
+    const r = await src.simpan(id, payload())
+    hapusDraf(user?.id, tipe, id)
+    return r.data?.data || null
+  }
+
   const simpan = async () => {
+    if (danaLebih) return setMsg({ ok: false, text: 'Dana disetujui tidak boleh melebihi dana diusulkan.' })
     setBusy('save')
     setMsg(null)
     try {
-      await src.simpan(id, payload())
-      setState((s) => ({ ...s, review: { ...(s.review || {}), ...payload(), isDone: false } }))
+      const rv = await kirim()
+      setState((s) => ({ ...s, review: { ...(s.review || {}), ...(rv || payload()), isDone: false } }))
       setMsg({ ok: true, text: 'Draf penilaian disimpan.' })
     } catch (e) {
       setMsg({ ok: false, text: formEl('Gagal menyimpan penilaian.')(e) })
@@ -208,9 +222,9 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
     setMsg(null)
     try {
       if (ditolak && pakaiDana) ubah({ danaDisetujui: '0' })
-      await src.simpan(id, payload())
-      await src.final(id)
-      setState((s) => ({ ...s, review: { ...(s.review || {}), ...payload(), isDone: true } }))
+      await kirim()
+      const r = await src.final(id)
+      setState((s) => ({ ...s, review: { ...(s.review || {}), ...payload(), ...(r.data?.data || {}), isDone: true } }))
       setMsg({ ok: true, text: 'Review telah diselesaikan.' })
     } catch (e) {
       setMsg({ ok: false, text: formEl('Gagal menyelesaikan review.')(e) })
@@ -278,7 +292,6 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
               </h2>
               <span className="flex items-center gap-2 text-xs text-slate-500">
                 Skor 1 (sangat kurang) – 5 (sangat baik)
-                <ApiPending />
               </span>
             </header>
             <div className="hidden grid-cols-[2rem_minmax(0,1fr)_14.5rem] gap-4 border-b border-slate-100 bg-slate-50 px-5 py-2 text-xs font-semibold text-slate-500 lg:grid">
@@ -421,7 +434,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
               {pakaiDana ? (
                 <div className="space-y-3">
                   <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    Pendanaan <ApiPending />
+                    Pendanaan
                   </p>
                   <div className="overflow-hidden rounded-xl border border-slate-300">
                     <div className="grid grid-cols-2 border-b border-slate-300 bg-slate-50 text-center text-xs font-semibold text-slate-600">
@@ -431,7 +444,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
                     <div className="grid grid-cols-2 text-center">
                       <span className="grid place-items-center border-r border-slate-300 px-3 py-3 text-sm text-slate-700">{rupiahId(item.anggaran)}</span>
                       <span className="px-2 py-2">
-                        {baca || ditolak ? (
+                        {baca || ditolak || danaTerkunci ? (
                           <span className="grid h-full place-items-center text-sm font-bold italic text-navy-950">{dana == null ? '—' : rupiahId(dana)}</span>
                         ) : (
                           <label className={`flex h-10 items-center gap-1 rounded-lg border px-2.5 focus-within:border-navy-500 focus-within:ring-2 focus-within:ring-navy-500/20 ${danaLebih || (cobaFinal && dana == null) ? 'border-red-400' : 'border-slate-300'}`}>
@@ -449,7 +462,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
                       </span>
                     </div>
                   </div>
-                  {!baca && !ditolak && diusulkan > 0 ? (
+                  {!baca && !ditolak && !danaTerkunci && diusulkan > 0 ? (
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="mr-1 text-xs text-slate-500">Isi cepat</span>
                       {[100, 75, 50, 30].map((p) => (
@@ -473,7 +486,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
               ) : (
                 <div className="space-y-3">
                   <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    Pendanaan <ApiPending />
+                    Pendanaan
                   </p>
                   <div className="overflow-hidden rounded-xl border border-slate-300">
                     <div className="grid grid-cols-2 border-b border-slate-300 bg-slate-50 text-center text-xs font-semibold text-slate-600">
@@ -547,7 +560,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
           </div>
           {!baca ? (
             <p className="text-xs leading-relaxed text-slate-500">
-              Catatan & rekomendasi tersimpan di server. Skor, catatan singkat{pakaiDana ? ', dan dana disetujui' : ''} sementara tersimpan otomatis di peramban ini sampai API tersedia.
+              Simpan draf untuk melanjutkan nanti (dari perangkat mana pun). Setelah review diselesaikan, penilaian{pakaiDana ? ' dan dana disetujui' : ''} tidak dapat diubah.
             </p>
           ) : null}
         </aside>

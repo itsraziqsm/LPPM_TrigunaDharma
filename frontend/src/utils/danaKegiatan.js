@@ -3,9 +3,9 @@
 // tidak bisa dinegosiasi setelah review diselesaikan). Dipakai semua statistik & pelaporan:
 // proposal yang belum `disetujui` TIDAK dihitung.
 //
-// Backend belum mengirim field `danaDisetujui` (W-54). Selama field itu tidak ada di respons,
-// nilai sementara = `anggaran` (dana diusulkan) proposal yang disetujui, dan `danaSementara()`
-// bernilai true agar UI menampilkan penanda ApiPending.
+// Field `danaDisetujui` kegiatan dikirim backend (W-54; laporan = dana proposal asal; `null` bila belum ada review
+// berdana yang difinalisasi). Cadangan backend lama (field tidak ada sama sekali): nilai sementara = `anggaran`
+// proposal yang disetujui dan `danaSementara()` true → UI menampilkan penanda ApiPending.
 // ---------------------------------------------------------------------------
 
 const angka = (v) => Number(v) || 0
