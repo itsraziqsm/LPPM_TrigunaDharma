@@ -32,6 +32,7 @@ API, dikelompokkan per rilis:
 - **Bagian 26** — Rumpun ilmu difokuskan ke **bidang komputer** (validasi di proposal & laporan, rumpun ilmu laporan bisa diubah).
 - **Bagian 27** — Dosen yang diundang bisa **membaca seluruh detail & file proposal** (tanpa ubah); semua anggota tim hanya baca.
 - **Bagian 28** — Kelompok kecil waiting list: W-43 (filter backup dihapus), W-44 (luaran untuk Ketua LPPM), W-45 (Monitor Pengguna Ketua STMIK), W-46 (Ketua tidak bisa hapus akun sendiri), W-49 (jumlah laporan harian), W-51 (NIDN/NIM/peran anggota), W-55 (reviewer laporan otomatis = reviewer proposal).
+- **Bagian 29** — W-47 riwayat halaman & pencarian per user, W-50 kontak admin (WhatsApp), W-52 reset password oleh admin (password sementara + wajib ganti), W-53 kategori/filter/ringkasan log aktivitas (+ log logout & login gagal).
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2392,4 +2393,147 @@ kembali `review`).
 - Usulan › Anggota: ambil jenis anggota & NIDN/NIM dari `anggota[].user` (W-51).
 - Laporan Kegiatan: dialog Tugaskan reviewer biasanya tidak diperlukan lagi bila status sudah `review`; tetap
   tampilkan untuk laporan berstatus `diajukan` (W-55).
+
+## 29. Riwayat per user, kontak admin, reset password admin, log aktivitas (W-47, W-50, W-52, W-53)
+
+Migrasi: `20261106000000_riwayat_user` (tabel `UserRiwayat`), `20261106000100_pengaturan_kontak_admin`
+(tabel `Pengaturan`), `20261106000200_reset_password_admin` (kolom `User.wajibGantiPassword`, notifikasi
+`password_direset`), `20261106000300_activity_log_kategori` (kolom `ActivityLog.kategori` + backfill).
+Endpoint baru memakai status HTTP biasa (400/401/403/404).
+
+### 29.1 W-47 — Riwayat halaman & pencarian (lintas perangkat)
+
+Semua butuh login, berlaku untuk user yang login (tiap user hanya melihat riwayatnya sendiri).
+
+| Method | Path | Body | Keterangan |
+|---|---|---|---|
+| GET | `/users/profile/riwayat` | — | `{ halaman, cari }` |
+| POST | `/users/profile/riwayat/halaman` | `{ path }` | catat halaman yang dibuka |
+| POST | `/users/profile/riwayat/cari` | `{ to, title, subtitle?, badge? }` | catat hasil pencarian yang dipilih |
+| DELETE | `/users/profile/riwayat/cari` | — | hapus semua riwayat pencarian (riwayat halaman tetap) |
+
+Respons ketiga endpoint tulis = bentuk yang sama dengan GET (riwayat terbaru), jadi frontend tidak perlu
+memanggil GET lagi:
+
+```json
+{
+  "success": true, "message": "Riwayat fetched",
+  "data": {
+    "halaman": [ { "path": "/dashboard", "at": "2026-11-02T14:36:41.851Z" } ],
+    "cari": [ { "to": "/proposals/detail/855", "title": "Sistem Pakar …", "subtitle": "Penelitian · 2026", "badge": "review", "at": "2026-11-02T14:36:40.120Z" } ]
+  }
+}
+```
+
+- Urutan terbaru dulu. Server menyimpan maks **50 halaman** dan **4 hasil cari** per user; entri lama
+  otomatis dibuang. Path/`to` yang sama tidak digandakan — dicatat ulang = naik ke atas (`at` diperbarui;
+  untuk cari, `title/subtitle/badge` ikut diperbarui).
+- `path`/`to` wajib path aplikasi diawali `/` (bukan `//`, tanpa skema, tanpa spasi), maks 500 karakter.
+  `title` wajib maks 200, `subtitle` maks 300, `badge` maks 50 (kosong → `null`). Pelanggaran → 400 dengan
+  pesan per field, mis. `"path wajib diisi"`, `"title maksimal 200 karakter"`.
+- Riwayat dihapus saat user menghapus akunnya sendiri.
+- Saran frontend: tetap simpan di `localStorage` untuk tampilan instan, kirim `POST` di latar (abaikan
+  gagal), dan muat `GET` saat login untuk menyinkronkan. Pintasan dashboard memakai `halaman`.
+
+### 29.2 W-50 — Kontak admin
+
+| Method | Path | Akses |
+|---|---|---|
+| GET | `/kontak-admin` | semua peran yang login |
+| PATCH | `/kontak-admin` | admin |
+
+```json
+{ "success": true, "message": "Kontak admin fetched",
+  "data": { "whatsapp": "6281234567890", "nama": "Admin LPPM", "jamLayanan": "Senin–Jumat 08.00–16.00",
+            "updatedAt": "2026-11-02T14:36:41.851Z", "updatedBy": { "id": 1, "name": "Admin LPPM", "fullName": "Admin LPPM" } } }
+```
+
+- Belum pernah diatur → `whatsapp: null`, `nama: "Admin LPPM"`, `jamLayanan: null`, `updatedAt/updatedBy: null`.
+  Frontend jatuh ke `VITE_ADMIN_WA` bila `whatsapp` null.
+- PATCH parsial: kirim minimal satu dari `whatsapp`, `nama` (maks 100), `jamLayanan` (maks 100); `null`/`""`
+  = kosongkan (nama kembali ke bawaan). Body kosong → 400.
+- `whatsapp` dinormalisasi: spasi, `-`, `(`, `)`, `.` dan `+` dibuang, awalan `0` → `62`; hasil wajib
+  `62` + 8–13 digit, selain itu 400 `"Nomor WhatsApp tidak valid…"`. Contoh `"0812-3456-7890"` → `"6281234567890"`,
+  `"+62 812 0000 1111"` → `"6281200001111"`. Langsung bisa dipakai di `https://wa.me/<whatsapp>`.
+- Respons PATCH = data terbaru (`"Kontak admin diperbarui"`); dicatat ke log (`pengaturan.kontak_admin`).
+
+### 29.3 W-52 — Reset password oleh Admin
+
+`POST /users/:id/reset-password` (admin) — body `{ "password": "<password admin yang sedang login>" }`.
+
+```json
+{ "success": true, "message": "Password berhasil direset. Password sementara hanya ditampilkan sekali.",
+  "data": { "passwordSementara": "h7KqP3mzR9tWxb", "wajibGantiPassword": true,
+            "user": { "id": 23, "name": "…", "fullName": null, "email": "dosen@kampus.ac.id" } } }
+```
+
+- Password sementara: 14 karakter acak (`crypto/rand`), selalu ada huruf kecil, huruf besar, dan angka; tanpa
+  karakter mirip (0/O, 1/l/I). **Hanya ada di respons ini** (header `Cache-Control: no-store`); server hanya
+  menyimpan hash bcrypt, jadi tidak bisa ditampilkan lagi — reset ulang bila hilang.
+- Efek: password lama tidak berlaku, `wajibGantiPassword = true`, semua refresh token user dicabut (semua
+  perangkat keluar), token lupa-password yang belum dipakai dibatalkan, user mendapat notifikasi
+  `password_direset` (`refType: "user"`), log `user.reset_password` (kategori `akun`).
+- Galat: 422 body tanpa `password`; 400 `"Password salah"` (password admin keliru); 400 reset akun sendiri
+  (pakai Ganti Password); 400 akun sudah dihapus; 404 user tidak ada; 403 bukan admin.
+- `POST /auth/login` (`data.user`) dan `GET /auth/me` kini punya `wajibGantiPassword` (boolean). Bila `true`,
+  frontend mengarahkan ke halaman ganti password sebelum Dashboard (backend tidak memblokir endpoint lain).
+- `PATCH /users/profile/password` `{ oldPassword: <sementara>, newPassword }` mengosongkan penanda. Selama
+  penanda aktif, password baru wajib ≥ 8 karakter (400 `"Password baru minimal 8 karakter"`) dan berbeda dari
+  password sementara (400 `"Password baru harus berbeda dari password sementara"`). Reset lewat email
+  (`POST /auth/reset-password`) juga mengosongkan penanda.
+- Password sementara tidak kedaluwarsa otomatis (opsi di waiting list belum diterapkan).
+
+### 29.4 W-53 — Log aktivitas: kategori, filter, ringkasan
+
+**Kategori** (`kategori` di tiap item `GET /activity-logs` dan `/activity-logs/my`, field baru setelah
+`createdAt`): `auth`, `akun`, `proposal`, `review`, `laporan`, `dokumen`, `periode`, `template`, `luaran`,
+`backup`, `sistem`. Diisi otomatis dari `action` (data lama sudah di-backfill):
+
+| Kategori | Action |
+|---|---|
+| `auth` | `LOGIN`, `LOGIN_GAGAL`, `LOGOUT`, `LOGOUT_ALL` |
+| `akun` | `user.*` (foto, export, hapus akun, reviewer grant/revoke/force_revoke, reset_password) |
+| `proposal` | `proposal.*` (create/update/submit/status.*/anggota.*/dokumen.upload/delete/deletion_request) |
+| `review` | `reviewer.*`, `review.*` |
+| `laporan` | `laporan.*`, `laporan_kegiatan.*` |
+| `dokumen` / `periode` / `template` / `luaran` / `backup` | awalan yang sama |
+| `sistem` | lainnya (mis. `pengaturan.kontak_admin`) |
+
+**Log baru** (Go saja): `LOGIN_GAGAL` (email terdaftar, password salah atau akun belum `approved`; detail
+menyebut sebabnya — email yang tidak terdaftar tidak dicatat karena log wajib punya user), `LOGOUT`
+(`POST /auth/logout` dengan refresh token yang masih aktif), `LOGOUT_ALL`.
+
+**Filter baru** `GET /activity-logs` (admin, ketua) dan `GET /activity-logs/my` — bisa digabung dengan
+`page`, `limit`, `userId`, `action` yang lama:
+
+| Query | Arti |
+|---|---|
+| `kategori` | salah satu kategori di atas; lainnya → 400 |
+| `search` | teks di `action`, `detail`, `ipAddress`, nama/nama lengkap/email user |
+| `dari`, `sampai` | `YYYY-MM-DD`, inklusif, dihitung per hari zona `BACKUP_ZONA` (bawaan WIB); format salah atau `dari > sampai` → 400 |
+
+`meta.total` mengikuti filter, jadi bisa dipakai untuk paginasi & angka hasil.
+
+**Ringkasan** `GET /activity-logs/ringkasan` (admin, ketua) — menerima `userId`, `search`, `dari`, `sampai`
+(bukan `kategori`):
+
+```json
+{ "success": true, "message": "Ringkasan log aktivitas fetched",
+  "data": { "total": 6812,
+            "perKategori": { "auth": 2210, "akun": 120, "proposal": 2400, "review": 610, "laporan": 900, "dokumen": 140,
+                             "periode": 12, "template": 9, "luaran": 33, "backup": 70, "sistem": 308 },
+            "loginHariIni": 41, "loginGagalHariIni": 3, "penggunaAktifHariIni": 27 } }
+```
+
+`perKategori` selalu memuat ke-11 kunci (urutan tetap). Angka `…HariIni` dihitung untuk hari ini (WIB) dan
+tidak terpengaruh filter.
+
+### Untuk frontend
+
+- Pintasan & "Terakhir dibuka": sinkronkan dengan `/users/profile/riwayat` (29.1).
+- Hubungi Admin: `GET /kontak-admin`, cadangan `VITE_ADMIN_WA`; tambah formulir pengaturan untuk admin (PATCH).
+- Manajemen Pengguna: tombol Reset password (admin) + dialog password sementara sekali tampil; setelah login,
+  `wajibGantiPassword` → halaman ganti password.
+- Log Aktivitas: filter Kategori & Cari pakai query server (`kategori`, `search`, `dari`, `sampai`), kartu dari
+  `/activity-logs/ringkasan`; `utils/kategoriLog.js` bisa diganti field `kategori`.
 

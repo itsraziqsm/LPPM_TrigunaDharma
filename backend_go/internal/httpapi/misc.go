@@ -12,7 +12,7 @@ import (
 
 const (
 	notificationColumns = "`id`,`userId`,`type`,`judul`,`pesan`,`isRead`,`refId`,`refType`,`createdAt`"
-	activityColumns     = "a.`id`,a.`userId`,a.`action`,a.`entityType`,a.`entityId`,a.`detail`,a.`proposalId`,a.`ipAddress`,a.`userAgent`,a.`createdAt`"
+	activityColumns     = "a.`id`,a.`userId`,a.`action`,a.`entityType`,a.`entityId`,a.`detail`,a.`proposalId`,a.`ipAddress`,a.`userAgent`,a.`createdAt`,a.`kategori`"
 )
 
 func (s *Server) registerNotificationRoutes() {
@@ -31,6 +31,7 @@ func (s *Server) registerDashboardRoutes() {
 func (s *Server) registerActivityLogRoutes() {
 	g := s.group("/api/v1/activity-logs", s.authenticate)
 	g.get("/my", s.myActivityLogs)
+	g.get("/ringkasan", authorize("admin", "ketua_lppm"), s.ringkasanLog) // baru (W-53)
 	g.get("/", authorize("admin", "ketua_lppm"), s.allActivityLogs)
 }
 
@@ -268,13 +269,20 @@ func (s *Server) activityLogs(c *Ctx, own bool) error {
 			args = append(args, "%"+action+"%")
 		}
 	}
+	// W-53 (Go saja): kategori, search, dari, sampai.
+	extra, extraArgs, err := s.filterLog(c, true)
+	if err != nil {
+		return err
+	}
+	where += extra
+	args = append(args, extraArgs...)
 	skip, take, err := paginationArgs(page, limit)
 	if err != nil {
 		return err
 	}
 	ctx := c.r.Context()
 	logs, err := queryObjs(ctx, s.db,
-		"SELECT "+activityColumns+" FROM `ActivityLog` a WHERE "+where+" ORDER BY a.`createdAt` DESC LIMIT ? OFFSET ?",
+		"SELECT "+activityColumns+" FROM `ActivityLog` a LEFT JOIN `User` u ON u.`id` = a.`userId` WHERE "+where+" ORDER BY a.`createdAt` DESC, a.`id` DESC LIMIT ? OFFSET ?",
 		append(append([]any{}, args...), take, skip)...)
 	if err != nil {
 		return err
@@ -287,7 +295,7 @@ func (s *Server) activityLogs(c *Ctx, own bool) error {
 	if err := attachOne(ctx, s.db, logs, "proposalId", "proposal", "SELECT `id` AS `__k`,`id`,`judul`,`jenis` FROM `Proposal` WHERE `id` IN (%s)"); err != nil {
 		return err
 	}
-	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ActivityLog` a WHERE "+where, args...)
+	total, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `ActivityLog` a LEFT JOIN `User` u ON u.`id` = a.`userId` WHERE "+where, args...)
 	if err != nil {
 		return err
 	}

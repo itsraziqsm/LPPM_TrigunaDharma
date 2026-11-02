@@ -122,7 +122,7 @@ def lengkapi_tim(pid, owner, jenis, dosen=2, mahasiswa=True):
     assert r[0] == 200, r
     terima_undangan(pid, *tokens)
 
-check("login user shape", list(adminUser.keys()) == ["id", "name", "fullName", "email", "status", "roles"], adminUser)
+check("login user shape", list(adminUser.keys()) == ["id", "name", "fullName", "email", "status", "roles", "wajibGantiPassword"] and adminUser["wajibGantiPassword"] is False, adminUser)
 check("wakil roles ordered by roleId", login("wakil.ketua@lppm.dev", "wakil123456")[2]["roles"] == ["ketua_lppm", "dosen"])
 
 # ── auth ──
@@ -132,7 +132,7 @@ b = expect("login missing fields", req("POST", "/api/v1/auth/login", body={}), 4
 check("login missing → Required", b["errors"] == {"email": ["Required"], "password": ["Required"]}, b)
 expect("bad json", req("POST", "/api/v1/auth/login", raw=b'{"x":', ctype="application/json"), 400)
 b = expect("me", req("GET", "/api/v1/auth/me", dosen1), 200, "Current user")
-check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt"] and isinstance(b["data"]["hasTugasan"], bool), b)
+check("me shape", list(b["data"].keys()) == ["id", "name", "fullName", "email", "status", "roles", "hasTugasan", "wajibGantiPassword", "nidn", "nim", "prodi", "programStudi", "institusi", "kontak", "noHp", "alamat", "tempatLahir", "tanggalLahir", "jabatanFungsional", "sintaId", "sintaScore", "fotoUrl", "emailVerifiedAt"] and isinstance(b["data"]["hasTugasan"], bool), b)
 expect("me bad token", req("GET", "/api/v1/auth/me", "xxx"), 401, "Token invalid or expired")
 expect("refresh blank", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "   "}), 400, "Refresh token required")
 expect("refresh unknown", req("POST", "/api/v1/auth/refresh", body={"refreshToken": "nope"}), 500, "Refresh token invalid or expired")
@@ -883,7 +883,7 @@ expect("notif delete", req("DELETE", f"/api/v1/notifications/{nid}", dosen1), 20
 
 # activity logs, dashboard, export
 b = expect("my activity", req("GET", "/api/v1/activity-logs/my?limit=3", dosen1), 200, "Activity logs fetched")
-check("activity shape", list(b["data"][0].keys()) == ["id", "userId", "action", "entityType", "entityId", "detail", "proposalId", "ipAddress", "userAgent", "createdAt", "proposal"], b["data"][0])
+check("activity shape", list(b["data"][0].keys()) == ["id", "userId", "action", "entityType", "entityId", "detail", "proposalId", "ipAddress", "userAgent", "createdAt", "kategori", "proposal"], b["data"][0])
 check("activity ip from X-Forwarded-For", b["data"][0]["ipAddress"].startswith("10.1."), b["data"][0])
 b = expect("all activity", req("GET", f"/api/v1/activity-logs?action=proposal&userId={dosen1User['id']}", admin), 200)
 check("all activity shape", list(b["data"][0].keys())[-2:] == ["user", "proposal"] and all("proposal" in x["action"] for x in b["data"]), b["data"][0])
@@ -1226,6 +1226,97 @@ check("laporan rumpun dari proposal", rl["rumpunIlmu"] == "Sistem Informasi", rl
 b = expect("laporan ubah rumpun", req("PATCH", f"/api/v1/laporan/{rl['id']}", dosen5, {"rumpunIlmu": "Kecerdasan Buatan dan Sains Data"}), 200)
 check("laporan rumpun berubah", b["data"]["rumpunIlmu"] == "Kecerdasan Buatan dan Sains Data" and req("GET", f"/api/v1/proposals/{rp['id']}", dosen5)[1]["data"]["rumpunIlmu"] == "Sistem Informasi", b["data"]["rumpunIlmu"])
 expect("laporan ubah rumpun salah", req("PATCH", f"/api/v1/laporan/{rl['id']}", dosen5, {"rumpunIlmu": "Ilmu Tanaman"}), 400)
+
+# ── W-47 riwayat per user ──
+b = expect("riwayat kosong/awal", req("GET", "/api/v1/users/profile/riwayat", mhs1), 200, "Riwayat fetched")
+check("riwayat shape", list(b["data"].keys()) == ["halaman", "cari"], b["data"])
+req("DELETE", "/api/v1/users/profile/riwayat/cari", mhs1)
+expect("riwayat halaman tanpa path", req("POST", "/api/v1/users/profile/riwayat/halaman", mhs1, {}), 400, "path wajib diisi")
+expect("riwayat halaman path luar", req("POST", "/api/v1/users/profile/riwayat/halaman", mhs1, {"path": "https://evil.example"}), 400)
+expect("riwayat halaman path //", req("POST", "/api/v1/users/profile/riwayat/halaman", mhs1, {"path": "//evil.example"}), 400)
+for pth in ["/dashboard", "/undangan", "/laporan-harian", "/dashboard"]:
+    b = expect("riwayat catat " + pth, req("POST", "/api/v1/users/profile/riwayat/halaman", mhs1, {"path": pth}), 200, "Riwayat halaman dicatat")
+h = [x["path"] for x in b["data"]["halaman"]]
+check("riwayat halaman urut & unik", h[:3] == ["/dashboard", "/laporan-harian", "/undangan"] and h.count("/dashboard") == 1 and list(b["data"]["halaman"][0].keys()) == ["path", "at"], h)
+for i in range(6):
+    b = req("POST", "/api/v1/users/profile/riwayat/cari", mhs1, {"to": f"/project/penelitian?id={i}", "title": f"Project {i}", "subtitle": "Penelitian", "badge": "disetujui"})[1]
+c = b["data"]["cari"]
+check("riwayat cari maks 4", len(c) == 4 and c[0]["to"] == "/project/penelitian?id=5" and list(c[0].keys()) == ["to", "title", "subtitle", "badge", "at"] and c[0]["title"] == "Project 5", c)
+b = req("POST", "/api/v1/users/profile/riwayat/cari", mhs1, {"to": "/undangan", "title": "Undangan"})[1]
+check("riwayat cari subtitle null", b["data"]["cari"][0]["subtitle"] is None and b["data"]["cari"][0]["badge"] is None, b["data"]["cari"][0])
+expect("riwayat cari tanpa title", req("POST", "/api/v1/users/profile/riwayat/cari", mhs1, {"to": "/x"}), 400, "title wajib diisi")
+expect("riwayat cari title panjang", req("POST", "/api/v1/users/profile/riwayat/cari", mhs1, {"to": "/x", "title": "a" * 201}), 400, "title maksimal 200 karakter")
+check("riwayat per user", all(x["to"] != "/undangan" for x in req("GET", "/api/v1/users/profile/riwayat", dosen1)[1]["data"]["cari"]))
+b = expect("riwayat cari hapus", req("DELETE", "/api/v1/users/profile/riwayat/cari", mhs1), 200, "Riwayat pencarian dihapus")
+check("riwayat cari kosong, halaman tetap", b["data"]["cari"] == [] and len(b["data"]["halaman"]) >= 3, b["data"])
+expect("riwayat tanpa token", req("GET", "/api/v1/users/profile/riwayat"), 401)
+
+# ── W-50 kontak admin ──
+awalKontak = expect("kontak admin (mahasiswa)", req("GET", "/api/v1/kontak-admin", mhs1), 200, "Kontak admin fetched")["data"]
+check("kontak admin shape", list(awalKontak.keys()) == ["whatsapp", "nama", "jamLayanan", "updatedAt", "updatedBy"], awalKontak)
+expect("kontak admin tanpa token", req("GET", "/api/v1/kontak-admin"), 401)
+expect("kontak admin ubah bukan admin", req("PATCH", "/api/v1/kontak-admin", ketua, {"whatsapp": "081234567890"}), 403)
+expect("kontak admin kosong", req("PATCH", "/api/v1/kontak-admin", admin, {}), 400)
+expect("kontak admin nomor salah", req("PATCH", "/api/v1/kontak-admin", admin, {"whatsapp": "12ab"}), 400)
+b = expect("kontak admin ubah", req("PATCH", "/api/v1/kontak-admin", admin, {"whatsapp": "0812-3456-7890", "nama": "Admin LPPM Uji", "jamLayanan": "Senin–Jumat 08.00–16.00"}), 200, "Kontak admin diperbarui")
+check("kontak admin dinormalisasi", b["data"]["whatsapp"] == "6281234567890" and b["data"]["nama"] == "Admin LPPM Uji" and b["data"]["updatedBy"]["id"] == adminUser["id"], b["data"])
+b = req("PATCH", "/api/v1/kontak-admin", admin, {"whatsapp": "+62 812 0000 1111"})[1]
+check("kontak admin +62", b["data"]["whatsapp"] == "6281200001111" and b["data"]["jamLayanan"] == "Senin–Jumat 08.00–16.00", b["data"])
+check("kontak admin dibaca dosen", req("GET", "/api/v1/kontak-admin", dosen1)[1]["data"]["whatsapp"] == "6281200001111")
+b = req("PATCH", "/api/v1/kontak-admin", admin, {"nama": None})[1]
+check("kontak admin nama bawaan", b["data"]["nama"] == "Admin LPPM", b["data"])
+req("PATCH", "/api/v1/kontak-admin", admin, {k: awalKontak[k] for k in ("whatsapp", "nama", "jamLayanan")})
+
+# ── W-52 reset password oleh admin ──
+em = f"reset{uuid.uuid4().hex[:6]}@lppm.dev"
+rid = req("POST", "/api/v1/auth/register/dosen", body={"email": em, "name": "Dosen Reset", "password": "password123", "nidn": "57" + uuid.uuid4().hex[:8]})[1]["data"]["id"]
+req("PATCH", f"/api/v1/users/{rid}/status", admin, {"status": "approved"})
+rTok, rRef, _ = login(em, "password123")
+expect("reset bukan admin", req("POST", f"/api/v1/users/{rid}/reset-password", ketua, {"password": "ketua123456"}), 403)
+expect("reset tanpa password", req("POST", f"/api/v1/users/{rid}/reset-password", admin, {}), 422)
+expect("reset password admin salah", req("POST", f"/api/v1/users/{rid}/reset-password", admin, {"password": "salah"}), 400, "Password salah")
+expect("reset diri sendiri", req("POST", f"/api/v1/users/{adminUser['id']}/reset-password", admin, {"password": "admin123456"}), 400)
+expect("reset 404", req("POST", "/api/v1/users/999999/reset-password", admin, {"password": "admin123456"}), 404)
+st, b, hdrs, _ = req("POST", f"/api/v1/users/{rid}/reset-password", admin, {"password": "admin123456"})
+tmp = b["data"]["passwordSementara"] if st == 200 else ""
+check("reset berhasil", st == 200 and len(tmp) == 14 and any(ch.isdigit() for ch in tmp) and any(ch.isupper() for ch in tmp) and any(ch.islower() for ch in tmp) and b["data"]["wajibGantiPassword"] is True and b["data"]["user"]["id"] == rid and hdrs.get("Cache-Control") == "no-store", (st, b))
+check("reset tanpa hash", "password" not in json.dumps(b["data"]["user"]), b["data"])
+st, _ = req("POST", "/api/v1/auth/login", body={"email": em, "password": "password123"})[:2]
+check("reset password lama ditolak", st == 500, st)
+expect("reset refresh token dicabut", req("POST", "/api/v1/auth/refresh", body={"refreshToken": rRef}), 500)
+rTok, _, rUser = login(em, tmp)
+check("reset login wajib ganti", rUser["wajibGantiPassword"] is True, rUser)
+check("reset me wajib ganti", req("GET", "/api/v1/auth/me", rTok)[1]["data"]["wajibGantiPassword"] is True)
+n = req("GET", "/api/v1/notifications?limit=10", rTok)[1]["data"]
+check("reset notif", any(x["type"] == "password_direset" for x in n), n[:2])
+expect("ganti sama dengan sementara", req("PATCH", "/api/v1/users/profile/password", rTok, {"oldPassword": tmp, "newPassword": tmp}), 400, "Password baru harus berbeda dari password sementara")
+expect("ganti terlalu pendek", req("PATCH", "/api/v1/users/profile/password", rTok, {"oldPassword": tmp, "newPassword": "abc"}), 400, "Password baru minimal 8 karakter")
+expect("ganti password baru", req("PATCH", "/api/v1/users/profile/password", rTok, {"oldPassword": tmp, "newPassword": "barupassword1"}), 200, "Password changed successfully")
+check("reset penanda hilang", req("GET", "/api/v1/auth/me", rTok)[1]["data"]["wajibGantiPassword"] is False)
+check("reset activity", any(x["action"] == "user.reset_password" and x["entityId"] == rid and x["kategori"] == "akun" for x in req("GET", "/api/v1/activity-logs/my?limit=10", admin)[1]["data"]))
+
+# ── W-53 kategori log, filter, ringkasan, logout & login gagal ──
+st, _ = req("POST", "/api/v1/auth/login", body={"email": em, "password": "salahsekali"})[:2]
+b = req("GET", f"/api/v1/activity-logs?userId={rid}&kategori=auth&limit=20", admin)[1]
+acts = [x["action"] for x in b["data"]]
+check("log login gagal & login", "LOGIN_GAGAL" in acts and "LOGIN" in acts and all(x["kategori"] == "auth" for x in b["data"]), acts)
+_, ref2, _ = login(em, "barupassword1")
+expect("logout dicatat", req("POST", "/api/v1/auth/logout", body={"refreshToken": ref2}), 200, "Logged out successfully")
+check("log logout", req("GET", f"/api/v1/activity-logs?userId={rid}&limit=1", admin)[1]["data"][0]["action"] == "LOGOUT")
+expect("log kategori salah", req("GET", "/api/v1/activity-logs?kategori=x", admin), 400)
+expect("log tanggal salah", req("GET", "/api/v1/activity-logs?dari=02-11-2026", admin), 400, "dari harus berformat YYYY-MM-DD")
+expect("log dari > sampai", req("GET", "/api/v1/activity-logs?dari=2026-12-02&sampai=2026-12-01", admin), 400)
+b = expect("log search email", req("GET", f"/api/v1/activity-logs?search={em}&limit=50", admin), 200)
+check("log search hasil", b["meta"]["total"] >= 3 and all(x["userId"] == rid or em in (x["detail"] or "") for x in b["data"]), b["meta"])
+b = req("GET", "/api/v1/activity-logs?kategori=backup&limit=5", admin)[1]
+check("log filter kategori", all(x["kategori"] == "backup" and x["action"].startswith("backup.") for x in b["data"]), b["data"][:1])
+check("log filter masa depan kosong", req("GET", "/api/v1/activity-logs?dari=2099-01-01", admin)[1]["meta"]["total"] == 0)
+check("log my kategori", all(x["kategori"] == "auth" for x in req("GET", "/api/v1/activity-logs/my?kategori=auth&limit=5", dosen1)[1]["data"]))
+b = expect("log ringkasan", req("GET", "/api/v1/activity-logs/ringkasan", ketua), 200, "Ringkasan log aktivitas fetched")
+r = b["data"]
+check("log ringkasan shape", list(r.keys()) == ["total", "perKategori", "loginHariIni", "loginGagalHariIni", "penggunaAktifHariIni"] and list(r["perKategori"].keys()) == ["auth", "akun", "proposal", "review", "laporan", "dokumen", "periode", "template", "luaran", "backup", "sistem"] and r["total"] == sum(r["perKategori"].values()) and r["loginHariIni"] >= 1 and r["loginGagalHariIni"] >= 1, r)
+check("log ringkasan total = list total", r["total"] == req("GET", "/api/v1/activity-logs?limit=1", admin)[1]["meta"]["total"], r["total"])
+expect("log ringkasan dosen", req("GET", "/api/v1/activity-logs/ringkasan", dosen1), 403)
 
 print(f"\n{CHECKS - len(FAILS)}/{CHECKS} checks passed")
 sys.exit(1 if FAILS else 0)

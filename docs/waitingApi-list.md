@@ -22,6 +22,10 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 | W-49 | Cetak Laporan mahasiswa: jumlah laporan harian per project | Field `jumlahLaporanHarian` di tiap item `GET /mahasiswa/laporan-harian/proposals` (milik user login) (bagian 28) | Saring `> 0`, muat laporan hanya saat Cetak. |
 | W-51 | Usulan › langkah Anggota (NIDN/NIM, jenis anggota) | `anggota[].user` kini memuat `nidn`, `nim`, `roles` di semua respons proposal & detail laporan (bagian 28) | Hentikan `members/search` per anggota saat membuka draf. |
 | W-55 | Laporan Kegiatan › Tugaskan reviewer | `POST /laporan/:id/submit` otomatis menugaskan reviewer proposal asal (masih berperan reviewer) → status `review`; bila tidak ada tetap `diajukan` (bagian 28) | Dialog Tugaskan hanya perlu untuk laporan `diajukan`; centang otomatis boleh tetap. |
+| W-47 | Pintasan dashboard & "Terakhir dibuka" (pencarian global) | `GET /users/profile/riwayat`, `POST .../riwayat/halaman` `{path}`, `POST .../riwayat/cari` `{to,title,subtitle?,badge?}`, `DELETE .../riwayat/cari`; maks 50 halaman / 4 cari per user (`new-api.md` bagian 29.1) | Respons tulis = riwayat terbaru; localStorage boleh tetap sebagai cache. |
+| W-50 | Tombol Alat › Hubungi Admin (+ pengaturan admin) | `GET /kontak-admin` (semua peran login) → `{whatsapp, nama, jamLayanan, updatedAt, updatedBy}`; `PATCH /kontak-admin` (admin, nomor dinormalisasi ke 62…) (bagian 29.2) | `whatsapp: null` → cadangan `VITE_ADMIN_WA`. Halaman pengaturan admin belum ada di frontend. |
+| W-52 | Manajemen Pengguna › Reset password (Admin) + paksa ganti password | `POST /users/:id/reset-password` `{password: <password admin>}` → `{passwordSementara, wajibGantiPassword, user}`; `wajibGantiPassword` di login & `/auth/me`; `PATCH /users/profile/password` mengosongkan (bagian 29.3) | Password sementara hanya sekali tampil; tanpa kedaluwarsa otomatis. |
+| W-53 | Log Aktivitas: Kategori, Cari, rentang tanggal, kartu ringkasan | Field `kategori` di log; `GET /activity-logs?kategori=&search=&dari=&sampai=` (juga `/my`); `GET /activity-logs/ringkasan` → `{total, perKategori, loginHariIni, loginGagalHariIni, penggunaAktifHariIni}`; `LOGIN_GAGAL`/`LOGOUT`/`LOGOUT_ALL` dicatat (bagian 29.4) | Ganti pemetaan `utils/kategoriLog.js` dengan field `kategori`. |
 
 ### Sudah disambungkan
 
@@ -230,9 +234,7 @@ halaman "sudah terkirim", dengan tautan "Daftar dengan data lain"). Status di ha
 Sekarang memakai "SOP Frontend": riwayat disimpan di `localStorage` per user (`utils/riwayat.js`: `riwayatHalaman:<id>`,
 `riwayatCari:<id>`), sehingga hanya berlaku di peramban yang sama. Opsional — hanya perlu bila riwayat harus ikut di semua perangkat:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-47 | Pintasan dashboard (maks 4, yang terakhir digunakan dulu) dan "Terakhir dibuka" di pencarian global (maks 4) | Riwayat halaman yang dibuka & hasil pencarian yang dipilih, per user, lintas perangkat | `GET /users/profile/riwayat` → `{ halaman: [{ path, at }], cari: [{ to, title, subtitle, badge }] }`; `POST /users/profile/riwayat/halaman` `{ path }`; `POST /users/profile/riwayat/cari` `{ to, title, subtitle, badge }` (server simpan maks 50 halaman / 4 hasil cari); `DELETE /users/profile/riwayat/cari` | Opsional (prioritas rendah). Tanpa ini fitur tetap jalan, hanya tidak sinkron antarperangkat dan hilang bila data peramban dibersihkan. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Jumlah laporan harian per project (Mahasiswa › Cetak Laporan)
 
@@ -247,9 +249,7 @@ Hubungi Admin (Ctrl/⌘ + M) membuka WhatsApp (`wa.me`) dengan pesan templat (je
 sementara diambil dari env build frontend `VITE_ADMIN_WA` (`frontend/.env.example`), karena tidak ada endpoint yang bisa dibaca
 semua peran (`GET /users` hanya admin/ketua). Kosong → dialog "Nomor admin belum diatur".
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-50 | Tombol Alat › **Hubungi Admin** (semua peran) | Nomor WhatsApp admin/LPPM yang bisa diubah tanpa build ulang frontend | `GET /kontak-admin` (login, semua peran) → `{ whatsapp: "6281234567890", nama: "Admin LPPM", jamLayanan?: "Senin–Jumat 08.00–16.00" }`; diatur admin lewat `PATCH /kontak-admin` (atau tabel pengaturan umum) | Simpan nomor dalam format internasional tanpa `+`. Setelah ada, frontend memakai API ini dan `VITE_ADMIN_WA` jadi cadangan. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Data anggota di respons proposal (Usulan › langkah Anggota)
 
@@ -266,9 +266,7 @@ Lupa password mandiri **sudah tersambung** (`/lupa-password` → `POST /auth/for
 `POST /auth/reset-password`). Untuk pengguna yang tidak bisa menerima email, dibutuhkan reset oleh Admin. Password asli **tidak pernah**
 bisa ditampilkan/dicetak (disimpan bcrypt), jadi alurnya memakai password sementara sekali pakai:
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-52 | Manajemen Pengguna › panel detail: tombol **Reset password** (Admin) + dialog yang menampilkan password sementara **sekali** (salin, tidak bisa dibuka lagi); saat login dengan password sementara → paksa **Ganti password** | Password sementara acak + penanda wajib ganti | `POST /users/:id/reset-password` (admin; body `{ password }` = password Admin pelaksana sebagai konfirmasi) → `{ passwordSementara: "Xy7…" }` (acak ≥ 12 karakter, hanya di respons ini); kolom baru `User.wajibGantiPassword` (BOOLEAN) di-set `true`, semua `RefreshToken` user dicabut, catat `ActivityLog` (`user.reset_password`), notifikasi ke user; `POST /auth/login` & `GET /auth/me` mengirim `wajibGantiPassword`; `PATCH /users/profile/password` mengosongkan penanda | Jangan pernah mengirim/menyimpan password asli atau hash ke frontend. Opsional: password sementara kedaluwarsa (mis. 24 jam). Frontend: setelah login, bila `wajibGantiPassword` → arahkan ke halaman ganti password sebelum Dashboard. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Log Aktivitas (Admin & Ketua LPPM, `/log`)
 
@@ -276,9 +274,7 @@ Halaman Log Aktivitas memakai `GET /activity-logs` (page, limit 15, `action` LIK
 frontend sementara dipetakan ke awalan `action` (`utils/kategoriLog.js`: LOGIN, user., proposal., review, laporan, dokumen., periode.,
 template., luaran., backup.) dan kolom cari hanya menyaring halaman yang sedang tampil.
 
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-53 | Log Aktivitas: filter **Kategori**, kolom **Cari**, (opsional) rentang tanggal & kartu ringkasan | Kategori resmi per log, pencarian teks di server, filter tanggal | Kolom `ActivityLog.kategori` (ENUM mis. `auth`, `akun`, `proposal`, `review`, `laporan`, `dokumen`, `periode`, `template`, `luaran`, `backup`, `sistem`) diisi saat `logActivity` (data lama di-backfill dari awalan `action`); `GET /activity-logs` + `kategori=`, `search=` (nama/email user, `action`, `detail`, IP), `dari=`/`sampai=` (tanggal); opsional `GET /activity-logs/ringkasan` → `{ total, perKategori: {…}, loginHariIni }` | Catat juga **logout** & **login gagal** (sekarang hanya `LOGIN` berhasil yang tercatat) agar kategori "Info login" lengkap. |
+Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 
 ## Form Penilaian Reviewer & pendanaan (`/penugasan/nilai/proposal|laporan/:id`)
 

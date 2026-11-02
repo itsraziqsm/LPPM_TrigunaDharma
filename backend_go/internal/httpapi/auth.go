@@ -98,13 +98,15 @@ type userWithRoles struct {
 	Password string
 	Status   string
 	Roles    []string
+	// WajibGanti: password sementara dari admin belum diganti (W-52).
+	WajibGanti bool
 }
 
 func (s *Server) findUserWithRoles(ctx context.Context, where string, arg any) (*userWithRoles, error) {
 	var u userWithRoles
 	err := s.db.QueryRowContext(ctx,
-		"SELECT `id`,`email`,`name`,`fullName`,`password`,`status` FROM `User` WHERE "+where+" LIMIT 1", arg).
-		Scan(&u.ID, &u.Email, &u.Name, &u.FullName, &u.Password, &u.Status)
+		"SELECT `id`,`email`,`name`,`fullName`,`password`,`status`,`wajibGantiPassword` FROM `User` WHERE "+where+" LIMIT 1", arg).
+		Scan(&u.ID, &u.Email, &u.Name, &u.FullName, &u.Password, &u.Status, &u.WajibGanti)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -178,6 +180,16 @@ func (s *Server) login(c *Ctx) error {
 		_ = passwordMatches(dummyPasswordHash(), password)
 	}
 	s.secureDelay()
+	// W-53 (Go saja): login gagal dicatat bila emailnya terdaftar (ActivityLog.userId wajib).
+	if user != nil && (!valid || user.Status != "approved") {
+		detail := "Login gagal: password salah"
+		if valid {
+			detail = "Login gagal: akun berstatus " + user.Status
+		}
+		if err := s.logActivity(ctx, s.db, c, activityEntry{UserID: user.ID, Action: "LOGIN_GAGAL", Detail: detail}); err != nil {
+			return err
+		}
+	}
 	if user == nil || !valid {
 		return plainError("Invalid credentials")
 	}
@@ -201,6 +213,7 @@ func (s *Server) login(c *Ctx) error {
 		{"user", O{
 			{"id", user.ID}, {"name", user.Name}, {"fullName", fullName},
 			{"email", user.Email}, {"status", user.Status}, {"roles", user.Roles},
+			{"wajibGantiPassword", user.WajibGanti}, // Go saja (W-52)
 		}},
 	})
 }
@@ -258,8 +271,20 @@ func (s *Server) logout(c *Ctx) error {
 	if !ok {
 		return c.fail(http.StatusBadRequest, "Refresh token required")
 	}
-	if _, err := s.db.ExecContext(c.r.Context(), "UPDATE `RefreshToken` SET `revoked` = ? WHERE `token` = ?", true, token); err != nil {
+	ctx := c.r.Context()
+	// W-53 (Go saja): catat LOGOUT untuk pemilik token yang masih aktif.
+	var userID int64
+	err := s.db.QueryRowContext(ctx, "SELECT `userId` FROM `RefreshToken` WHERE `token` = ? AND `revoked` = false", token).Scan(&userID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
+	}
+	if _, err := s.db.ExecContext(ctx, "UPDATE `RefreshToken` SET `revoked` = ? WHERE `token` = ?", true, token); err != nil {
+		return err
+	}
+	if userID != 0 {
+		if err := s.logActivity(ctx, s.db, c, activityEntry{UserID: userID, Action: "LOGOUT", Detail: "Logout"}); err != nil {
+			return err
+		}
 	}
 	return c.ok("Logged out successfully", noData)
 }
@@ -267,6 +292,9 @@ func (s *Server) logout(c *Ctx) error {
 func (s *Server) logoutAll(c *Ctx) error {
 	if _, err := s.db.ExecContext(c.r.Context(),
 		"UPDATE `RefreshToken` SET `revoked` = ? WHERE `userId` = ? AND `revoked` = ?", true, c.user.UserID, false); err != nil {
+		return err
+	}
+	if err := s.logActivity(c.r.Context(), s.db, c, activityEntry{UserID: c.user.UserID, Action: "LOGOUT_ALL", Detail: "Logout dari semua perangkat"}); err != nil {
 		return err
 	}
 	return c.ok("Logged out from all devices", noData)
@@ -404,7 +432,7 @@ func (s *Server) resetPassword(c *Ctx) error {
 	}
 	now := s.nowMs()
 	err = s.withTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `updatedAt` = ? WHERE `id` = ?", hash, now, userID)
+		res, err := tx.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `wajibGantiPassword` = false, `updatedAt` = ? WHERE `id` = ?", hash, now, userID)
 		if err != nil {
 			return err
 		}
@@ -446,6 +474,7 @@ func (s *Server) me(c *Ctx) error {
 	data := O{
 		{"id", user.ID}, {"name", user.Name}, {"fullName", fullName}, {"email", user.Email},
 		{"status", user.Status}, {"roles", user.Roles}, {"hasTugasan", count > 0},
+		{"wajibGantiPassword", user.WajibGanti}, // Go saja (W-52)
 	}
 	// W-08 (Go saja): field profil ikut dikirim agar frontend bisa langsung menampilkannya.
 	profile, err := queryObj(ctx, s.db, "SELECT "+meProfileColumns+" FROM `User` u WHERE u.`id` = ?", c.user.UserID)

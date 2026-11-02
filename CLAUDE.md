@@ -20,7 +20,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
 - `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -34,7 +34,8 @@ Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
    file menunjuk file asal di Node. Frontend bergantung pada perilaku ini.
    Pengecualian yang disengaja: respons proposal kini punya field `tipe`, `luaran`, `skema`,
    `mitra` (+ `mitraJenis/Alamat/Kontak/Kebutuhan`), `rumpunIlmu`, `bidang`, `kataKunci`, `tahapan` (+ `kontak`/`noHp`/`nidn`/`nim`/`roles` di `anggota[].user`
-   dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`);
+   dan di pencarian user); `/auth/me` ikut mengirim field profil (+ SINTA, `fotoUrl`, `emailVerifiedAt`); login & `/auth/me` + `wajibGantiPassword`;
+   log aktivitas + field `kategori`;
    `/dosen/proposals/stats` punya key `review`.
    Endpoint baru tanpa padanan Node (`/api/v1/laporan`) memakai status HTTP yang sesuai
    (400/403/404/409) dan didokumentasikan di `backend_go/new-api.md`.
@@ -120,8 +121,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 ### Endpoint (`/api/v1`, semua butuh Bearer token kecuali auth publik & `/health`)
 | Grup | Endpoint utama | Akses |
 |---|---|---|
-| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`), verify-email/resend (login), verify-email (publik) | publik / login |
-| `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password; Ketua LPPM/STMIK → 403), profile/export (file JSON), profile/foto (POST multipart / DELETE), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua+ketua_stmik (W-45, baca); status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
+| `/auth` | login, refresh, logout, logout-all, register/dosen, register/mahasiswa, forgot-password, reset-password, me (+ field profil, `emailVerifiedAt`, `wajibGantiPassword`), verify-email/resend (login), verify-email (publik) | publik / login |
+| `/users` | `/kandidat-reviewer` (admin+ketua, sebelum `/:id`), `/:id/reviewer` (GET/PATCH admin+ketua), `/:id/reviewer/force-revoke` (ketua), search, profile/me (GET; PATCH field profil + `jabatanFungsional`, `sintaId`, `sintaScore`; DELETE = hapus akun sendiri, wajib password; Ketua LPPM/STMIK → 403), profile/export (file JSON), profile/foto (POST multipart / DELETE), profile/riwayat (GET; POST `/halaman` `{path}`, POST `/cari`, DELETE `/cari`; maks 50/4, W-47), `/:id/reset-password` (POST admin, `{password}` admin → `passwordSementara` sekali tampil, W-52), `/:id/foto` (GET **publik**, router terpisah sebelum `/users`), profile/password, list, `/:id`, `/:id/status`, `/:id/roles`, delete | list/detail admin+ketua+ketua_stmik (W-45, baca); status/delete admin; roles admin (ketua hanya tambah/cabut `reviewer` pada dosen) |
 | `/periode` | list, detail, create, update, DELETE `/:id` (hapus langsung + password); `deletion-request` (+ approve/cancel) | baca: semua; create/update/DELETE: ketua; deletion-request: admin; approve: ketua |
 | `/proposals` | list (admin/ketua/reviewer), `/my`, detail, create/update/submit (dosen/mhs), `/:id/status` (ketua/admin), delete, `dokumen-utama` upload/download | sesuai kolom |
 | `/proposals/:id/reviewers`, `/reviews`, `/reviews/finalize` | tugaskan/hapus reviewer (ketua/admin); simpan & finalisasi review (reviewer) | |
@@ -137,7 +138,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 | `/dosen/kepercayaan` | nilai kepercayaan 0–5 (`?userId=` admin/ketua) | dosen, mahasiswa, admin, ketua |
 | `/notifications` | list, read-all, `/:id/read`, delete | login |
 | `/dashboard/stats` | statistik | admin, ketua |
-| `/activity-logs` | `/my`; list semua (admin, ketua) | |
+| `/activity-logs` | `/my`; list semua (admin, ketua); filter `kategori`, `search`, `dari`/`sampai` (YYYY-MM-DD WIB); `/ringkasan` (admin, ketua) | |
+| `/kontak-admin` | GET (`whatsapp`, `nama`, `jamLayanan`), PATCH (nomor dinormalisasi `62…`) | GET login semua peran; PATCH admin |
 | `/export/proposals` | data export | admin, ketua |
 | `/proposals/:id/deletion-request`, `/laporan/:id/deletion-request`, `/dokumen/deletion-request` | admin minta hapus dokumen yang sudah diajukan (`{password, alasan}`, GET = permintaan menunggu); daftar (`?status=&tipe=`); Ketua `/:requestId/approve` (`{password}`, hapus proposal + laporannya) / `/cancel` (admin batal, Ketua tolak) | admin / ketua |
 | `/monitoring` | `/ringkasan`, `/proposals` (`status`, `urut`, paginasi; + `tahapan`, `anggaran`, `laporan`), `/dosen` (dosen pengusul + perStatus/perJenis/anggaran); filter `periodeId`, `tahun`, `jenis`, `search`, `termasukDraft` (bawaan tanpa draft) | ketua_stmik, ketua, admin |
@@ -212,9 +214,13 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
 - Notifikasi (`NotifType`): `proposal_diajukan`, `proposal_disetujui`, `proposal_ditolak`,
   `proposal_revisi`, `reviewer_ditugaskan`, `review_selesai`, `laporan_diunggah`,
   `deletion_request`, `deletion_approved`, `deletion_cancelled`, `laporan_diajukan`,
-  `laporan_disetujui`, `laporan_ditolak`, `laporan_revisi` (notifikasi laporan memakai
+  `laporan_disetujui`, `laporan_ditolak`, `laporan_revisi`, `password_direset` (notifikasi laporan memakai
   `refType: "laporan"`).
-- Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`).
+- Aksi penting dicatat ke `ActivityLog` (dengan `ipAddress`, `userAgent`, `kategori` dari awalan action lewat
+  `kategoriLog` di `log_aktivitas.go`: auth|akun|proposal|review|laporan|dokumen|periode|template|luaran|backup|sistem);
+  `LOGIN`, `LOGIN_GAGAL` (email terdaftar saja), `LOGOUT`, `LOGOUT_ALL` ikut dicatat.
+- **Reset password oleh admin** (W-52): password sementara 14 karakter acak, hanya di respons; `User.wajibGantiPassword`
+  = true, refresh token dicabut, notifikasi `password_direset`; ganti password (≥ 8, beda dari sementara) mengosongkan penanda.
 - **Backup database** (`backup.go`, `backup_dump.go`): otomatis sebulan sekali (env `BACKUP_HARI`=1,
   `BACKUP_JAM`=2, `BACKUP_ZONA`=Asia/Jakarta, `BACKUP_OTOMATIS`; terlewat → dijalankan saat server
   hidup, cek tiap 10 menit) + manual admin; dump SQL gzip ditulis Go sendiri (snapshot konsisten) ke
@@ -222,8 +228,9 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   `dibuatOlehId`, status berjalan|berhasil|gagal, `periode` YYYY-MM untuk otomatis, `dihapusAt`).
 
 ### Database (MySQL/MariaDB)
-Tabel: `Role` (`name` ENUM admin|ketua_lppm|ketua_stmik|dosen|reviewer|mahasiswa), `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`),
-`EmailVerificationToken`, `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
+Tabel: `Role` (`name` ENUM admin|ketua_lppm|ketua_stmik|dosen|reviewer|mahasiswa), `User` (+ `jabatanFungsional`, `sintaId`, `sintaScore`, `deletedAt`, `emailVerifiedAt`, `wajibGantiPassword`),
+`EmailVerificationToken`, `UserRiwayat` (riwayat halaman/cari per user, W-47), `Pengaturan` (key-value,
+mis. `kontak_admin.*`, W-50), `LuaranKegiatan` (item luaran per proposal, bukti blob), `MasterData`
 (`kategori` rumpun_ilmu|bidang|luaran|jenis_mitra, `nama` unik per kategori, `jenisKegiatan` NULL = keduanya,
 `jenisLuaran`, `urutan`, `isAktif`), `UserFoto`
 (foto profil: `userId` PK, blob, mime, ukuran), `UserRole`, `RefreshToken`, `PasswordResetToken`, `Periode`
@@ -319,7 +326,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   admin & Ketua LPPM: **Aktivitas sistem** (`feed`, `Feed lebar`) **selebar area konten** di bawah dua kolom Informasi (layar lebar: satu baris per log,
   waktu di kanan; aksi `aksiTerbaca`, keterangan = `log.detail`) + tautan **"Lihat log lebih banyak"** → **`/log`** (`LogAktivitasPage.jsx`, admin/ketua:
   `KepalaStatus` 3 kartu (total, login, aktivitas proposal = `meta.total`), `PanelCari` + Filter **Kategori** (dipetakan ke awalan `action`,
-  `utils/kategoriLog.js`; cari = halaman tampil saja → ApiPending W-53), tabel `KartuNavy` 15 per halaman)
+  `utils/kategoriLog.js`; cari = halaman tampil saja; API W-53 (`kategori`, `search`, `/ringkasan`) sudah tersedia), tabel `KartuNavy` 15 per halaman)
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
@@ -581,7 +588,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   semua peran, sementara `ErrorState` **501**), 3. **Hubungi Admin** (Ctrl/⌘ + M) → WhatsApp `wa.me` di tab baru (`utils/hubungiAdmin.js`) dengan
   templat "Halo admin, saya mengalami kendala di "<jejak>", dimana ... / Terima kasih atas perhatiannya. / - <nama>, <peran pertama>"; jejak =
   breadcrumb halaman yang tampil (`Breadcrumb.jsx` mencatat ke `utils/jejakSaatIni.js`, tanpa breadcrumb → path URL); nomor dari env
-  `VITE_ADMIN_WA` (`frontend/.env.example`; awalan 0 → 62; kosong → dialog "Nomor admin belum diatur") sampai API W-50 ada. Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
+  `VITE_ADMIN_WA` (`frontend/.env.example`; awalan 0 → 62; kosong → dialog "Nomor admin belum diatur") (API `GET /kontak-admin` W-50 sudah tersedia, frontend belum menyambungkan). Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc; kolom kosong = **riwayat per user** "Terakhir
   dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>`, + Hapus riwayat; tanpa API)). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
@@ -679,7 +686,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Lupa password**: tautan "Lupa password?" di samping label Password Login → `/lupa-password` (`LupaPasswordPage.jsx`, tamu: `POST /auth/forgot-password`,
   selalu tampil "Periksa Email Anda") ; tautan email → `/reset-password?token=` (`ResetPasswordPage.jsx`, publik tanpa guard: password baru ≥ 8 + ulangi,
   `POST /auth/reset-password {token, newPassword}`, sesi lokal dikosongkan → `/login` + flash; token tak valid → "Minta tautan baru"). Butuh `FRONTEND_URL` di backend.
-  Reset oleh Admin (password sementara + wajib ganti) = ApiPending W-52. Halaman tamu mandiri (Terkirim, Lupa/Reset password) memakai merek
+  Reset oleh Admin (password sementara + wajib ganti): API W-52 sudah tersedia (`POST /users/:id/reset-password`), frontend belum menyambungkan. Halaman tamu mandiri (Terkirim, Lupa/Reset password) memakai merek
   `components/MerekLppm.jsx` (lencana + teks "LPPM").
   Daftar: setelah `register` berhasil → `setBerhasil` + `tungguOutro()` lalu tetap ke `/register/terkirim` (`authStore.register` juga punya jeda dev 0,75 dtk).
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi

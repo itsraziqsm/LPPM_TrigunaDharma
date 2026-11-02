@@ -35,8 +35,8 @@ func (s *Server) logActivity(ctx context.Context, q dbtx, c *Ctx, e activityEntr
 		}
 	}
 	_, err := q.ExecContext(ctx,
-		"INSERT INTO `ActivityLog` (`userId`,`action`,`entityType`,`entityId`,`detail`,`proposalId`,`ipAddress`,`userAgent`,`createdAt`) VALUES (?,?,?,?,?,?,?,?,?)",
-		e.UserID, e.Action, e.EntityType, e.EntityID, e.Detail, e.ProposalID, ip, ua, s.nowMs())
+		"INSERT INTO `ActivityLog` (`userId`,`action`,`entityType`,`entityId`,`detail`,`proposalId`,`ipAddress`,`userAgent`,`createdAt`,`kategori`) VALUES (?,?,?,?,?,?,?,?,?,?)",
+		e.UserID, e.Action, e.EntityType, e.EntityID, e.Detail, e.ProposalID, ip, ua, s.nowMs(), kategoriLog(e.Action))
 	return err
 }
 

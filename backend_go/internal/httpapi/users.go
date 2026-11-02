@@ -45,6 +45,7 @@ func (s *Server) registerUserRoutes() {
 	g.post("/profile/foto", multerImage("file"), s.uploadProfileFoto)              // baru (W-07)
 	g.delete("/profile/foto", s.deleteProfileFoto)                                 // baru (W-07)
 	g.patch("/profile/password", s.changePassword)
+	s.registerRiwayatRoutes(g) // baru (W-47): /profile/riwayat
 	g.get("/", authorize("admin", "ketua_lppm", "ketua_stmik"), s.validateQuery(paginationSchema), s.getUsers)
 	g.get("/kandidat-reviewer", authorize("admin", "ketua_lppm"), s.listKandidatReviewer) // baru, sebelum /:id
 	g.get("/:id", authorize("admin", "ketua_lppm", "ketua_stmik"), s.getUser)
@@ -52,6 +53,7 @@ func (s *Server) registerUserRoutes() {
 	// Go saja (W-30): ketua_lppm boleh, tetapi hanya untuk menambah/mencabut reviewer pada dosen.
 	g.patch("/:id/roles", authorize("admin", "ketua_lppm"), validateBody(assignRoleSchema), s.assignRoles)
 	s.registerReviewerAksesRoutes(g) // baru: /:id/reviewer (GET, PATCH), /:id/reviewer/force-revoke
+	g.post("/:id/reset-password", authorize("admin"), validateBody(resetPasswordAdminSchema), s.resetPasswordOlehAdmin) // baru (W-52)
 	g.delete("/:id", authorize("admin"), s.deleteUser)
 }
 
@@ -454,11 +456,20 @@ func (s *Server) changePassword(c *Ctx) error {
 	if !passwordMatches(hash, oldPassword) {
 		return httpError(http.StatusBadRequest, "Old password is incorrect")
 	}
+	var wajibGanti bool
+	if err := s.db.QueryRowContext(ctx, "SELECT `wajibGantiPassword` FROM `User` WHERE `id` = ?", c.user.UserID).Scan(&wajibGanti); err != nil {
+		return err
+	}
+	if wajibGanti { // W-52: password sementara dari admin harus diganti dengan yang baru
+		if err := passwordBaruValid(oldPassword, newPassword); err != nil {
+			return err
+		}
+	}
 	newHash, err := hashPassword(newPassword, bcryptSaltRounds)
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `updatedAt` = ? WHERE `id` = ?", newHash, s.nowMs(), c.user.UserID); err != nil {
+	if _, err := s.db.ExecContext(ctx, "UPDATE `User` SET `password` = ?, `wajibGantiPassword` = false, `updatedAt` = ? WHERE `id` = ?", newHash, s.nowMs(), c.user.UserID); err != nil {
 		return err
 	}
 	return c.ok("Password changed successfully", noData)

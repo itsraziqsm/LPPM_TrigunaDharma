@@ -245,6 +245,7 @@ func (s *Server) deleteOwnAccount(c *Ctx) error {
 			"DELETE FROM `UserFoto` WHERE `userId` = ?",
 			"DELETE FROM `PasswordResetToken` WHERE `userId` = ?",
 			"DELETE FROM `EmailVerificationToken` WHERE `userId` = ?",
+			"DELETE FROM `UserRiwayat` WHERE `userId` = ?",
 			"UPDATE `RefreshToken` SET `revoked` = true WHERE `userId` = ?",
 			// Undangan yang belum dijawab dianggap ditolak agar pengusul tidak terhambat saat submit.
 			"UPDATE `ProposalAnggota` SET `statusUndangan` = 'ditolak' WHERE `userId` = ? AND `statusUndangan` = 'pending'",
