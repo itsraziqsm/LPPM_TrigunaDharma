@@ -44,6 +44,7 @@ import ReviewProposalPage from './review/ReviewProposalPage'
 import ProposalMasukDetailPage from './ProposalMasukDetailPage'
 import LaporanMasukDetailPage from './LaporanMasukDetailPage'
 import ReviewLaporanPage from './review/ReviewLaporanPage'
+import FormReviewPage from './review/FormReviewPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
 import LaporanHarianInputPage from './LaporanHarianInputPage'
 import UserAvatar from '../components/UserAvatar'
@@ -133,6 +134,8 @@ export default function DashboardLayout({ page, jenis }) {
       if (isAdminOrKetua) return page === 'review-proposal' ? <ProposalMasukDetailPage key={location.pathname} /> : <LaporanMasukDetailPage key={location.pathname} />
       if (isReviewer) return page === 'review-proposal' ? <ReviewProposalPage key={location.pathname} /> : <ReviewLaporanPage key={location.pathname} />
     }
+    // Form Penilaian Reviewer (halaman sendiri): /penugasan/nilai/proposal|laporan/:id.
+    if (page === 'form-review' && isReviewer) return <FormReviewPage key={location.pathname} tipe={jenis} />
 
     // Ketua STMIK (hanya baca): Akademik › Daftar Dokumen (Proposal, Laporan), Statistik (dulu Pemantauan),
     // Arsip Periode, Cetak Laporan, Monitor Pengguna (Pengguna mode baca).

@@ -38,6 +38,8 @@ const router = createBrowserRouter([
       { path: '/undangan', element: <DashboardLayout page="undangan" /> },
       { path: '/undangan/:id', element: <DashboardLayout page="undangan-detail" /> },
       { path: '/penugasan', element: <DashboardLayout page="penugasan" /> },
+      { path: '/penugasan/nilai/proposal/:id', element: <DashboardLayout page="form-review" jenis="proposal" /> },
+      { path: '/penugasan/nilai/laporan/:id', element: <DashboardLayout page="form-review" jenis="laporan" /> },
       { path: '/laporan-harian', element: <DashboardLayout page="laporan-harian" /> },
       { path: '/project/penelitian', element: <DashboardLayout page="project" jenis="penelitian" /> },
       { path: '/project/pengabdian', element: <DashboardLayout page="project" jenis="pengabdian" /> },

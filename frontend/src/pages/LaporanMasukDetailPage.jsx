@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, UserPlus } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
+import { proposalApi } from '../api/proposal'
 import { usersApi } from '../api/users'
 import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
@@ -53,6 +54,8 @@ export default function LaporanMasukDetailPage() {
   const [catatan, setCatatan] = useState('')
   const [reviewers, setReviewers] = useState(null)
   const [picked, setPicked] = useState([])
+  // Reviewer proposal asal = reviewer laporan (UAT); otomatis dipilih di dialog Tugaskan (W-55).
+  const [dariProposal, setDariProposal] = useState(new Set())
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -79,9 +82,17 @@ export default function LaporanMasukDetailPage() {
     setPicked([])
     try {
       // Urut beban (W-32): tanpa tugasan aktif dulu; pengusul sudah dikeluarkan backend.
-      const r = await usersApi.getKandidatReviewer({ itemId: laporan.id })
+      const [r, asal] = await Promise.all([
+        usersApi.getKandidatReviewer({ itemId: laporan.id }),
+        laporan.proposalId ? proposalApi.getById(laporan.proposalId).then((x) => x.data.data).catch(() => null) : null,
+      ])
       const assigned = new Set((laporan.reviewerTugasan || []).map((t) => t.reviewerId ?? t.reviewer?.id))
-      setReviewers((r.data.data || []).filter((u) => !u.sudahDitugaskan && u.id !== laporan.pengusul?.id && !assigned.has(u.id)))
+      const tersedia = (r.data.data || []).filter((u) => !u.sudahDitugaskan && u.id !== laporan.pengusul?.id && !assigned.has(u.id))
+      const idAsal = new Set((asal?.reviewerTugasan || []).map((t) => t.reviewerId ?? t.reviewer?.id))
+      setDariProposal(idAsal)
+      // Reviewer proposal asal di urutan teratas & langsung tercentang.
+      setReviewers([...tersedia.filter((u) => idAsal.has(u.id)), ...tersedia.filter((u) => !idAsal.has(u.id))])
+      setPicked(tersedia.filter((u) => idAsal.has(u.id)).map((u) => u.id))
     } catch {
       setReviewers([])
     }
@@ -238,6 +249,7 @@ export default function LaporanMasukDetailPage() {
                                 onChange={(e) => setPicked((p) => (e.target.checked ? [...p, u.id] : p.filter((x) => x !== u.id)))}
                               />
                               {u.fullName || u.name}
+                              {dariProposal.has(u.id) ? <span className="rounded-md bg-navy-50 px-1.5 py-0.5 text-[11px] font-medium text-navy-700">Reviewer proposal</span> : null}
                               <span className="text-xs text-slate-500">{u.email}</span>
                               <span className="ml-auto">
                                 <BebanReviewer kandidat={u} />

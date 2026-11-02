@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ClipboardCheck, ClipboardList, FileText } from 'lucide-react'
 import { laporanApi } from '../../api/laporan'
@@ -8,15 +8,16 @@ import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, StatusBadge } from '../laporan/shared'
 import LuaranCapaian from '../laporan/LuaranCapaian'
 import { rupiah, tanggal } from '../laporan/format'
-import FormPenilaian from './FormPenilaian'
+import KartuPenilaian from './KartuPenilaian'
+import { tautanForm } from '../../utils/rubrikReview'
 import Breadcrumb from '../../components/Breadcrumb'
 import { cariTugasan } from './cariTugasan'
 
 // ---------------------------------------------------------------------------
 // Detail laporan mode reviewer (/laporan-masuk/detail/:id) — menggantikan modal review
 // laporan di Penugasan Review (tab Laporan). Data: GET /laporan/:id + tugasan saya dari
-// GET /laporan/tugasan (myReview). Penilaian hanya saat laporan berstatus `review`
-// (POST /laporan/:id/reviews, /finalize).
+// GET /laporan/tugasan (myReview). Penilaian di halaman Form Penilaian
+// (FormReviewPage, /penugasan/nilai/laporan/:id), hanya saat laporan berstatus `review`.
 // ---------------------------------------------------------------------------
 
 const nama = (u) => u?.fullName || u?.name || '—'
@@ -43,21 +44,6 @@ export default function ReviewLaporanPage() {
     }
   }, [id])
 
-  const simpan = useCallback(
-    async (payload) => {
-      await laporanApi.submitReview(id, payload)
-      setReview((r) => ({ ...(r || {}), ...payload, isDone: false }))
-    },
-    [id],
-  )
-  const selesaikan = useCallback(
-    async (payload) => {
-      await laporanApi.submitReview(id, payload)
-      await laporanApi.finalizeReview(id)
-      setReview((r) => ({ ...(r || {}), ...payload, isDone: true }))
-    },
-    [id],
-  )
 
   const kembali = (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,6 +99,10 @@ export default function ReviewLaporanPage() {
           {l.periode ? <span>· {l.periode.nama}</span> : null}
           <span>· ditugaskan {tanggal(state.tugasan.createdAt)}</span>
         </p>
+        <Link to={tautanForm('laporan', l.id)} className={`btn ${done || l.status !== 'review' ? 'btn-secondary' : 'btn-primary'} w-full sm:w-auto`}>
+          <ClipboardCheck className="size-4" aria-hidden="true" />
+          {done ? 'Lihat hasil penilaian' : 'Buka form penilaian'}
+        </Link>
       </header>
 
       <Section icon={FileText} title="Isi laporan">
@@ -135,18 +125,7 @@ export default function ReviewLaporanPage() {
         <LuaranCapaian proposalId={l.proposalId} />
       </Section>
 
-      <Section icon={ClipboardCheck} title={done ? 'Hasil penilaian Anda' : 'Form penilaian'}>
-        <FormPenilaian
-          key={done ? 'done' : 'edit'}
-          noun="laporan"
-          review={review}
-          done={done}
-          locked={l.status !== 'review'}
-          lockedNote="Laporan tidak sedang dalam tahap review, penilaian tidak dapat diubah."
-          onSave={simpan}
-          onFinalize={selesaikan}
-        />
-      </Section>
+      <KartuPenilaian tipe="laporan" id={l.id} review={review} terkunci={l.status !== 'review'} />
     </div>
   )
 }

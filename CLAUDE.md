@@ -279,7 +279,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dialihkan ke sini), `/kegiatan/penelitian`,
   `/kegiatan/pengabdian`, `/kegiatan/:jenis/detail/:id` (semua peran terkait), `/kegiatan/:jenis/usulan[/:id]`, `/kegiatan/:jenis/laporan/(baru|:id)`,
   `/luaran` (dosen), `/laporan-masuk` (admin/ketua), `/backup`, `/template-proposal` (admin), `/luaran-dosen` (Ketua LPPM), `/daftar-dokumen/proposal|laporan`, `/statistik` (`/pemantauan` dialihkan), `/arsip-periode[/detail/:id]` (Ketua STMIK), `/cetak-laporan` (mhs: laporan harian; Ketua STMIK: rekap), `/arsip-kegiatan[/detail/:id]` (dosen; `/periode` dosen dialihkan), `/arsip-project[/detail/:id]` (mhs; `/riwayat-project` dialihkan), `/notifikasi` & `/notifikasi/:id`, `/bantuan` (semua peran), `/log` (admin/ketua), `/undangan[/:id]`
-  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
+  (dosen/mhs), `/laporan-harian` (mhs, semua project), `/project/penelitian|pengabdian[/input]` & `/riwayat-project` (mhs), `/penugasan` (reviewer / punya tugasan) + `/penugasan/nilai/proposal|laporan/:id` (Form Penilaian), `/proposals/detail/:id` & `/laporan-masuk/detail/:id` (**halaman detail, bukan modal**: Ketua/Admin =
   `ProposalMasukDetailPage` / `LaporanMasukDetailPage` (kelola), reviewer = `pages/review/` (penilaian); tautan lama
   `/proposals?detail=` & `/laporan-masuk?id=` dialihkan ke sini), `/profil`.
   `/proposal-saya` (halaman lama, sudah dihapus) dialihkan ke `/kegiatan/penelitian`.
@@ -499,7 +499,14 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Mulai/Lanjutkan/Lihat & Nilai membuka halaman detail di `src/pages/review/`: `ReviewProposalPage` (`/proposals/detail/:id`:
   abstrak, info, mitra, target luaran, lampiran `readOnly`, dokumen utama, tim, riwayat + form) dan `ReviewLaporanPage`
   (`/laporan-masuk/detail/:id`: isi laporan, dokumen, capaian luaran + form; terkunci bila laporan bukan `review`); form
-  bersama `FormPenilaian.jsx`; `myReview` dicari dari daftar tugasan (`cariTugasan.js`, tanpa endpoint detail tugasan).
+  `myReview` dicari dari daftar tugasan (`cariTugasan.js`, tanpa endpoint detail tugasan). Penilaian **tidak lagi di halaman detail**: detail
+  menampilkan kartu `KartuPenilaian` (rata-rata, rekomendasi, dana) + tombol ke halaman **Form Penilaian Reviewer** `FormReviewPage.jsx`
+  (`/penugasan/nilai/proposal|laporan/:id`, mengikuti formulir kertas LPPM): kepala (judul, pengusul, bidang ilmu, reviewer) → A. 7 komponen
+  skor 1–5 + catatan singkat → total/rata-rata/kelayakan otomatis → B. Catatan reviewer → C. Rekomendasi (Diterima/Diterima dengan perbaikan/
+  Ditolak, saran "Sesuai skor") + **dana disetujui ditentukan reviewer** (proposal; ≤ dana diusulkan, isi cepat %, ditolak → Rp 0); ringkasan
+  melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
+  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Dialog Tugaskan
+  reviewer laporan (`LaporanMasukDetailPage`) otomatis mencentang reviewer proposal asal (UAT: reviewer proposal = reviewer laporan; W-55).
   Notifikasi `reviewer_ditugaskan` menuju halaman detail ini. Buka dokumen utama: `utils/dokumenUtama.js`. Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).

@@ -285,6 +285,20 @@ template., luaran., backup.) dan kolom cari hanya menyaring halaman yang sedang 
 |---|---|---|---|---|
 | W-53 | Log Aktivitas: filter **Kategori**, kolom **Cari**, (opsional) rentang tanggal & kartu ringkasan | Kategori resmi per log, pencarian teks di server, filter tanggal | Kolom `ActivityLog.kategori` (ENUM mis. `auth`, `akun`, `proposal`, `review`, `laporan`, `dokumen`, `periode`, `template`, `luaran`, `backup`, `sistem`) diisi saat `logActivity` (data lama di-backfill dari awalan `action`); `GET /activity-logs` + `kategori=`, `search=` (nama/email user, `action`, `detail`, IP), `dari=`/`sampai=` (tanggal); opsional `GET /activity-logs/ringkasan` → `{ total, perKategori: {…}, loginHariIni }` | Catat juga **logout** & **login gagal** (sekarang hanya `LOGIN` berhasil yang tercatat) agar kategori "Info login" lengkap. |
 
+## Form Penilaian Reviewer & pendanaan (`/penugasan/nilai/proposal|laporan/:id`)
+
+Halaman Form Penilaian (`pages/review/FormReviewPage.jsx`) mengikuti formulir kertas LPPM: 7 komponen substansi (skor 1–5 + catatan
+singkat), total & rata-rata (≥ 4,0 layak lanjut, 3,0–3,9 layak dengan revisi, < 3,0 tidak layak), catatan reviewer, rekomendasi
+(Diterima = `disetujui`, Diterima dengan perbaikan = `revisi`, Ditolak = `ditolak`), dan **dana disetujui** yang ditentukan reviewer
+(≤ dana diusulkan; ditolak → Rp 0). Saat ini server hanya menyimpan `catatan` + `rekomendasi`; skor, catatan singkat & dana disetujui
+disimpan sebagai draf `localStorage` (`formReview:<userId>:<tipe>:<id>`, `utils/rubrikReview.js`) — hanya di peramban reviewer itu dan
+tidak terlihat Ketua. Kolom lama `nilaiRelevansi/Metodologi/Anggaran/Luaran` tidak dipakai form baru.
+
+| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-54 | Form Penilaian: skor per komponen + catatan singkat, dana disetujui; ringkasan di Detail (reviewer) & Hasil review (Ketua/pengusul) | Skor 1–5 per komponen, catatan singkat, dana disetujui per review | Tabel `ReviewSkor` (`reviewId` FK `ProposalReview` CASCADE, `kode` VARCHAR(40), `skor` TINYINT 1–5, `catatan` VARCHAR(200), unik `reviewId+kode`); kolom `ProposalReview.danaDisetujui` DECIMAL(15,2) NULL. `POST /proposals/:id/reviews` & `/laporan/:id/reviews` menerima `skor: [{kode, skor, catatan?}]` + `danaDisetujui` (proposal saja; 400 bila > `anggaran` atau < 0); respons review (+ `myReview` di tugasan, `GET /proposals/:id/reviews`) mengirim `skor`, `totalSkor`, `rataSkor`, `danaDisetujui`. `/finalize` menolak (400) bila skor belum lengkap, `rekomendasi` kosong, atau `danaDisetujui` kosong pada proposal (`ditolak` → 0). Opsional: rubrik di master (`GET /master/rubrik-review?jenis=&tipe=` → `[{kode,label,urutan}]`) agar pengabdian & laporan punya komponen sendiri | Kode komponen frontend: `judul`, `relevansi`, `latar`, `kebaruan`, `pustaka`, `konsistensi`, `kelayakan`. **Keputusan pendanaan**: bila reviewer > 1, perlu aturan dana final (rata-rata / terendah / dipilih Ketua) dan kolom `anggaranDisetujui` di proposal agar Statistik, Rekap anggaran & Surat Tugas memakai dana disetujui (sekarang memakai `anggaran` usulan). |
+| W-55 | Laporan Kegiatan › Tugaskan reviewer | Reviewer laporan = reviewer proposal asal (hasil UAT) | Saat laporan **diajukan** (`POST /laporan/:id/submit`), salin `ReviewerTugasan` proposal asal (`proposalId`) yang masih berperan `reviewer` ke laporan, set status `review`, notifikasi `reviewer_ditugaskan`; bila tidak ada → tetap `diajukan` (Ketua menugaskan manual) | Sementara frontend: dialog Tugaskan reviewer laporan otomatis mencentang & menaruh paling atas reviewer proposal asal (lencana "Reviewer proposal"), Ketua cukup klik Tugaskan. |
+
 ## Elemen desain yang belum dibuat (bukan soal API)
 
 - Grup menu **Kegiatan → Penelitian, Pengabdian** sudah dibuat (khusus dosen).

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, ClipboardCheck, ClipboardList, Download, FileText, Handshake, Tag, Users } from 'lucide-react'
 import { proposalApi } from '../../api/proposal'
@@ -9,7 +9,8 @@ import { Fields, Section } from '../KegiatanDetailPage'
 import { DokumenTab } from '../ProposalDosen/DokumenTab'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from '../ProposalDosen/constants'
 import LuaranCapaian from '../laporan/LuaranCapaian'
-import FormPenilaian from './FormPenilaian'
+import KartuPenilaian from './KartuPenilaian'
+import { tautanForm } from '../../utils/rubrikReview'
 import Breadcrumb from '../../components/Breadcrumb'
 import { cariTugasan } from './cariTugasan'
 
@@ -17,7 +18,7 @@ import { cariTugasan } from './cariTugasan'
 // Detail proposal mode reviewer (/proposals/detail/:id) — menggantikan modal "Form
 // Penilaian Proposal" di Penugasan Review. Data: GET /proposals/:id (reviewer yang
 // ditugaskan boleh membaca) + tugasan saya dari GET /reviewer/my-tugasan (myReview).
-// Simpan: POST /proposals/:id/reviews; selesai: + /reviews/finalize.
+// Penilaian di halaman Form Penilaian (FormReviewPage, /penugasan/nilai/proposal/:id).
 // ---------------------------------------------------------------------------
 
 const hari = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '—')
@@ -46,21 +47,6 @@ export default function ReviewProposalPage() {
     }
   }, [id])
 
-  const simpan = useCallback(
-    async (payload) => {
-      await reviewerApi.submitReview(id, payload)
-      setReview((r) => ({ ...(r || {}), ...payload, isDone: false }))
-    },
-    [id],
-  )
-  const selesaikan = useCallback(
-    async (payload) => {
-      await reviewerApi.submitReview(id, payload)
-      await reviewerApi.finalizeReview(id)
-      setReview((r) => ({ ...(r || {}), ...payload, isDone: true }))
-    },
-    [id],
-  )
 
   const kembali = (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -118,6 +104,10 @@ export default function ReviewProposalPage() {
           {d.periode ? <span>· {d.periode.nama}</span> : null}
           <span>· ditugaskan {hari(state.tugasan.createdAt)}</span>
         </p>
+        <Link to={tautanForm('proposal', d.id)} className={`btn ${done ? 'btn-secondary' : 'btn-primary'} w-full sm:w-auto xl:hidden`}>
+          <ClipboardCheck className="size-4" aria-hidden="true" />
+          {done ? 'Lihat hasil penilaian' : 'Buka form penilaian'}
+        </Link>
       </header>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -178,18 +168,10 @@ export default function ReviewProposalPage() {
             <DokumenTab proposalId={d.id} dokumenLampiran={d.dokumenLampiran || []} status={d.status} readOnly />
           </Section>
 
-          <Section icon={ClipboardCheck} title={done ? 'Hasil penilaian Anda' : 'Form penilaian'}>
-            <FormPenilaian
-              key={done ? 'done' : 'edit'}
-              review={review}
-              done={done}
-              onSave={simpan}
-              onFinalize={selesaikan}
-            />
-          </Section>
         </div>
 
         <aside className="min-w-0 space-y-6">
+          <KartuPenilaian tipe="proposal" id={d.id} review={review} />
           <Section icon={FileText} title="Dokumen utama">
             {d.dokumenNama ? (
               <div className="space-y-3">
