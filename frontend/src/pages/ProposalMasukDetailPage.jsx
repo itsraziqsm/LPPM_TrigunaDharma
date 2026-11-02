@@ -18,6 +18,8 @@ import { ReviewList } from './laporan/shared'
 import Breadcrumb from '../components/Breadcrumb'
 import useJejakMenu from '../hooks/useJejakMenu'
 import LuaranCapaian from './laporan/LuaranCapaian'
+import ApiPending from '../components/ApiPending'
+import { danaFinal, danaSementara } from '../utils/danaKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail Proposal Kegiatan untuk Ketua LPPM / Admin (/proposals/detail/:id) — halaman,
@@ -217,7 +219,11 @@ export default function ProposalMasukDetailPage() {
                 { label: 'Skema', value: d.skema || '—', hidden: d.jenis === 'pengabdian' },
                 { label: 'Rumpun ilmu', value: d.rumpunIlmu || '—' },
                 { label: 'Bidang', value: d.bidang || '—' },
-                { label: 'Anggaran', value: rupiah(d.anggaran) },
+                { label: 'Dana diusulkan', value: rupiah(d.anggaran) },
+                {
+                  label: 'Dana disetujui',
+                  value: d.status !== 'disetujui' ? <span className="text-slate-400">Belum ditetapkan</span> : <>{danaFinal(d) == null ? '—' : rupiah(danaFinal(d))}{danaSementara(d) ? <ApiPending className="ml-1.5" /> : null}</>,
+                },
                 { label: 'Ringkasan target luaran', value: d.luaran || '—' },
                 {
                   label: 'Kata kunci',

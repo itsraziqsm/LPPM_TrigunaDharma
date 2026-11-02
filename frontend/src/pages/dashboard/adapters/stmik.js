@@ -36,8 +36,9 @@ export async function load() {
       kpis: [
         { key: 'total', label: 'Proposal diajukan', value: n(total), hint: 'Tanpa draft' },
         { key: 'dosen', label: 'Dosen pengusul', value: n(Number(rk?.jumlahDosenPengusul) || 0), hint: 'Dosen yang memasukkan proposal' },
-        { key: 'selesai', label: 'Disetujui', value: n(counts.disetujui || 0), hint: has ? `Anggaran ${rupiahRingkas(rk.anggaranDisetujui)}` : 'Data belum termuat' },
-        { key: 'anggaran', label: 'Total anggaran diajukan', value: has ? rupiahRingkas(rk.totalAnggaran) : null, tone: 'warning', hint: 'Seluruh proposal diajukan' },
+        { key: 'selesai', label: 'Disetujui', value: n(counts.disetujui || 0), hint: has ? 'Proposal diterima' : 'Data belum termuat' },
+        // Dana disetujui reviewer dari proposal disetujui saja (backend: anggaranDisetujui → jumlah danaDisetujui, W-54).
+        { key: 'anggaran', label: 'Dana disetujui', value: has ? rupiahRingkas(rk.anggaranDisetujui) : null, tone: 'warning', hint: 'Hanya proposal disetujui' },
       ],
       attention: { items: [], emptyDesc: 'Pemantauan saja — tidak ada tindakan yang menunggu Anda.' },
       pipeline: {

@@ -8,6 +8,8 @@ import { JENIS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
+import { danaFinal, danaSementara } from '../utils/danaKegiatan'
+import ApiPending from '../components/ApiPending'
 import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
@@ -264,7 +266,7 @@ function LaporanDetail({ id, jenis }) {
                     ['Target luaran', laporan.luaran || '—'],
                     ['Luaran tercapai', laporan.luaranTercapai || '—'],
                     ['Ringkasan hasil', laporan.ringkasanHasil || '—'],
-                    ['Anggaran disetujui', rupiah(laporan.anggaran)],
+                    ['Dana disetujui', <span key="dana">{danaFinal(laporan) == null ? '—' : rupiah(danaFinal(laporan))}{danaSementara(laporan) ? <ApiPending className="ml-1.5" /> : null}</span>],
                     ['Realisasi anggaran', rupiah(laporan.realisasiAnggaran)],
                     ['Dokumen', <DokumenLaporan key="d" laporan={laporan} />],
                   ]}

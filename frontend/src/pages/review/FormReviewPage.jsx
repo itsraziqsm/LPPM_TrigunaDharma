@@ -12,13 +12,15 @@ import { confirmDialog } from '../../utils/dialog'
 import { batalTab, siapkanTab } from '../../utils/pratinjauPdf'
 import { KOMPONEN, REKOMENDASI, SKOR, angkaId, bacaDraf, hitungSkor, labelRekomendasi, rupiahId, simpanDraf } from '../../utils/rubrikReview'
 import { JENIS_LABEL } from '../ProposalDosen/constants'
+import { danaFinal } from '../../utils/danaKegiatan'
 import { cariTugasan } from './cariTugasan'
 
 // ---------------------------------------------------------------------------
 // Form Penilaian Reviewer — halaman sendiri (/penugasan/nilai/proposal|laporan/:id), mengikuti
 // formulir kertas LPPM: kepala (judul, pengusul, bidang ilmu) → A. Penilaian substansi (7 komponen,
 // skor 1–5 + catatan singkat) → total, rata-rata & kelayakan otomatis → B. Catatan reviewer →
-// C. Rekomendasi (+ dana disetujui untuk proposal, ditentukan reviewer, ≤ dana diusulkan).
+// C. Rekomendasi (+ dana disetujui: proposal = ditentukan reviewer, ≤ dana diusulkan, final setelah
+// review selesai; laporan = dana disetujui proposal asal + realisasi, baca saja).
 // Server: POST /proposals|laporan/:id/reviews {catatan, rekomendasi} (+ /finalize).
 // Skor, catatan singkat & dana disetujui = draf lokal sampai API W-54 (utils/rubrikReview.js).
 // ---------------------------------------------------------------------------
@@ -149,6 +151,10 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   const dana = ditolak ? 0 : form.danaDisetujui === '' ? null : Number(form.danaDisetujui)
   const danaLebih = pakaiDana && dana != null && diusulkan > 0 && dana > diusulkan
   const persenDana = pakaiDana && dana != null && diusulkan > 0 ? Math.round((dana / diusulkan) * 100) : null
+  // Laporan: dana = dana disetujui proposal asal (baca saja). Reviewer proposal = reviewer laporan, jadi draf
+  // penilaian proposalnya di peramban ini dipakai dulu; selain itu field backend / dana diusulkan (W-54).
+  const drafAsal = tipe === 'laporan' ? bacaDraf(user?.id, 'proposal', item.proposalId) : null
+  const danaLaporan = tipe === 'laporan' ? (drafAsal?.danaDisetujui !== '' && drafAsal?.danaDisetujui != null ? Number(drafAsal.danaDisetujui) : danaFinal(item)) : null
   const saran = hasil.kelayakan?.saran
 
   const ubah = (patch) => {
@@ -217,7 +223,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
     siapkanTab()
     try {
       const { cetakFormReview } = await import('./formReviewPDF')
-      cetakFormReview({ tipe, item, form: { ...form, danaDisetujui: ditolak ? 0 : form.danaDisetujui }, reviewer: nama(user) })
+      cetakFormReview({ tipe, item, form: { ...form, danaDisetujui: pakaiDana ? (ditolak ? 0 : form.danaDisetujui) : danaLaporan }, reviewer: nama(user) })
     } catch {
       batalTab()
       setMsg({ ok: false, text: 'PDF gagal dibuat.' })
@@ -375,10 +381,10 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
             <header className="border-b border-slate-200 px-5 py-3.5">
               <h2 className="flex items-center gap-2 text-base font-semibold text-navy-950">
                 <Coins className="size-[18px] text-navy-600" aria-hidden="true" />
-                C. Rekomendasi{pakaiDana ? ' & pendanaan' : ''}
+                C. Rekomendasi & pendanaan
               </h2>
             </header>
-            <div className={`grid gap-6 px-5 py-5 ${pakaiDana ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]' : ''}`}>
+            <div className="grid gap-6 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
               <fieldset className="space-y-2.5">
                 <legend className="mb-2.5 text-sm font-semibold text-slate-700">Rekomendasi</legend>
                 {REKOMENDASI.map((r) => {
@@ -460,10 +466,28 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
                         ? 'Dana disetujui tidak boleh melebihi dana diusulkan.'
                         : persenDana != null
                           ? `${persenDana}% dari dana diusulkan.`
-                          : 'Reviewer menentukan dana yang disetujui, maksimal sebesar dana diusulkan.'}
+                          : 'Reviewer menentukan dana yang disetujui, maksimal sebesar dana diusulkan.'}{' '}
+                    Dana final dan tidak dapat diubah setelah review diselesaikan.
                   </p>
                 </div>
-              ) : null}
+              ) : (
+                <div className="space-y-3">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    Pendanaan <ApiPending />
+                  </p>
+                  <div className="overflow-hidden rounded-xl border border-slate-300">
+                    <div className="grid grid-cols-2 border-b border-slate-300 bg-slate-50 text-center text-xs font-semibold text-slate-600">
+                      <span className="border-r border-slate-300 px-3 py-2">Dana disetujui</span>
+                      <span className="px-3 py-2">Realisasi anggaran</span>
+                    </div>
+                    <div className="grid grid-cols-2 text-center text-sm">
+                      <span className="border-r border-slate-300 px-3 py-3 font-bold italic text-navy-950">{danaLaporan == null ? '—' : rupiahId(danaLaporan)}</span>
+                      <span className="px-3 py-3 text-slate-700">{rupiahId(item.realisasiAnggaran)}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">Dana disetujui ditetapkan saat review proposal dan tidak berubah di tahap laporan.</p>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -490,12 +514,10 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
                 <dt className="text-slate-500">Rekomendasi</dt>
                 <dd className="text-right font-medium text-navy-900">{form.rekomendasi ? labelRekomendasi(form.rekomendasi) : '—'}</dd>
               </div>
-              {pakaiDana ? (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-slate-500">Dana disetujui</dt>
-                  <dd className="text-right font-medium text-navy-900">{dana == null ? '—' : rupiahId(dana)}</dd>
-                </div>
-              ) : null}
+              <div className="flex justify-between gap-3">
+                <dt className="text-slate-500">Dana disetujui</dt>
+                <dd className="text-right font-medium text-navy-900">{(pakaiDana ? dana : danaLaporan) == null ? '—' : rupiahId(pakaiDana ? dana : danaLaporan)}</dd>
+              </div>
             </dl>
           </section>
 

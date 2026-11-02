@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { danaFinal, totalDana } from '../../utils/danaKegiatan'
 import { tampilkanPdf } from '../../utils/pratinjauPdf'
 
 // ---------------------------------------------------------------------------
@@ -19,17 +20,14 @@ export const rupiah = (v) => `Rp ${Number(v || 0).toLocaleString('id-ID', { maxi
 const nama = (u) => u?.fullName || u?.name || '-'
 const angka = (v) => Number(v) || 0
 
-// Agregat sekumpulan proposal: jumlah, per status, total anggaran, anggaran disetujui.
+// Agregat sekumpulan proposal: jumlah, per status, dana disetujui (hanya proposal disetujui;
+// dana = keputusan reviewer, utils/danaKegiatan.js — sementara dana diusulkan sampai W-54).
 export function agregat(list) {
   const perStatus = Object.fromEntries(STATUS.map((s) => [s, 0]))
-  let total = 0
-  let disetujui = 0
   for (const p of list) {
     if (perStatus[p.status] != null) perStatus[p.status] += 1
-    total += angka(p.anggaran)
-    if (p.status === 'disetujui') disetujui += angka(p.anggaran)
   }
-  return { jumlah: list.length, perStatus, total, disetujui }
+  return { jumlah: list.length, perStatus, disetujui: totalDana(list) }
 }
 
 function kepala(doc, judul, sub) {
@@ -72,8 +70,8 @@ function kaki(doc, label) {
   }
 }
 
-const barisRingkas = (label, a) => [label, a.jumlah, ...STATUS.map((s) => a.perStatus[s]), rupiah(a.total), rupiah(a.disetujui)]
-const kepalaRingkas = ['Periode', 'Jumlah', ...STATUS.map((s) => STATUS_LABEL[s]), 'Total anggaran', 'Anggaran disetujui']
+const barisRingkas = (label, a) => [label, a.jumlah, ...STATUS.map((s) => a.perStatus[s]), rupiah(a.disetujui)]
+const kepalaRingkas = ['Periode', 'Jumlah', ...STATUS.map((s) => STATUS_LABEL[s]), 'Dana disetujui']
 const kolomRingkas = { 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center' }, 4: { halign: 'center' }, 5: { halign: 'center' }, 6: { halign: 'center' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
 
 const perPeriode = (proposals, id) => proposals.filter((p) => p.periode?.id === id)
@@ -106,9 +104,9 @@ export function rekapPeriodePDF({ periodes, proposals, denganDaftar, judulFile }
       autoTable(doc, {
         ...gaya,
         startY: y + 3,
-        head: [['No', 'Judul', 'Pengusul', 'Jenis', 'Status', 'Tahapan', 'Anggaran']],
+        head: [['No', 'Judul', 'Pengusul', 'Jenis', 'Status', 'Tahapan', 'Dana disetujui']],
         body: list.length
-          ? list.map((p, i) => [i + 1, p.judul, nama(p.pengusul), JENIS_LABEL[p.jenis] || p.jenis, STATUS_LABEL[p.status] || p.status, p.tahapan?.label || '-', rupiah(p.anggaran)])
+          ? list.map((p, i) => [i + 1, p.judul, nama(p.pengusul), JENIS_LABEL[p.jenis] || p.jenis, STATUS_LABEL[p.status] || p.status, p.tahapan?.label || '-', danaFinal(p) == null ? '-' : rupiah(danaFinal(p))])
           : [[{ content: 'Belum ada proposal yang diajukan.', colSpan: 7, styles: { halign: 'center', textColor: 120 } }]],
         columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 95 }, 2: { cellWidth: 45 }, 6: { halign: 'right' } },
       })
@@ -132,7 +130,7 @@ export function rekapTahunanPDF({ tahun, periodes, proposals }) {
   autoTable(doc, {
     ...gaya,
     startY: doc.lastAutoTable.finalY + 8,
-    head: [['Jenis kegiatan', 'Jumlah', ...STATUS.map((s) => STATUS_LABEL[s]), 'Total anggaran', 'Anggaran disetujui']],
+    head: [['Jenis kegiatan', 'Jumlah', ...STATUS.map((s) => STATUS_LABEL[s]), 'Dana disetujui']],
     body: Object.keys(JENIS_LABEL).map((j) => barisRingkas(JENIS_LABEL[j], agregat(proposals.filter((p) => p.jenis === j)))),
     columnStyles: kolomRingkas,
   })
@@ -148,10 +146,10 @@ export function rekapAnggaranPDF({ keterangan, proposals }) {
   autoTable(doc, {
     ...gaya,
     startY: y,
-    head: [['Jenis kegiatan', 'Proposal disetujui', 'Anggaran disetujui', 'Realisasi (laporan)']],
+    head: [['Jenis kegiatan', 'Proposal disetujui', 'Dana disetujui', 'Realisasi (laporan)']],
     body: Object.keys(JENIS_LABEL).map((j) => {
       const l = disetujui.filter((p) => p.jenis === j)
-      return [JENIS_LABEL[j], l.length, rupiah(l.reduce((n, p) => n + angka(p.anggaran), 0)), rupiah(l.reduce((n, p) => n + angka(p.laporan?.realisasiAnggaran), 0))]
+      return [JENIS_LABEL[j], l.length, rupiah(totalDana(l)), rupiah(l.reduce((n, p) => n + angka(p.laporan?.realisasiAnggaran), 0))]
     }),
     foot: [['Total', disetujui.length, rupiah(agregat(disetujui).disetujui), rupiah(totalRealisasi)]],
     columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
@@ -159,7 +157,7 @@ export function rekapAnggaranPDF({ keterangan, proposals }) {
   autoTable(doc, {
     ...gaya,
     startY: doc.lastAutoTable.finalY + 8,
-    head: [['No', 'Judul', 'Pengusul', 'Jenis', 'Periode', 'Disetujui', 'Anggaran', 'Realisasi']],
+    head: [['No', 'Judul', 'Pengusul', 'Jenis', 'Periode', 'Disetujui', 'Dana disetujui', 'Realisasi']],
     body: disetujui.length
       ? disetujui.map((p, i) => [
           i + 1,
@@ -168,7 +166,7 @@ export function rekapAnggaranPDF({ keterangan, proposals }) {
           JENIS_LABEL[p.jenis] || p.jenis,
           p.periode?.nama || '-',
           p.approvedAt ? new Date(p.approvedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
-          rupiah(p.anggaran),
+          rupiah(danaFinal(p) ?? 0),
           p.laporan?.realisasiAnggaran != null ? rupiah(p.laporan.realisasiAnggaran) : '-',
         ])
       : [[{ content: 'Belum ada proposal disetujui.', colSpan: 8, styles: { halign: 'center', textColor: 120 } }]],

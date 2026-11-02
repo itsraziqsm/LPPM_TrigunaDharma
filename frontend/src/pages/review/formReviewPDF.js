@@ -114,13 +114,14 @@ export function cetakFormReview({ tipe, item, form, reviewer }) {
     doc.text(r.label, M + 6, yy)
   })
 
-  if (tipe !== 'laporan') {
+  {
+    const dana = form.danaDisetujui === '' || form.danaDisetujui == null ? '-' : rupiahId(form.danaDisetujui)
     autoTable(doc, {
       startY: y - 2,
       margin: { left: W - M - 78, right: M },
       tableWidth: 78,
-      head: [['Dana diusulkan', 'Dana disetujui']],
-      body: [[rupiahId(item.anggaran), form.danaDisetujui === '' || form.danaDisetujui == null ? '—' : rupiahId(form.danaDisetujui)]],
+      head: [tipe === 'laporan' ? ['Dana disetujui', 'Realisasi anggaran'] : ['Dana diusulkan', 'Dana disetujui']],
+      body: [tipe === 'laporan' ? [dana, rupiahId(item.realisasiAnggaran)] : [rupiahId(item.anggaran), dana]],
       theme: 'grid',
       styles: { font: 'times', fontSize: 10.5, halign: 'center', cellPadding: 2.5, lineWidth: 0.2, lineColor: [120, 120, 120], textColor: [20, 20, 20] },
       headStyles: { fillColor: [255, 255, 255], fontStyle: 'normal' },

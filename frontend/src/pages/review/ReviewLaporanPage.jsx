@@ -8,6 +8,8 @@ import { JENIS_LABEL } from '../ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, StatusBadge } from '../laporan/shared'
 import LuaranCapaian from '../laporan/LuaranCapaian'
 import { rupiah, tanggal } from '../laporan/format'
+import { danaFinal, danaSementara } from '../../utils/danaKegiatan'
+import ApiPending from '../../components/ApiPending'
 import KartuPenilaian from './KartuPenilaian'
 import { tautanForm } from '../../utils/rubrikReview'
 import Breadcrumb from '../../components/Breadcrumb'
@@ -115,7 +117,7 @@ export default function ReviewLaporanPage() {
             ['Target luaran', l.luaran || '—'],
             ['Luaran tercapai', l.luaranTercapai || '—'],
             ['Ringkasan hasil', l.ringkasanHasil || '—'],
-            ['Anggaran / realisasi', `${rupiah(l.anggaran)} / ${rupiah(l.realisasiAnggaran)}`],
+            ['Dana disetujui / realisasi', <span key="dana">{danaFinal(l) == null ? '—' : rupiah(danaFinal(l))} / {rupiah(l.realisasiAnggaran)}{danaSementara(l) ? <ApiPending className="ml-1.5" /> : null}</span>],
             ['Dokumen', <DokumenLaporan key="d" laporan={l} />],
           ]}
         />

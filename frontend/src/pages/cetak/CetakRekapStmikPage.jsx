@@ -111,7 +111,7 @@ export default function CetakRekapStmikPage() {
         kartu={[
           { icon: CalendarRange, tone: TONE.navy, label: 'Periode', value: memuat ? '…' : (periodes || []).length },
           { icon: FileText, tone: TONE.navy, label: 'Proposal diajukan', value: memuat ? '…' : total.jumlah },
-          { icon: Coins, tone: TONE.hijau, label: 'Anggaran disetujui', value: memuat ? '…' : rupiahRingkas(total.disetujui) },
+          { icon: Coins, tone: TONE.hijau, label: 'Dana disetujui', value: memuat ? '…' : rupiahRingkas(total.disetujui) },
         ]}
       />
 

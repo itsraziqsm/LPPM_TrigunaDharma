@@ -507,6 +507,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
   `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Dialog Tugaskan
   reviewer laporan (`LaporanMasukDetailPage`) otomatis mencentang reviewer proposal asal (UAT: reviewer proposal = reviewer laporan; W-55).
+  **Dana (keputusan UAT)**: dana final = **dana disetujui reviewer**, final setelah review diselesaikan (tidak bisa dinegosiasi). Form laporan
+  tetap menampilkan pendanaan: dana disetujui proposal asal (baca saja; dari draf penilaian proposal reviewer yang sama, lalu field backend)
+  + realisasi anggaran. Rubrik sama untuk proposal & laporan, penelitian & pengabdian. **Statistik & pelaporan memakai dana disetujui saja,
+  proposal yang belum disetujui tidak dihitung** — helper `utils/danaKegiatan.js` (`danaFinal`, `totalDana`, `danaSementara`; tanpa field
+  `danaDisetujui` = sementara `anggaran` proposal disetujui + ApiPending, W-54): Statistik (kartu & batang "Dana disetujui", baris anggaran
+  diajukan dihapus), tabel Pemantauan (kolom Dana disetujui), rekap PDF Ketua STMIK (kolom "Total anggaran" dihapus), dashboard Ketua STMIK
+  (kartu Dana disetujui), detail proposal Ketua/Kegiatan (Dana diusulkan + Dana disetujui), detail laporan ("Dana disetujui / realisasi").
   Notifikasi `reviewer_ditugaskan` menuju halaman detail ini. Buka dokumen utama: `utils/dokumenUtama.js`. Blok bersama
   di `src/pages/laporan/` (`shared.jsx`, `format.js`, `LuaranCapaian.jsx` = daftar item luaran
   + form capaian/bukti, `editable` hanya untuk pengusul saat laporan draft/revisi).

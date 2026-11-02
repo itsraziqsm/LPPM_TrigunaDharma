@@ -28,6 +28,8 @@ import LuaranCapaian from './laporan/LuaranCapaian'
 import { LaporanTab } from './ProposalDosen/LaporanTab'
 import UserAvatar from '../components/UserAvatar'
 import { DokumenTab } from './ProposalDosen/DokumenTab'
+import ApiPending from '../components/ApiPending'
+import { danaFinal, danaSementara } from '../utils/danaKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail Kegiatan (/kegiatan/:jenis/detail/:id) — halaman, bukan modal. Dipakai
@@ -326,7 +328,11 @@ export default function KegiatanDetailPage({ jenis }) {
                 { label: 'Skema', value: detail.skema || '—', hidden: isPengabdian },
                 { label: 'Rumpun ilmu', value: detail.rumpunIlmu || '—' },
                 { label: 'Bidang', value: detail.bidang || '—' },
-                { label: 'Anggaran', value: rupiah(detail.anggaran) },
+                { label: 'Dana diusulkan', value: rupiah(detail.anggaran) },
+                {
+                  label: 'Dana disetujui',
+                  value: detail.status !== 'disetujui' ? <span className="text-slate-400">Belum ditetapkan</span> : <>{danaFinal(detail) == null ? '—' : rupiah(danaFinal(detail))}{danaSementara(detail) ? <ApiPending className="ml-1.5" /> : null}</>,
+                },
                 { label: 'Ringkasan target luaran', value: detail.luaran || '—' },
                 {
                   label: 'Kata kunci',

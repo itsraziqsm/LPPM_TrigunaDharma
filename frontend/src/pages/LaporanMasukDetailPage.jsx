@@ -8,6 +8,8 @@ import { JENIS_LABEL, STATUS_LABEL } from './ProposalDosen/constants'
 import { DokumenLaporan, InfoTable, Message, ReviewList, StatusBadge } from './laporan/shared'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
+import { danaFinal, danaSementara } from '../utils/danaKegiatan'
+import ApiPending from '../components/ApiPending'
 import { confirmDialog } from '../utils/dialog'
 import { getRoleNames } from '../utils/roles'
 import useAuthStore from '../store/authStore'
@@ -202,7 +204,7 @@ export default function LaporanMasukDetailPage() {
                   ['Target luaran', laporan.luaran || '—'],
                   ['Luaran tercapai', laporan.luaranTercapai || '—'],
                   ['Ringkasan hasil', laporan.ringkasanHasil || '—'],
-                  ['Anggaran / realisasi', `${rupiah(laporan.anggaran)} / ${rupiah(laporan.realisasiAnggaran)}`],
+                  ['Dana disetujui / realisasi', <span key="dana">{danaFinal(laporan) == null ? '—' : rupiah(danaFinal(laporan))} / {rupiah(laporan.realisasiAnggaran)}{danaSementara(laporan) ? <ApiPending className="ml-1.5" /> : null}</span>],
                   ['Dokumen', <DokumenLaporan key="d" laporan={laporan} />],
                 ]}
               />

@@ -5,6 +5,8 @@ import { monitoringApi } from '../../api/monitoring'
 import { laporanApi } from '../../api/laporan'
 import { proposalApi } from '../../api/proposal'
 import { semuaHalaman } from '../../utils/semuaHalaman'
+import { danaSementara, totalDana } from '../../utils/danaKegiatan'
+import ApiPending from '../../components/ApiPending'
 import { BatangTopik, Banding, Donat } from './Grafik'
 import { WARNA, fmtPersen, persen } from './warna'
 
@@ -158,8 +160,8 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
       const l = P.filter((p) => p.jenis === j)
       return {
         jumlah: l.length,
-        anggaran: l.reduce((n, p) => n + angka(p.anggaran), 0),
-        disetujui: l.filter((p) => p.status === 'disetujui').reduce((n, p) => n + angka(p.anggaran), 0),
+        // Hanya dana disetujui reviewer dari proposal yang sudah disetujui (yang belum disetujui tidak masuk statistik).
+        disetujui: totalDana(l),
         laporan: data.laporan.filter((x) => x.jenis === j).length,
       }
     }
@@ -222,9 +224,13 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
         <KartuAngka icon={Users} label="Dosen pengusul" nilai={ringkasan === undefined ? '…' : (ringkasan?.jumlahDosenPengusul ?? '—')} />
         <KartuAngka
           icon={Coins}
-          label="Anggaran disetujui"
+          label="Dana disetujui"
           nilai={rupiahRingkas(s.penelitian.disetujui + s.pengabdian.disetujui)}
-          ket={`dari ${rupiahRingkas(s.penelitian.anggaran + s.pengabdian.anggaran)} diajukan`}
+          ket={
+            <>
+              dari {s.disetujui} proposal disetujui{danaSementara(data.proposals) ? <ApiPending className="ml-1.5" /> : null}
+            </>
+          }
         />
       </section>
 
@@ -265,14 +271,13 @@ export default function StatistikVisual({ filter, ringkasan, status, onStatus })
           </dl>
         </Panel>
 
-        <Panel judul="Penelitian vs pengabdian" desc="Perbandingan jumlah, anggaran, dan laporan per jenis kegiatan.">
+        <Panel judul="Penelitian vs pengabdian" desc="Perbandingan jumlah, dana disetujui, dan laporan per jenis kegiatan.">
           <Banding
             kiri={{ label: 'Penelitian', color: WARNA.navy }}
             kanan={{ label: 'Pengabdian', color: WARNA.brass }}
             baris={[
               { label: 'Jumlah proposal', kiri: s.penelitian.jumlah, kanan: s.pengabdian.jumlah, format: (v) => String(v) },
-              { label: 'Anggaran diajukan', kiri: s.penelitian.anggaran, kanan: s.pengabdian.anggaran, format: rupiahRingkas },
-              { label: 'Anggaran disetujui', kiri: s.penelitian.disetujui, kanan: s.pengabdian.disetujui, format: rupiahRingkas },
+              { label: 'Dana disetujui', kiri: s.penelitian.disetujui, kanan: s.pengabdian.disetujui, format: rupiahRingkas },
               { label: 'Jumlah laporan', kiri: s.penelitian.laporan, kanan: s.pengabdian.laporan, format: (v) => String(v) },
             ]}
           />

@@ -9,6 +9,7 @@ import { barisKlik } from '../utils/barisKlik'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constants'
 import StatistikVisual from './statistik/StatistikVisual'
+import { danaFinal } from '../utils/danaKegiatan'
 
 // ---------------------------------------------------------------------------
 // Statistik (/statistik, dulu Pemantauan Proposal /pemantauan) — Ketua STMIK (juga bisa dibuka Ketua LPPM/Admin),
@@ -120,7 +121,7 @@ export default function PemantauanPage() {
       <header className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="min-w-0">
           <h1 className="page-title">Statistik</h1>
-          <p className="page-desc">Pemantauan proposal: dosen pengusul, progres tiap proposal, dan besaran anggaran. Hanya baca.</p>
+          <p className="page-desc">Pemantauan proposal: dosen pengusul, progres tiap proposal, dan dana yang disetujui. Hanya baca.</p>
         </div>
         <Breadcrumb items={[{ label: 'Statistik' }]} />
       </header>
@@ -217,7 +218,7 @@ export default function PemantauanPage() {
             </label>
             <select id="pm-urut" className="input w-auto py-1.5" value={urut} onChange={(e) => setUrut(e.target.value)}>
               <option value="terbaru">Terbaru</option>
-              <option value="anggaran">Anggaran terbesar</option>
+              <option value="anggaran">Dana diusulkan terbesar</option>
               <option value="judul">Judul</option>
               <option value="pengusul">Pengusul</option>
             </select>
@@ -240,7 +241,7 @@ export default function PemantauanPage() {
                   <th scope="col">Pengusul</th>
                   <th scope="col">Status &amp; progres</th>
                   <th scope="col" className="text-right">
-                    Anggaran
+                    Dana disetujui
                   </th>
                   <th scope="col">Laporan</th>
                 </tr>
@@ -273,7 +274,7 @@ export default function PemantauanPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="text-right tabular-nums">{rupiah(p.anggaran)}</td>
+                    <td className="text-right tabular-nums">{danaFinal(p) == null ? <span className="text-slate-400">—</span> : rupiah(danaFinal(p))}</td>
                     <td>
                       {p.laporan ? (
                         <>
@@ -300,7 +301,7 @@ export default function PemantauanPage() {
                   <th scope="col">Proposal</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="text-right">
-                    Anggaran
+                    Dana disetujui
                   </th>
                   <th scope="col">Terakhir diajukan</th>
                 </tr>
@@ -335,8 +336,8 @@ export default function PemantauanPage() {
                       </span>
                     </td>
                     <td className="text-right text-sm tabular-nums">
-                      {rupiah(r.totalAnggaran)}
-                      <span className="block text-xs text-green-700">Disetujui {rupiah(r.anggaranDisetujui)}</span>
+                      {rupiah(r.anggaranDisetujui)}
+                      <span className="block text-xs text-slate-500">dana disetujui</span>
                     </td>
                     <td className="text-sm">{hari(r.terakhirDiajukanAt)}</td>
                   </tr>
