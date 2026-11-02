@@ -1,19 +1,39 @@
-// Kategori log aktivitas — DITURUNKAN dari awalan `action` (backend belum punya kolom kategori, W-53).
-// `cari` = nilai parameter `action` untuk GET /activity-logs (backend memakai LIKE %…%).
+// Kategori log aktivitas — field `kategori` dari backend (W-53, new-api.md bagian 29.4):
+// auth, akun, proposal, review, laporan, dokumen, periode, template, luaran, backup, sistem.
+// `kategoriDari(log)` memakai field itu; log dari backend lama (tanpa `kategori`) diturunkan dari awalan `action`.
 export const KATEGORI_LOG = [
-  { key: 'login', label: 'Info login', cari: 'LOGIN', cocok: (a) => a === 'LOGIN' },
-  { key: 'akun', label: 'Akun pengguna', cari: 'user.', cocok: (a) => a.startsWith('user.') },
-  { key: 'proposal', label: 'Proposal', cari: 'proposal.', cocok: (a) => a.startsWith('proposal.') },
-  { key: 'review', label: 'Review', cari: 'review', cocok: (a) => a.startsWith('review') },
-  { key: 'laporan', label: 'Laporan', cari: 'laporan', cocok: (a) => a.startsWith('laporan') },
-  { key: 'dokumen', label: 'Dokumen', cari: 'dokumen.', cocok: (a) => a.startsWith('dokumen.') },
-  { key: 'periode', label: 'Periode', cari: 'periode.', cocok: (a) => a.startsWith('periode.') },
-  { key: 'template', label: 'Template', cari: 'template.', cocok: (a) => a.startsWith('template.') },
-  { key: 'luaran', label: 'Luaran', cari: 'luaran.', cocok: (a) => a.startsWith('luaran.') },
-  { key: 'backup', label: 'Backup', cari: 'backup.', cocok: (a) => a.startsWith('backup.') },
+  { key: 'auth', label: 'Info login' },
+  { key: 'akun', label: 'Akun pengguna' },
+  { key: 'proposal', label: 'Proposal' },
+  { key: 'review', label: 'Review' },
+  { key: 'laporan', label: 'Laporan' },
+  { key: 'dokumen', label: 'Dokumen' },
+  { key: 'periode', label: 'Periode' },
+  { key: 'template', label: 'Template' },
+  { key: 'luaran', label: 'Luaran' },
+  { key: 'backup', label: 'Backup' },
+  { key: 'sistem', label: 'Sistem' },
 ]
 
-export const kategoriDari = (action = '') => KATEGORI_LOG.find((k) => k.cocok(String(action))) || { key: 'lain', label: 'Lainnya' }
+const AUTH = ['LOGIN', 'LOGIN_GAGAL', 'LOGOUT', 'LOGOUT_ALL']
+
+function kunciDariAction(action = '') {
+  const a = String(action)
+  if (AUTH.includes(a)) return 'auth'
+  if (a.startsWith('user.')) return 'akun'
+  if (a.startsWith('reviewer.') || a.startsWith('review.')) return 'review'
+  if (a.startsWith('laporan')) return 'laporan'
+  const awal = a.split('.')[0]
+  return KATEGORI_LOG.some((k) => k.key === awal) ? awal : 'sistem'
+}
+
+// Terima objek log ({kategori, action}) atau string action.
+export function kategoriDari(log) {
+  const key = typeof log === 'string' ? kunciDariAction(log) : log?.kategori || kunciDariAction(log?.action)
+  return KATEGORI_LOG.find((k) => k.key === key) || { key, label: key || 'Lainnya' }
+}
+
+const AKSI_AUTH = { LOGIN: 'login', LOGIN_GAGAL: 'login gagal', LOGOUT: 'logout', LOGOUT_ALL: 'logout semua perangkat' }
 
 // Teks aksi yang lebih mudah dibaca: "proposal.status.disetujui" → "proposal · status · disetujui".
-export const aksiTerbaca = (action = '') => (action === 'LOGIN' ? 'login' : String(action).split('.').join(' · ').replace(/_/g, ' '))
+export const aksiTerbaca = (action = '') => AKSI_AUTH[action] || String(action).split('.').join(' · ').replace(/_/g, ' ')

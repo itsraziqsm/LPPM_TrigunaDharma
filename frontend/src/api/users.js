@@ -15,6 +15,8 @@ export const usersApi = {
   // Reviewer urut beban (tugasan aktif paling sedikit dulu): { itemId, exclude } → prioritas, sudahDitugaskan (W-32)
   getKandidatReviewer: (params = {}) => api.get('/users/kandidat-reviewer', { params }),
   deleteUser: (id) => api.delete(`/users/${id}`),
+  // Reset password oleh admin (W-52): body = password admin → { passwordSementara, wajibGantiPassword, user }
+  resetPassword: (id, password) => api.post(`/users/${id}/reset-password`, { password }),
   // Search user by role untuk dropdown (semua authenticated user bisa akses)
   search: (params) => api.get('/users/search', { params }),
   // Profile endpoints

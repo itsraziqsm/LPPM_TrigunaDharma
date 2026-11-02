@@ -15,17 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-43 | Daftar Backup: opsi filter **Dihapus** | `GET /backup?status=dihapus` (`dihapusAt` terisi); `status=berhasil` kini hanya yang filenya masih ada (`new-api.md` bagian 28) | Aktifkan opsi "Dihapus", hapus `ApiPending`. |
-| W-44 | Luaran (Ketua LPPM, `/luaran-dosen`) + Cetak Dokumen › Luaran Dosen | `GET /luaran`, `/luaran/unduh-csv`, `/luaran/unduh-zip` kini `admin` + `ketua_lppm` (bagian 28) | Hapus penanda 403/`ApiPending`. |
-| W-45 | Monitor Pengguna (Ketua STMIK, `/users` baca saja) | `GET /users`, `GET /users/:id` kini juga `ketua_stmik`; tulis tetap 403 (bagian 28) | Hapus `ApiPending`. |
-| W-46 | Pengaturan › Zona Berbahaya (Ketua LPPM & Ketua STMIK) | `DELETE /users/profile/me` → 403 "Akun Ketua LPPM/Ketua STMIK tidak dapat dihapus sendiri. Hubungi Admin." (bagian 28) | Tampilan sudah menyembunyikan formulir; cukup tampilkan pesan 403 bila muncul. |
-| W-49 | Cetak Laporan mahasiswa: jumlah laporan harian per project | Field `jumlahLaporanHarian` di tiap item `GET /mahasiswa/laporan-harian/proposals` (milik user login) (bagian 28) | Saring `> 0`, muat laporan hanya saat Cetak. |
-| W-51 | Usulan › langkah Anggota (NIDN/NIM, jenis anggota) | `anggota[].user` kini memuat `nidn`, `nim`, `roles` di semua respons proposal & detail laporan (bagian 28) | Hentikan `members/search` per anggota saat membuka draf. |
-| W-55 | Laporan Kegiatan › Tugaskan reviewer | `POST /laporan/:id/submit` otomatis menugaskan reviewer proposal asal (masih berperan reviewer) → status `review`; bila tidak ada tetap `diajukan` (bagian 28) | Dialog Tugaskan hanya perlu untuk laporan `diajukan`; centang otomatis boleh tetap. |
-| W-47 | Pintasan dashboard & "Terakhir dibuka" (pencarian global) | `GET /users/profile/riwayat`, `POST .../riwayat/halaman` `{path}`, `POST .../riwayat/cari` `{to,title,subtitle?,badge?}`, `DELETE .../riwayat/cari`; maks 50 halaman / 4 cari per user (`new-api.md` bagian 29.1) | Respons tulis = riwayat terbaru; localStorage boleh tetap sebagai cache. |
-| W-50 | Tombol Alat › Hubungi Admin (+ pengaturan admin) | `GET /kontak-admin` (semua peran login) → `{whatsapp, nama, jamLayanan, updatedAt, updatedBy}`; `PATCH /kontak-admin` (admin, nomor dinormalisasi ke 62…) (bagian 29.2) | `whatsapp: null` → cadangan `VITE_ADMIN_WA`. Halaman pengaturan admin belum ada di frontend. |
-| W-52 | Manajemen Pengguna › Reset password (Admin) + paksa ganti password | `POST /users/:id/reset-password` `{password: <password admin>}` → `{passwordSementara, wajibGantiPassword, user}`; `wajibGantiPassword` di login & `/auth/me`; `PATCH /users/profile/password` mengosongkan (bagian 29.3) | Password sementara hanya sekali tampil; tanpa kedaluwarsa otomatis. |
-| W-53 | Log Aktivitas: Kategori, Cari, rentang tanggal, kartu ringkasan | Field `kategori` di log; `GET /activity-logs?kategori=&search=&dari=&sampai=` (juga `/my`); `GET /activity-logs/ringkasan` → `{total, perKategori, loginHariIni, loginGagalHariIni, penggunaAktifHariIni}`; `LOGIN_GAGAL`/`LOGOUT`/`LOGOUT_ALL` dicatat (bagian 29.4) | Ganti pemetaan `utils/kategoriLog.js` dengan field `kategori`. |
+| — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
 
@@ -33,6 +23,17 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 
 | ID | Disambungkan di |
 |---|---|
+| W-43 | Daftar Backup: opsi filter **Dihapus** aktif (`status=dihapus`) |
+| W-44 | Luaran Dosen & Cetak Dokumen › Luaran Dosen (Ketua LPPM): penanda 403/ApiPending dihapus |
+| W-45 | Monitor Pengguna (Ketua STMIK): penanda 403/ApiPending dihapus |
+| W-46 | Zona Berbahaya: formulir Ketua tetap disembunyikan; pesan 403 server ditampilkan apa adanya |
+| W-49 | Cetak Laporan mahasiswa: daftar = `jumlahLaporanHarian > 0`, laporan dimuat saat Cetak |
+| W-51 | Usulan › Anggota: jenis & NIDN/NIM dari `anggota[].user` (pencarian per email hanya cadangan backend lama) |
+| W-55 | Ajukan laporan: pesan "diteruskan ke reviewer proposal Anda" bila status `review`; kartu Reviewer Ketua menjelaskan laporan `diajukan` tanpa reviewer |
+| W-47 | `utils/riwayat.js`: localStorage = cache, tulis halaman/cari dikirim di latar, `sinkronRiwayat` (GET) sekali per sesi di `DashboardLayout` |
+| W-50 | Tombol Alat › Hubungi Admin: `GET /kontak-admin` (dimuat awal, cadangan `VITE_ADMIN_WA`); Pengaturan › **Kontak Admin** (admin, PATCH) `components/KontakAdminForm.jsx` |
+| W-52 | Manajemen Pengguna › Tindakan Admin › **Reset Password** (`ResetPasswordModal`: password admin → password sementara sekali tampil + Salin); `wajibGantiPassword` → `WajibGantiPasswordPage` menggantikan semua halaman |
+| W-53 | Log Aktivitas: filter Kategori (`kategori`), Cari (`search`), Rentang tanggal (`dari`/`sampai`) di server; kartu dari `/activity-logs/ringkasan` (total, login & login gagal hari ini); `utils/kategoriLog.js` memakai field `kategori` |
 | W-03 / W-13 | Field `tahapan` → Usulan Terakhir (dashboard) dan kolom Tahapan (Status Kegiatan) |
 | W-04 | SINTA ID & skor → input Pengaturan, kartu Nilai Sinta (dashboard) |
 | W-07 / W-10 | Foto profil → unggah/hapus di Pengaturan; tampil di dashboard, kartu Pengaturan, sidebar (`UserAvatar`) |

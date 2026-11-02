@@ -8,6 +8,7 @@ import { authApi } from '../api/auth'
 import useAuthStore from '../store/authStore'
 import UserAvatar from '../components/UserAvatar'
 import { programStudiApi } from '../api/programStudi'
+import KontakAdminForm from '../components/KontakAdminForm'
 import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ const ROLE_LABEL = {
 const SECTIONS = [
   { id: 'foto-profil', label: 'Foto Profil' },
   { id: 'informasi-profil', label: 'Informasi Profil' },
+  { id: 'kontak-admin', label: 'Kontak Admin' },
   { id: 'ganti-password', label: 'Ganti Password' },
   { id: 'zona-berbahaya', label: 'Zona Berbahaya' },
 ]
@@ -331,6 +333,8 @@ export default function ProfilePage() {
     try {
       await usersApi.changePassword(pwForm.oldPassword, pwForm.newPassword)
       setPwMsg({ type: 'success', text: 'Password berhasil diubah.' })
+      // W-52: ganti password mengosongkan penanda password sementara.
+      if (useAuthStore.getState().user?.wajibGantiPassword) useAuthStore.setState((st) => ({ user: { ...st.user, wajibGantiPassword: false } }))
       setPwForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
       setPwMsg({ type: 'error', text: err.response?.data?.message || 'Gagal mengubah password.' })
@@ -403,7 +407,7 @@ export default function ProfilePage() {
 
           <nav aria-label="Bagian pengaturan" className="card hidden px-3 py-3 lg:block">
             <ul className="space-y-0.5">
-              {SECTIONS.map((s) => (
+              {SECTIONS.filter((s) => s.id !== 'kontak-admin' || roleNames.includes('admin')).map((s) => (
                 <li key={s.id}>
                   <a
                     href={`#${s.id}`}
@@ -593,6 +597,9 @@ export default function ProfilePage() {
               </div>
             </form>
           </SettingsCard>
+
+          {/* Kontak admin (khusus admin, W-50) */}
+          {roleNames.includes('admin') ? <KontakAdminForm SettingsCard={SettingsCard} Field={Field} Message={Message} /> : null}
 
           {/* Ganti password */}
           <SettingsCard

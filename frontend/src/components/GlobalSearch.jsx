@@ -4,7 +4,7 @@ import { AppWindow, LifeBuoy, MessageSquareText, Search } from 'lucide-react'
 import SearchPopup from './SearchPopup'
 import useTampil from '../hooks/useTampil'
 import { alertDialog } from '../utils/dialog'
-import { NOMOR_ADMIN_WA, pesanKendala, tautanWhatsApp } from '../utils/hubungiAdmin'
+import { kontakTermuat, muatKontakAdmin, nomorAdmin, pesanKendala, tautanWhatsApp } from '../utils/hubungiAdmin'
 import { ROLE_LABEL } from '../pages/dashboard/format'
 import { cariGlobal, konteksPencarian } from '../utils/globalSearch'
 import useAuthStore from '../store/authStore'
@@ -14,13 +14,20 @@ import { catatCari, hapusRiwayatCari, riwayatCari } from '../utils/riwayat'
 //   1. Pencarian (Ctrl/⌘ + F) → popup pencarian global (halaman + data sesuai peran, utils/globalSearch.js)
 //   2. Bantuan (Ctrl/⌘ + H)       → halaman /bantuan (sementara 501)
 //   3. Hubungi Admin (Ctrl/⌘ + M) → WhatsApp admin (utils/hubungiAdmin.js) dengan pesan templat berisi
-//      jejak halaman saat ini, nama & peran pelapor; nomor dari env VITE_ADMIN_WA (W-50)
+//      jejak halaman saat ini, nama & peran pelapor; nomor dari GET /kontak-admin (W-50), cadangan VITE_ADMIN_WA
 // Pintasan tetap berfungsi walau panel tertutup. Panel: Esc / klik di luar = tutup.
 const MOD_KEY = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
 
-// Alat 3: buka WhatsApp admin di tab baru dengan pesan templat.
-function hubungiAdmin(user) {
-  if (!NOMOR_ADMIN_WA) {
+// Alat 3: buka WhatsApp admin di tab baru dengan pesan templat. Nomor dari GET /kontak-admin (dimuat saat
+// tombol Alat terpasang); bila belum termuat, tab disiapkan dulu secara sinkron agar tidak diblokir popup.
+async function hubungiAdmin(user) {
+  const peran = (user?.roles || []).map((r) => ROLE_LABEL[r?.name || r] || r?.name || r)[0]
+  const pesan = pesanKendala({ nama: user?.fullName || user?.name, peran })
+  const tab = kontakTermuat() ? null : window.open('', '_blank')
+  await muatKontakAdmin()
+  const nomor = nomorAdmin()
+  if (!nomor) {
+    tab?.close()
     alertDialog({
       tone: 'info',
       title: 'Nomor admin belum diatur',
@@ -28,8 +35,13 @@ function hubungiAdmin(user) {
     })
     return
   }
-  const peran = (user?.roles || []).map((r) => ROLE_LABEL[r?.name || r] || r?.name || r)[0]
-  window.open(tautanWhatsApp(pesanKendala({ nama: user?.fullName || user?.name, peran })), '_blank', 'noopener,noreferrer')
+  const url = tautanWhatsApp(pesan, nomor)
+  if (tab) {
+    tab.opener = null
+    tab.location.href = url
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 }
 
 export default function GlobalSearch({ roleNames, isReviewer }) {
@@ -49,6 +61,11 @@ export default function GlobalSearch({ roleNames, isReviewer }) {
     setRecent(riwayatCari(userId))
     setOpen(true)
   }
+
+  // Kontak admin dimuat di awal agar Hubungi Admin bisa langsung membuka WhatsApp.
+  useEffect(() => {
+    muatKontakAdmin()
+  }, [])
 
   const ALAT = [
     { kunci: 'f', label: 'Pencarian', desc: 'Cari halaman, proposal, laporan', icon: Search, jalankan: buka },

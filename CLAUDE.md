@@ -318,15 +318,15 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   grid membungkus di desktop, hover = sedikit membesar (`scale-[1.03]`, `transition-[scale,…]`); isi pintasan mengikuti menu
   sidebar tiap peran (item ber-`roles` disaring di `DashboardScreen`, mis. admin vs Ketua LPPM pada adapter `pengelola`); tampil **maks 4**
   (`utils/riwayat.js` `pilihPintasan`: halaman yang terakhir dibuka user dulu — `DashboardLayout` mencatat tiap pindah halaman per user di
-  localStorage `riwayatHalaman:<id>` — sisanya urutan adapter = paling penting; tanpa API; **ponsel (< sm): judul & kartu pintasan
+  localStorage `riwayatHalaman:<id>` (cache; disinkronkan ke `/users/profile/riwayat`, W-47: tulis di latar, `sinkronRiwayat` GET sekali per sesi) — sisanya urutan adapter = paling penting; **ponsel (< sm): judul & kartu pintasan
   disembunyikan**), lalu kartu angka `ToneCard` (4 kartu; ponsel **2×2 tanpa ikon**, `ToneCardGrid` `grid-cols-2`); dosen = info dokumen & luaran `DocCards`, peran lain = `KpiToneCards(model.kpis)`)
   → [dosen: **Usulan Terakhir**] → 3. **Informasi** (`DashboardBody`: Perlu perhatian, daftar utama (kegiatan terbaru: **hanya 3 item** + "Lihat selengkapnya" ke `list.to`, `LIST_MAX`) (+ umpan aktivitas
   bila adapter mengirim `feed`), status (`pipeline`), panel samping/periode **diminimalkan** (`<details>` tertutup);
   **Notifikasi terbaru dihapus** — adapter dosen & reviewer `feed: null`, tidak lagi memanggil `/notifications`);
   admin & Ketua LPPM: **Aktivitas sistem** (`feed`, `Feed lebar`) **selebar area konten** di bawah dua kolom Informasi (layar lebar: satu baris per log,
   waktu di kanan; aksi `aksiTerbaca`, keterangan = `log.detail`) + tautan **"Lihat log lebih banyak"** → **`/log`** (`LogAktivitasPage.jsx`, admin/ketua:
-  `KepalaStatus` 3 kartu (total, login, aktivitas proposal = `meta.total`), `PanelCari` + Filter **Kategori** (dipetakan ke awalan `action`,
-  `utils/kategoriLog.js`; cari = halaman tampil saja; API W-53 (`kategori`, `search`, `/ringkasan`) sudah tersedia), tabel `KartuNavy` 15 per halaman)
+  `KepalaStatus` 3 kartu dari `GET /activity-logs/ringkasan` (total sesuai filter, login & login gagal hari ini), `PanelCari` + Filter **Kategori** (field
+  `kategori`, `utils/kategoriLog.js`) + **Rentang tanggal** (`dari`/`sampai`), cari (`search`) — semua di server (W-53), tabel `KartuNavy` 15 per halaman)
   → [dosen: **Profil Dosen** (identitas & data dosen) lalu **Statistik Dosen** (angka capaian)]. Isi tiap peran tetap dari
   adapter masing-masing (`DashboardScreen` untuk admin, ketua, mahasiswa, reviewer; `DosenScreen` untuk dosen).
 - Dashboard **dosen** memakai tampilan revamp sendiri `src/pages/dashboard/DosenScreen.jsx`
@@ -368,7 +368,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
 - **Menu per peran** (`Sidebar.jsx`; fitur yang tidak ada di menu = dicabut, route jatuh ke dashboard). Sidebar mendukung **3 tingkat**
   (`NavGroup` rekursif, `daunMenu` = tautan daun untuk rail ciut). **Ketua LPPM** (`KETUA_NAV_ITEMS`): Dashboard · Dokumen Masuk
   (Proposal/Laporan Kegiatan) · Periode · **Pengguna** · **Dokumentasi** (Cetak Dokumen, **Luaran** `/luaran-dosen` — backend GET /luaran &
-  unduhan kini terbuka untuk ketua_lppm (W-44 tersedia); penanda ApiPending di frontend tinggal dihapus). **Admin** (`ADMIN_NAV_ITEMS`): Dashboard · **Akademik** (Dokumen Masuk
+  unduhan terbuka untuk ketua_lppm, W-44). **Admin** (`ADMIN_NAV_ITEMS`): Dashboard · **Akademik** (Dokumen Masuk
   (`DOKUMEN_MASUK`), Periode lihat saja) · **Dokumentasi** (Manajemen Template, Cetak Dokumen) · Pengguna · Backup Data (Luaran &
   Pemantauan dicabut). **Pengguna** (`/users`, `UserManagementPage` judul "Manajemen Pengguna": kepala `KepalaMasuk` + panel cari kolom cari · Filter (Peran, Status akun) · Cari, "Filter aktif" hanya bila ada) · **Dokumentasi** (Manajemen Template `/template-proposal`, Cetak Dokumen) ·
   Backup Data. **Luaran Dosen** (`LuaranDosenPage.jsx`: `GET /luaran` filter + paginasi 6 per halaman, unduh bukti per item; tombol Unduh CSV & ZIP
@@ -398,7 +398,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Cetak Laporan** (`pages/cetak/CetakRekapStmikPage.jsx`, `/cetak-laporan` — rute sama dengan mahasiswa, dipilih per peran; PDF
   `pages/cetak/rekapStmikPDF.js`: rekap kegiatan per periode (satu/semua, opsional daftar proposal), rekap tahunan (+ per jenis), rekap
   anggaran disetujui (filter tahun & jenis, + realisasi laporan); agregat dihitung di peramban), **Monitor Pengguna** (`/users` →
-  `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users kini terbuka untuk ketua_stmik (W-45 tersedia; penanda ApiPending di frontend tinggal dihapus). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
+  `UserManagementPage readOnly`: tanpa ubah status/peran/hapus/reviewer; backend GET /users terbuka untuk ketua_stmik, W-45). Detail Kegiatan & detail laporan kembali ke halaman asal lewat `location.state.dari` `{to, label}` (bawaan Daftar Proposal/Laporan).
   Label "Ketua STMIK" ada di semua `ROLE_LABEL` + opsi peran Manajemen User.
 - **Periode** (`PeriodePage`): kepala `KepalaStatus` (gaya Status Penelitian dosen; prop `aksi` = tombol Tambah Periode untuk Ketua; kartu Total Periode, Periode Aktif, Total Kegiatan).
   Daftar periode = **folder** (`components/FolderPeriode.jsx`: `FolderPeriode` tema terang — bidang atas navy (penelitian) /
@@ -432,8 +432,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`GrupTahun`, bawaan tertutup); klik folder → 3 project terbaru + Lihat lebih banyak → `/arsip-project/detail/:id`
   (ponsel: langsung detail); klik project → `/project/:jenis?id=`),
   **Undangan Ikut Serta** (`/undangan`), **Cetak Laporan** (`/cetak-laporan`, `pages/cetak/CetakLaporanHarianPage.jsx`: daftar project **yang punya ≥ 1 laporan harian**
-  (laporan tiap project dimuat paralel saat halaman dibuka lalu dipakai ulang saat cetak; jumlah per project = ApiPending W-49 opsional) +
-  Cetak rekap → `GET /mahasiswa/laporan-harian/:id` → PDF `pages/cetak/laporanHarianPDF.js`, sama dengan rekap di Project Saya). Semua dari API yang sudah ada.
+  (`jumlahLaporanHarian > 0`, W-49) + Cetak rekap → `GET /mahasiswa/laporan-harian/:id` (dimuat saat Cetak) → PDF `pages/cetak/laporanHarianPDF.js`, sama dengan rekap di Project Saya). Semua dari API yang sudah ada.
 - **Dokumen Masuk** (Proposal Kegiatan `ProposalPage` & Laporan Kegiatan `LaporanMasukPage`, ketua & admin) memakai
   logika bersama `src/hooks/useDokumenMasuk.js` + `src/components/PeriodeAktif.jsx` (`KepalaMasuk` = judul + breadcrumb lalu kartu
   ringkasan teks + 3 kotak gaya Undangan, responsif lewat **container query** (`@container`, bukan lebar layar — area Pengguna menyempit
@@ -449,7 +448,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`/laporan-masuk/detail/:id`, isi panel lama). Notifikasi & pencarian global pengelola menuju halaman ini.
 - **Backup Data** (`src/pages/BackupPage.jsx`, `/backup`, admin; `src/api/backup.js`, new-api.md bagian 19): kartu
   "Backup sekarang" (`POST /backup` 202 → pantau `GET /backup/:id` tiap 1,5 dtk; info jadwal `GET /backup/jadwal`),
-  lalu tabel **Daftar Backup** (`GET /backup`, filter pelaku `sumber` & `status`; opsi "Dihapus" nonaktif = ApiPending W-43) dengan kolom "Dilakukan oleh" (Sistem /
+  lalu tabel **Daftar Backup** (`GET /backup`, filter pelaku `sumber` & `status` (+ "Dihapus" = `status=dihapus`, W-43)) dengan kolom "Dilakukan oleh" (Sistem /
   nama admin), status (Berjalan/Berhasil/Gagal, **Dihapus** bila `dihapusAt` terisi + waktu & penghapus), file + ukuran (dicoret bila dihapus), isi, durasi, Unduh (blob `.sql.gz`) & Hapus file.
 - **Cetak Dokumen** (`src/pages/cetak/`, admin & ketua): `CetakDokumenPage` = wadah kartu dokumen
   (status konfigurasi, Cetak, Konfigurasi). (1) **Export Rekapitulasi Proposal** → konfigurasi =
@@ -459,7 +458,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   diwarisi lalu bisa diubah; PDF `utils/suratTugasPDF.js`. Konfigurasi di `localStorage`
   (`utils/cetakConfig.js`, kunci di `pages/cetak/dokumen.js`); simpan server/nomor otomatis/arsip =
   ApiPending W-42. (3) **Cetak Tabel Pengguna** (`CetakPenggunaPage`, `/cetak-dokumen/tabel-pengguna`): semua peran atau pilih ≥ 1
-  peran → `GET /users` semua halaman (per peran, digabung) → PDF `pages/cetak/cetakPengguna.js`. (4) **Luaran Dosen** (Ketua LPPM; unduhan 403 sampai W-44;
+  peran → `GET /users` semua halaman (per peran, digabung) → PDF `pages/cetak/cetakPengguna.js`. (4) **Luaran Dosen** (Ketua LPPM; unduhan terbuka W-44;
   `CetakLuaranPage`, `/cetak-dokumen/luaran-dosen`): keluaran ZIP bukti &/atau CSV (≥ 1) + filter Luaran Dosen kecuali jenis
   luaran & prioritas → `GET /luaran/unduh-zip|unduh-csv` (`pages/cetak/cetakLuaran.js`). Kunci & ringkasan di `pages/cetak/dokumen.js`.
 - **Usulan** (`src/pages/UsulanPage.jsx`, `/kegiatan/:jenis/usulan[/:id]`): wizard Identitas →
@@ -472,8 +471,8 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
-  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Saat draf dibuka, jenis anggota (dosen/mahasiswa) + NIDN/NIM dilengkapi
-  lewat `members/search?q=<email>` (respons proposal tidak memuat `nim`/`nidn`/peran — W-51). **Ketua pengusul (akun yang masuk) tidak bisa menjadi
+  anggota menampilkan kontak (`noHp`/`kontak`), tanpa alamat. Saat draf dibuka, jenis anggota (dosen/mahasiswa) + NIDN/NIM dari
+  `anggota[].user` (`nidn`/`nim`/`roles`, W-51; `members/search` per email hanya cadangan backend lama). **Ketua pengusul (akun yang masuk) tidak bisa menjadi
   anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
   penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (sama dengan backend) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
@@ -512,8 +511,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   skor 1–5 + catatan singkat → total/rata-rata/kelayakan otomatis → B. Catatan reviewer → C. Rekomendasi (Diterima/Diterima dengan perbaikan/
   Ditolak, saran "Sesuai skor") + **dana disetujui ditentukan reviewer** (proposal; ≤ dana diusulkan, isi cepat %, ditolak → Rp 0); ringkasan
   melekat di kanan, Selesaikan (validasi lengkap) / Simpan draf / **Cetak form (PDF)** (`formReviewPDF.js`). Rubrik & draf lokal di
-  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Dialog Tugaskan
-  reviewer laporan (`LaporanMasukDetailPage`) otomatis mencentang reviewer proposal asal (UAT: reviewer proposal = reviewer laporan; W-55).
+  `utils/rubrikReview.js`: server hanya `catatan` + `rekomendasi`, skor/catatan singkat/dana = localStorage sampai **W-54**. Reviewer laporan =
+  reviewer proposal asal (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan (status langsung `review`, pesan ajukan menyesuaikan); bila tidak
+  ada, dialog Tugaskan reviewer laporan (`LaporanMasukDetailPage`) tetap mencentang reviewer proposal asal yang tersedia.
   **Dana (keputusan UAT)**: dana final = **dana disetujui reviewer**, final setelah review diselesaikan (tidak bisa dinegosiasi). Form laporan
   tetap menampilkan pendanaan: dana disetujui proposal asal (baca saja; dari draf penilaian proposal reviewer yang sama, lalu field backend)
   + realisasi anggaran. Rubrik sama untuk proposal & laporan, penelitian & pengabdian. **Statistik & pelaporan memakai dana disetujui saja,
@@ -588,9 +588,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   semua peran, sementara `ErrorState` **501**), 3. **Hubungi Admin** (Ctrl/⌘ + M) → WhatsApp `wa.me` di tab baru (`utils/hubungiAdmin.js`) dengan
   templat "Halo admin, saya mengalami kendala di "<jejak>", dimana ... / Terima kasih atas perhatiannya. / - <nama>, <peran pertama>"; jejak =
   breadcrumb halaman yang tampil (`Breadcrumb.jsx` mencatat ke `utils/jejakSaatIni.js`, tanpa breadcrumb → path URL); nomor dari env
-  `VITE_ADMIN_WA` (`frontend/.env.example`; awalan 0 → 62; kosong → dialog "Nomor admin belum diatur") (API `GET /kontak-admin` W-50 sudah tersedia, frontend belum menyambungkan). Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
+  `GET /kontak-admin` (W-50, dimuat saat tombol Alat terpasang; belum termuat → tab disiapkan sinkron) dengan cadangan `VITE_ADMIN_WA` (`frontend/.env.example`; kosong → dialog "Nomor admin belum diatur"); admin mengaturnya di Pengaturan › **Kontak Admin** (`components/KontakAdminForm.jsx`, `PATCH /kontak-admin`). Pencarian (klik atau **Ctrl/⌘ + F**) membuka `SearchPopup` (`src/components/SearchPopup.jsx`: portal,
   kolom cari di atas, rekomendasi berkelompok di bawahnya mengikuti ketikan, ↑/↓/Enter/Esc; kolom kosong = **riwayat per user** "Terakhir
-  dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>`, + Hapus riwayat; tanpa API)). Latar
+  dibuka" maks 4 (`utils/riwayat.js` `riwayatCari/catatCari`, localStorage `riwayatCari:<id>` sebagai cache + server W-47, + Hapus riwayat)). Latar
   di-blur dan tidak bisa digulir: kelas `search-open` di `<html>` mengunci `body` + elemen
   `data-scroll-container` (wadah gulir `DashboardLayout`, daftar Manajemen User) — wadah gulir baru
   wajib diberi atribut ini. Kunci yang sama berlaku **global untuk semua modal** (`html:has([aria-modal='true'],
@@ -686,7 +686,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Lupa password**: tautan "Lupa password?" di samping label Password Login → `/lupa-password` (`LupaPasswordPage.jsx`, tamu: `POST /auth/forgot-password`,
   selalu tampil "Periksa Email Anda") ; tautan email → `/reset-password?token=` (`ResetPasswordPage.jsx`, publik tanpa guard: password baru ≥ 8 + ulangi,
   `POST /auth/reset-password {token, newPassword}`, sesi lokal dikosongkan → `/login` + flash; token tak valid → "Minta tautan baru"). Butuh `FRONTEND_URL` di backend.
-  Reset oleh Admin (password sementara + wajib ganti): API W-52 sudah tersedia (`POST /users/:id/reset-password`), frontend belum menyambungkan. Halaman tamu mandiri (Terkirim, Lupa/Reset password) memakai merek
+  **Reset oleh Admin** (W-52): Manajemen Pengguna › Tindakan Admin › Reset Password (`ResetPasswordModal`: konfirmasi password admin → `POST /users/:id/reset-password`,
+  password sementara tampil sekali + Salin); user dengan `wajibGantiPassword` di `/auth/me` melihat `WajibGantiPasswordPage` (dirender `DashboardLayout` menggantikan semua halaman,
+  tanpa sidebar; `PATCH /users/profile/password` lalu penanda di store dikosongkan; ganti password di Pengaturan juga mengosongkannya). Halaman tamu mandiri (Terkirim, Lupa/Reset password) memakai merek
   `components/MerekLppm.jsx` (lencana + teks "LPPM").
   Daftar: setelah `register` berhasil → `setBerhasil` + `tungguOutro()` lalu tetap ke `/register/terkirim` (`authStore.register` juga punya jeda dev 0,75 dtk).
 - **Intro autentikasi** (`src/components/AuthIntro.jsx`, dipasang di Login & Register, portal `z-[60]`): sekali per sesi

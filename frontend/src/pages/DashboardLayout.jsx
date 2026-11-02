@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import GlobalSearch from '../components/GlobalSearch'
 import useLenis from '../hooks/useLenis'
 import useAuthStore from '../store/authStore'
-import { catatKunjungan } from '../utils/riwayat'
+import { catatKunjungan, sinkronRiwayat } from '../utils/riwayat'
 import DashboardHome from './dashboard/DashboardHome'
 import PeriodePage from './PeriodePage'
 import UserManagementPage from './UserManagementPage'
@@ -45,6 +45,7 @@ import ProposalMasukDetailPage from './ProposalMasukDetailPage'
 import LaporanMasukDetailPage from './LaporanMasukDetailPage'
 import ReviewLaporanPage from './review/ReviewLaporanPage'
 import FormReviewPage from './review/FormReviewPage'
+import WajibGantiPasswordPage from './WajibGantiPasswordPage'
 import RiwayatProjectPage from './RiwayatProjectPage'
 import LaporanHarianInputPage from './LaporanHarianInputPage'
 import UserAvatar from '../components/UserAvatar'
@@ -97,6 +98,10 @@ export default function DashboardLayout({ page, jenis }) {
   useEffect(() => {
     if (ready) catatKunjungan(userId, location.pathname)
   }, [ready, userId, location.pathname])
+  // Riwayat lintas perangkat (W-47): muat dari server sekali setelah user termuat.
+  useEffect(() => {
+    if (ready) sinkronRiwayat(userId)
+  }, [ready, userId])
 
   if (!user || loading) {
     return (
@@ -119,6 +124,9 @@ export default function DashboardLayout({ page, jenis }) {
       </div>
     )
   }
+
+  // W-52: password direset Admin → wajib ganti password sebelum halaman apa pun.
+  if (user.wajibGantiPassword) return <WajibGantiPasswordPage />
 
   const renderContent = () => {
     // Detail kegiatan: pengusul, anggota tim (dosen/mahasiswa), admin & ketua (baca saja).

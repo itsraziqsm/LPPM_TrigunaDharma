@@ -1,58 +1,60 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Activity, LogIn, FileText } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Activity, LogIn, ShieldAlert } from 'lucide-react'
 import { activityLogApi } from '../api/activityLog'
 import KepalaStatus from '../components/KepalaStatus'
 import KartuNavy from '../components/KartuNavy'
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
-import ApiPending from '../components/ApiPending'
 import { TONE } from '../utils/toneStatus'
 import { KATEGORI_LOG, aksiTerbaca, kategoriDari } from '../utils/kategoriLog'
 
 // ---------------------------------------------------------------------------
 // Log Aktivitas (/log, Admin & Ketua LPPM; dari Beranda › Aktivitas sistem › "Lihat log lebih banyak").
-// GET /activity-logs?page&limit=15[&action] — 15 per halaman. Kepala KepalaStatus (3 kartu: total aktivitas,
-// login tercatat, aktivitas proposal = meta.total dengan limit=1). Filter Kategori dipetakan ke awalan
-// `action` (utils/kategoriLog.js) karena backend belum punya kategori; kolom cari hanya menyaring halaman
-// yang sedang tampil (API belum punya pencarian teks) — keduanya W-53.
+// GET /activity-logs?page&limit=15[&kategori&search&dari&sampai] (W-53, new-api.md bagian 29.4) — semua
+// filter di server, `meta.total` mengikuti filter. Kepala: GET /activity-logs/ringkasan (total mengikuti
+// cari & tanggal; login & login gagal = hari ini, WIB). Kategori dari field `kategori` (utils/kategoriLog.js).
 // ---------------------------------------------------------------------------
 
 const LIMIT = 15
 const waktu = (v) =>
   v ? new Date(v).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+const tgl = (v) => (v ? new Date(`${v}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
 
 export default function LogAktivitasPage() {
   const [kategori, setKategori] = useState('')
+  const [dari, setDari] = useState('')
+  const [sampai, setSampai] = useState('')
   const [page, setPage] = useState(1)
   const [cari, setCari] = useState('')
   const [cariAktif, setCariAktif] = useState('')
   const [data, setData] = useState({ rows: [], total: 0 })
   const [memuat, setMemuat] = useState(true)
   const [gagal, setGagal] = useState(false)
-  const [ringkas, setRingkas] = useState({ total: null, login: null, proposal: null })
+  const [ringkas, setRingkas] = useState(null)
 
-  // Kartu ringkasan: total per kategori lewat meta.total (limit=1).
+  const tanggalSalah = Boolean(dari && sampai && dari > sampai)
+  const filterTanggal = tanggalSalah ? {} : { ...(dari ? { dari } : {}), ...(sampai ? { sampai } : {}) }
+  const kunciFilter = JSON.stringify([cariAktif, filterTanggal])
+
+  // Kartu: ringkasan server (total mengikuti cari & tanggal; angka "hari ini" tidak terpengaruh filter).
   useEffect(() => {
     let alive = true
-    const hitung = (params) =>
-      activityLogApi
-        .getAll({ page: 1, limit: 1, ...params })
-        .then((r) => Number(r.data.meta?.total) || 0)
-        .catch(() => null)
-    Promise.all([hitung({}), hitung({ action: 'LOGIN' }), hitung({ action: 'proposal.' })]).then(([total, login, proposal]) => {
-      if (alive) setRingkas({ total, login, proposal })
-    })
+    const [search, tanggal] = JSON.parse(kunciFilter)
+    activityLogApi
+      .ringkasan({ ...(search ? { search } : {}), ...tanggal })
+      .then((r) => alive && setRingkas(r.data.data || null))
+      .catch(() => alive && setRingkas(false))
     return () => {
       alive = false
     }
-  }, [])
+  }, [kunciFilter])
 
   useEffect(() => {
     let alive = true
-    const k = KATEGORI_LOG.find((x) => x.key === kategori)
+    const [search, tanggal] = JSON.parse(kunciFilter)
     setMemuat(true)
     activityLogApi
-      .getAll({ page, limit: LIMIT, ...(k ? { action: k.cari } : {}) })
+      .getAll({ page, limit: LIMIT, ...(kategori ? { kategori } : {}), ...(search ? { search } : {}), ...tanggal })
       .then((r) => {
         if (!alive) return
         setData({ rows: r.data.data || [], total: Number(r.data.meta?.total) || 0 })
@@ -63,24 +65,22 @@ export default function LogAktivitasPage() {
     return () => {
       alive = false
     }
-  }, [kategori, page])
+  }, [kategori, page, kunciFilter])
 
   const pages = Math.max(1, Math.ceil(data.total / LIMIT))
-  const q = cariAktif.trim().toLowerCase()
-  const rows = useMemo(
-    () =>
-      q
-        ? data.rows.filter((l) =>
-            [l.user?.name, l.user?.email, l.action, l.detail, l.ipAddress].some((v) => String(v || '').toLowerCase().includes(q)),
-          )
-        : data.rows,
-    [data.rows, q],
-  )
+  const rows = data.rows
   const labelKategori = KATEGORI_LOG.find((k) => k.key === kategori)?.label
+  const ulang = (fn) => (v) => {
+    fn(v)
+    setPage(1)
+  }
   const aktif = [
-    ...(labelKategori ? [{ key: 'kategori', label: `Kategori: ${labelKategori}`, onRemove: () => (setKategori(''), setPage(1)) }] : []),
-    ...(cariAktif ? [{ key: 'cari', label: `Cari: "${cariAktif}"`, onRemove: () => (setCari(''), setCariAktif('')) }] : []),
+    ...(labelKategori ? [{ key: 'kategori', label: `Kategori: ${labelKategori}`, onRemove: () => ulang(setKategori)('') }] : []),
+    ...(dari ? [{ key: 'dari', label: `Dari ${tgl(dari)}`, onRemove: () => ulang(setDari)('') }] : []),
+    ...(sampai ? [{ key: 'sampai', label: `Sampai ${tgl(sampai)}`, onRemove: () => ulang(setSampai)('') }] : []),
+    ...(cariAktif ? [{ key: 'cari', label: `Cari: "${cariAktif}"`, onRemove: () => (setCari(''), ulang(setCariAktif)('')) }] : []),
   ]
+  const nilai = (v) => (ringkas === null ? '…' : ringkas === false ? '—' : (v ?? 0))
 
   return (
     <div className="page space-y-6">
@@ -89,9 +89,9 @@ export default function LogAktivitasPage() {
         desc="Riwayat aktivitas pengguna di sistem: login, perubahan proposal, review, laporan, dokumen, dan lainnya."
         crumbs={[{ label: 'Log Aktivitas' }]}
         kartu={[
-          { icon: Activity, tone: TONE.navy, label: 'Total aktivitas', value: ringkas.total ?? '…' },
-          { icon: LogIn, tone: TONE.hijau, label: 'Login tercatat', value: ringkas.login ?? '…' },
-          { icon: FileText, tone: TONE.amber, label: 'Aktivitas proposal', value: ringkas.proposal ?? '…' },
+          { icon: Activity, tone: TONE.navy, label: cariAktif || dari || sampai ? 'Aktivitas sesuai filter' : 'Total aktivitas', value: nilai(ringkas?.total) },
+          { icon: LogIn, tone: TONE.hijau, label: 'Login hari ini', value: nilai(ringkas?.loginHariIni) },
+          { icon: ShieldAlert, tone: TONE.amber, label: 'Login gagal hari ini', value: nilai(ringkas?.loginGagalHariIni) },
         ]}
       />
 
@@ -101,11 +101,13 @@ export default function LogAktivitasPage() {
         id="log"
         value={cari}
         onChange={setCari}
-        onSubmit={() => setCariAktif(cari)}
-        placeholder="Cari nama, email, aksi, atau keterangan (di halaman ini)"
+        onSubmit={() => ulang(setCariAktif)(cari.trim())}
+        placeholder="Cari nama, email, aksi, keterangan, atau alamat IP"
         aktif={aktif}
         onReset={() => {
           setKategori('')
+          setDari('')
+          setSampai('')
           setPage(1)
           setCari('')
           setCariAktif('')
@@ -116,14 +118,19 @@ export default function LogAktivitasPage() {
             label="Kategori"
             items={[['', 'Semua'], ...KATEGORI_LOG.map((k) => [k.key, k.label])]}
             value={kategori}
-            onChange={(v) => {
-              setKategori(v)
-              setPage(1)
-            }}
+            onChange={ulang(setKategori)}
           />
-          <p className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            Kategori sementara diturunkan dari jenis aksi; pencarian hanya di halaman yang tampil. <ApiPending />
-          </p>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-700">Rentang tanggal</legend>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="log-dari">Dari tanggal</label>
+              <input id="log-dari" type="date" className="input h-9 w-auto" value={dari} max={sampai || undefined} onChange={(e) => ulang(setDari)(e.target.value)} />
+              <span className="text-sm text-slate-500">sampai</span>
+              <label className="sr-only" htmlFor="log-sampai">Sampai tanggal</label>
+              <input id="log-sampai" type="date" className="input h-9 w-auto" value={sampai} min={dari || undefined} onChange={(e) => ulang(setSampai)(e.target.value)} />
+            </div>
+            {tanggalSalah ? <p className="mt-1.5 text-xs text-red-700">Tanggal awal tidak boleh setelah tanggal akhir.</p> : null}
+          </fieldset>
         </div>
       </PanelCari>
 
@@ -142,7 +149,7 @@ export default function LogAktivitasPage() {
             Memuat log…
           </p>
         ) : rows.length === 0 ? (
-          <p className="px-6 py-12 text-center text-base text-slate-500">{data.rows.length ? 'Tidak ada log yang cocok di halaman ini.' : 'Belum ada aktivitas tercatat.'}</p>
+          <p className="px-6 py-12 text-center text-base text-slate-500">{aktif.length ? 'Tidak ada log yang cocok dengan filter.' : 'Belum ada aktivitas tercatat.'}</p>
         ) : (
           <AreaMemuat memuat={memuat}>
             <div className="overflow-x-auto">
@@ -165,7 +172,7 @@ export default function LogAktivitasPage() {
                         {l.user?.email ? <span className="block text-xs text-slate-500">{l.user.email}</span> : null}
                       </td>
                       <td>
-                        <span className="badge badge-neutral">{kategoriDari(l.action).label}</span>
+                        <span className={`badge ${l.action === 'LOGIN_GAGAL' ? 'badge-danger' : 'badge-neutral'}`}>{kategoriDari(l).label}</span>
                       </td>
                       <td>
                         <span className="block text-sm font-medium text-slate-800">{aksiTerbaca(l.action)}</span>

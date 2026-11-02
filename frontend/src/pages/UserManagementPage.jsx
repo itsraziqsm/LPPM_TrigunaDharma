@@ -277,6 +277,87 @@ function Modal({ title, onClose, children }) {
 }
 
 
+// ─── Reset password (Admin, W-52) ────────────────────────────────────────────
+// POST /users/:id/reset-password {password admin} → password sementara (hanya ditampilkan SEKALI). User wajib
+// mengganti password saat masuk berikutnya; semua sesinya dikeluarkan.
+function ResetPasswordModal({ user, onClose }) {
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const [hasil, setHasil] = useState(null)
+  const [tersalin, setTersalin] = useState(false)
+  const nama = user.fullName || user.name || user.email
+
+  const kirim = async (e) => {
+    e.preventDefault()
+    if (!password) return setErr('Masukkan password Anda untuk konfirmasi.')
+    setBusy(true)
+    setErr(null)
+    try {
+      const r = await usersApi.resetPassword(user.id, password)
+      setHasil(r.data.data?.passwordSementara || '')
+      setPassword('')
+    } catch (e2) {
+      const errs = e2.response?.data?.errors
+      setErr(errs ? Object.values(errs).flat().join(' ') : e2.response?.data?.message || 'Password gagal direset.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const salin = async () => {
+    try {
+      await navigator.clipboard.writeText(hasil)
+      setTersalin(true)
+    } catch {
+      setTersalin(false)
+    }
+  }
+
+  const tutup = async () => {
+    if (hasil && !tersalin && !(await confirmDialog({ tone: 'warning', title: 'Tutup tanpa menyalin?', message: 'Password sementara tidak dapat ditampilkan lagi. Bila hilang, reset ulang.', confirmText: 'Ya, tutup' }))) return
+    onClose()
+  }
+
+  return (
+    <Modal title="Reset Password" onClose={tutup}>
+      {hasil ? (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Password <span className="font-semibold text-slate-900">{nama}</span> telah direset. Berikan password sementara ini kepada pengguna. Saat masuk, ia wajib menggantinya.
+          </p>
+          <div className="flex items-center gap-2 rounded-lg border border-navy-200 bg-navy-50 px-4 py-3">
+            <code className="min-w-0 flex-1 select-all break-all font-mono text-lg font-semibold tracking-wide text-navy-950">{hasil}</code>
+            <button type="button" onClick={salin} className="btn btn-secondary btn-sm shrink-0">
+              {tersalin ? 'Tersalin' : 'Salin'}
+            </button>
+          </div>
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">Password ini hanya ditampilkan sekali dan tidak dapat dibuka lagi.</p>
+          <div className="flex justify-end">
+            <button type="button" onClick={tutup} className="btn btn-primary">Selesai</button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={kirim} className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Buat password sementara untuk <span className="font-semibold text-slate-900">{nama}</span>. Password lama tidak berlaku lagi, semua sesinya dikeluarkan,
+            dan ia wajib mengganti password saat masuk berikutnya.
+          </p>
+          {err ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{err}</div> : null}
+          <div>
+            <label htmlFor="reset-pw-admin" className="label">Password Anda (konfirmasi)</label>
+            <input id="reset-pw-admin" type="password" autoComplete="current-password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="btn btn-ghost">Batal</button>
+            <button type="submit" disabled={busy} className="btn btn-danger">{busy ? 'Memproses…' : 'Reset password'}</button>
+          </div>
+        </form>
+      )}
+    </Modal>
+  )
+}
+
 // ─── Akses Penugasan Review (dosen ↔ reviewer) ───────────────────────────────
 // Dosen hanya melihat menu "Penugasan Review" bila punya peran `reviewer`
 // (utils/roles.js → canReview). Admin & Ketua LPPM: GET/PATCH /users/:id/reviewer
@@ -545,11 +626,12 @@ function ForceRevokeModal({ user, tugasan, onClose, onDone }) {
 
 // ─── Detail Panel ────────────────────────────────────────────────────────────
 
-function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleChange, onReviewerChanged, onDelete }) {
+function UserDetail({ user, isAdmin, isKetua, meId, onClose, onStatusChange, onRoleChange, onReviewerChanged, onDelete }) {
   const roleNames = getRoleNames(user.roles)
   const primaryRole = getPrimaryRole(roleNames)
 
   const [statusModal, setStatusModal] = useState(false)
+  const [resetModal, setResetModal] = useState(false)
   const [roleModal, setRoleModal] = useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
   const [newStatus, setNewStatus] = useState(user.status)
@@ -661,6 +743,19 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
                   <span className="text-sm font-medium text-navy-700">Pilih</span>
                 </button>
 
+                {user.id !== meId && !user.deletedAt ? (
+                  <button
+                    onClick={() => setResetModal(true)}
+                    className="group flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <div>
+                      <p className="text-base font-semibold text-slate-900">Reset Password</p>
+                      <p className="text-sm text-slate-500">Buat password sementara; pengguna wajib menggantinya saat masuk.</p>
+                    </div>
+                    <span className="text-sm font-medium text-navy-700">Reset</span>
+                  </button>
+                ) : null}
+
                 <button
                   onClick={() => { setErr(null); setDeleteModal(true) }}
                   className="group flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-white px-4 py-3 text-left transition-colors hover:bg-red-50"
@@ -678,6 +773,7 @@ function UserDetail({ user, isAdmin, isKetua, onClose, onStatusChange, onRoleCha
       </div>
 
       {/* Modals */}
+      {resetModal ? <ResetPasswordModal user={user} onClose={() => setResetModal(false)} /> : null}
       {statusModal && (
         <Modal title="Ubah Status" onClose={() => setStatusModal(false)}>
           <div className="space-y-5">
@@ -1132,6 +1228,7 @@ export default function UserManagementPage({ readOnly = false }) {
         ) : detailUser ? (
           <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md shadow-xl xl:static xl:z-auto xl:h-full xl:w-[420px] xl:max-w-none xl:shrink-0 xl:shadow-none">
             <UserDetail
+              meId={me?.id}
               user={detailUser}
               isAdmin={isAdmin}
               isKetua={isKetua}

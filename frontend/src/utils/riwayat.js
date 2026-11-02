@@ -1,11 +1,15 @@
+import { riwayatApi } from '../api/riwayat'
+
 // ---------------------------------------------------------------------------
-// Riwayat penggunaan per user (localStorage, per peramban; tidak butuh API — tidak perlu
-// sinkron antarperangkat). Kunci memakai id user sehingga akun lain di peramban yang sama
-// punya riwayat sendiri. Semua akses dibungkus try/catch (mode privat / penyimpanan diblokir).
+// Riwayat penggunaan per user. localStorage = cache untuk tampilan instan (kunci memakai id user sehingga
+// akun lain di peramban yang sama punya riwayat sendiri; akses dibungkus try/catch), disinkronkan dengan
+// server lintas perangkat (W-47, api/riwayat.js): tulis dikirim di latar (gagal diabaikan) dan respons
+// (= riwayat terbaru) ditimpakan ke cache; sinkronRiwayat(userId) memuat GET sekali per sesi.
 //   catatKunjungan(userId, path)        — dipanggil DashboardLayout tiap pindah halaman
 //   pilihPintasan(userId, shortcuts, n) — pintasan dashboard maks n: yang terakhir dipakai dulu,
 //                                         sisanya diisi urutan adapter (= paling penting)
 //   riwayatCari(userId) / catatCari(userId, item) — 4 hasil pencarian global terakhir dibuka
+//   sinkronRiwayat(userId)              — dipanggil DashboardLayout sekali setelah user termuat
 // ---------------------------------------------------------------------------
 
 const MAKS_KUNJUNGAN = 50
@@ -32,12 +36,54 @@ const kunciHalaman = (id) => `riwayatHalaman:${id}`
 const kunciCari = (id) => `riwayatCari:${id}`
 const pathOf = (to) => String(to || '').split(/[?#]/)[0]
 
+// Timpakan riwayat server ke cache lokal. Halaman: waktu terbaru dari keduanya; cari: urutan server
+// (badgeClass hanya ada di lokal, dipertahankan bila `to` sama).
+function terapkan(userId, data) {
+  if (!userId || !data) return
+  if (Array.isArray(data.halaman)) {
+    const peta = baca(kunciHalaman(userId), {})
+    for (const h of data.halaman) {
+      const ts = Date.parse(h.at) || 0
+      if (h.path && h.path !== '/dashboard' && ts > (peta[h.path] || 0)) peta[h.path] = ts
+    }
+    const urut = Object.entries(peta).sort((a, b) => b[1] - a[1]).slice(0, MAKS_KUNJUNGAN)
+    tulis(kunciHalaman(userId), Object.fromEntries(urut))
+  }
+  if (Array.isArray(data.cari)) {
+    const lama = new Map(riwayatCari(userId).map((x) => [x.to, x]))
+    tulis(
+      kunciCari(userId),
+      data.cari.slice(0, MAKS_RIWAYAT_CARI).map((c) => ({
+        key: `riwayat-${c.to}`,
+        to: c.to,
+        title: c.title,
+        subtitle: c.subtitle || null,
+        badge: c.badge || null,
+        badgeClass: lama.get(c.to)?.badgeClass || null,
+      })),
+    )
+  }
+}
+
+const latar = (userId, janji) =>
+  janji.then((r) => terapkan(userId, r.data?.data)).catch(() => {
+    /* tetap pakai cache lokal */
+  })
+
+const sudahSinkron = new Set()
+export function sinkronRiwayat(userId) {
+  if (!userId || sudahSinkron.has(userId)) return Promise.resolve()
+  sudahSinkron.add(userId)
+  return latar(userId, riwayatApi.get())
+}
+
 export function catatKunjungan(userId, path) {
   if (!userId || !path || path === '/dashboard') return
   const peta = baca(kunciHalaman(userId), {})
   peta[path] = Date.now()
   const urut = Object.entries(peta).sort((a, b) => b[1] - a[1]).slice(0, MAKS_KUNJUNGAN)
   tulis(kunciHalaman(userId), Object.fromEntries(urut))
+  latar(userId, riwayatApi.catatHalaman(path))
 }
 
 // Waktu terakhir halaman pintasan (atau turunannya, mis. /statistik → /statistik?tab=dosen,
@@ -73,8 +119,14 @@ export function catatCari(userId, item) {
   const simpan = { key: `riwayat-${item.to}`, to: item.to, title: item.title, subtitle: item.subtitle || null, badge: item.badge || null, badgeClass: item.badgeClass || null }
   const lama = riwayatCari(userId).filter((x) => x.to !== item.to)
   tulis(kunciCari(userId), [simpan, ...lama].slice(0, MAKS_RIWAYAT_CARI))
+  latar(
+    userId,
+    riwayatApi.catatCari({ to: item.to, title: String(item.title || item.to).slice(0, 200), ...(item.subtitle ? { subtitle: String(item.subtitle).slice(0, 300) } : {}), ...(item.badge ? { badge: String(item.badge).slice(0, 50) } : {}) }),
+  )
 }
 
 export function hapusRiwayatCari(userId) {
-  if (userId) tulis(kunciCari(userId), [])
+  if (!userId) return
+  tulis(kunciCari(userId), [])
+  latar(userId, riwayatApi.hapusCari())
 }
