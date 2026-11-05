@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import AreaMemuat from '../components/AreaMemuat'
 import { KepalaMasuk } from '../components/PeriodeAktif'
-import { Link } from 'react-router-dom'
-import { ArrowUpRight, BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BellOff, CheckCheck, ChevronRight, Trash2 } from 'lucide-react'
 import { notificationApi } from '../api/notification'
-import useAuthStore from '../store/authStore'
 import { NOTIF_EVENT, notifyNotificationsChanged } from '../utils/notificationEvents'
 import { daysSince, formatDate, timeAgo } from './dashboard/format'
-import { DEFAULT_META, KATEGORI_NOTIF, TYPE_META, getRoleNames, kategoriNotif, pengirimFor, targetFor } from '../utils/notifikasi'
-import { semuaHalaman } from '../utils/semuaHalaman'
+import { DEFAULT_META, KATEGORI_NOTIF, TYPE_META, kategoriNotif, pengirimFor } from '../utils/notifikasi'
 
 // ---------------------------------------------------------------------------
 // Halaman Notifikasi (/notifikasi), dibuka dari "Lihat semua notifikasi" di
 // (judul / "Lihat detail" → halaman detail /notifikasi/:id, NotifikasiDetailPage)
 // dropdown lonceng. Data: GET /notifications (page, limit, onlyUnread) +
 // PATCH /:id/read, PATCH /read-all, DELETE /:id. Perubahan di halaman ini
-// dan di lonceng saling diberitahukan lewat utils/notificationEvents. Filter **Kategori** (pengirim/jenis kegiatan,
-// utils/notifikasi.js KATEGORI_NOTIF): backend belum punya filter kategori (W-56) → saat kategori dipilih, hingga
-// 500 notifikasi terbaru dimuat lalu disaring di peramban.
+// dan di lonceng saling diberitahukan lewat utils/notificationEvents. Filter **Kategori** (W-56) dikirim ke server
+// (`kategori=`, paginasi normal); jumlah belum dibaca per kategori dari GET /notifications/ringkasan. Klik baris =
+// buka Detail Notifikasi (di sana ada tombol ke halaman terkait, mis. "Buka kegiatan").
 // ---------------------------------------------------------------------------
 
 const LIMIT = 20
@@ -48,8 +46,8 @@ function FilterTab({ active, onClick, children }) {
 }
 
 export default function NotifikasiPage() {
-  const user = useAuthStore((s) => s.user)
-  const roles = getRoleNames(user?.roles)
+  const navigate = useNavigate()
+  const [ringkasan, setRingkasan] = useState(null)
 
   const [filter, setFilter] = useState('semua')
   const [kategori, setKategori] = useState('')
@@ -64,12 +62,24 @@ export default function NotifikasiPage() {
   const [tick, setTick] = useState(0)
 
   const onlyUnread = filter === 'belum'
+  const filterParams = { ...(onlyUnread ? { onlyUnread: true } : {}), ...(kategori ? { kategori } : {}) }
+  const filterKey = `${onlyUnread}|${kategori}`
 
+  // Belum dibaca total & per kategori (W-56); cadangan backend lama: meta.total dari ?onlyUnread=true.
   const loadUnreadTotal = useCallback(() => {
     notificationApi
-      .getAll({ onlyUnread: true, limit: 1 })
-      .then((r) => setUnreadTotal(Number(r.data.meta?.total) || 0))
-      .catch(() => setUnreadTotal(null))
+      .ringkasan()
+      .then((r) => {
+        const d = r.data.data || {}
+        setRingkasan(d.perKategori || null)
+        setUnreadTotal(Number(d.belumDibaca) || 0)
+      })
+      .catch(() =>
+        notificationApi
+          .getAll({ onlyUnread: true, limit: 1 })
+          .then((r) => setUnreadTotal(Number(r.data.meta?.total) || 0))
+          .catch(() => setUnreadTotal(null)),
+      )
   }, [])
 
   // Muat halaman pertama (ulang saat filter berubah atau ada perubahan dari lonceng).
@@ -77,14 +87,9 @@ export default function NotifikasiPage() {
     let alive = true
     setLoading(true)
     setFailed(false)
-    const params = onlyUnread ? { onlyUnread: true } : {}
-    const muat = kategori
-      ? semuaHalaman(notificationApi.getAll, params, 5).then(({ items: semua }) => {
-          const cocok = semua.filter((n) => kategoriNotif(n).key === kategori)
-          return { rows: cocok, total: cocok.length }
-        })
-      : notificationApi.getAll({ page: 1, limit: LIMIT, ...params }).then((r) => ({ rows: r.data.data || [], total: Number(r.data.meta?.total) || 0 }))
-    muat
+    notificationApi
+      .getAll({ page: 1, limit: LIMIT, ...filterParams })
+      .then((r) => ({ rows: r.data.data || [], total: Number(r.data.meta?.total) || 0 }))
       .then(({ rows, total: t }) => {
         if (!alive) return
         setItems(rows)
@@ -97,7 +102,7 @@ export default function NotifikasiPage() {
     return () => {
       alive = false
     }
-  }, [onlyUnread, kategori, tick, loadUnreadTotal])
+  }, [filterKey, tick, loadUnreadTotal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onChange = (e) => {
@@ -111,7 +116,7 @@ export default function NotifikasiPage() {
     setLoadingMore(true)
     try {
       const next = page + 1
-      const r = await notificationApi.getAll({ page: next, limit: LIMIT, ...(onlyUnread ? { onlyUnread: true } : {}) })
+      const r = await notificationApi.getAll({ page: next, limit: LIMIT, ...filterParams })
       const seen = new Set(items.map((n) => n.id))
       setItems((prev) => [...prev, ...(r.data.data || []).filter((n) => !seen.has(n.id))])
       setTotal(Number(r.data.meta?.total) || 0)
@@ -134,6 +139,7 @@ export default function NotifikasiPage() {
         setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)))
       }
       setUnreadTotal((c) => (c === null ? c : Math.max(0, c - 1)))
+      loadUnreadTotal()
       notifyNotificationsChanged('page')
     } catch {
       /* biarkan; status tetap belum dibaca */
@@ -146,6 +152,7 @@ export default function NotifikasiPage() {
       setItems((prev) => prev.filter((x) => x.id !== n.id))
       setTotal((t) => Math.max(0, t - 1))
       if (!n.isRead) setUnreadTotal((c) => (c === null ? c : Math.max(0, c - 1)))
+      loadUnreadTotal()
       notifyNotificationsChanged('page')
     } catch {
       /* abaikan */
@@ -225,6 +232,16 @@ export default function NotifikasiPage() {
             }`}
           >
             {k.label}
+            {(k.key ? ringkasan?.[k.key]?.belumDibaca : unreadTotal) > 0 ? (
+              <span
+                className={`ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none ${
+                  kategori === k.key ? 'bg-white text-navy-900' : 'bg-brass-400 text-navy-950'
+                }`}
+                title="Belum dibaca"
+              >
+                {k.key ? ringkasan[k.key].belumDibaca : unreadTotal}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -273,11 +290,21 @@ export default function NotifikasiPage() {
                 {group.items.map((n) => {
                   const meta = TYPE_META[n.type] || DEFAULT_META
                   const Icon = meta.icon
-                  const target = targetFor(n, roles)
+                  const buka = () => navigate(`/notifikasi/${n.id}`, { state: { notif: n } })
                   return (
                     <li
                       key={n.id}
-                      className={`group flex gap-4 px-5 py-4 sm:px-6 ${n.isRead ? '' : 'bg-navy-50/50'}`}
+                      role="link"
+                      tabIndex={0}
+                      onClick={buka}
+                      onKeyDown={(e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          buka()
+                        }
+                      }}
+                      aria-label={`${n.isRead ? '' : 'Belum dibaca: '}${n.judul}`}
+                      className={`group flex cursor-pointer gap-4 px-5 py-4 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none sm:px-6 ${n.isRead ? '' : 'bg-navy-50/50'}`}
                     >
                       <span className={`grid size-10 shrink-0 place-items-center rounded-full ${meta.tone}`}>
                         <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
@@ -287,11 +314,8 @@ export default function NotifikasiPage() {
                           {!n.isRead ? (
                             <span className="mt-2 size-2 shrink-0 rounded-full bg-navy-600" aria-hidden="true" />
                           ) : null}
-                          <h3 className={`break-words text-base leading-snug ${n.isRead ? 'text-slate-700' : 'font-semibold text-navy-950'}`}>
-                            <Link to={`/notifikasi/${n.id}`} state={{ notif: n }} className="hover:text-navy-700 hover:underline">
-                              {!n.isRead ? <span className="sr-only">Belum dibaca: </span> : null}
-                              {n.judul}
-                            </Link>
+                          <h3 className={`break-words text-base leading-snug group-hover:text-navy-700 ${n.isRead ? 'text-slate-700' : 'font-semibold text-navy-950'}`}>
+                            {n.judul}
                           </h3>
                         </div>
                         <p className="mt-0.5 break-words text-sm leading-relaxed text-slate-600">{n.pesan}</p>
@@ -303,34 +327,27 @@ export default function NotifikasiPage() {
                           <time dateTime={n.createdAt} title={formatDate(n.createdAt, { dateStyle: 'full' })} className="text-slate-500">
                             {timeAgo(n.createdAt)}
                           </time>
-                          <Link
-                            to={`/notifikasi/${n.id}`}
-                            state={{ notif: n }}
-                            className="inline-flex items-center gap-0.5 font-semibold text-navy-700 hover:text-navy-900"
-                          >
-                            Lihat detail
-                            <ChevronRight className="size-3.5" aria-hidden="true" />
-                          </Link>
-                          {target ? (
-                            <Link
-                              to={target.to}
-                              onClick={() => markRead(n)}
-                              className="inline-flex items-center gap-1 font-semibold text-navy-700 hover:text-navy-900"
-                            >
-                              {target.label}
-                              <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                            </Link>
-                          ) : null}
                           {!n.isRead ? (
-                            <button type="button" onClick={() => markRead(n)} className="font-semibold text-slate-600 hover:text-navy-900">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                markRead(n)
+                              }}
+                              className="font-semibold text-slate-600 hover:text-navy-900"
+                            >
                               Tandai dibaca
                             </button>
                           ) : null}
                         </div>
                       </div>
+                      <ChevronRight className="size-5 shrink-0 self-center text-slate-300 transition-colors group-hover:text-navy-600" aria-hidden="true" />
                       <button
                         type="button"
-                        onClick={() => remove(n)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          remove(n)
+                        }}
                         aria-label={`Hapus notifikasi: ${n.judul}`}
                         title="Hapus"
                         className="icon-btn shrink-0 self-start opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -344,7 +361,7 @@ export default function NotifikasiPage() {
             </section>
           ))}
 
-          {!kategori && items.length < total ? (
+          {items.length < total ? (
             <div className="flex flex-col items-center gap-2">
               <button type="button" onClick={loadMore} disabled={loadingMore} className="btn btn-secondary">
                 {loadingMore ? 'Memuat...' : 'Muat lebih banyak'}

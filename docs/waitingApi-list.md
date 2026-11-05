@@ -15,7 +15,6 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-56 | Notifikasi: filter Kategori, label "dari", jumlah per kategori | Item `GET /notifications` + `kategori` & `pengirim {id,name,fullName}` (null = sistem); filter `?kategori=` (meta.total sesuai filter); `GET /notifications/ringkasan` → `{ belumDibaca, perKategori: { k: { total, belumDibaca } } }` (`new-api.md` bagian 31) | Hapus pemuatan 500 + saring di peramban; `pengirimFor` jadi cadangan bila `pengirim` null. |
 | — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
@@ -24,6 +23,7 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 
 | ID | Disambungkan di |
 |---|---|
+| W-56 | Notifikasi: filter Kategori dikirim ke server (`?kategori=`, paginasi normal), lencana belum dibaca per kategori dari `GET /notifications/ringkasan`, label "dari" = `pengirim` (cadangan `pengirimFor`); baris diklik → Detail Notifikasi (tombol halaman terkait ada di detail) |
 | W-54 | Form Penilaian: nilai awal dari `myReview`, Simpan/Selesaikan mengirim `skor[]` + `danaDisetujui` (proposal; terkunci setelah diputuskan); `KartuPenilaian` & `ReviewList` (Ketua/pengusul) menampilkan rata-rata, kelayakan, skor per komponen, dana; `utils/danaKegiatan.js` memakai `danaDisetujui` kegiatan; dialog Tugaskan proposal = satu reviewer |
 | W-48 | Halaman Terkirim: **Cek status** → `POST /auth/register/status` (email lengkap dari state navigasi atau diketik); 409 `code` sudah ditangani sejak awal |
 | W-42 | Cetak Dokumen: konfigurasi 4 dokumen dimuat dari & disimpan ke `/cetak/konfigurasi/:dokumen` (localStorage = cache); Surat Tugas: cetak = `POST /surat-tugas` (nomor otomatis) + arsip per kegiatan dengan Cetak ulang |
@@ -285,15 +285,6 @@ singkat), total & rata-rata (≥ 4,0 layak lanjut, 3,0–3,9 layak dengan revisi
 (≤ dana diusulkan; ditolak → Rp 0). Saat ini server hanya menyimpan `catatan` + `rekomendasi`; skor, catatan singkat & dana disetujui
 disimpan sebagai draf `localStorage` (`formReview:<userId>:<tipe>:<id>`, `utils/rubrikReview.js`) — hanya di peramban reviewer itu dan
 tidak terlihat Ketua. Kolom lama `nilaiRelevansi/Metodologi/Anggaran/Luaran` tidak dipakai form baru.
-
-Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
-
-## Kategori & pengirim notifikasi (`/notifikasi`, lonceng)
-
-Notifikasi kini punya filter **Kategori** di frontend (`utils/notifikasi.js` `KATEGORI_NOTIF`): Kegiatan (pengusul: diajukan/diunggah),
-Keputusan LPPM (disetujui/ditolak/revisi), Review (penugasan & hasil review), Admin & sistem (hapus dokumen/periode, reset password,
-lainnya). Kategori & "dari" diturunkan dari `type` karena backend tidak menyimpannya; saat kategori dipilih, frontend memuat hingga
-500 notifikasi terbaru lalu menyaring di peramban (paginasi tidak tersedia untuk kategori).
 
 Semua kebutuhan API di bagian ini sudah tersedia (lihat "API sudah tersedia" di atas).
 

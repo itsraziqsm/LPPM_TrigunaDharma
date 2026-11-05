@@ -588,13 +588,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   judul/"Lihat detail" di `/notifikasi`; notifikasi dari state navigasi atau `GET /notifications` (tanpa endpoint
   detail, dicari ≤ 5 × 100), ditandai dibaca saat dibuka; isi: ikon + label jenis, judul, pesan, tombol halaman
   terkait (`targetFor`), kartu data terkait (proposal/laporan/periode via `GET /proposals|laporan|periode/:id`:
-  judul, status, pengusul, periode, tanggal, catatan revisi), panel Informasi (Dari = `pengirimFor`, karena backend
-  tidak menyimpan pengirim; tanggal & waktu WIB), Hapus. Helper bersama di `src/utils/notifikasi.js`
+  judul, status, pengusul, periode, tanggal, catatan revisi), panel Informasi (Kategori; Dari = `pengirim` dari backend W-56, cadangan `pengirimFor`; tanggal & waktu WIB), Hapus. Helper bersama di `src/utils/notifikasi.js`
   (`TYPE_META`, `targetFor`, `pengirimFor`).
 - `/notifikasi` (`NotifikasiPage.jsx`): daftar per rentang waktu, filter Semua/Belum dibaca + **Kategori** menurut pengirim/jenis kegiatan
-  (`utils/notifikasi.js` `KATEGORI_NOTIF`/`kategoriNotif`: Kegiatan · Keputusan LPPM · Review · Admin & sistem; kategori dipilih → hingga 500 terbaru
-  dimuat lalu disaring di peramban, ApiPending W-56), tiap item + label kategori & "dari <pengirim>" (`pengirimFor`; lonceng & detail ikut menampilkan kategori),
-  tandai dibaca/semua, hapus, muat lebih banyak, tautan ke halaman terkait sesuai peran
+  (`utils/notifikasi.js` `KATEGORI_NOTIF`/`kategoriNotif` memakai field `kategori`: Kegiatan · Keputusan LPPM · Review · Admin & sistem; filter dikirim ke server
+  `?kategori=` (W-56, paginasi normal), lencana belum dibaca per kategori dari `GET /notifications/ringkasan`), tiap item + label kategori & "dari <pengirim>"
+  (`pengirim` server, cadangan `pengirimFor`; lonceng & detail ikut menampilkan kategori); **seluruh baris diklik/Enter → Detail Notifikasi** (tombol halaman
+  terkait mis. "Buka kegiatan" hanya ada di detail), tandai dibaca (baris), hapus, muat lebih banyak
   (`refType` `laporan` belum punya halaman). Dibuka dari "Lihat semua notifikasi" di lonceng.
   Lonceng & halaman disinkronkan lewat `src/utils/notificationEvents.js`; jumlah belum dibaca
   diambil dari `GET /notifications?onlyUnread=true` → `meta.total`.

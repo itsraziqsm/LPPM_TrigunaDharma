@@ -18,8 +18,7 @@ import { timeAgo } from './dashboard/format'
 // Notifikasi diambil dari state navigasi atau GET /notifications (tidak ada
 // endpoint detail; dicari sampai 5 halaman × 100). Saat dibuka ditandai dibaca.
 // Data terkait dimuat sesuai refType: proposal (GET /proposals/:id), laporan
-// (GET /laporan/:id), periode (GET /periode/:id). "Dari" = pihak pemicu (lihat
-// pengirimFor; backend tidak menyimpan pengirim).
+// (GET /laporan/:id), periode (GET /periode/:id). "Dari" = `pengirim` dari backend (W-56), cadangan pengirimFor.
 // ---------------------------------------------------------------------------
 
 const tanggalPanjang = (v) =>
@@ -253,7 +252,7 @@ export default function NotifikasiDetailPage() {
             <h2 className="text-base font-semibold text-navy-950">Informasi</h2>
             <dl className="mt-4 space-y-4">
               <Row icon={UserRound} label="Dari">
-                {relatedState === 'loading' && ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'].includes(notif.type) ? '…' : pengirim}
+                {!notif.pengirim && relatedState === 'loading' && ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'].includes(notif.type) ? '…' : pengirim}
               </Row>
               <Row icon={Tags} label="Kategori">{kategoriNotif(notif).label}</Row>
               <Row icon={CalendarDays} label="Tanggal">{tanggalPanjang(notif.createdAt)}</Row>

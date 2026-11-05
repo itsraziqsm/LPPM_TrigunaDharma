@@ -35,7 +35,8 @@ export const TYPE_META = {
   password_direset: { icon: KeyRound, tone: 'bg-amber-50 text-amber-700', label: 'Password direset' },
 }
 
-// Kategori notifikasi menurut pengirim & jenis kegiatannya (backend belum menyimpan kategori/pengirim — W-56):
+// Kategori notifikasi menurut pengirim & jenis kegiatannya — field `kategori` dari backend (W-56); notifikasi dari
+// backend lama tanpa field itu diturunkan dari `type` dengan pemetaan yang sama:
 //   kegiatan  = aktivitas pengusul (proposal/laporan diajukan, laporan diunggah)
 //   keputusan = keputusan LPPM (Ketua/Admin) atas proposal & laporan
 //   review    = penugasan & hasil review (reviewer)
@@ -46,7 +47,8 @@ export const KATEGORI_NOTIF = [
   { key: 'review', label: 'Review', types: ['reviewer_ditugaskan', 'review_selesai'] },
   { key: 'admin', label: 'Admin & sistem', types: [] },
 ]
-export const kategoriNotif = (n) => KATEGORI_NOTIF.find((k) => k.types.includes(n?.type)) || KATEGORI_NOTIF[3]
+export const kategoriNotif = (n) =>
+  KATEGORI_NOTIF.find((k) => k.key === n?.kategori) || KATEGORI_NOTIF.find((k) => k.types.includes(n?.type)) || KATEGORI_NOTIF[3]
 export const DEFAULT_META = { icon: Bell, tone: 'bg-slate-100 text-slate-600', label: 'Notifikasi' }
 
 export function getRoleNames(roles) {
@@ -55,9 +57,10 @@ export function getRoleNames(roles) {
   return roles.map((r) => r.role?.name || r.name || '')
 }
 
-// Pihak yang memicu notifikasi (backend tidak menyimpan pengirim): pengusul untuk
-// pengajuan, reviewer untuk review selesai, selain itu pengelola LPPM.
+// Pihak yang memicu notifikasi: `pengirim` dari backend (W-56); bila null (sistem/data lama) ditebak dari jenisnya —
+// pengusul untuk pengajuan, reviewer untuk review selesai, selain itu pengelola LPPM.
 export function pengirimFor(n, related) {
+  if (n?.pengirim) return n.pengirim.fullName || n.pengirim.name || 'Pengguna'
   const pengusul = related?.pengusul?.fullName || related?.pengusul?.name
   if (['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'].includes(n.type)) return pengusul || 'Pengusul kegiatan'
   if (n.type === 'review_selesai') return 'Reviewer'
