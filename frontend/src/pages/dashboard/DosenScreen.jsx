@@ -211,7 +211,7 @@ function ProfileMetrics({ penelitian, pengabdian, kepercayaan }) {
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
       <SectionTitle id="profil-capaian">Statistik Dosen</SectionTitle>
-      <ul className="grid grid-cols-2 items-start gap-3 sm:gap-4 xl:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         <MetricCard label="Penelitian" value={penelitian} icon={ICONS.penelitian} hint="Proposal disetujui" />
         <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
         <MetricCard
@@ -219,11 +219,6 @@ function ProfileMetrics({ penelitian, pengabdian, kepercayaan }) {
           icon={ICONS.kepercayaan}
           className="max-xl:col-span-2"
           value={kepercayaan ? (nilai == null ? 'Belum ada data' : `${Number(nilai).toFixed(1)}/${skala}.0`) : null}
-          hint={
-            kepercayaan?.komponen
-              ? `${kepercayaan.komponen.filter((k) => k.nilai != null).length} dari ${kepercayaan.komponen.length} komponen terhitung`
-              : null
-          }
         />
       </ul>
     </section>
