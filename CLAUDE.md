@@ -364,7 +364,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   dilanjutkan", baris draft/revisi disorot + tombol "Lanjutkan" di sel judul; panel cari standar `PanelCari`
   (cari · Filter status · Cari)) tab Proposal
   (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`); tombol sekunder
-  **Usulkan Proposal Baru** & **Kirim Laporan Baru** ada **di atas** Riwayat (di bawah kartu ringkasan). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). **Tanpa tombol Detail**:
+  **Usulkan Proposal Baru** & **Kirim Laporan Baru** ada **di atas** Riwayat (di bawah kartu ringkasan). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
   dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan
   lama) dialihkan ke Detail Kegiatan.

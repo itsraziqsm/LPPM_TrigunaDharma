@@ -63,19 +63,24 @@ function TahapanBadge({ tahapan }) {
 }
 
 // Proposal milik dosen lain tempat user menjadi anggota (undangan diterima):
-// GET /dosen/proposals/as-member. Detail lewat GET /proposals/:id (readOnly).
+// GET /dosen/proposals/as-member (+ search, status di server). Detail lewat GET /proposals/:id (readOnly).
+// Panel cari standar (PanelCari): cari judul/abstrak · Filter status · Cari.
 function MemberSection({ jenis, label, userId }) {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [state, setState] = useState('loading')
+  const [cari, setCari] = useState('')
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('')
+  const adaFilter = Boolean(query || status)
 
   useEffect(() => {
     let alive = true
     setState('loading')
     proposalDosenApi
-      .getAsMember({ jenis, page, limit: LIMIT })
+      .getAsMember({ jenis, page, limit: LIMIT, ...(query ? { search: query } : {}), ...(status ? { status } : {}) })
       .then((r) => {
         if (!alive) return
         setRows(r.data.data || [])
@@ -86,9 +91,12 @@ function MemberSection({ jenis, label, userId }) {
     return () => {
       alive = false
     }
-  }, [jenis, page])
+  }, [jenis, page, query, status])
 
   const pages = Math.max(1, Math.ceil(total / LIMIT))
+  const aktif = [
+    ...(status ? [{ key: 'status', label: `Status: ${STATUS_LABEL[status]}`, onRemove: () => (setStatus(''), setPage(1)) }] : []),
+  ]
 
   return (
     <KartuNavy
@@ -105,6 +113,34 @@ function MemberSection({ jenis, label, userId }) {
       }
       badge={state === 'loading' ? <IndikatorMemuat /> : `${total} ${label.toLowerCase()}`}
     >
+      <PanelCari
+        id="kegiatan-anggota"
+        bare
+        value={cari}
+        onChange={setCari}
+        onSubmit={() => {
+          setPage(1)
+          setQuery(cari.trim())
+        }}
+        placeholder={`Cari judul atau abstrak ${label.toLowerCase()}`}
+        aktif={aktif}
+        onReset={() => {
+          setCari('')
+          setQuery('')
+          setStatus('')
+          setPage(1)
+        }}
+      >
+        <PilihanFilter
+          label="Status"
+          value={status}
+          onChange={(v) => {
+            setStatus(v)
+            setPage(1)
+          }}
+          items={[['', 'Semua status'], ...STATUSES.map((st) => [st, STATUS_LABEL[st]])]}
+        />
+      </PanelCari>
       <AreaMemuat memuat={state === 'loading' && rows.length > 0} className="table-wrap">
         <table className="table table-tight">
           <thead>
@@ -135,7 +171,7 @@ function MemberSection({ jenis, label, userId }) {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-slate-500">
-                  Anda belum menjadi anggota {label.toLowerCase()} lain.
+                  {adaFilter ? `Tidak ada ${label.toLowerCase()} yang cocok dengan pencarian.` : `Anda belum menjadi anggota ${label.toLowerCase()} lain.`}
                 </td>
               </tr>
             ) : (
