@@ -253,6 +253,18 @@ export default function KegiatanPage({ jenis }) {
   const [counts, setCounts] = useState(null)
   const [countsFailed, setCountsFailed] = useState(false)
   const [laporanDiterima, setLaporanDiterima] = useState(null)
+  // Proposal disetujui yang belum punya laporan (GET /laporan/eligible) → lencana di tombol Kirim Laporan Baru.
+  const [siapLapor, setSiapLapor] = useState(0)
+  useEffect(() => {
+    let alive = true
+    laporanApi
+      .getEligible()
+      .then((r) => alive && setSiapLapor((r.data.data || []).filter((p) => !p.jenis || p.jenis === jenis).length))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [jenis])
   const [tipe, setTipe] = useState('proposal')
   const [rows, setRows] = useState([])
   // Tipe pemilik `rows` (tab lama tetap tampil pudar selama tab baru dimuat — tanpa kedip).
@@ -417,11 +429,26 @@ export default function KegiatanPage({ jenis }) {
           <CirclePlus className="size-5" aria-hidden="true" />
           Usulkan Proposal Baru
         </Link>
-        <Link to={`/kegiatan/${jenis}/laporan/baru`} className="btn btn-secondary h-12">
+        <Link
+          to={`/kegiatan/${jenis}/laporan/baru`}
+          className={`btn h-12 ${siapLapor > 0 ? 'btn-secondary border-brass-400 ring-2 ring-brass-300/50' : 'btn-secondary'}`}
+          title={siapLapor > 0 ? `${siapLapor} proposal disetujui siap dilanjutkan ke pelaporan` : undefined}
+        >
           <FileText className="size-5" aria-hidden="true" />
           Kirim Laporan Baru
+          {siapLapor > 0 ? (
+            <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-brass-400 px-1.5 py-0.5 text-[11px] font-bold leading-none text-navy-950">
+              {siapLapor}
+              <span className="sr-only"> proposal siap dilaporkan</span>
+            </span>
+          ) : null}
         </Link>
       </div>
+      {siapLapor > 0 ? (
+        <p className="-mt-3 text-right text-xs text-slate-500" role="status">
+          {siapLapor} {label.toLowerCase()} disetujui siap dilanjutkan ke pelaporan.
+        </p>
+      ) : null}
 
       <section
         aria-labelledby="riwayat-kegiatan"
