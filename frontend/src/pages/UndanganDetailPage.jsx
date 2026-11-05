@@ -14,6 +14,7 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL, UNDANGAN_COLOR } from './Propo
 import { Fields, Section } from './KegiatanDetailPage'
 import Breadcrumb from '../components/Breadcrumb'
 import { UNDANGAN_STATUS_COLOR, UNDANGAN_STATUS_LABEL, judulUndangan, tanggalPanjang } from './undanganConst'
+import IdentitasKegiatan from '../components/IdentitasKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail Undangan (/undangan/:id) — informasi kegiatan terkait undangan.
@@ -192,7 +193,7 @@ export default function UndanganDetailPage() {
         ) : null}
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
           <Section icon={FileText} title="Abstrak">
             <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{d.abstrak || '—'}</p>
@@ -262,7 +263,7 @@ export default function UndanganDetailPage() {
           </Section>
         </div>
 
-        <aside className="min-w-0 space-y-6">
+        <IdentitasKegiatan>
           <Section icon={Mail} title="Undangan">
             <Fields
               items={[
@@ -318,7 +319,7 @@ export default function UndanganDetailPage() {
               ))}
             </ul>
           </Section>
-        </aside>
+        </IdentitasKegiatan>
       </div>
     </div>
   )

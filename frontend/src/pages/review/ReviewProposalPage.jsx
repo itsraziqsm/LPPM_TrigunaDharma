@@ -13,6 +13,7 @@ import KartuPenilaian from './KartuPenilaian'
 import { tautanForm } from '../../utils/rubrikReview'
 import Breadcrumb from '../../components/Breadcrumb'
 import { cariTugasan } from './cariTugasan'
+import IdentitasKegiatan from '../../components/IdentitasKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail proposal mode reviewer (/proposals/detail/:id) — menggantikan modal "Form
@@ -110,7 +111,7 @@ export default function ReviewProposalPage() {
         </Link>
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
           <Section icon={FileText} title="Abstrak">
             <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{d.abstrak || '—'}</p>
@@ -170,7 +171,7 @@ export default function ReviewProposalPage() {
 
         </div>
 
-        <aside className="min-w-0 space-y-6">
+        <IdentitasKegiatan>
           <KartuPenilaian tipe="proposal" id={d.id} review={review} />
           <Section icon={FileText} title="Dokumen utama">
             {d.dokumenNama ? (
@@ -221,7 +222,7 @@ export default function ReviewProposalPage() {
               ]}
             />
           </Section>
-        </aside>
+        </IdentitasKegiatan>
       </div>
     </div>
   )

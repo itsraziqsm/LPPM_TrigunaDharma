@@ -12,6 +12,7 @@ import { danaFinal, danaSementara } from '../utils/danaKegiatan'
 import ApiPending from '../components/ApiPending'
 import { segarkanSiapLapor } from '../utils/siapLapor'
 import { confirmDialog } from '../utils/dialog'
+import IdentitasKegiatan from '../components/IdentitasKegiatan'
 
 // ---------------------------------------------------------------------------
 // Laporan kegiatan untuk pengusul (dosen/mahasiswa) — API /laporan (new-api.md).
@@ -313,7 +314,7 @@ function LaporanDetail({ id, jenis }) {
           </section>
         </div>
 
-        <aside className="space-y-6">
+        <IdentitasKegiatan dari="lg">
           <section className="card px-6 py-5">
             <h2 className="text-base font-semibold text-navy-950">Ringkasan</h2>
             <dl className="mt-3 space-y-2.5 text-sm">
@@ -383,7 +384,7 @@ function LaporanDetail({ id, jenis }) {
               </ul>
             </section>
           ) : null}
-        </aside>
+        </IdentitasKegiatan>
       </div>
     </div>
   )

@@ -648,3 +648,9 @@ textarea.sr-only {
   top: 0;
   left: 0;
 }
+
+/* Identitas kegiatan (components/IdentitasKegiatan.jsx): kolom kanan sticky yang bisa bergulir sendiri — bilah gulir tipis. */
+.identitas-kegiatan {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}

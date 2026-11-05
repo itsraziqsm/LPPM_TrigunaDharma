@@ -22,6 +22,7 @@ import useJejakMenu from '../hooks/useJejakMenu'
 import LuaranCapaian from './laporan/LuaranCapaian'
 import ApiPending from '../components/ApiPending'
 import { danaFinal, danaSementara } from '../utils/danaKegiatan'
+import IdentitasKegiatan from '../components/IdentitasKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail Proposal Kegiatan untuk Ketua LPPM / Admin (/proposals/detail/:id) — halaman,
@@ -220,7 +221,7 @@ export default function ProposalMasukDetailPage() {
         ) : null}
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-6">
           <Section icon={FileText} title="Abstrak">
             <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{d.abstrak || '—'}</p>
@@ -356,7 +357,7 @@ export default function ProposalMasukDetailPage() {
           )}
         </div>
 
-        <aside className="min-w-0 space-y-6">
+        <IdentitasKegiatan>
           <Section icon={FileText} title="Dokumen utama">
             {d.dokumenNama ? (
               <div className="space-y-3">
@@ -479,7 +480,7 @@ export default function ProposalMasukDetailPage() {
               ]}
             />
           </Section>
-        </aside>
+        </IdentitasKegiatan>
       </div>
     </div>
   )

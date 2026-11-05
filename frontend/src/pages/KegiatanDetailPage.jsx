@@ -30,6 +30,7 @@ import UserAvatar from '../components/UserAvatar'
 import { DokumenTab } from './ProposalDosen/DokumenTab'
 import ApiPending from '../components/ApiPending'
 import { danaFinal, danaSementara } from '../utils/danaKegiatan'
+import IdentitasKegiatan from '../components/IdentitasKegiatan'
 
 // ---------------------------------------------------------------------------
 // Detail Kegiatan (/kegiatan/:jenis/detail/:id) — halaman, bukan modal. Dipakai
@@ -314,7 +315,7 @@ export default function KegiatanDetailPage({ jenis }) {
         ) : null}
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         {/* Kolom utama */}
         <div className="min-w-0 space-y-6">
           <Section icon={FileText} title="Abstrak">
@@ -395,7 +396,7 @@ export default function KegiatanDetailPage({ jenis }) {
         </div>
 
         {/* Kolom samping */}
-        <aside className="min-w-0 space-y-6">
+        <IdentitasKegiatan>
           <Section icon={Users} title={`Tim (${anggota.length + 1} orang)`}>
             <ul className="space-y-3">
               <li className="flex items-start justify-between gap-3">
@@ -453,7 +454,7 @@ export default function KegiatanDetailPage({ jenis }) {
               ]}
             />
           </Section>
-        </aside>
+        </IdentitasKegiatan>
       </div>
     </div>
   )
