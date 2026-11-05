@@ -10,6 +10,7 @@ import LuaranCapaian from './laporan/LuaranCapaian'
 import { rupiah, tanggal } from './laporan/format'
 import { danaFinal, danaSementara } from '../utils/danaKegiatan'
 import ApiPending from '../components/ApiPending'
+import { segarkanSiapLapor } from '../utils/siapLapor'
 import { confirmDialog } from '../utils/dialog'
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ function LaporanBaru({ jenis }) {
     setMsg(null)
     try {
       const r = await laporanApi.create({ proposalId: p.id })
+      segarkanSiapLapor()
       navigate(`/kegiatan/${jenis}/laporan/${r.data.data.id}/isi`, { replace: true })
     } catch (e) {
       setMsg({ type: 'error', text: errorText(e, 'Laporan gagal dibuat.') })

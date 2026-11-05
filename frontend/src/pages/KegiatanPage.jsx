@@ -11,6 +11,7 @@ import { JENIS_LABEL, STATUS_COLOR, STATUS_LABEL } from './ProposalDosen/constan
 import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { barisKlik } from '../utils/barisKlik'
 import KartuNavy from '../components/KartuNavy'
+import { EVENT_SIAP_LAPOR, hitungSiapLapor } from '../utils/siapLapor'
 import { StatusCard } from '../components/KepalaStatus'
 
 // ---------------------------------------------------------------------------
@@ -257,12 +258,15 @@ export default function KegiatanPage({ jenis }) {
   const [siapLapor, setSiapLapor] = useState(0)
   useEffect(() => {
     let alive = true
-    laporanApi
-      .getEligible()
-      .then((r) => alive && setSiapLapor((r.data.data || []).filter((p) => !p.jenis || p.jenis === jenis).length))
-      .catch(() => {})
+    const muat = () =>
+      hitungSiapLapor()
+        .then((h) => alive && setSiapLapor(h[jenis] || 0))
+        .catch(() => {})
+    muat()
+    window.addEventListener(EVENT_SIAP_LAPOR, muat)
     return () => {
       alive = false
+      window.removeEventListener(EVENT_SIAP_LAPOR, muat)
     }
   }, [jenis])
   const [tipe, setTipe] = useState('proposal')

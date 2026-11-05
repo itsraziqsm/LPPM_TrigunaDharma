@@ -10,6 +10,7 @@ import LogoLppm from './LogoLppm'
 import ConfirmDialog from './ConfirmDialog'
 import { Archive, Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { EVENT_TUGASAN, hitungTugasanReview } from '../utils/tugasanReview'
+import { EVENT_SIAP_LAPOR, hitungSiapLapor } from '../utils/siapLapor'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -106,8 +107,8 @@ const DOSEN_NAV_ITEMS = [
     ),
     children: [
       // Ikon anak dipakai di rail ciut (tampil sebagai ikon terpisah).
-      { path: '/kegiatan/penelitian', label: 'Penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
-      { path: '/kegiatan/pengabdian', label: 'Pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/kegiatan/penelitian', label: 'Penelitian', badge: 'lapor-penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/kegiatan/pengabdian', label: 'Pengabdian', badge: 'lapor-pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
   {
@@ -181,7 +182,20 @@ const daunMenu = (items) => items.flatMap((it) => (it.children ? daunMenu(it.chi
 
 // Grup menu bertingkat (rekursif, hingga 3 tingkat): tingkat 1 dengan ikon, tingkat
 // berikutnya hanya label dengan garis kiri bertingkat.
-function NavGroup({ item, onNavigate, depth = 0 }) {
+// Lencana angka menu (undangan, review, siap lapor). `lencana(item)` → jumlah.
+function Lencana({ jumlah, title }) {
+  if (!(jumlah > 0)) return null
+  return (
+    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail" title={title}>
+      {jumlah}
+    </span>
+  )
+}
+
+const judulLencana = (item, n) =>
+  item.badge === 'review' ? `${n} review belum selesai` : String(item.badge || '').startsWith('lapor') ? `${n} proposal disetujui siap dilaporkan` : `${n} undangan menunggu`
+
+function NavGroup({ item, onNavigate, depth = 0, lencana = () => 0 }) {
   const { pathname } = useLocation()
   const childActive = daunMenu(item.children).some((c) => pathname.startsWith(c.path))
   // Pilihan manual berlaku di halaman tempat ia dibuat; saat pindah halaman
@@ -204,16 +218,21 @@ function NavGroup({ item, onNavigate, depth = 0 }) {
       >
         {depth === 0 ? <span className="shrink-0">{item.icon}</span> : null}
         <span className="flex-1 truncate text-left">{item.label}</span>
+        {/* Grup tertutup: jumlah lencana anak-anaknya tampil di kepala grup. */}
+        {!expanded ? (
+          <Lencana jumlah={daunMenu(item.children).reduce((n, c) => n + (lencana(c) || 0), 0)} title="Ada yang perlu ditindaklanjuti" />
+        ) : null}
         <ChevronRight className={`size-4 shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`} strokeWidth={1.8} aria-hidden="true" />
       </button>
       <Collapse open={expanded} id={listId}>
         <div className={`${depth === 0 ? 'ml-[1.3rem]' : 'ml-3'} flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2`}>
           {item.children.map((child) =>
             child.children ? (
-              <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} />
+              <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} lencana={lencana} />
             ) : (
               <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
                 <span className="flex-1 truncate">{child.label}</span>
+                <Lencana jumlah={lencana(child)} title={judulLencana(child, lencana(child))} />
               </NavLink>
             ),
           )}
@@ -361,8 +380,33 @@ export default function Sidebar() {
       window.removeEventListener(EVENT_TUGASAN, hitung)
     }
   }, [isReviewer])
-  // badge: true = undangan menunggu; 'review' = review belum selesai.
-  const jumlahLencana = (item) => (item.badge === 'review' ? reviewBelum : item.badge ? pendingCount : 0)
+  // Proposal disetujui yang belum punya laporan, per jenis (dosen) → lencana Kegiatan › Penelitian/Pengabdian.
+  const [siapLapor, setSiapLapor] = useState({ penelitian: 0, pengabdian: 0 })
+  useEffect(() => {
+    if (!isDosen) return undefined
+    let alive = true
+    const hitung = () =>
+      hitungSiapLapor()
+        .then((h) => alive && setSiapLapor(h))
+        .catch(() => {})
+    hitung()
+    window.addEventListener(EVENT_SIAP_LAPOR, hitung)
+    return () => {
+      alive = false
+      window.removeEventListener(EVENT_SIAP_LAPOR, hitung)
+    }
+  }, [isDosen])
+  // badge: true = undangan menunggu; 'review' = review belum selesai; 'lapor-<jenis>' = siap dilaporkan.
+  const jumlahLencana = (item) =>
+    item.badge === 'review'
+      ? reviewBelum
+      : item.badge === 'lapor-penelitian'
+        ? siapLapor.penelitian
+        : item.badge === 'lapor-pengabdian'
+          ? siapLapor.pengabdian
+          : item.badge
+            ? pendingCount
+            : 0
 
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -465,7 +509,7 @@ export default function Sidebar() {
           <div ref={setMenuEl} className="relative flex flex-col gap-0.5">
             <SorotNav wadah={menuEl} kunci={`${pathname}|${collapsed}|${mobileOpen}`} />
             {allNavItems.map((item) => item.children ? (
-              <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} />
+              <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} lencana={jumlahLencana} />
             ) : (
               <NavLink
                 key={item.path}
@@ -484,7 +528,7 @@ export default function Sidebar() {
                 {jumlahLencana(item) > 0 && (
                   <span
                     className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail"
-                    title={item.badge === 'review' ? `${jumlahLencana(item)} review belum selesai` : `${jumlahLencana(item)} undangan menunggu`}
+                    title={judulLencana(item, jumlahLencana(item))}
                   >
                     {jumlahLencana(item)}
                   </span>

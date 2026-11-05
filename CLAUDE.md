@@ -365,7 +365,10 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   (cari · Filter status · Cari)) tab Proposal
   (`/dosen/proposals`) / Laporan (`/laporan/my`, `src/api/laporan.js`); tombol sekunder
   **Usulkan Proposal Baru** & **Kirim Laporan Baru** ada **di atas** Riwayat (di bawah kartu ringkasan); **Kirim Laporan Baru** diberi lencana
-  jumlah proposal disetujui yang belum punya laporan (`GET /laporan/eligible`, disaring per jenis; tombol berbingkai brass + teks "N … disetujui siap dilanjutkan ke pelaporan"). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
+  jumlah proposal disetujui yang belum punya laporan (`GET /laporan/eligible`, disaring per jenis; tombol berbingkai brass + teks "N … disetujui siap dilanjutkan ke pelaporan").
+  Hitungan bersama `utils/siapLapor.js` (`hitungSiapLapor`, event `segarkanSiapLapor()` dipanggil setelah laporan dibuat) juga dipakai **lencana sidebar**
+  Kegiatan › Penelitian/Pengabdian (`badge: 'lapor-<jenis>'`; grup tertutup menampilkan total di kepala grup — `NavGroup` prop `lencana`; rail ciut = titik)
+  dan item **Perlu perhatian** Beranda dosen "N proposal disetujui siap dilaporkan" → Kirim laporan (`adapters/dosen.js`, `siapLapor`). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
   dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan
   lama) dialihkan ke Detail Kegiatan.

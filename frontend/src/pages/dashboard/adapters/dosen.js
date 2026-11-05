@@ -8,6 +8,7 @@ import {
   sortAttention,
   statusMeta,
 } from '../format'
+import { hitungSiapLapor } from '../../../utils/siapLapor'
 import {
   PROFILE_SHORTCUT,
   approvalHint,
@@ -49,6 +50,7 @@ export async function load({ withReviewerDigest }) {
     pengabdian: req('Jumlah pengabdian', () => countDisetujui('pengabdian')),
     luaran: req('Statistik luaran', () => luaranApi.stats().then((r) => r.data.data)),
     kepercayaan: req('Nilai kepercayaan', () => proposalDosenApi.getKepercayaan().then((r) => r.data.data)),
+    siapLapor: req('Proposal siap dilaporkan', hitungSiapLapor),
     ...(withReviewerDigest ? { tugasan: req('Tugasan review', loadTugasan) } : {}),
   })
 
@@ -107,6 +109,21 @@ export async function load({ withReviewerDigest }) {
       detail: 'Belum diajukan ke LPPM.',
       to: `/kegiatan/${firstDraft?.jenis || 'penelitian'}?status=draft`,
       cta: 'Lanjutkan',
+    })
+  }
+
+  // Proposal disetujui yang belum punya laporan → lanjut ke pelaporan.
+  const siap = data.siapLapor
+  if (siap?.total > 0) {
+    const jenisUtama = siap.penelitian >= siap.pengabdian ? 'penelitian' : 'pengabdian'
+    const rinci = [siap.penelitian ? `${siap.penelitian} penelitian` : null, siap.pengabdian ? `${siap.pengabdian} pengabdian` : null].filter(Boolean).join(' dan ')
+    attention.push({
+      key: 'siap-lapor',
+      tone: 'warning',
+      title: `${siap.total} proposal disetujui siap dilaporkan`,
+      detail: `${rinci} sudah disetujui dan belum punya laporan.`,
+      to: `/kegiatan/${jenisUtama}/laporan/baru`,
+      cta: 'Kirim laporan',
     })
   }
 
