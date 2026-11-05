@@ -123,8 +123,13 @@ Data yang **sudah** tersambung ke API yang ada:
 | Cari anggota (+ kontak) | `GET /users/search` |
 | Rumpun Ilmu, Bidang, Kata Kunci | field `rumpunIlmu`, `bidang`, `kataKunci`; pilihan dari `GET /master/(rumpun-ilmu\|bidang)` |
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
+| **Luaran wajib** jurnal & poster: item bawaan terkunci (tidak bisa dihapus/diganti jenis), ikut tersimpan lewat `POST /luaran` | `utils/luaranWajib.js` (aturan di frontend) |
 
-Data yang **menunggu API**: tidak ada lagi.
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-57 | Usulan › Dokumen › **Target Luaran wajib** (jurnal & poster) | Aturan "wajib" ditegakkan & diumumkan server, bukan hanya di frontend | (1) `GET /luaran/jenis` + field `wajib: true` untuk `jurnal` & `poster` (frontend membaca ini menggantikan `LUARAN_WAJIB`); (2) submit proposal (`/dosen/proposals/:id/submit` & `/proposals/:id/submit`) → **400** `"Target luaran wajib: artikel jurnal dan poster"` bila belum ada item `LuaranKegiatan` berjenis `jurnal` **dan** `poster`; (3) `DELETE /luaran/:id` → **409** bila menghapus item jurnal/poster terakhir pada proposal draft/revisi | Keputusan kampus: luaran jurnal & poster kini **wajib** (sebelumnya hanya prioritas, new-api.md §25 "bukan wajib"). Draft boleh belum lengkap. Proposal lama tanpa jurnal/poster: frontend menambahkan item bawaan saat dibuka dan menyimpannya saat proposal disimpan. |
 
 ## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
 

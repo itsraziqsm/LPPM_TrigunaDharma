@@ -215,7 +215,8 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   keterangan, tercapaiAt, bukti URL/file) saat proposal disetujui dan laporan belum diajukan.
   Dapat diklaim = tercapai + laporan disetujui; jurnal = dapat diklaim berjenis jurnal.
   Jenis: jurnal, **poster**, prosiding, hki, buku, produk, media_massa, lainnya; **jurnal & poster = prioritas**
-  (ditampilkan paling atas di `/luaran/jenis`, `/master/luaran` (+ `prioritas`), daftar admin), tidak wajib.
+  (ditampilkan paling atas di `/luaran/jenis`, `/master/luaran` (+ `prioritas`), daftar admin); backend belum mewajibkan —
+  keputusan kampus kini **wajib** di Usulan (frontend), penegakan server diminta di W-57.
   (Menu `/luaran` di frontend = pencairan dana, hal lain, menunggu kampus.)
 - **Nilai kepercayaan** = 5 × rata-rata komponen yang ada datanya (persetujuan proposal,
   persetujuan laporan dari proposal disetujui yang periodenya selesai/laporannya diputuskan,
@@ -490,7 +491,9 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   Anggota (dosen & mahasiswa dipisah, `AnggotaSearch fixedRole`) → **Mitra** (nama → field
   `mitra`, wajib; jenis dari `GET /master/jenis-mitra`, alamat, kontak, pernyataan kebutuhan →
   `mitraJenis/Alamat/Kontak/Kebutuhan`) → Dokumen → Preview. Penelitian mengisi `skema` di Identitas. Langkah Dokumen punya editor **Target Luaran**
-  (item `/luaran`: jenis dari `GET /luaran/jenis` (cadangan `LUARAN_JENIS`), **prioritas jurnal & poster** ditandai, target, tanggal target) yang disinkronkan
+  (item `/luaran`: jenis dari `GET /luaran/jenis` (cadangan `LUARAN_JENIS`), target, tanggal target; **luaran wajib jurnal & poster** (`utils/luaranWajib.js`):
+  usulan baru langsung berisi dua item bawaan bertarget nama master (penelitian/pengabdian), proposal lama tanpa keduanya dilengkapi saat dibuka,
+  item wajib berlencana "Wajib", jenis terkunci & tidak bisa dihapus, selalu paling atas, validasi Simpan menolak bila kurang; server belum menegakkan → W-57) yang disinkronkan
   (`syncLuaran`: hapus/ubah/tambah) setelah proposal tersimpan; field teks `luaran` diisi
   ringkasan item; pilihan cepat dari `GET /master/luaran`. Identitas: Rumpun Ilmu & Bidang
   (dropdown dari `src/api/master.js`), Dokumen: Kata Kunci (koma → array `kataKunci`). Tabel
@@ -499,7 +502,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   anggota**: `AnggotaSearch` prop `ketuaId` → hasil nonaktif "Ketua kegiatan", `addAnggota` menolak. **Aturan tim** (anggota selain ketua, `src/utils/aturanTim.js`):
   penelitian dosen 0–5 + mahasiswa ≥ 1, pengabdian dosen 1–5 + mahasiswa ≥ 1 (sama dengan backend) — panel
   `KomposisiTim` di langkah Anggota, blokir Berikutnya/Simpan & tolak tambah melebihi batas (draf tidak
-  terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1) kecuali **Target Luaran**; Isi Laporan:
+  terkena). Semua isian langkah Dokumen wajib (Kata Kunci ≥ 1); **Target Luaran** wajib memuat jurnal & poster (target lain opsional); Isi Laporan:
   semua wajib termasuk Realisasi Anggaran (Link Jurnal/Video = bagian luaran, opsional). Mengubah isian (Usulan & Isi Laporan) menghapus pesan galat server lama (mis. rumpun ilmu tidak tersedia yang sudah
   diperbaiki). Jenis kegiatan tidak bisa diubah (mengikuti
   route/menu Kegiatan; mode ubah memakai `jenis` proposal). Tombol **Simpan draf** di tengah

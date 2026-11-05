@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDrafForm from '../hooks/useDrafForm'
+import { kunciWajib, lengkapiWajib, wajibKurang } from '../utils/luaranWajib'
 import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -108,12 +109,13 @@ function validate(form, file, existingDoc, luaranItems, anggota) {
   else if (abstrak.length < 100) e.abstrak = `Abstrak minimal 100 karakter (sekarang ${abstrak.length}).`
   else if (abstrak.length > 2000) e.abstrak = 'Abstrak maksimal 2000 karakter.'
   if (form.jenis === 'pengabdian' && !form.mitra.trim()) e.mitra = 'Nama mitra wajib diisi.'
-  // Semua isian Dokumen wajib, kecuali Target Luaran.
+  // Semua isian Dokumen wajib; Target Luaran wajib memuat jurnal & poster (utils/luaranWajib.js).
   const kkError = parseKataKunci(form.kataKunci).length === 0 ? 'Isi minimal satu kata kunci.' : kataKunciError(form.kataKunci)
   if (kkError) e.kataKunci = kkError
   const tim = pelanggaranTim(form.jenis, anggota)
   if (tim.length) e.anggota = `Komposisi tim belum sesuai: ${tim.join(', ')}.`
   if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
+  else if (wajibKurang(luaranItems).length) e.luaran = 'Target luaran wajib: artikel jurnal dan poster.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
     else if (!ALLOWED_MIME.includes(file.type)) e.dokumen = 'Format file harus PDF atau DOCX.'
@@ -315,7 +317,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         }),
       )
     })
-  const [luaranItems, setLuaranItems] = useState([])
+  // Usulan baru langsung berisi luaran wajib (jurnal & poster) sebagai target bawaan.
+  const [luaranItems, setLuaranItems] = useState(() => (isEdit ? [] : lengkapiWajib([], jenisRoute || 'penelitian', newLuaran)))
   const [luaranOrig, setLuaranOrig] = useState([])
   const [file, setFile] = useState(null)
   const [existingDoc, setExistingDoc] = useState(null)
@@ -347,7 +350,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     (v) => {
       if (v.form) setForm((f) => ({ ...f, ...v.form }))
       if (Array.isArray(v.anggota)) setAnggota(v.anggota)
-      if (Array.isArray(v.luaranItems)) setLuaranItems(v.luaranItems)
+      if (Array.isArray(v.luaranItems)) setLuaranItems(lengkapiWajib(v.luaranItems, jenisRoute || 'penelitian', newLuaran))
       if (Number.isInteger(v.maxReached)) setMaxReached((m) => Math.max(m, v.maxReached))
       if (Number.isInteger(v.step)) setStep(v.step)
     },
@@ -451,7 +454,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             target: l.target || '',
             targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
           }))
-          setLuaranItems(items)
+          // Proposal lama tanpa jurnal/poster: item wajib ditambahkan (tersimpan saat proposal disimpan).
+          setLuaranItems(lengkapiWajib(items, p.jenis || jenisRoute || 'penelitian', newLuaran))
           setLuaranOrig(items)
           setLoadState('ready')
         })
@@ -497,6 +501,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   }
   const setPeran = (id, peran) => setAnggota((prev) => prev.map((x) => (x.id === id ? { ...x, peran } : x)))
   const removeAnggota = (id) => setAnggota((prev) => prev.filter((x) => x.id !== id))
+  const wajibKeys = useMemo(() => kunciWajib(luaranItems), [luaranItems])
   const setLuaran = (key, field, value) => setLuaranItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
   const steps = stepsFor(form.jenis)
   const current = steps[Math.min(step, steps.length - 1)].key
@@ -636,7 +641,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
         }))
         // Target yang belum valid tetap ada di formulir.
-        const sisa = [...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)]
+        const sisa = lengkapiWajib([...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)], form.jenis, newLuaran)
         setLuaranItems(sisa)
         setLuaranOrig(saved)
         draf.bersihkan({ ...isianDraf, luaranItems: sisa })
@@ -1064,18 +1069,20 @@ export default function UsulanPage({ jenis: jenisRoute }) {
             <fieldset>
               <legend className="label">Target Luaran</legend>
               <p className="-mt-0.5 mb-3 text-xs text-slate-500">
-                Opsional. Capaian tiap target diisi saat menyusun laporan dan dihitung sebagai luaran yang dapat diklaim.
-                Luaran <strong className="font-semibold text-slate-700">prioritas: jurnal &amp; poster</strong> — disarankan minimal satu.
+                Luaran <strong className="font-semibold text-slate-700">wajib: artikel jurnal &amp; poster</strong> sudah disiapkan dan tidak bisa dihapus — sesuaikan
+                target & tanggalnya. Boleh menambah target lain. Capaian tiap target diisi saat menyusun laporan dan dihitung sebagai luaran yang dapat diklaim.
               </p>
               {luaranItems.length > 0 ? (
                 <ul className="space-y-3">
-                  {luaranItems.map((item, i) => (
+                  {luaranItems.map((item, i) => {
+                    const wajib = wajibKeys.has(item.key)
+                    return (
                     <li key={item.key} className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_10rem_auto] sm:items-end">
                       <div>
                         <label htmlFor={`ul-jenis-${item.key}`} className="label">
-                          Jenis
+                          Jenis{wajib ? <span className="badge badge-info ml-1.5 align-middle">Wajib</span> : null}
                         </label>
-                        <select id={`ul-jenis-${item.key}`} className="input" value={item.jenis} onChange={(e) => setLuaran(item.key, 'jenis', e.target.value)}>
+                        <select id={`ul-jenis-${item.key}`} className="input" value={item.jenis} disabled={wajib} onChange={(e) => setLuaran(item.key, 'jenis', e.target.value)}>
                           {jenisLuaran.map((j) => (
                             <option key={j.kode} value={j.kode}>
                               {j.label}
@@ -1111,14 +1118,17 @@ export default function UsulanPage({ jenis: jenisRoute }) {
                       </div>
                       <button
                         type="button"
-                        className="icon-btn text-red-700 hover:bg-red-50"
-                        aria-label={`Hapus target ${i + 1}`}
+                        className="icon-btn text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                        aria-label={wajib ? `Target ${i + 1} wajib, tidak bisa dihapus` : `Hapus target ${i + 1}`}
+                        title={wajib ? 'Luaran wajib tidak bisa dihapus' : undefined}
+                        disabled={wajib}
                         onClick={() => setLuaranItems((prev) => prev.filter((x) => x.key !== item.key))}
                       >
                         <Trash2 className="size-4" aria-hidden="true" />
                       </button>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               ) : form.luaran ? (
                 <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">Catatan luaran lama: {form.luaran}</p>
