@@ -636,3 +636,15 @@ body:has([aria-modal='true'], .overlay) .global-search-fab {
     }
   }
 }
+
+/* Input tersembunyi (.sr-only: file, radio, checkbox) dipaku ke viewport. Dengan `absolute` posisinya dihitung dari
+   leluhur ber-posisi terdekat — sering <body>, jauh di bawah layar — sehingga saat difokuskan (klik label "Pilih file",
+   tombol unggah, skor Form Penilaian) peramban menggulir <html> dan seluruh layout terangkat (area kosong di bawah).
+   `fixed` = selalu di dalam viewport → fokus tidak menggulir apa pun. Di luar @layer agar menimpa utilitas Tailwind. */
+input.sr-only,
+select.sr-only,
+textarea.sr-only {
+  position: fixed;
+  top: 0;
+  left: 0;
+}

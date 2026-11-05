@@ -692,6 +692,11 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `TipeTab` Kegiatan) `bg-white/15`; di halaman berlatar kanvas (Notifikasi, Penugasan Review) `bg-white` + bingkai tipis; di dalam kartu putih
   (Detail Periode `ProposalPanel`) `bg-navy-100`. Toggle bergaya kotak di latar abu (Daftar: peran; Statistik: jenis topik `PilihTopik`)
   memakai **kotak putih yang bergeser** (`translate` + `width` 300 ms; lebar tombol berbeda → diukur `offsetLeft/offsetWidth`).
+- **Input tersembunyi `.sr-only`** (file, radio, checkbox) dipaku `position: fixed` lewat aturan global di `index.css` (di luar @layer):
+  dengan `absolute` posisinya dihitung dari `<body>` jauh di bawah layar, sehingga fokus (klik "Pilih file"/area unggah, skor Form Penilaian)
+  menggulir `<html>` dan seluruh layout terangkat. Input file baru cukup memakai `sr-only` (atau `hidden` + `ref.click()`).
+- **Paket**: `npm audit` tinggal `xlsx` (SheetJS di npm tidak diperbarui; versi aman 0.20.3 hanya di CDN SheetJS,
+  dipakai `utils/exportExcel.js`). `overrides.minimatch` `^11.0.4` di `package.json` menutup celah minimatch lewat eslint 10 tanpa turun ke eslint 9.
 - Penanda placeholder bersama: `src/components/ApiPending.jsx`.
 - Komponen wizard bersama (`Stepper`, `StepCard`, `PreviewTable`, `Required`, `FieldError`):
   `src/components/Wizard.jsx` (dipakai Usulan & Isi Laporan).
