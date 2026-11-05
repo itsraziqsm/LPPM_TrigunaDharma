@@ -1,15 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Award,
   BadgeCheck,
   Check,
   ChevronRight,
   DollarSign,
   HeartHandshake,
   Microscope,
-  NotebookText,
-  Star,
   Timer,
   X,
 } from 'lucide-react'
@@ -24,7 +21,7 @@ import UserAvatar from '../../components/UserAvatar'
 // (pintasan horizontal + kartu dokumen & luaran), 3. Usulan Terakhir (tahapan),
 // 4. Informasi (perlu perhatian, status proposal, proposal terbaru, periode
 // berjalan diminimalkan; notifikasi terbaru dihapus), 5. Profil Dosen (identitas &
-// data dosen), 6. Statistik Dosen (angka capaian).
+// data dosen), 6. Statistik Dosen (Penelitian, Pengabdian, Nilai Kepercayaan + rincian).
 //
 // Bagian yang belum punya endpoint ditampilkan sebagai placeholder dengan
 // penanda "API belum ada". Daftarnya: docs/waitingApi-list.md (root repo).
@@ -41,9 +38,6 @@ const ICONS = {
   dollar: DollarSign,
   pengabdian: HeartHandshake,
   penelitian: Microscope,
-  jurnal: NotebookText,
-  sinta: (props) => <Star {...props} fill="currentColor" />,
-  sertifikasi: Award,
   kepercayaan: BadgeCheck,
 }
 
@@ -193,50 +187,81 @@ function LatestProposal({ latest, unavailable }) {
 
 // ── Profil capaian ──────────────────────────────────────────────────────────
 // Ponsel: kartu ringkas 2 kolom tanpa ikon; kartu yang API-nya belum ada disembunyikan.
-function MetricCard({ label, value, icon: IconCmp, pending, hint }) {
+function MetricCard({ label, value, icon: IconCmp, pending, hint, className = '', children }) {
   return (
-    <li className={`flex items-center justify-between gap-4 rounded-xl bg-white px-4 py-3.5 sm:px-6 sm:py-5 ${pending ? 'max-sm:hidden' : ''}`}>
-      <div className="min-w-0">
-        <p className="text-sm text-slate-700 sm:text-xl sm:text-slate-900">{label}</p>
-        <p className="mt-1 text-lg font-medium tabular-nums lining-nums text-slate-900 sm:mt-2 sm:text-xl">{show(value)}</p>
-        {pending ? <ApiPending className="mt-1.5" /> : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+    <li className={`rounded-xl bg-white px-4 py-3.5 sm:px-6 sm:py-5 ${pending ? 'max-sm:hidden' : ''} ${className}`}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-700 sm:text-xl sm:text-slate-900">{label}</p>
+          <p className="mt-1 text-lg font-medium tabular-nums lining-nums text-slate-900 sm:mt-2 sm:text-xl">{show(value)}</p>
+          {pending ? <ApiPending className="mt-1.5" /> : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+        </div>
+        <span className="hidden size-[4.5rem] shrink-0 place-items-center rounded-full bg-navy-800 text-white sm:grid">
+          <IconCmp className="size-9" aria-hidden="true" />
+        </span>
       </div>
-      <span className="hidden size-[4.5rem] shrink-0 place-items-center rounded-full bg-navy-800 text-white sm:grid">
-        <IconCmp className="size-9" aria-hidden="true" />
-      </span>
+      {children}
     </li>
   )
 }
 
-function ProfileMetrics({ user, penelitian, pengabdian, luaran, kepercayaan }) {
+// Rincian nilai kepercayaan (GET /dosen/kepercayaan → komponen): 4 komponen berbobot sama, nilai = 5 × rata-rata
+// komponen yang punya data; komponen tanpa data tidak dihitung.
+function RincianKepercayaan({ komponen }) {
+  if (!komponen?.length) return null
+  return (
+    <details className="mt-3 border-t border-slate-100 pt-2.5">
+      <summary className="cursor-pointer text-xs font-semibold text-navy-700 hover:text-navy-900">Lihat rincian perhitungan</summary>
+      <ul className="mt-2 space-y-2 text-xs">
+        {komponen.map((k) => (
+          <li key={k.kode} className="flex items-start justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block font-medium text-slate-800">{k.label}</span>
+              <span className="block text-slate-500">{k.keterangan}</span>
+            </span>
+            <span className="shrink-0 text-right tabular-nums text-slate-700">
+              {k.nilai == null ? (
+                <span className="text-slate-400">belum ada data</span>
+              ) : (
+                <>
+                  <span className="block font-semibold text-navy-900">{Math.round(Number(k.nilai) * 100)}%</span>
+                  <span className="block text-slate-400">
+                    {Number(k.pembilang).toLocaleString('id-ID')}/{Number(k.penyebut).toLocaleString('id-ID')}
+                  </span>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">Nilai = 5 × rata-rata komponen yang sudah punya data (bobot sama).</p>
+    </details>
+  )
+}
+
+// Statistik Dosen: hanya Penelitian, Pengabdian (proposal disetujui) dan Nilai Kepercayaan.
+function ProfileMetrics({ penelitian, pengabdian, kepercayaan }) {
   const nilai = kepercayaan?.nilai
   const skala = kepercayaan?.skala || 5
-  const hasSinta = user && Object.prototype.hasOwnProperty.call(user, 'sintaScore')
   return (
     <section aria-labelledby="profil-capaian" className="space-y-3">
       <SectionTitle id="profil-capaian">Statistik Dosen</SectionTitle>
-      <ul className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
-        <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
-        <MetricCard label="Jurnal" icon={ICONS.jurnal} value={luaran ? luaran.jurnal : null} hint="Luaran jurnal yang dapat diklaim" />
-        <MetricCard
-          label="Nilai Sinta"
-          icon={ICONS.sinta}
-          value={hasSinta ? (user.sintaScore ?? 'Belum diisi') : null}
-          pending={!hasSinta}
-          hint={hasSinta ? (user.sintaId ? `SINTA ID ${user.sintaId}` : 'Isi di Pengaturan') : null}
-        />
+      <ul className="grid grid-cols-2 items-start gap-3 sm:gap-4 xl:grid-cols-3">
         <MetricCard label="Penelitian" value={penelitian} icon={ICONS.penelitian} hint="Proposal disetujui" />
-        <MetricCard label="Sertifikasi" icon={ICONS.sertifikasi} pending />
+        <MetricCard label="Pengabdian" value={pengabdian} icon={ICONS.pengabdian} hint="Proposal disetujui" />
         <MetricCard
           label="Nilai Kepercayaan"
           icon={ICONS.kepercayaan}
+          className="max-xl:col-span-2"
           value={kepercayaan ? (nilai == null ? 'Belum ada data' : `${Number(nilai).toFixed(1)}/${skala}.0`) : null}
           hint={
             kepercayaan?.komponen
               ? `${kepercayaan.komponen.filter((k) => k.nilai != null).length} dari ${kepercayaan.komponen.length} komponen terhitung`
               : null
           }
-        />
+        >
+          <RincianKepercayaan komponen={kepercayaan?.komponen} />
+        </MetricCard>
       </ul>
     </section>
   )
@@ -365,7 +390,7 @@ export default function DosenScreen({ role, adapterKey, user, loading, refreshin
         <hr className="pemisah max-sm:hidden" />
         <DosenStats user={user} />
         <hr className="pemisah max-sm:hidden" />
-        <ProfileMetrics user={user} penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} luaran={dosen.luaran} kepercayaan={dosen.kepercayaan} />
+        <ProfileMetrics penelitian={dosen.penelitian} pengabdian={dosen.pengabdian} kepercayaan={dosen.kepercayaan} />
       </>
     )
 
