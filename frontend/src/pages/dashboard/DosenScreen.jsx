@@ -21,7 +21,7 @@ import UserAvatar from '../../components/UserAvatar'
 // (pintasan horizontal + kartu dokumen & luaran), 3. Usulan Terakhir (tahapan),
 // 4. Informasi (perlu perhatian, status proposal, proposal terbaru, periode
 // berjalan diminimalkan; notifikasi terbaru dihapus), 5. Profil Dosen (identitas &
-// data dosen), 6. Statistik Dosen (Penelitian, Pengabdian, Nilai Kepercayaan + rincian).
+// data dosen), 6. Statistik Dosen (Penelitian, Pengabdian, Nilai Kepercayaan).
 //
 // Bagian yang belum punya endpoint ditampilkan sebagai placeholder dengan
 // penanda "API belum ada". Daftarnya: docs/waitingApi-list.md (root repo).
@@ -187,7 +187,7 @@ function LatestProposal({ latest, unavailable }) {
 
 // ── Profil capaian ──────────────────────────────────────────────────────────
 // Ponsel: kartu ringkas 2 kolom tanpa ikon; kartu yang API-nya belum ada disembunyikan.
-function MetricCard({ label, value, icon: IconCmp, pending, hint, className = '', children }) {
+function MetricCard({ label, value, icon: IconCmp, pending, hint, className = '' }) {
   return (
     <li className={`rounded-xl bg-white px-4 py-3.5 sm:px-6 sm:py-5 ${pending ? 'max-sm:hidden' : ''} ${className}`}>
       <div className="flex items-center justify-between gap-4">
@@ -200,42 +200,7 @@ function MetricCard({ label, value, icon: IconCmp, pending, hint, className = ''
           <IconCmp className="size-9" aria-hidden="true" />
         </span>
       </div>
-      {children}
     </li>
-  )
-}
-
-// Rincian nilai kepercayaan (GET /dosen/kepercayaan → komponen): 4 komponen berbobot sama, nilai = 5 × rata-rata
-// komponen yang punya data; komponen tanpa data tidak dihitung.
-function RincianKepercayaan({ komponen }) {
-  if (!komponen?.length) return null
-  return (
-    <details className="mt-3 border-t border-slate-100 pt-2.5">
-      <summary className="cursor-pointer text-xs font-semibold text-navy-700 hover:text-navy-900">Lihat rincian perhitungan</summary>
-      <ul className="mt-2 space-y-2 text-xs">
-        {komponen.map((k) => (
-          <li key={k.kode} className="flex items-start justify-between gap-3">
-            <span className="min-w-0">
-              <span className="block font-medium text-slate-800">{k.label}</span>
-              <span className="block text-slate-500">{k.keterangan}</span>
-            </span>
-            <span className="shrink-0 text-right tabular-nums text-slate-700">
-              {k.nilai == null ? (
-                <span className="text-slate-400">belum ada data</span>
-              ) : (
-                <>
-                  <span className="block font-semibold text-navy-900">{Math.round(Number(k.nilai) * 100)}%</span>
-                  <span className="block text-slate-400">
-                    {Number(k.pembilang).toLocaleString('id-ID')}/{Number(k.penyebut).toLocaleString('id-ID')}
-                  </span>
-                </>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-400">Nilai = 5 × rata-rata komponen yang sudah punya data (bobot sama).</p>
-    </details>
   )
 }
 
@@ -259,9 +224,7 @@ function ProfileMetrics({ penelitian, pengabdian, kepercayaan }) {
               ? `${kepercayaan.komponen.filter((k) => k.nilai != null).length} dari ${kepercayaan.komponen.length} komponen terhitung`
               : null
           }
-        >
-          <RincianKepercayaan komponen={kepercayaan?.komponen} />
-        </MetricCard>
+        />
       </ul>
     </section>
   )

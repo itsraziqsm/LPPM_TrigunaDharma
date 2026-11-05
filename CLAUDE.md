@@ -351,7 +351,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   jenis tidak diulang bila nama periode memuatnya; ponsel: titik tahap kecil & hanya label tahap aktif), Informasi, Profil Dosen (dua kartu 1:1 di desktop: identitas — foto = tautan ke
   `/profil`, di tengah kartu di ponsel, isi rata tengah vertikal, jabatan kecil di atas nama serif besar, kontak kecil; Data Dosen — label kecil abu +
   nilai tebal, 2 kolom; tanpa angka mini), Statistik Dosen (**hanya 3 kartu**: Penelitian, Pengabdian (proposal disetujui), Nilai Kepercayaan
-  (`GET /dosen/kepercayaan`, + `<details>` "Lihat rincian perhitungan" per komponen: nilai %, pembilang/penyebut, keterangan); ponsel: 2 kolom tanpa ikon, Nilai Kepercayaan selebar 2 kolom)). **Ponsel (< sm)**: isian/kartu yang
+  (`GET /dosen/kepercayaan`, nilai saja — rincian komponen **tidak** ditampilkan); ponsel: 2 kolom tanpa ikon, Nilai Kepercayaan selebar 2 kolom)). **Ponsel (< sm)**: isian/kartu yang
   API-nya belum ada (No. HP, Institusi, TTL, Sertifikasi) disembunyikan, garis pemisah dashboard disembunyikan, daftar "Proposal terbaru" hanya
   judul + status & tanggal (`ItemList` menyembunyikan meta). "Perlu perhatian" tanpa subjudul & tanpa judul berkutip. Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
