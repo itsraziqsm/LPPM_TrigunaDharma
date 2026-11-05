@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import useDrafForm from '../../hooks/useDrafForm'
+import DrafDipulihkan from '../../components/DrafDipulihkan'
 import { Download, Pencil } from 'lucide-react'
 import { LUARAN_JENIS, LUARAN_PRIORITAS, luaranApi } from '../../api/luaran'
 import { hari } from './format'
@@ -65,6 +67,12 @@ function CapaianForm({ item, onDone, onCancel }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  // Pengaman refresh: isian capaian yang belum disimpan (file bukti tidak).
+  const draf = useDrafForm(`capaian:${item.id}`, form, (v) => setForm((f) => ({ ...f, ...v })))
+  const batal = () => {
+    draf.bersihkan()
+    onCancel()
+  }
 
   const save = async (e) => {
     e.preventDefault()
@@ -85,6 +93,7 @@ function CapaianForm({ item, onDone, onCancel }) {
         buktiUrl: form.buktiUrl.trim() || null,
       })
       if (file) await luaranApi.uploadBukti(item.id, file)
+      draf.bersihkan()
       onDone()
     } catch (err) {
       setError(errorText(err, 'Capaian gagal disimpan.'))
@@ -94,6 +103,7 @@ function CapaianForm({ item, onDone, onCancel }) {
 
   return (
     <form onSubmit={save} className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <DrafDipulihkan draf={draf} />
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor={`lc-status-${item.id}`} className="label">
@@ -160,7 +170,7 @@ function CapaianForm({ item, onDone, onCancel }) {
         <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>
           {busy ? 'Menyimpan…' : 'Simpan capaian'}
         </button>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel} disabled={busy}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={batal} disabled={busy}>
           Batal
         </button>
       </div>
@@ -173,6 +183,8 @@ export default function LuaranCapaian({ proposalId, editable = false, onSaved })
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [tick, setTick] = useState(0)
+  // Form capaian yang sedang terbuka dibuka lagi setelah muat ulang (isiannya dipulihkan CapaianForm).
+  useDrafForm(editable ? `capaian-buka:${proposalId}` : null, editingId, (v) => setEditingId(v), { siap: items !== null })
 
   useEffect(() => {
     let alive = true

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, UserPlus } from 'lucide-react'
 import { laporanApi } from '../api/laporan'
@@ -54,6 +56,17 @@ export default function LaporanMasukDetailPage() {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
   const [catatan, setCatatan] = useState('')
+  // Pengaman refresh: pilihan keputusan & catatan yang belum disimpan.
+  const isianKeputusan = useMemo(() => ({ status, catatan }), [status, catatan])
+  const drafKeputusan = useDrafForm(
+    `keputusan:laporan:${id}`,
+    isianKeputusan,
+    (v) => {
+      setStatus(v.status || '')
+      setCatatan(v.catatan || '')
+    },
+    { siap: laporan !== null },
+  )
   const [reviewers, setReviewers] = useState(null)
   const [picked, setPicked] = useState([])
   // Reviewer proposal asal = reviewer laporan (UAT, W-55): backend menugaskannya otomatis saat laporan diajukan;
@@ -130,6 +143,7 @@ export default function LaporanMasukDetailPage() {
       await laporanApi.updateStatus(laporan.id, { status, ...(status !== 'review' && catatan.trim() ? { catatanRevisi: catatan.trim() } : {}) })
       setMsg({ type: 'success', text: `Status laporan diubah menjadi ${STATUS_LABEL[status]}.` })
       setStatus('')
+      drafKeputusan.bersihkan({ status: '', catatan: catatan.trim() })
       reload()
     } catch (err) {
       setMsg({ type: 'error', text: errorText(err, 'Gagal mengubah status.') })
@@ -303,6 +317,7 @@ export default function LaporanMasukDetailPage() {
 
               {canDecide ? (
                 <form onSubmit={decide} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+                  <DrafDipulihkan draf={drafKeputusan} />
                   <h3 className="text-base font-semibold text-navy-950">Keputusan</h3>
                   <div className="grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
                     <div>

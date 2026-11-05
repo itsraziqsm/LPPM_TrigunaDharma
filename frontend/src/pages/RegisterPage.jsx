@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useLenis from '../hooks/useLenis'
@@ -72,6 +73,15 @@ export default function RegisterPage() {
   const [langkah, setLangkah] = useState(0) // 0 = akun, 1 = data dosen/mahasiswa
   const [arah, setArah] = useState('maju')
   const [cobaLangkah, setCobaLangkah] = useState([false, false])
+  // Pengaman refresh: peran & isian (tanpa password) disimpan sebagai draf lokal tamu; dibuka lagi di langkah 1.
+  const isianDraf = useMemo(() => {
+    const { password: _pw, ...isian } = form
+    return { role, form: isian }
+  }, [role, form])
+  const draf = useDrafForm('daftar', isianDraf, (v) => {
+    if (v.role === 'dosen' || v.role === 'mahasiswa') setRole(v.role)
+    if (v.form) setForm((f) => ({ ...f, ...v.form, password: f.password }))
+  })
   const galat = (k) => ((coba || cobaLangkah[LANGKAH_KOLOM[0].includes(k) ? 0 : 1]) ? galatKlien[k] : null) || galatServer[k]
   const lanjut = () => {
     setCobaLangkah((c) => [true, c[1]])
@@ -108,6 +118,7 @@ export default function RegisterPage() {
         ? { email, name: form.name.trim(), password: form.password, nidn: form.nidn, programStudi: form.programStudi }
         : { email, name: form.name.trim(), password: form.password, nim: form.nim, prodi: form.prodi }
       const res = await register(role, payload)
+      draf.bersihkan()
       simpanPendaftaran({ email, role, createdAt: res?.data?.createdAt })
       setBerhasil(true)
       await tungguOutro()
@@ -115,6 +126,7 @@ export default function RegisterPage() {
     } catch (err) {
       if (err.code === 'PENDAFTARAN_MENUNGGU') {
         clearError()
+        draf.bersihkan()
         simpanPendaftaran({ email, role, createdAt: err.data?.createdAt })
         navigate('/register/terkirim', { replace: true, state: { menunggu: true, email } })
       } else if (err.code === 'AKUN_SUDAH_AKTIF') {

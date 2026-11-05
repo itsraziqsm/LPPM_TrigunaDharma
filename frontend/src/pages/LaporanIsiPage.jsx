@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CircleAlert, CloudUpload, Eye, FileText, Info, Save, Trash2, Users } from 'lucide-react'
@@ -193,6 +195,19 @@ export default function LaporanIsiPage({ jenis }) {
     }
   }, [id, jenis, navigate, user?.id])
 
+  // Pengaman refresh: isian, langkah & tautan bukti luaran disimpan sebagai draf lokal (file tidak).
+  const isianDraf = useMemo(() => ({ form, step, tautan: Object.fromEntries((links || []).map((l) => [l.id, l.url])) }), [form, step, links])
+  const draf = useDrafForm(
+    `laporan-isi:${id}`,
+    isianDraf,
+    (v) => {
+      if (v.form) setForm((f) => ({ ...f, ...v.form }))
+      if (Number.isInteger(v.step)) setStep(v.step)
+      if (v.tautan) setLinks((ls) => (ls || []).map((l) => (l.id in v.tautan ? { ...l, url: v.tautan[l.id] } : l)))
+    },
+    { siap: loadState === 'ready' && links !== null },
+  )
+
   const errors = useMemo(() => validate(form, file, laporan, links), [form, file, laporan, links])
   const current = STEPS[step].key
   const err = (k) => (showErrors[current] ? errors[k] : null)
@@ -292,7 +307,9 @@ export default function LaporanIsiPage({ jenis }) {
     }
     const fresh = (await laporanApi.getById(laporan.id)).data.data
     setLaporan(fresh)
-    setForm((f) => ({ ...f, ...Object.fromEntries(FIELDS.filter((k) => !skipped.includes(k)).map((k) => [k, formFrom(fresh)[k]])) }))
+    const formBaru = { ...form, ...Object.fromEntries(FIELDS.filter((k) => !skipped.includes(k)).map((k) => [k, formFrom(fresh)[k]])) }
+    setForm(formBaru)
+    draf.bersihkan({ ...isianDraf, form: formBaru })
     return { skipped, uploadWarn }
   }
 
@@ -380,6 +397,7 @@ export default function LaporanIsiPage({ jenis }) {
   return (
     <div className="page space-y-8">
       {header}
+      <DrafDipulihkan draf={draf} />
 
       <Stepper steps={STEPS} step={step} maxReached={STEPS.length - 1} onGo={goTo} />
 

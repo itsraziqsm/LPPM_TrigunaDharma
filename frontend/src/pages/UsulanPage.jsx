@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -337,6 +339,21 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   const topRef = useRef(null)
   const firstStep = useRef(true)
 
+  // Pengaman refresh: isian, anggota, target luaran & langkah disimpan sebagai draf lokal (file tidak).
+  const isianDraf = useMemo(() => ({ form, anggota, luaranItems, step, maxReached }), [form, anggota, luaranItems, step, maxReached])
+  const draf = useDrafForm(
+    `usulan:${jenisRoute}:${id || draftId || 'baru'}`,
+    isianDraf,
+    (v) => {
+      if (v.form) setForm((f) => ({ ...f, ...v.form }))
+      if (Array.isArray(v.anggota)) setAnggota(v.anggota)
+      if (Array.isArray(v.luaranItems)) setLuaranItems(v.luaranItems)
+      if (Number.isInteger(v.maxReached)) setMaxReached((m) => Math.max(m, v.maxReached))
+      if (Number.isInteger(v.step)) setStep(v.step)
+    },
+    { siap: loadState === 'ready' },
+  )
+
   // Setiap ganti langkah, gulir kembali ke stepper (tombol navigasi ada di bawah).
   useEffect(() => {
     if (firstStep.current) {
@@ -619,9 +636,11 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
         }))
         // Target yang belum valid tetap ada di formulir.
-        setLuaranItems([...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)])
+        const sisa = [...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)]
+        setLuaranItems(sisa)
         setLuaranOrig(saved)
-      }
+        draf.bersihkan({ ...isianDraf, luaranItems: sisa })
+      } else draf.bersihkan()
       const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
       setDraftMsg(
         warn.length
@@ -651,6 +670,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     setSaving(true)
     try {
       const { warn } = await persist({ draft: false })
+      draf.bersihkan()
       navigate(`/kegiatan/${form.jenis}`, {
         state: {
           flash: warn.length
@@ -711,6 +731,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   return (
     <div className="page space-y-8">
       {header}
+      <DrafDipulihkan draf={draf} />
       <div ref={topRef} className="scroll-mt-6">
         <Stepper steps={steps} step={step} maxReached={Math.min(maxReached, steps.length - 1)} onGo={goTo} />
       </div>

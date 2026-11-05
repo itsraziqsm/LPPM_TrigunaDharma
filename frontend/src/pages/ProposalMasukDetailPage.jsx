@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, ClipboardCheck, ClipboardList, Download, FileText, Handshake, Tag, UserPlus, Users } from 'lucide-react'
 import { proposalApi } from '../api/proposal'
@@ -51,6 +53,17 @@ export default function ProposalMasukDetailPage() {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
   const [catatan, setCatatan] = useState('')
+  // Pengaman refresh: pilihan keputusan & catatan yang belum disimpan.
+  const isianKeputusan = useMemo(() => ({ status, catatan }), [status, catatan])
+  const drafKeputusan = useDrafForm(
+    `keputusan:proposal:${id}`,
+    isianKeputusan,
+    (v) => {
+      setStatus(v.status || '')
+      setCatatan(v.catatan || '')
+    },
+    { siap: state.status === 'ready' },
+  )
   const [kandidat, setKandidat] = useState(null)
   const [picked, setPicked] = useState([])
 
@@ -131,6 +144,7 @@ export default function ProposalMasukDetailPage() {
       await proposalApi.updateStatus(d.id, { status, ...(status !== 'review' && catatan.trim() ? { catatanRevisi: catatan.trim() } : {}) })
       setMsg({ ok: true, text: `Status proposal diubah menjadi ${STATUS_LABEL[status]}.` })
       setStatus('')
+      drafKeputusan.bersihkan({ status: '', catatan: catatan.trim() })
       reload()
     } catch (err) {
       alertDialog({ title: 'Gagal memperbarui status', message: pesan(err, 'Silakan coba lagi.') })
@@ -298,6 +312,7 @@ export default function ProposalMasukDetailPage() {
               <Section icon={ClipboardCheck} title="Keputusan">
                 {canDecide ? (
                   <form onSubmit={putuskan} className="space-y-4">
+                    <DrafDipulihkan draf={drafKeputusan} />
                     <div className="grid gap-4 sm:grid-cols-[14rem_minmax(0,1fr)]">
                       <div>
                         <label htmlFor="pm-status" className="label">

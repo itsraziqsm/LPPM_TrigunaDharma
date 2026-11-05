@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { periodeApi } from '../api/periode'
 import useAuthStore from '../store/authStore'
@@ -79,6 +80,28 @@ export default function PeriodePage() {
       alive = false
     }
   }, [periodes])
+
+  // Pengaman refresh: dialog Tambah/Edit Periode yang sedang terbuka (beserta isiannya) dibuka lagi setelah muat ulang.
+  const isianDraf = useMemo(
+    () => (canEdit && (modal === 'create' || modal === 'edit') ? { modal, periodeId: selected?.id ?? null, form } : null),
+    [canEdit, modal, selected?.id, form],
+  )
+  useDrafForm(
+    'periode-form',
+    isianDraf,
+    (v) => {
+      if (!v?.form) return
+      if (v.modal === 'edit') {
+        const p = periodes.find((x) => x.id === v.periodeId)
+        if (!p) return
+        setSelected(p)
+      }
+      setForm({ ...EMPTY_FORM, ...v.form })
+      setFormError(null)
+      setModal(v.modal)
+    },
+    { siap: !loading },
+  )
 
   // ── Modal helpers ──────────────────────────────────────────────────────────
 

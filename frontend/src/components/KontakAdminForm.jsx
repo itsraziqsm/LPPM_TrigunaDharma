@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MessageSquareText } from 'lucide-react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from './DrafDipulihkan'
 import { kontakAdminApi } from '../api/kontakAdmin'
 import { setKontakAdmin } from '../utils/hubungiAdmin'
 
@@ -13,6 +15,7 @@ export default function KontakAdminForm({ SettingsCard, Field, Message }) {
   const [form, setForm] = useState({ whatsapp: '', nama: '', jamLayanan: '' })
   const [msg, setMsg] = useState(null)
   const [saving, setSaving] = useState(false)
+  const draf = useDrafForm('kontak-admin', form, (v) => setForm((f) => ({ ...f, ...v })), { siap: Boolean(awal) })
 
   useEffect(() => {
     let alive = true
@@ -45,7 +48,9 @@ export default function KontakAdminForm({ SettingsCard, Field, Message }) {
       const r = await kontakAdminApi.update(body)
       const d = r.data.data || {}
       setAwal(d)
-      setForm({ whatsapp: d.whatsapp || '', nama: d.nama || '', jamLayanan: d.jamLayanan || '' })
+      const baru = { whatsapp: d.whatsapp || '', nama: d.nama || '', jamLayanan: d.jamLayanan || '' }
+      setForm(baru)
+      draf.bersihkan(baru)
       setKontakAdmin(d)
       setMsg({ type: 'success', text: 'Kontak admin diperbarui.' })
     } catch (err) {
@@ -59,6 +64,7 @@ export default function KontakAdminForm({ SettingsCard, Field, Message }) {
   return (
     <SettingsCard id="kontak-admin" title="Kontak Admin" desc="Nomor WhatsApp yang dibuka semua pengguna lewat tombol Alat › Hubungi Admin.">
       <form onSubmit={simpan} className="space-y-6">
+        <DrafDipulihkan draf={draf} />
         <div className="grid gap-4 md:grid-cols-2">
           <Field id="ka-wa" label="Nomor WhatsApp" hint="Mis. 0812-3456-7890 atau +62 812…; disimpan sebagai 62…. Kosongkan untuk menonaktifkan.">
             <input id="ka-wa" inputMode="tel" className="input" value={form.whatsapp} disabled={!awal} onChange={(e) => setForm((f) => ({ ...f, whatsapp: e.target.value }))} placeholder="6281234567890" />

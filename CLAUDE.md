@@ -611,6 +611,14 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `errorElement` router (galat render → 500). Fitur yang belum dibangun memakai `ErrorState`
   kode 501 di dalam layout, mis. `/luaran` (`LuaranPage.jsx`, menu Luaran dosen) — menunggu
   keputusan Pihak Kampus.
+- **Pengaman isian formulir (draf otomatis)**: `hooks/useDrafForm.js` (`useDrafForm(nama, nilai, setNilai, { siap })` → `{ dipulihkan, buang, bersihkan([nilaiBaru]) }`)
+  + `utils/drafForm.js` menyimpan isian yang **belum disimpan** ke localStorage `drafForm:<userId|tamu>:<nama>` (`{v, at}`, kedaluwarsa 7 hari, jeda 400 ms,
+  hanya bila berbeda dari patokan = nilai awal/terakhir tersimpan) sehingga refresh/tab tertutup tidak menghilangkan isian; dipulihkan sekali setelah `siap`
+  (data server termuat) + penanda `components/DrafDipulihkan.jsx` ("Buang draf" = kembali ke isian awal). `bersihkan()` wajib dipanggil setelah berhasil
+  disimpan ke server; logout (`localStorage.clear()`) ikut menghapus. **Password & file tidak pernah disimpan.** Dipakai: Usulan (isian, anggota, target
+  luaran, langkah), Isi Laporan (+ tautan bukti, langkah), Input Laporan Harian, Form Penilaian Reviewer (bukan review final), Informasi Profil, Kontak Admin,
+  dialog Tambah/Edit Periode (dialog dibuka lagi), Keputusan Ketua (proposal & laporan), Konfigurasi Surat Tugas, Daftar (tamu, tanpa password, tanpa penanda),
+  form Capaian luaran & Unggah laporan kemajuan (form yang terbuka dibuka lagi). Tidak dipakai untuk kolom cari/filter, dialog password, dan file. Formulir baru wajib memakainya.
 - **Jangan pakai `window.alert/confirm`.** Pakai `confirmDialog({ title, message, tone, confirmText })`
   / `alertDialog({ title, message })` dari `src/utils/dialog.js` (Promise → `true/false`), dirender
   `<DialogHost />` (dipasang di `main.jsx`) dengan `src/components/ConfirmDialog.jsx` (gaya dialog

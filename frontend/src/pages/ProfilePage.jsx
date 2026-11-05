@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
 import Collapse from '../components/Collapse'
 import { useNavigate } from 'react-router-dom'
@@ -172,6 +174,8 @@ export default function ProfilePage() {
   const [form, setForm] = useState(saved)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState(null)
+  // Pengaman refresh: Informasi Profil yang belum disimpan (password tidak pernah disimpan).
+  const draf = useDrafForm('profil', form, (v) => setForm((f) => ({ ...f, ...v })))
 
   const [pwForm, setPwForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
   const [pwSaving, setPwSaving] = useState(false)
@@ -309,6 +313,7 @@ export default function ProfilePage() {
       const next = { ...form, ...profileFrom({ ...form, ...(data?.data || {}) }) }
       setSaved(next)
       setForm(next)
+      draf.bersihkan(next)
       useAuthStore.setState((s) => ({ user: s.user ? { ...s.user, name: next.name, fullName: next.fullName || null } : s.user }))
       setMsg({ type: 'success', text: 'Profil berhasil disimpan.' })
     } catch (err) {
@@ -485,6 +490,7 @@ export default function ProfilePage() {
             desc="Perbarui informasi profil akun dan data diri Anda."
           >
             <form onSubmit={handleSaveProfil} className="space-y-6">
+              <DrafDipulihkan draf={draf} />
               <div className="grid gap-4 md:grid-cols-2">
                 <Field id="pf-name" label="Username" wide>
                   <input id="pf-name" className="input" value={form.name} onChange={set('name')} placeholder="Nama panggilan" />

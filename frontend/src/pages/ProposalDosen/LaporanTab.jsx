@@ -1,4 +1,6 @@
 import { useState, useRef } from 'react'
+import useDrafForm from '../../hooks/useDrafForm'
+import DrafDipulihkan from '../../components/DrafDipulihkan'
 import api from '../../api/axios'
 import { File as FileIcon, FileChartColumn, Plus, TriangleAlert, Upload } from 'lucide-react'
 import { alertDialog, confirmDialog } from '../../utils/dialog'
@@ -23,6 +25,12 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
     const fileInputRef = useRef(null)
 
     const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    // Pengaman refresh: isian teks laporan yang belum diunggah (file tidak).
+    const draf = useDrafForm(`laporan-kemajuan:${proposalId}`, form, (v) => setForm((f) => ({ ...f, ...v })))
+    const batal = () => {
+        draf.bersihkan()
+        onCancel()
+    }
 
     const handleFileChange = (e) => {
         const selected = e.target.files?.[0]
@@ -74,6 +82,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
             await api.post(`/proposals/${proposalId}/laporan`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             })
+            draf.bersihkan()
             onSuccess()
         } catch (e) {
             setError(e.response?.data?.message || 'Gagal mengunggah laporan.')
@@ -88,6 +97,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
                 <h3 className="text-base font-semibold text-navy-950">Unggah laporan baru</h3>
                 <p className="mt-1 text-sm leading-relaxed text-slate-500">Isi informasi laporan secara lengkap sebelum mengunggah berkas pendukung.</p>
             </header>
+            <DrafDipulihkan draf={draf} />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
@@ -202,7 +212,7 @@ function UploadLaporanForm({ proposalId, onSuccess, onCancel }) {
                     {loading ? 'Menyimpan laporan...' : 'Simpan laporan'}
                 </button>
                 <button
-                    onClick={onCancel}
+                    onClick={batal}
                     disabled={loading}
                     className="btn btn-secondary"
                 >
@@ -318,6 +328,8 @@ export function LaporanTab({ proposalId, laporan = [], status, onRefresh, readOn
     const [showForm, setShowForm] = useState(false)
 
     const canUpload = !readOnly && status === 'disetujui'
+    // Form unggah yang sedang terbuka dibuka lagi setelah muat ulang.
+    useDrafForm(canUpload ? `laporan-kemajuan-buka:${proposalId}` : null, showForm, (v) => setShowForm(Boolean(v)))
 
     const handleDelete = async (id) => {
         await api.delete(`/proposals/laporan/${id}`)

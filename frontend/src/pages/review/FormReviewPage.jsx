@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import useDrafForm from '../../hooks/useDrafForm'
+import DrafDipulihkan from '../../components/DrafDipulihkan'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, ClipboardCheck, Coins, MessageSquareText, Printer, Save, Send, Sparkles } from 'lucide-react'
 import { proposalApi } from '../../api/proposal'
@@ -86,6 +88,13 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState(null)
   const [cobaFinal, setCobaFinal] = useState(false)
+  // Pengaman refresh: isian penilaian yang belum disimpan ke server disimpan sebagai draf lokal (review final tidak).
+  const draf = useDrafForm(
+    state.review?.isDone ? null : `form-review:${tipe}:${id}`,
+    form,
+    (v) => setForm((f) => ({ ...f, ...v })),
+    { siap: state.status === 'ready' && form !== null },
+  )
 
   useEffect(() => {
     let alive = true
@@ -189,6 +198,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   const kirim = async () => {
     const r = await src.simpan(id, payload())
     hapusDraf(user?.id, tipe, id)
+    draf.bersihkan()
     return r.data?.data || null
   }
 
@@ -251,6 +261,7 @@ export default function FormReviewPage({ tipe = 'proposal' }) {
   return (
     <div className="page rise space-y-6">
       {kembali}
+      <DrafDipulihkan draf={draf} />
 
       <header className="card overflow-hidden">
         <div className="space-y-3 border-b border-slate-200 bg-navy-950 px-6 py-5 text-white">

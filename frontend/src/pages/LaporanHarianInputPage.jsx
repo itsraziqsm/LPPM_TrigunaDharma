@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import useDrafForm from '../hooks/useDrafForm'
+import DrafDipulihkan from '../components/DrafDipulihkan'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, CircleCheck, CloudUpload } from 'lucide-react'
 import Breadcrumb from '../components/Breadcrumb'
@@ -33,6 +35,8 @@ export default function LaporanHarianInputPage({ jenis }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef()
+  // Pengaman refresh: isian teks disimpan sebagai draf lokal per project (file tidak).
+  const draf = useDrafForm(proposalId ? `laporan-harian:${proposalId}` : null, form, (v) => setForm((f) => ({ ...f, ...v })))
 
   useEffect(() => {
     let alive = true
@@ -84,6 +88,7 @@ export default function LaporanHarianInputPage({ jenis }) {
       if (form.linkGdrive.trim()) fd.append('linkGdrive', form.linkGdrive.trim())
       if (file) fd.append('file', file)
       await laporanHarianApi.create(proposal.id, fd)
+      draf.bersihkan()
       navigate(kembali, { state: { flash: 'Laporan harian berhasil disimpan.' } })
     } catch (err) {
       setError(err?.response?.data?.message || 'Gagal menyimpan laporan.')
@@ -140,6 +145,8 @@ export default function LaporanHarianInputPage({ jenis }) {
           {proposal.judul}
         </p>
       </header>
+
+      <DrafDipulihkan draf={draf} />
 
       <form onSubmit={handleSubmit} className="card overflow-hidden" noValidate>
         <div className="space-y-5 px-5 py-6 sm:px-6">

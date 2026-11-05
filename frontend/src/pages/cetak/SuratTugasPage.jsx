@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import useDrafForm from '../../hooks/useDrafForm'
+import DrafDipulihkan from '../../components/DrafDipulihkan'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Printer, RotateCcw, Save } from 'lucide-react'
 import { proposalApi } from '../../api/proposal'
@@ -80,12 +82,17 @@ export default function SuratTugasPage() {
   const [arsip, setArsip] = useState(null)
   const [arsipTick, setArsipTick] = useState(0)
   const [mencetak, setMencetak] = useState(false)
+  const [cfgSiap, setCfgSiap] = useState(false)
+  // Pengaman refresh: konfigurasi yang belum disimpan ke server disimpan sebagai draf lokal.
+  const draf = useDrafForm('surat-tugas', cfg, (v) => setCfg((c) => ({ ...c, ...v })), { siap: cfgSiap })
 
   // Konfigurasi bersama dari server menimpa cache peramban.
   useEffect(() => {
     let alive = true
     muatCetakConfig(SURAT_TUGAS_KEY).then((saved) => {
-      if (!alive || !saved) return
+      if (!alive) return
+      setCfgSiap(true)
+      if (!saved) return
       // Isian penandatangan yang kosong di server tidak menimpa bawaan (Ketua yang sedang masuk).
       const ttd = Object.fromEntries(Object.entries(saved.penandatangan || {}).filter(([, v]) => v))
       setCfg((c) => ({ ...EMPTY, ...saved, penandatangan: { ...EMPTY.penandatangan, ...c.penandatangan, ...ttd } }))
@@ -197,6 +204,7 @@ export default function SuratTugasPage() {
     if (andPrint) siapkanTab()
     const saved = saveCetakConfig(SURAT_TUGAS_KEY, cfg)
     setCfg(saved)
+    draf.bersihkan(saved)
     if (andPrint) {
       setMencetak(true)
       try {
@@ -234,6 +242,7 @@ export default function SuratTugasPage() {
         </div>
         <CetakBreadcrumb last="Surat Tugas" />
       </header>
+      <DrafDipulihkan draf={draf} />
 
       {msg ? (
         <div
