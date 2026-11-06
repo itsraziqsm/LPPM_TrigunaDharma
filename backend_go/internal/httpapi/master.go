@@ -83,6 +83,7 @@ func (s *Server) listMaster(c *Ctx) error {
 		for i := range items {
 			j, _ := items[i].Get("jenisLuaran").(string)
 			items[i].Set("prioritas", luaranPrioritas[j])
+			items[i].Set("wajib", luaranWajib[j]) // W-57
 		}
 	}
 	return c.ok("Master data fetched", items)

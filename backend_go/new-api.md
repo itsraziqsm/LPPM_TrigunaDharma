@@ -35,6 +35,7 @@ API, dikelompokkan per rilis:
 - **Bagian 29** — W-47 riwayat halaman & pencarian per user, W-50 kontak admin (WhatsApp), W-52 reset password oleh admin (password sementara + wajib ganti), W-53 kategori/filter/ringkasan log aktivitas (+ log logout & login gagal).
 - **Bagian 30** — W-48 satu identitas satu pendaftaran (validasi NIDN/NIRM, 409 ber-`code`, daftar ulang, cek status), W-54 form penilaian reviewer (skor rubrik, dana disetujui = dana final, satu reviewer per proposal), W-42 konfigurasi cetak bersama + nomor & arsip surat tugas.
 - **Bagian 31** — W-56 kategori & pengirim notifikasi (filter `kategori`, ringkasan per kategori).
+- **Bagian 32** — W-57 target luaran **jurnal & poster wajib** saat proposal diajukan.
 
 - Base URL: `VITE_API_URL` (default `http://localhost:3000/api/v1`)
 - Semua endpoint butuh header `Authorization: Bearer <accessToken>`
@@ -2046,8 +2047,8 @@ label peran "Ketua STMIK" di tempat yang menampilkan nama peran.
 ### 25.1 Jenis luaran baru `poster` & prioritas
 
 - Jenis luaran (`LuaranKegiatan.jenis`, `POST/PATCH /luaran`) kini juga menerima **`poster`**.
-- **Jurnal dan poster adalah luaran prioritas**: selalu ditampilkan paling atas. Bukan wajib — dosen
-  tetap boleh memilih jenis lain.
+- **Jurnal dan poster adalah luaran prioritas**: selalu ditampilkan paling atas. ~~Bukan wajib~~ — **kini wajib**
+  (W-57, bagian 32): submit proposal ditolak tanpa target jurnal & poster; jenis lain tetap boleh ditambahkan.
 
 **`GET /api/v1/luaran/jenis`** (semua user login) — pakai ini untuk dropdown jenis di editor Target
 Luaran (menggantikan daftar statis `LUARAN_JENIS` di frontend):
@@ -2744,4 +2745,29 @@ Keempat kunci selalu ada dengan urutan tetap; `belumDibaca` = jumlah semua kateg
 - Filter Kategori: kirim `kategori=` ke server (hapus pemuatan 500 item + saring di peramban dan penanda ApiPending
   W-56); jumlah per kategori/lencana dari `/notifications/ringkasan`.
 - Label "dari": pakai `pengirim.fullName || pengirim.name`; bila `null`, `pengirimFor` lama tetap jadi cadangan.
+
+## 32. Target luaran jurnal & poster wajib (W-57)
+
+Keputusan kampus: target luaran **artikel jurnal** dan **poster** kini **wajib** untuk setiap proposal (sebelumnya
+hanya prioritas, bagian 25). Tanpa migrasi database.
+
+- **`GET /luaran/jenis`** — tiap item + `wajib` (boolean), `true` untuk `jurnal` & `poster`:
+  `{ "kode": "jurnal", "label": "Artikel jurnal", "prioritas": true, "wajib": true }`. `GET /master/luaran` juga
+  menambah `wajib` (dari `jenisLuaran`) di samping `prioritas`.
+- **Submit proposal** (`POST /dosen/proposals/:id/submit` dan `POST /proposals/:id/submit`) → **400**
+  `{ "success": false, "message": "Target luaran wajib: artikel jurnal dan poster" }` bila proposal belum punya item
+  `LuaranKegiatan` berjenis `jurnal` **dan** `poster`. Dicek setelah aturan undangan & komposisi tim, jadi galat
+  tim tetap muncul lebih dulu. Draft boleh disimpan tanpa keduanya.
+- **`DELETE /luaran/:id`** → **409** bila item itu target jurnal/poster **terakhir** pada proposal (hanya bisa terjadi
+  saat draft/revisi, karena target terkunci di status lain):
+  `"Target luaran Artikel jurnal wajib ada. Tambahkan target Artikel jurnal lain sebelum menghapus atau mengubah yang ini."`
+- **`PATCH /luaran/:id`** dengan `jenis` baru → **409** yang sama bila mengubah jenis item jurnal/poster terakhir;
+  mengubah `target`/`targetTanggal` (atau mengirim `jenis` yang sama) tetap boleh.
+
+Proposal yang sudah diajukan/disetujui sebelum aturan ini tidak diubah; aturan baru berlaku saat (re)submit, mis.
+setelah revisi. `cmd/seed-proposal` sudah membuat target jurnal & poster untuk setiap proposal.
+
+### Untuk frontend
+
+- Ganti konstanta `LUARAN_WAJIB` dengan `wajib` dari `GET /luaran/jenis`; tampilkan pesan 400/409 server apa adanya.
 

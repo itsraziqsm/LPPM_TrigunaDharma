@@ -25,6 +25,8 @@ var (
 	// Urutan = urutan tampil; jurnal & poster adalah luaran prioritas (luaranPrioritas).
 	luaranJenis     = []string{"jurnal", "poster", "prosiding", "hki", "buku", "produk", "media_massa", "lainnya"}
 	luaranPrioritas = map[string]bool{"jurnal": true, "poster": true}
+	// luaranWajib (W-57, keputusan kampus): target jurnal & poster wajib ada saat proposal diajukan.
+	luaranWajib = map[string]bool{"jurnal": true, "poster": true}
 	luaranLabel     = map[string]string{
 		"jurnal": "Artikel jurnal", "poster": "Poster", "prosiding": "Prosiding seminar", "hki": "Hak Kekayaan Intelektual (HKI)",
 		"buku": "Buku", "produk": "Produk / teknologi tepat guna", "media_massa": "Video / publikasi media massa", "lainnya": "Lainnya",
@@ -272,6 +274,11 @@ func (s *Server) updateLuaran(c *Ctx) error {
 	if err := ensureTargetEditable(p); err != nil {
 		return err
 	}
+	if jenisBaru, ok := c.bodyMap()["jenis"].(string); ok { // W-57: jangan pindahkan jenis wajib terakhir
+		if err := s.cekHapusLuaranWajib(c.r.Context(), id, p.ID, jenisBaru); err != nil {
+			return err
+		}
+	}
 	return s.applyLuaranUpdate(c, id, luaranTargetFields, "Luaran berhasil diperbarui")
 }
 
@@ -367,6 +374,9 @@ func (s *Server) deleteLuaran(c *Ctx) error {
 	if err := ensureTargetEditable(p); err != nil {
 		return err
 	}
+	if err := s.cekHapusLuaranWajib(c.r.Context(), id, p.ID, ""); err != nil { // W-57
+		return err
+	}
 	if _, err := s.db.ExecContext(c.r.Context(), "DELETE FROM `LuaranKegiatan` WHERE `id` = ?", id); err != nil {
 		return err
 	}
@@ -407,4 +417,39 @@ func (s *Server) luaranStats(c *Ctx) error {
 	return c.ok("Statistik luaran fetched", O{
 		{"total", total}, {"tercapai", tercapai}, {"dapatDiklaim", diklaim}, {"jurnal", jurnal}, {"poster", poster}, {"perJenis", jenis},
 	})
+}
+
+// pesanLuaranWajib: pesan 400 saat submit proposal tanpa target jurnal & poster (W-57).
+const pesanLuaranWajib = "Target luaran wajib: artikel jurnal dan poster"
+
+// cekLuaranWajib → 400 bila proposal belum punya target luaran berjenis jurnal DAN poster (W-57).
+func (s *Server) cekLuaranWajib(ctx context.Context, proposalID int64) error {
+	rows, err := queryObjs(ctx, s.db, "SELECT DISTINCT `jenis` FROM `LuaranKegiatan` WHERE `proposalId` = ? AND `jenis` IN ('jurnal','poster')", proposalID)
+	if err != nil {
+		return err
+	}
+	if len(rows) < len(luaranWajib) {
+		return httpError(http.StatusBadRequest, pesanLuaranWajib)
+	}
+	return nil
+}
+
+// cekHapusLuaranWajib → 409 bila item `id` adalah target jurnal/poster terakhir di proposal dan akan
+// dihapus (jenisBaru "") atau dipindah ke jenis lain (W-57).
+func (s *Server) cekHapusLuaranWajib(ctx context.Context, id, proposalID int64, jenisBaru string) error {
+	var jenis string
+	if err := s.db.QueryRowContext(ctx, "SELECT `jenis` FROM `LuaranKegiatan` WHERE `id` = ?", id).Scan(&jenis); err != nil {
+		return err
+	}
+	if !luaranWajib[jenis] || jenisBaru == jenis {
+		return nil
+	}
+	n, err := countRows(ctx, s.db, "SELECT COUNT(*) FROM `LuaranKegiatan` WHERE `proposalId` = ? AND `jenis` = ?", proposalID, jenis)
+	if err != nil {
+		return err
+	}
+	if n <= 1 {
+		return httpError(http.StatusConflict, "Target luaran "+luaranLabel[jenis]+" wajib ada. Tambahkan target "+luaranLabel[jenis]+" lain sebelum menghapus atau mengubah yang ini.")
+	}
+	return nil
 }

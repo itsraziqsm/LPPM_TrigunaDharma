@@ -307,9 +307,11 @@ Hasil pemindaian, perbaikan per aturan gosec, versi dependensi, dan aturan untuk
     dan `/surat-tugas` (nomor otomatis `001/ST/LPPM/XI/2026`).
 25. W-56 (lihat `new-api.md` bagian 31): item `GET /notifications` + `kategori` & `pengirim`, filter `?kategori=`,
     `GET /notifications/ringkasan` (belum dibaca per kategori).
-26. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
+26. W-57 (lihat `new-api.md` bagian 32): submit proposal wajib punya target luaran jurnal & poster (400), item
+    jurnal/poster terakhir tidak bisa dihapus/diubah jenisnya (409), `wajib` di `GET /luaran/jenis` & `/master/luaran`.
+27. Header `ETag` memakai SHA-256 (Node/Express: SHA-1) dengan format yang sama; nilainya opak bagi
     klien sehingga perilaku 304 tidak berubah. Lihat `SECURITY.md`.
-27. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
+28. Endpoint `/api/v1/laporan` tidak ada di Node. Error bisnisnya memakai status HTTP
    yang sesuai (400/403/404/409), bukan 500 gaya Node. Lihat `new-api.md`.
 
 Catatan: seperti versi Node, `GET /proposals/:id`, `GET /dosen/proposals/:id`

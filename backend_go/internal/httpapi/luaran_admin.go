@@ -64,7 +64,7 @@ func (s *Server) registerLuaranAdminRoutes(g *mount) {
 func (s *Server) luaranJenisList(c *Ctx) error {
 	items := make([]O, len(luaranJenis))
 	for i, j := range luaranJenis {
-		items[i] = O{{"kode", j}, {"label", luaranLabel[j]}, {"prioritas", luaranPrioritas[j]}}
+		items[i] = O{{"kode", j}, {"label", luaranLabel[j]}, {"prioritas", luaranPrioritas[j]}, {"wajib", luaranWajib[j]}}
 	}
 	return c.ok("Jenis luaran fetched", items)
 }

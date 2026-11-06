@@ -430,6 +430,9 @@ func (s *Server) submitProposal(c *Ctx) error {
 	if err := s.checkKomposisiTim(ctx, existing); err != nil {
 		return err
 	}
+	if err := s.cekLuaranWajib(ctx, existing.ID); err != nil { // W-57
+		return err
+	}
 	now := s.nowMs()
 	if err := s.updateKegiatan(ctx, s.db, id, "`status` = 'diajukan', `submittedAt` = ?, `updatedAt` = ?", now, now); err != nil {
 		return err

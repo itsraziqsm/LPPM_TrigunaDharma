@@ -15,6 +15,7 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
+| W-57 | Usulan › Dokumen › Target Luaran wajib (jurnal & poster) | `GET /luaran/jenis` (+ `/master/luaran`) + `wajib`; submit proposal tanpa target jurnal **dan** poster → 400 "Target luaran wajib: artikel jurnal dan poster"; `DELETE /luaran/:id` / `PATCH` ubah `jenis` item jurnal/poster terakhir → 409 (`new-api.md` bagian 32) | Ganti `LUARAN_WAJIB` dengan field `wajib`; tampilkan pesan 400/409 server. |
 | — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
@@ -125,11 +126,7 @@ Data yang **sudah** tersambung ke API yang ada:
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
 | **Luaran wajib** jurnal & poster: item bawaan terkunci (tidak bisa dihapus/diganti jenis), ikut tersimpan lewat `POST /luaran` | `utils/luaranWajib.js` (aturan di frontend) |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-57 | Usulan › Dokumen › **Target Luaran wajib** (jurnal & poster) | Aturan "wajib" ditegakkan & diumumkan server, bukan hanya di frontend | (1) `GET /luaran/jenis` + field `wajib: true` untuk `jurnal` & `poster` (frontend membaca ini menggantikan `LUARAN_WAJIB`); (2) submit proposal (`/dosen/proposals/:id/submit` & `/proposals/:id/submit`) → **400** `"Target luaran wajib: artikel jurnal dan poster"` bila belum ada item `LuaranKegiatan` berjenis `jurnal` **dan** `poster`; (3) `DELETE /luaran/:id` → **409** bila menghapus item jurnal/poster terakhir pada proposal draft/revisi | Keputusan kampus: luaran jurnal & poster kini **wajib** (sebelumnya hanya prioritas, new-api.md §25 "bukan wajib"). Draft boleh belum lengkap. Proposal lama tanpa jurnal/poster: frontend menambahkan item bawaan saat dibuka dan menyimpannya saat proposal disimpan. |
+Semua kebutuhan API di bagian ini sudah tersedia (W-57, lihat "API sudah tersedia" di atas).
 
 ## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
 

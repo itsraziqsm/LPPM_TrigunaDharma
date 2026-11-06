@@ -20,7 +20,7 @@ Archive/        Arsip, JANGAN diedit: backend_node.zip (backend Node/Express/Pri
 Dokumen yang wajib dibaca sebelum mengubah bagian terkait:
 - `backend_go/README.md` — cara jalan, struktur, pengujian, perbedaan sengaja dengan Node.
 - `backend_go/SECURITY.md` — hasil gosec/govulncheck, perbaikan, dan aturan keamanan untuk kode baru.
-- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53, pendaftaran satu identitas/form penilaian & dana disetujui/surat tugas W-48/54/42, kategori & pengirim notifikasi W-56) untuk developer FE;
+- `backend_go/new-api.md` — API baru (fitur laporan, Grup A, B, C, W-22–W-30, hak akses reviewer, backup, template proposal, detail undangan, hapus dokumen dengan izin, Ketua STMIK & pemantauan, luaran prioritas & unduh luaran admin, rumpun ilmu komputer, akses baca dosen diundang, kelompok kecil W-43–46/49/51/55, riwayat/kontak admin/reset password admin/log aktivitas W-47/50/52/53, pendaftaran satu identitas/form penilaian & dana disetujui/surat tugas W-48/54/42, kategori & pengirim notifikasi W-56, luaran jurnal & poster wajib W-57) untuk developer FE;
   perbarui setiap kali menambah/mengubah API baru.
 - `frontend/CATATAN_REDESIGN.md` — sistem desain "Navy Akademik" & dashboard seragam.
 
@@ -215,8 +215,9 @@ token) yang bisa ditugaskan, membuka tugasan, dan menyimpan/finalisasi review. `
   keterangan, tercapaiAt, bukti URL/file) saat proposal disetujui dan laporan belum diajukan.
   Dapat diklaim = tercapai + laporan disetujui; jurnal = dapat diklaim berjenis jurnal.
   Jenis: jurnal, **poster**, prosiding, hki, buku, produk, media_massa, lainnya; **jurnal & poster = prioritas**
-  (ditampilkan paling atas di `/luaran/jenis`, `/master/luaran` (+ `prioritas`), daftar admin); backend belum mewajibkan —
-  keputusan kampus kini **wajib** di Usulan (frontend), penegakan server diminta di W-57.
+  (ditampilkan paling atas di `/luaran/jenis`, `/master/luaran` (+ `prioritas`, `wajib`), daftar admin) dan **wajib** (W-57,
+  keputusan kampus; `luaranWajib` di `luaran.go`): submit proposal tanpa target jurnal **dan** poster → 400 "Target luaran wajib:
+  artikel jurnal dan poster" (setelah cek undangan & komposisi tim; draft bebas); hapus/ubah jenis item jurnal/poster terakhir → 409.
   (Menu `/luaran` di frontend = pencairan dana, hal lain, menunggu kampus.)
 - **Nilai kepercayaan** = 5 × rata-rata komponen yang ada datanya (persetujuan proposal,
   persetujuan laporan dari proposal disetujui yang periodenya selesai/laporannya diputuskan,

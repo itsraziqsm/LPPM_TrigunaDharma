@@ -124,6 +124,14 @@ def lengkapi_tim(pid, owner, jenis, dosen=2, mahasiswa=True):
     assert r[0] == 200, r
     terima_undangan(pid, *tokens)
 
+def lengkapi_luaran(pid, owner):
+    """W-57: target luaran jurnal & poster wajib ada sebelum proposal diajukan."""
+    ada = {x["jenis"] for x in req("GET", f"/api/v1/luaran/proposal/{pid}", owner)[1]["data"]}
+    for jenis, target in (("jurnal", "Artikel jurnal SINTA"), ("poster", "Poster ilmiah")):
+        if jenis not in ada:
+            r = req("POST", "/api/v1/luaran", owner, {"proposalId": pid, "jenis": jenis, "target": target})
+            assert r[0] == 201, r
+
 check("login user shape", list(adminUser.keys()) == ["id", "name", "fullName", "email", "status", "roles", "wajibGantiPassword"] and adminUser["wajibGantiPassword"] is False, adminUser)
 check("wakil roles ordered by roleId", login("wakil.ketua@lppm.dev", "wakil123456")[2]["roles"] == ["ketua_lppm", "dosen"])
 
@@ -305,6 +313,7 @@ terima_undangan(pid, dosen3, dosen4)
 inv = [i for i in req("GET", "/api/v1/dosen/proposals/invitations", mhs1)[1]["data"] if i["proposal"]["id"] == pid][0]
 expect("submit pending", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", dosen1), 500, "Proposal tidak dapat diajukan: 1 anggota belum merespons undangan. Semua anggota harus menyetujui undangan terlebih dahulu.")
 req("PATCH", f"/api/v1/dosen/proposals/invitations/{inv['id']}", mhs1, {"status": "diterima"})
+lengkapi_luaran(pid, dosen1)
 b = expect("dosen submit", req("POST", f"/api/v1/dosen/proposals/{pid}/submit", dosen1), 200, "Proposal berhasil diajukan")
 check("submitted", b["data"]["status"] == "diajukan" and b["data"]["submittedAt"] is not None, b["data"])
 expect("update after submit", req("PATCH", f"/api/v1/proposals/{pid}", dosen1, {"judul": "Judul Lain Lagi"}), 500, "Proposal hanya bisa diedit saat status draft atau revisi")
@@ -660,6 +669,17 @@ expect("luaran list missing", req("GET", "/api/v1/luaran/proposal/999999", admin
 expect("luaran delete", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 200, "Luaran berhasil dihapus")
 expect("luaran delete missing", req("DELETE", f"/api/v1/luaran/{lh}", dosen5), 404, "Luaran tidak ditemukan")
 lengkapi_tim(lp, dosen5, "penelitian", dosen=0)
+# W-57: jurnal & poster wajib saat submit
+expect("submit tanpa poster (W-57)", req("POST", f"/api/v1/dosen/proposals/{lp}/submit", dosen5), 400, "Target luaran wajib: artikel jurnal dan poster")
+expect("submit tanpa poster /proposals (W-57)", req("POST", f"/api/v1/proposals/{lp}/submit", dosen5), 400, "Target luaran wajib: artikel jurnal dan poster")
+expect("hapus jurnal terakhir (W-57)", req("DELETE", f"/api/v1/luaran/{lj['id']}", dosen5), 409)
+expect("ubah jenis jurnal terakhir (W-57)", req("PATCH", f"/api/v1/luaran/{lj['id']}", dosen5, {"jenis": "buku"}), 409)
+expect("ubah target jurnal tetap boleh", req("PATCH", f"/api/v1/luaran/{lj['id']}", dosen5, {"jenis": "jurnal", "target": "Jurnal SINTA 3"}), 200)
+lpst = expect("tambah poster", req("POST", "/api/v1/luaran", dosen5, {"proposalId": lp, "jenis": "poster", "target": "Poster seminar"}), 201)["data"]["id"]
+lpst2 = req("POST", "/api/v1/luaran", dosen5, {"proposalId": lp, "jenis": "poster", "target": "Poster kedua"})[1]["data"]["id"]
+expect("hapus poster bukan terakhir", req("DELETE", f"/api/v1/luaran/{lpst2}", dosen5), 200)
+b = expect("luaran jenis wajib (W-57)", req("GET", "/api/v1/luaran/jenis", dosen5), 200)
+check("luaran jenis wajib field", [x["kode"] for x in b["data"] if x["wajib"]] == ["jurnal", "poster"] and list(b["data"][0].keys()) == ["kode", "label", "prioritas", "wajib"], b["data"][:3])
 expect("luaran submit proposal (penelitian tanpa anggota dosen)", req("POST", f"/api/v1/dosen/proposals/{lp}/submit", dosen5), 200)
 expect("luaran target locked", req("PATCH", f"/api/v1/luaran/{lj['id']}", dosen5, {"target": "Jurnal SINTA 2"}), 400, "Target luaran hanya bisa diubah saat proposal berstatus draft atau revisi")
 expect("luaran approve proposal", req("PATCH", f"/api/v1/proposals/{lp}/status", ketua, {"status": "disetujui"}), 200)
@@ -717,7 +737,7 @@ check("master bidang jenis", len(b) > 0 and all(x["jenisKegiatan"] in (None, "pe
 b = req("GET", "/api/v1/master/luaran?jenis=penelitian", dosen1)[1]["data"]
 check("master luaran", b[0]["nama"] == "Artikel jurnal nasional terakreditasi (SINTA)" and b[0]["jenisLuaran"] == "jurnal" and all(x["jenisKegiatan"] in (None, "penelitian") for x in b), b[:2])
 pr = [x["prioritas"] for x in b]
-check("master luaran prioritas di atas", pr == sorted(pr, reverse=True) and any(x["jenisLuaran"] == "poster" and x["prioritas"] for x in b) and pr.count(True) >= 3, [(x["nama"], x["prioritas"]) for x in b])
+check("master luaran prioritas di atas", pr == sorted(pr, reverse=True) and any(x["jenisLuaran"] == "poster" and x["prioritas"] for x in b) and pr.count(True) >= 3 and all(x["wajib"] == (x["jenisLuaran"] in ("jurnal", "poster")) for x in b), [(x["nama"], x["prioritas"]) for x in b])
 expect("master unknown", req("GET", "/api/v1/master/xyz", dosen1), 404)
 expect("master bad jenis", req("GET", "/api/v1/master/bidang?jenis=x", dosen1), 400)
 expect("master no token", req("GET", "/api/v1/master/bidang"), 401)
@@ -760,6 +780,7 @@ expect("pengabdian submit tanpa tim", req("POST", f"/api/v1/dosen/proposals/{mp[
 lengkapi_tim(mp["id"], dosen5, "pengabdian", mahasiswa=False)
 expect("pengabdian submit tanpa mahasiswa", req("POST", f"/api/v1/dosen/proposals/{mp['id']}/submit", dosen5), 400, "Proposal pengabdian belum dapat diajukan: tim wajib memiliki minimal 1 anggota mahasiswa (sekarang 0), selain ketua pengusul.")
 lengkapi_tim(mp["id"], dosen5, "pengabdian")
+lengkapi_luaran(mp['id'], dosen5)
 b = expect("pengabdian submit tim lengkap", req("POST", f"/api/v1/dosen/proposals/{mp['id']}/submit", dosen5), 200, "Proposal berhasil diajukan")
 check("pengabdian tim lengkap", len(b["data"]["anggota"]) == 3, b["data"]["anggota"])
 b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Penelitian tanpa mitra", "abstrak": abstrak, "jenis": "penelitian", "mitraJenis": None})
@@ -815,6 +836,7 @@ check("dosen5 default bukan reviewer", "reviewer" not in d5roles, d5roles)
 b = req("POST", "/api/v1/dosen/proposals", dosen2, {"judul": "Proposal untuk uji akses reviewer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 ra = b[1]["data"]["id"]
 lengkapi_tim(ra, dosen2, "penelitian")
+lengkapi_luaran(ra, dosen2)
 expect("ra submit", req("POST", f"/api/v1/dosen/proposals/{ra}/submit", dosen2), 200)
 expect("assign non-reviewer dosen", req("POST", f"/api/v1/proposals/{ra}/reviewers", ketua, {"reviewerIds": [d5]}), 400, "Reviewer tidak ditemukan, belum disetujui, atau tidak berperan reviewer")
 expect("non-reviewer my-tugasan", req("GET", "/api/v1/reviewer/my-tugasan", dosen5), 403, "Anda tidak memiliki peran reviewer")
@@ -868,6 +890,7 @@ b = expect("grant again then normal revoke", req("PATCH", f"/api/v1/users/{d5}/r
 b = req("POST", "/api/v1/dosen/proposals", dosen2, {"judul": "Proposal kedua uji akses reviewer", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 ra2 = b[1]["data"]["id"]
 lengkapi_tim(ra2, dosen2, "penelitian")
+lengkapi_luaran(ra2, dosen2)
 expect("ra2 submit", req("POST", f"/api/v1/dosen/proposals/{ra2}/submit", dosen2), 200)
 expect("assign d5 ra2", req("POST", f"/api/v1/proposals/{ra2}/reviewers", ketua, {"reviewerIds": [d5]}), 200)
 st = req("GET", f"/api/v1/users/{d5}/reviewer", ketua)[1]["data"]
@@ -1102,6 +1125,7 @@ req("DELETE", f"/api/v1/dosen/proposals/{up}", dosen5)
 b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal untuk uji hapus dengan izin", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 hp = b[1]["data"]["id"]
 lengkapi_tim(hp, dosen5, "penelitian")
+lengkapi_luaran(hp, dosen5)
 expect("hp submit", req("POST", f"/api/v1/dosen/proposals/{hp}/submit", dosen5), 200)
 expect("hapus req ketua forbidden", req("POST", f"/api/v1/proposals/{hp}/deletion-request", ketua, {"password": "ketua123456", "alasan": "duplikat"}), 403)
 expect("hapus req dosen forbidden", req("POST", f"/api/v1/proposals/{hp}/deletion-request", dosen5, {"password": "dosen123456", "alasan": "duplikat"}), 403)
@@ -1203,7 +1227,7 @@ check("monitoring dosen cari isi", b["meta"]["total"] >= 1 and any(x["dosen"]["i
 # ── luaran prioritas (jurnal, poster) + admin mengunduh luaran dosen ──
 import zipfile as _zf
 b = expect("luaran jenis", req("GET", "/api/v1/luaran/jenis", dosen1), 200, "Jenis luaran fetched")
-check("luaran jenis prioritas", [x["kode"] for x in b["data"][:2]] == ["jurnal", "poster"] and b["data"][1] == {"kode": "poster", "label": "Poster", "prioritas": True} and not b["data"][2]["prioritas"], b["data"][:3])
+check("luaran jenis prioritas", [x["kode"] for x in b["data"][:2]] == ["jurnal", "poster"] and b["data"][1] == {"kode": "poster", "label": "Poster", "prioritas": True, "wajib": True} and not b["data"][2]["prioritas"], b["data"][:3])
 b = req("POST", "/api/v1/dosen/proposals", dosen5, {"judul": "Proposal dengan luaran poster", "abstrak": abstrak, "jenis": "penelitian", "periodeId": periodePen})
 pp = b[1]["data"]["id"]
 b = expect("luaran poster", req("POST", "/api/v1/luaran", dosen5, {"proposalId": pp, "jenis": "poster", "target": "Poster seminar nasional"}), 201)
