@@ -60,7 +60,8 @@ go run ./cmd/hapus-proposal-mahasiswa [-yes]  # hapus proposal berpengusul mahas
 go run ./cmd/seed-email         # 6 akun contoh @email.com, satu per peran (ketuastmik@email.com/ketuastmik123, dst.; aman diulang)
 go run ./cmd/seed-proposal [-reset|-dry-run]  # proposal + laporan contoh SEMUA status (17 per dosen1 & dosen2, 3 per dosen3–5; aman diulang)
 go run ./cmd/truncate-data [-yes] [-produksi]  # TRUNCATE semua tabel kecuali User/UserRole/Role/_prisma_migrations (tanpa -yes = pratinjau; produksi wajib -produksi)
-go run ./cmd/server             # default PORT=3000
+go run .                        # server, default PORT=3000 (jalan pintas; sama dengan baris berikut)
+go run ./cmd/server             # server (keduanya memanggil internal/app.RunServer)
 go test ./...                   # unit test tanpa DB (config, database, sqlb, httpapi/compat_test)
 sh scripts/security-scan.sh     # go vet + go test + gosec + govulncheck (gosec 0 temuan; lihat SECURITY.md)
 python3 scripts/e2e.py http://localhost:3000   # ±766 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
@@ -68,7 +69,7 @@ docker compose up --build       # app :3233 + MySQL 8 (host :3307), migrasi otom
 ```
 
 ### Arsitektur
-- `cmd/server` (HTTP, graceful shutdown), `cmd/migrate` (runner kompatibel Prisma),
+- `cmd/server` dan `main.go` di root `backend_go/` (`go run .`) sama-sama memanggil `internal/app.RunServer` (HTTP, graceful shutdown); `cmd/migrate` (runner kompatibel Prisma),
   `cmd/seed`, `cmd/seed-tahap-1` (laporan + reviewer/review + target luaran untuk proposal
   `disetujui` yang belum punya laporan; menulis SQL langsung mengikuti `insertKegiatan`).
 - `internal/config` — baca env (`godotenv`). Default: `PORT=3000`, `CORS_ORIGIN=*`,

@@ -37,8 +37,11 @@ go mod download
 go run ./cmd/migrate          # buat/upgrade tabel (setara `npx prisma migrate deploy`)
 go run ./cmd/seed             # opsional: role + akun demo + periode
 go run ./cmd/seed-tahap-1     # opsional: laporan contoh untuk proposal yang sudah disetujui
-go run ./cmd/server           # server di PORT (default 3000)
+go run .                      # server di PORT (default 3000), jalan pintas untuk:
+go run ./cmd/server           # sama persis (keduanya memanggil internal/app.RunServer)
 ```
+
+`go run .` hanya untuk server; command lain tetap lewat `go run ./cmd/<nama>`.
 
 Build binary produksi:
 
@@ -169,7 +172,9 @@ item luaran diberi 2 target luaran, ditandai tercapai bila laporan sudah diajuka
 ## Struktur
 
 ```
+main.go         jalan pintas `go run .` → sama dengan cmd/server
 cmd/server      entrypoint HTTP server
+internal/app    RunServer(): .env, koneksi DB, HTTP server + graceful shutdown (dipakai main.go & cmd/server)
 cmd/migrate     runner migrasi (kompatibel _prisma_migrations)
 cmd/seed        seeder role, akun, periode
 cmd/seed-tahap-1  seeder laporan untuk proposal yang sudah disetujui

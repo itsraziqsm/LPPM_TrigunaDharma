@@ -27,7 +27,7 @@ var (
 	luaranPrioritas = map[string]bool{"jurnal": true, "poster": true}
 	// luaranWajib (W-57, keputusan kampus): target jurnal & poster wajib ada saat proposal diajukan.
 	luaranWajib = map[string]bool{"jurnal": true, "poster": true}
-	luaranLabel     = map[string]string{
+	luaranLabel = map[string]string{
 		"jurnal": "Artikel jurnal", "poster": "Poster", "prosiding": "Prosiding seminar", "hki": "Hak Kekayaan Intelektual (HKI)",
 		"buku": "Buku", "produk": "Produk / teknologi tepat guna", "media_massa": "Video / publikasi media massa", "lainnya": "Lainnya",
 	}
