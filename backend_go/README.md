@@ -43,6 +43,11 @@ go run ./cmd/server           # sama persis (keduanya memanggil internal/app.Run
 
 `go run .` hanya untuk server; command lain tetap lewat `go run ./cmd/<nama>`.
 
+Atau lewat **Makefile** (`make` saja = daftar perintah): `make run`, `make migrate`, `make status`, `make seed`,
+`make seed-email`, `make seed-proposal`, `make seed-tahap-1`, `make truncate` (pratinjau), `make test`, `make vet`,
+`make scan`, `make e2e` (`URL=` untuk server lain), `make build`, `make docker`. Butuh `make` (bawaan Linux/macOS;
+Windows: pasang lewat Git Bash/`choco install make`, atau pakai perintah `go run` di atas).
+
 Build binary produksi:
 
 ```bash

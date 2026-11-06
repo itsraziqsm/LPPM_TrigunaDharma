@@ -62,6 +62,7 @@ go run ./cmd/seed-proposal [-reset|-dry-run]  # proposal + laporan contoh SEMUA 
 go run ./cmd/truncate-data [-yes] [-produksi]  # TRUNCATE semua tabel kecuali User/UserRole/Role/_prisma_migrations (tanpa -yes = pratinjau; produksi wajib -produksi)
 go run .                        # server, default PORT=3000 (jalan pintas; sama dengan baris berikut)
 go run ./cmd/server             # server (keduanya memanggil internal/app.RunServer)
+make                            # daftar jalan pintas Makefile: make run|migrate|status|seed|seed-email|seed-proposal|seed-tahap-1|truncate|test|vet|scan|e2e|build|docker
 go test ./...                   # unit test tanpa DB (config, database, sqlb, httpapi/compat_test)
 sh scripts/security-scan.sh     # go vet + go test + gosec + govulncheck (gosec 0 temuan; lihat SECURITY.md)
 python3 scripts/e2e.py http://localhost:3000   # ±766 cek E2E (jumlah sedikit bergantung data); HANYA DB dev ter-seed, TRUST_PROXY=true
