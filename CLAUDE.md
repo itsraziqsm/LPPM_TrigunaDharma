@@ -378,7 +378,13 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   proposal diajukan): lencana baris Riwayat ("Semua anggota menerima" → tombol **Ajukan sekarang** ke Detail Kegiatan / "N anggota menolak" /
   "N belum menanggapi"), banner hijau/merah/kuning di Detail Kegiatan, lencana sidebar Kegiatan › jenis (`badge: 'kegiatan-<jenis>'` = siap lapor +
   tim lengkap + tim ada penolakan; tooltip merinci; dihitung ulang saat tab kembali aktif), dan Perlu perhatian Beranda ("N proposal: ada anggota
-  menolak undangan" → Ubah anggota, "N proposal siap diajukan" → Ajukan). Notifikasi `undangan_diterima|undangan_ditolak|tim_lengkap` disiapkan di
+  menolak undangan" → Ubah anggota, "N proposal siap diajukan" → Ajukan).
+  **Riwayat mode ringkas (uji coba, saat ini hanya `jenis === 'penelitian'`, flag `ringkas` di `KegiatanPage` & `MemberSection`)**: tanpa gulir
+  horizontal 360–1920 px — `table-fixed` + `<colgroup>`; kolom Judul (periode · skema · anggaran, lencana tim, tombol Lanjutkan/Ajukan) · Status
+  (+ Tahapan di bawahnya) · Luaran = **pokoknya saja** (`utils/luaranPokok.js`: "Jurnal", "Poster", "HKI"…, teks lengkap di tooltip; tab Laporan:
+  Luaran Tercapai 3 baris) · Tanggal (diperbarui + "Dibuat …", tanpa jam) · aksi (Hapus draf = ikon). Kolom Jenis dihapus (tab sudah menunjukkan).
+  Ponsel: Status disembunyikan < sm, Luaran & Tanggal < md — isinya pindah ke baris kecil di sel Judul. Tabel "sebagai anggota tim": Judul · Ketua
+  (+ "Saya: peran") · Status (+ Tahapan). Pengabdian masih tata letak lama sampai disetujui. Notifikasi `undangan_diterima|undangan_ditolak|tim_lengkap` disiapkan di
   `utils/notifikasi.js` (kategori Kegiatan), menunggu backend W-58. Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
   dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan

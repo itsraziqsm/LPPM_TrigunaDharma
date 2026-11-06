@@ -13,6 +13,7 @@ import { barisKlik } from '../utils/barisKlik'
 import KartuNavy from '../components/KartuNavy'
 import { EVENT_SIAP_LAPOR, hitungSiapLapor } from '../utils/siapLapor'
 import { statusTim } from '../utils/tanggapanTim'
+import { luaranPokok } from '../utils/luaranPokok'
 import { StatusCard } from '../components/KepalaStatus'
 
 // ---------------------------------------------------------------------------
@@ -68,6 +69,9 @@ function TahapanBadge({ tahapan }) {
 // GET /dosen/proposals/as-member (+ search, status di server). Detail lewat GET /proposals/:id (readOnly).
 // Panel cari standar (PanelCari): cari judul/abstrak · Filter status · Cari.
 function MemberSection({ jenis, label, userId }) {
+  // Mode ringkas (uji coba di Penelitian dulu): tanpa gulir horizontal — Peran saya di bawah Ketua, Tahapan di bawah Status.
+  const ringkas = jenis === 'penelitian'
+  const kolom = ringkas ? 4 : 6
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [total, setTotal] = useState(0)
@@ -144,8 +148,30 @@ function MemberSection({ jenis, label, userId }) {
         />
       </PanelCari>
       <AreaMemuat memuat={state === 'loading' && rows.length > 0} className="table-wrap">
-        <table className="table table-tight">
+        <table className={`table table-tight ${ringkas ? 'table-fixed' : ''}`}>
+          {ringkas ? (
+            <colgroup>
+              <col />
+              <col className="hidden w-48 md:table-column" />
+              <col className="hidden w-32 sm:table-column md:w-36" />
+              <col className="w-10" />
+            </colgroup>
+          ) : null}
           <thead>
+            {ringkas ? (
+              <tr>
+                <th scope="col">Judul</th>
+                <th scope="col" className="hidden md:table-cell">
+                  Ketua pengusul
+                </th>
+                <th scope="col" className="hidden sm:table-cell">
+                  Status
+                </th>
+                <th scope="col">
+                  <span className="sr-only">Aksi</span>
+                </th>
+              </tr>
+            ) : (
             <tr>
               <th scope="col">Judul</th>
               <th scope="col">Ketua pengusul</th>
@@ -156,23 +182,24 @@ function MemberSection({ jenis, label, userId }) {
                 <span className="sr-only">Aksi</span>
               </th>
             </tr>
+            )}
           </thead>
           <tbody>
             {state === 'loading' && rows.length === 0 ? (
               <tr aria-hidden="true">
-                <td colSpan={6}>
+                <td colSpan={kolom}>
                   <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
                 </td>
               </tr>
             ) : state === 'error' ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-600">
+                <td colSpan={kolom} className="py-8 text-center text-slate-600">
                   Daftar keanggotaan gagal dimuat.
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-500">
+                <td colSpan={kolom} className="py-8 text-center text-slate-500">
                   {adaFilter ? `Tidak ada ${label.toLowerCase()} yang cocok dengan pencarian.` : `Anda belum menjadi anggota ${label.toLowerCase()} lain.`}
                 </td>
               </tr>
@@ -180,6 +207,41 @@ function MemberSection({ jenis, label, userId }) {
               rows.map((p) => {
                 const saya = (p.anggota || []).find((a) => a.user?.id === userId)
                 const buka = () => navigate(`/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
+                const ketua = p.pengusul?.fullName || p.pengusul?.name || '—'
+                if (ringkas) {
+                  return (
+                    <tr key={p.id} {...barisKlik(buka, p.judul)}>
+                      <td className="min-w-0">
+                        <p className="line-clamp-2 break-words font-semibold text-slate-900" title={p.judul}>
+                          {p.judul}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-slate-500">{p.periode?.nama || 'Belum ada periode'}</p>
+                        <p className="mt-0.5 truncate text-xs text-slate-500 md:hidden">
+                          Ketua: {ketua} · <span className="capitalize">{saya?.peran || 'anggota'}</span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+                          <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                          {p.tahapan ? <TahapanBadge tahapan={p.tahapan} /> : null}
+                        </div>
+                      </td>
+                      <td className="hidden md:table-cell">
+                        <p className="truncate" title={ketua}>
+                          {ketua}
+                        </p>
+                        <p className="text-xs capitalize text-slate-500">Saya: {saya?.peran || 'anggota'}</p>
+                      </td>
+                      <td className="hidden sm:table-cell">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                          {p.tahapan ? <TahapanBadge tahapan={p.tahapan} /> : null}
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
+                      </td>
+                    </tr>
+                  )
+                }
                 return (
                   <tr key={p.id} {...barisKlik(buka, p.judul)}>
                     <td className="min-w-[16rem] max-w-md">
@@ -224,6 +286,8 @@ function MemberSection({ jenis, label, userId }) {
     </KartuNavy>
   )
 }
+
+const tanggal = (v) => (v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 
 const dateTime = (v) =>
   v ? new Date(v).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
@@ -386,7 +450,10 @@ export default function KegiatanPage({ jenis }) {
   const usulanTo = `/kegiatan/${jenis}/usulan`
   const isLaporan = tipe === 'laporan'
   const dataLaporan = rowsTipe === 'laporan'
-  const dataColCount = dataLaporan ? 7 : 9
+  // Mode ringkas (uji coba di Penelitian dulu): tanpa gulir horizontal — kolom Jenis dihapus (tab sudah menunjukkan),
+  // Tanggal Upload + Update digabung, Skema & Tahapan menumpang di kolom Judul/Status, Luaran = pokoknya saja (luaranPokok).
+  const ringkas = jenis === 'penelitian'
+  const dataColCount = ringkas ? 5 : dataLaporan ? 7 : 9
   const memuatUlang = loading && rows.length > 0
 
   return (
@@ -520,8 +587,34 @@ export default function KegiatanPage({ jenis }) {
           </PanelCari>
 
         <AreaMemuat memuat={memuatUlang} className="table-wrap">
-          <table className="table table-tight">
+          <table className={`table table-tight ${ringkas ? 'table-fixed' : ''}`}>
+            {ringkas ? (
+              <colgroup>
+                <col />
+                <col className="hidden w-32 sm:table-column md:w-36" />
+                <col className={`hidden md:table-column ${dataLaporan ? 'w-64' : 'w-40'}`} />
+                <col className="hidden w-32 md:table-column" />
+                <col className="w-12" />
+              </colgroup>
+            ) : null}
             <thead>
+              {ringkas ? (
+                <tr>
+                  <th scope="col">Judul</th>
+                  <th scope="col" className="hidden sm:table-cell">
+                    Status
+                  </th>
+                  <th scope="col" className="hidden md:table-cell">
+                    {dataLaporan ? 'Luaran Tercapai' : 'Luaran'}
+                  </th>
+                  <th scope="col" className="hidden md:table-cell">
+                    Tanggal
+                  </th>
+                  <th scope="col">
+                    <span className="sr-only">Aksi</span>
+                  </th>
+                </tr>
+              ) : (
               <tr>
                 <th scope="col">Tanggal Upload</th>
                 <th scope="col">Judul</th>
@@ -541,6 +634,7 @@ export default function KegiatanPage({ jenis }) {
                   <span className="sr-only">Aksi</span>
                 </th>
               </tr>
+              )}
             </thead>
             <tbody>
               {loading && rows.length === 0 ? (
@@ -578,6 +672,108 @@ export default function KegiatanPage({ jenis }) {
                   const buka = () =>
                     navigate(dataLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}` : `/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
                   const klik = barisKlik(buka, p.judul)
+                  if (ringkas) {
+                    const pokok = dataLaporan ? [] : luaranPokok(p.luaran)
+                    return (
+                      <tr key={`${tipe}-${p.id}`} {...klik} className={`${klik.className} ${lanjut ? 'bg-amber-50/60' : ''}`}>
+                        <td className="min-w-0">
+                          <p className="line-clamp-2 break-words font-semibold text-slate-900" title={p.judul}>
+                            {p.judul}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500" title={[p.periode?.nama, p.skema].filter(Boolean).join(' · ')}>
+                            {p.periode?.nama || 'Belum ada periode'}
+                            {!dataLaporan && p.skema ? ` · ${p.skema}` : ''}
+                            {p.anggaran ? ` · ${rupiah(p.anggaran)}` : ''}
+                          </p>
+                          {/* Ponsel: kolom Status (< sm), Luaran & Tanggal (< md) disembunyikan → ringkasannya di sini. */}
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+                            <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                            {!dataLaporan && p.tahapan ? <TahapanBadge tahapan={p.tahapan} /> : null}
+                          </div>
+                          <p className="mt-0.5 truncate text-xs text-slate-500 md:hidden">
+                            {[!dataLaporan && pokok.length ? pokok.join(', ') : null, `Diperbarui ${tanggal(p.updatedAt)}`].filter(Boolean).join(' · ')}
+                          </p>
+                          {tim || lanjut ? (
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              {tim ? (
+                                <span className={`badge ${tim.tone}`} title={tim.pesan}>
+                                  {tim.label}
+                                </span>
+                              ) : null}
+                              {lanjut ? (
+                                <Link
+                                  to={
+                                    dataLaporan
+                                      ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi`
+                                      : tim?.kode === 'lengkap'
+                                        ? `/kegiatan/${p.jenis || jenis}/detail/${p.id}`
+                                        : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`
+                                  }
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  className="btn btn-primary btn-sm"
+                                >
+                                  {tim?.kode === 'lengkap' ? 'Ajukan sekarang' : `Lanjutkan ${p.status === 'revisi' ? 'revisi' : 'draf'}`}
+                                  <ArrowRight className="size-4" aria-hidden="true" />
+                                </Link>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="hidden sm:table-cell">
+                          <div className="flex flex-col items-start gap-1.5">
+                            <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                            {!dataLaporan && p.tahapan ? <TahapanBadge tahapan={p.tahapan} /> : null}
+                          </div>
+                        </td>
+                        <td className="hidden md:table-cell">
+                          {dataLaporan ? (
+                            <p className="line-clamp-3 break-words text-sm" title={p.luaranTercapai || undefined}>
+                              {p.luaranTercapai || '—'}
+                            </p>
+                          ) : pokok.length ? (
+                            <ul className="flex flex-wrap gap-1" title={p.luaran} aria-label="Luaran">
+                              {pokok.map((l) => (
+                                <li key={l} className="badge badge-neutral">
+                                  {l}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="hidden text-sm tabular-nums md:table-cell">
+                          <span className="block whitespace-nowrap" title={`Diperbarui ${dateTime(p.updatedAt)}`}>
+                            {tanggal(p.updatedAt)}
+                          </span>
+                          <span className="block whitespace-nowrap text-xs text-slate-500" title={`Diunggah ${dateTime(p.createdAt)}`}>
+                            Dibuat {tanggal(p.createdAt)}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          {!dataLaporan && p.status === 'draft' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                hapus(p)
+                              }}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              disabled={deleting === p.id}
+                              aria-label={`Hapus draf ${p.judul}`}
+                              title="Hapus draf"
+                              className="icon-btn ml-auto text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                            </button>
+                          ) : (
+                            <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  }
                   return (
                   <tr key={`${tipe}-${p.id}`} {...klik} className={`${klik.className} ${lanjut ? 'bg-amber-50/60' : ''}`}>
                     <td className="whitespace-nowrap tabular-nums">{dateTime(p.createdAt)}</td>
