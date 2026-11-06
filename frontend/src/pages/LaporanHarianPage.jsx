@@ -96,87 +96,85 @@ function TabelLaporan({ laporan, onDelete, deleting, judulProposal }) {
     <section className="space-y-4">
       <div className="hidden lg:block">
         <div className="table-wrap">
-          <table className="table table-tight">
+          {/* Ringkas (pola Riwayat Kegiatan): Dokumen & Link GDrive satu kolom, aksi berupa ikon — tanpa gulir horizontal. */}
+          <table className="table table-tight table-fixed">
+            <colgroup>
+              <col className="w-32" />
+              <col />
+              <col className="w-48" />
+              <col className="w-24" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">Tanggal</th>
                 <th scope="col">Kegiatan</th>
-                <th scope="col">Dokumen</th>
-                <th scope="col">Link GDrive</th>
-                <th scope="col">Aksi</th>
+                <th scope="col">Dokumen &amp; tautan</th>
+                <th scope="col" className="text-right">
+                  Aksi
+                </th>
               </tr>
             </thead>
             <tbody>
               {laporan.map((l) => (
                 <tr key={l.id} className="transition-colors hover:bg-navy-50/60">
-                  <td className="whitespace-nowrap align-top font-medium text-slate-900">
-                    {fmtDate(l.tanggal)}
-                  </td>
-                  <td className="align-top">
-                    <p className="max-w-md leading-relaxed text-slate-700">
+                  <td className="align-top font-medium text-slate-900">{fmtDate(l.tanggal)}</td>
+                  <td className="min-w-0 align-top">
+                    <p className="line-clamp-4 break-words leading-relaxed text-slate-700" title={l.kegiatan}>
                       {l.kegiatan}
                     </p>
                   </td>
-                  <td className="align-top">
-                    {l.dokumenNama ? (
-                      <div className="space-y-0.5">
+                  <td className="min-w-0 align-top">
+                    <div className="flex flex-col items-start gap-1">
+                      {l.dokumenNama ? (
                         <button
+                          type="button"
                           onClick={() => laporanHarianApi.openDokumen(l.id)}
-                          className="btn btn-ghost btn-sm -ml-3 text-navy-800"
-                          title="Buka dokumen"
+                          className="inline-flex max-w-full items-center gap-1.5 text-left text-sm font-medium text-navy-800 hover:underline"
+                          title={`Buka ${l.dokumenNama}${l.dokumenUkuran ? ` (${fmtSize(l.dokumenUkuran)})` : ''}`}
                         >
                           <FileText className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                          <span className="max-w-[180px] truncate">{l.dokumenNama}</span>
+                          <span className="min-w-0 truncate">{l.dokumenNama}</span>
                         </button>
-                        {l.dokumenUkuran && (
-                          <p className="text-sm text-slate-500">Ukuran: {fmtSize(l.dokumenUkuran)}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-slate-400">Tidak ada dokumen</span>
-                    )}
+                      ) : (
+                        <span className="text-sm text-slate-400">Tanpa dokumen</span>
+                      )}
+                      {l.linkGdrive ? (
+                        <a
+                          href={l.linkGdrive}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-800 hover:underline"
+                          title={l.linkGdrive}
+                        >
+                          <ExternalLink className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                          Link GDrive
+                        </a>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="align-top">
-                    {l.linkGdrive ? (
-                      <a
-                        href={l.linkGdrive}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-ghost btn-sm -ml-3 text-navy-800"
-                      >
-                        <ExternalLink className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                        Lihat Dokumen
-                      </a>
-                    ) : (
-                      <span className="text-sm text-slate-400">Tidak ada tautan</span>
-                    )}
-                  </td>
-                  <td className="align-top">
-                    <div className="flex flex-col items-start gap-1.5">
+                    <div className="flex items-center justify-end gap-0.5">
                       {l.dokumenNama && (
                         <button
+                          type="button"
                           onClick={() => handleDownloadDokumen(l)}
                           disabled={downloading === l.id}
-                          className="btn btn-secondary btn-sm"
+                          className="icon-btn text-navy-700 hover:bg-navy-50"
                           title="Unduh dokumen"
+                          aria-label={`Unduh dokumen laporan ${fmtDate(l.tanggal)}`}
                         >
-                          {downloading === l.id ? (
-                            <span className="spinner" aria-hidden="true" />
-                          ) : (
-                            <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                          )}
-                          Unduh Dokumen
+                          {downloading === l.id ? <span className="spinner" aria-hidden="true" /> : <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />}
                         </button>
                       )}
-
                       <button
+                        type="button"
                         onClick={() => onDelete(l.id)}
                         disabled={deleting === l.id}
-                        className="btn btn-danger btn-sm"
+                        className="icon-btn text-red-700 hover:bg-red-50"
                         title="Hapus laporan"
+                        aria-label={`Hapus laporan ${fmtDate(l.tanggal)}`}
                       >
                         <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                        Hapus Laporan
                       </button>
                     </div>
                   </td>

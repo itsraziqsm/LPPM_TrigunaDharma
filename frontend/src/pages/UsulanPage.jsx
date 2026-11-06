@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDrafForm from '../hooks/useDrafForm'
-import { kunciWajib, lengkapiWajib, wajibKurang } from '../utils/luaranWajib'
+import { kunciWajib, lengkapiWajib, wajibDariJenis, wajibKurang } from '../utils/luaranWajib'
 import { segarkanTanggapanTim } from '../utils/tanggapanTim'
 import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
@@ -93,7 +93,7 @@ async function syncLuaran(proposalId, orig, items) {
   }
 }
 
-function validate(form, file, existingDoc, luaranItems, anggota) {
+function validate(form, file, existingDoc, luaranItems, anggota, daftarWajib) {
   const e = {}
   const judul = form.judul.trim()
   if (!judul) e.judul = 'Judul proposal wajib diisi.'
@@ -116,7 +116,7 @@ function validate(form, file, existingDoc, luaranItems, anggota) {
   const tim = pelanggaranTim(form.jenis, anggota)
   if (tim.length) e.anggota = `Komposisi tim belum sesuai: ${tim.join(', ')}.`
   if (luaranItems.some((i) => i.target.trim().length < 3)) e.luaran = 'Setiap target luaran minimal 3 karakter.'
-  else if (wajibKurang(luaranItems).length) e.luaran = 'Target luaran wajib: artikel jurnal dan poster.'
+  else if (wajibKurang(luaranItems, daftarWajib).length) e.luaran = 'Target luaran wajib: artikel jurnal dan poster.'
   if (file) {
     if (file.size > MAX_FILE) e.dokumen = 'Ukuran file melebihi batas 10 MB.'
     else if (!ALLOWED_MIME.includes(file.type)) e.dokumen = 'Format file harus PDF atau DOCX.'
@@ -305,6 +305,8 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       alive = false
     }
   }, [])
+  // Jenis luaran wajib dari server (W-57, `wajib` di GET /luaran/jenis); cadangan jurnal & poster.
+  const daftarWajib = useMemo(() => wajibDariJenis(jenisLuaran), [jenisLuaran])
   const labelLuaran = (k) => jenisLuaran.find((j) => j.kode === k)?.label || LUARAN_JENIS[k] || k
   const [anggota, setAnggota] = useState([])
   const lengkapiAnggota = (list, masihAktif) =>
@@ -471,7 +473,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
     }
   }, [id, isEdit, jenisRoute])
 
-  const errors = useMemo(() => validate(form, file, existingDoc, luaranItems, anggota), [form, file, existingDoc, luaranItems, anggota])
+  const errors = useMemo(() => validate(form, file, existingDoc, luaranItems, anggota, daftarWajib), [form, file, existingDoc, luaranItems, anggota, daftarWajib])
   const jenisLabel = JENIS_LABEL[form.jenis] || 'Kegiatan'
   const periodeOptions = periodes.filter((p) => p.jenis === form.jenis)
   const periode = periodes.find((p) => String(p.id) === String(form.periodeId))
@@ -502,7 +504,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
   }
   const setPeran = (id, peran) => setAnggota((prev) => prev.map((x) => (x.id === id ? { ...x, peran } : x)))
   const removeAnggota = (id) => setAnggota((prev) => prev.filter((x) => x.id !== id))
-  const wajibKeys = useMemo(() => kunciWajib(luaranItems), [luaranItems])
+  const wajibKeys = useMemo(() => kunciWajib(luaranItems, daftarWajib), [luaranItems, daftarWajib])
   const setLuaran = (key, field, value) => setLuaranItems((prev) => prev.map((x) => (x.key === key ? { ...x, [field]: value } : x)))
   const steps = stepsFor(form.jenis)
   const current = steps[Math.min(step, steps.length - 1)].key
@@ -593,8 +595,9 @@ export default function UsulanPage({ jenis: jenisRoute }) {
       const items = draft ? luaranItems.filter((i) => i.target.trim().length >= 3) : luaranItems
       try {
         await syncLuaran(savedId, luaranOrig, items)
-      } catch {
-        warn.push('sebagian target luaran gagal disimpan')
+      } catch (e) {
+        // Pesan server ditampilkan apa adanya (mis. 409 W-57 "Target luaran Artikel jurnal wajib ada…").
+        warn.push(e.response?.data?.message ? `target luaran gagal disimpan: ${e.response.data.message}` : 'sebagian target luaran gagal disimpan')
       }
     }
     segarkanTanggapanTim() // anggota bisa berubah → lencana tanggapan tim dihitung ulang
@@ -643,7 +646,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
           targetTanggal: l.targetTanggal ? String(l.targetTanggal).slice(0, 10) : '',
         }))
         // Target yang belum valid tetap ada di formulir.
-        const sisa = lengkapiWajib([...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)], form.jenis, newLuaran)
+        const sisa = lengkapiWajib([...saved, ...luaranItems.filter((i) => !i.id && i.target.trim().length < 3)], form.jenis, newLuaran, daftarWajib)
         setLuaranItems(sisa)
         setLuaranOrig(saved)
         draf.bersihkan({ ...isianDraf, luaranItems: sisa })

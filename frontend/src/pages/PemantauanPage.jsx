@@ -234,39 +234,72 @@ export default function PemantauanPage() {
           <p className="py-10 text-center text-sm text-slate-500">Tidak ada data untuk filter ini.</p>
         ) : tabData === 'proposal' ? (
           <div className="table-wrap">
-            <table className="table table-tight">
+            {/* Ringkas (pola Riwayat Kegiatan): Dana & Laporan satu kolom (< lg → sel Judul), Pengusul (< md) & Status (< sm) ke sel Judul. */}
+            <table className="table table-tight table-fixed">
+              <colgroup>
+                <col />
+                <col className="hidden w-52 md:table-column" />
+                <col className="hidden w-40 sm:table-column" />
+                <col className="hidden w-40 lg:table-column" />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Proposal</th>
-                  <th scope="col">Pengusul</th>
-                  <th scope="col">Status &amp; progres</th>
-                  <th scope="col" className="text-right">
-                    Dana disetujui
+                  <th scope="col" className="hidden md:table-cell">
+                    Pengusul
                   </th>
-                  <th scope="col">Laporan</th>
+                  <th scope="col" className="hidden sm:table-cell">
+                    Status &amp; progres
+                  </th>
+                  <th scope="col" className="hidden lg:table-cell">
+                    Dana &amp; laporan
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {list.items.map((p) => (
+                {list.items.map((p) => {
+                  const dana = danaFinal(p) == null ? null : rupiah(danaFinal(p))
+                  const laporan = p.laporan ? (
+                    <>
+                      <span className={`badge ${STATUS_COLOR[p.laporan.status] || 'badge-neutral'}`}>Laporan: {STATUS_LABEL[p.laporan.status] || p.laporan.status}</span>
+                      {p.laporan.realisasiAnggaran != null ? <span className="mt-1 block text-xs text-slate-500">Realisasi {rupiah(p.laporan.realisasiAnggaran)}</span> : null}
+                    </>
+                  ) : (
+                    <span className="block text-xs text-slate-400">Belum ada laporan</span>
+                  )
+                  return (
                   <tr key={p.id} {...barisKlik(() => navigate(`/kegiatan/${p.jenis}/detail/${p.id}`, { state: { dari: { to: '/statistik', label: 'Statistik' } } }), p.judul)}>
-                    <td className="min-w-56">
-                      <span className="block font-semibold text-slate-900">{p.judul}</span>
-                      <span className="block text-xs text-slate-500">
+                    <td className="min-w-0">
+                      <span className="line-clamp-2 break-words font-semibold text-slate-900" title={p.judul}>
+                        {p.judul}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-slate-500">
                         {[JENIS_LABEL[p.jenis], p.periode?.nama, p.submittedAt ? `diajukan ${hari(p.submittedAt)}` : null].filter(Boolean).join(' · ')}
                       </span>
+                      <span className="mt-0.5 block truncate text-xs text-slate-500 md:hidden">
+                        {nama(p.pengusul)} · {p.jumlahAnggota ?? 0} anggota
+                      </span>
+                      <span className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+                        <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
+                        {p.tahapan ? <span className="text-xs text-slate-600">Tahap {p.tahapan.urutan}/4</span> : null}
+                      </span>
+                      <span className="mt-1 block lg:hidden">
+                        <span className="block text-xs tabular-nums text-slate-600">Dana disetujui {dana || '—'}</span>
+                        <span className="mt-1 block">{laporan}</span>
+                      </span>
                     </td>
-                    <td>
+                    <td className="hidden md:table-cell">
                       <span className="flex items-center gap-2">
-                        <UserAvatar user={p.pengusul} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
+                        <UserAvatar user={p.pengusul} className="size-7 shrink-0 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                         <span className="min-w-0 text-sm">
-                          <span className="block font-medium text-slate-900">{nama(p.pengusul)}</span>
-                          <span className="block text-xs text-slate-500">
+                          <span className="line-clamp-2 break-words font-medium text-slate-900">{nama(p.pengusul)}</span>
+                          <span className="block truncate text-xs text-slate-500">
                             {[p.pengusul?.nidn, `${p.jumlahAnggota ?? 0} anggota`].filter(Boolean).join(' · ')}
                           </span>
                         </span>
                       </span>
                     </td>
-                    <td>
+                    <td className="hidden sm:table-cell">
                       <span className={`badge ${STATUS_COLOR[p.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.status] || p.status}</span>
                       {p.tahapan ? (
                         <span className="mt-1 block text-xs text-slate-600">
@@ -274,74 +307,86 @@ export default function PemantauanPage() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="text-right tabular-nums">{danaFinal(p) == null ? <span className="text-slate-400">—</span> : rupiah(danaFinal(p))}</td>
-                    <td>
-                      {p.laporan ? (
-                        <>
-                          <span className={`badge ${STATUS_COLOR[p.laporan.status] || 'badge-neutral'}`}>{STATUS_LABEL[p.laporan.status] || p.laporan.status}</span>
-                          {p.laporan.realisasiAnggaran != null ? (
-                            <span className="mt-1 block text-xs text-slate-500">Realisasi {rupiah(p.laporan.realisasiAnggaran)}</span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className="text-sm text-slate-400">Belum ada</span>
-                      )}
+                    <td className="hidden lg:table-cell">
+                      <span className="block text-sm tabular-nums">{dana || <span className="text-slate-400">—</span>}</span>
+                      <span className="mt-1 block">{laporan}</span>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
         ) : (
           <div className="table-wrap">
-            <table className="table table-tight">
+            {/* Ringkas: Dana & Terakhir diajukan satu kolom (< lg → sel Dosen), Status per jenis (< md) & jumlah (< sm) ke sel Dosen. */}
+            <table className="table table-tight table-fixed">
+              <colgroup>
+                <col />
+                <col className="hidden w-36 sm:table-column" />
+                <col className="hidden w-56 md:table-column" />
+                <col className="hidden w-40 lg:table-column" />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Dosen</th>
-                  <th scope="col">Proposal</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" className="text-right">
-                    Dana disetujui
+                  <th scope="col" className="hidden sm:table-cell">
+                    Proposal
                   </th>
-                  <th scope="col">Terakhir diajukan</th>
+                  <th scope="col" className="hidden md:table-cell">
+                    Status
+                  </th>
+                  <th scope="col" className="hidden lg:table-cell">
+                    Dana &amp; terakhir diajukan
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {list.items.map((r) => (
+                {list.items.map((r) => {
+                  const perStatus = (
+                    <span className="flex flex-wrap gap-1">
+                      {STATUS_URUT.filter((k) => Number(r.perStatus?.[k]) > 0).map((k) => (
+                        <span key={k} className={`badge ${STATUS_COLOR[k] || 'badge-neutral'}`}>
+                          {STATUS_LABEL[k]} {r.perStatus[k]}
+                        </span>
+                      ))}
+                    </span>
+                  )
+                  return (
                   <tr key={r.dosen?.id} title="Lihat proposal dosen ini" {...barisKlik(() => lihatDosen(r.dosen), nama(r.dosen))}>
-                    <td>
+                    <td className="min-w-0">
                       <span className="flex items-center gap-2">
-                        <UserAvatar user={r.dosen} className="size-8 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
+                        <UserAvatar user={r.dosen} className="size-8 shrink-0 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                         <span className="min-w-0 text-sm">
-                          <span className="block font-medium text-slate-900">{nama(r.dosen)}</span>
-                          <span className="block text-xs text-slate-500">
+                          <span className="line-clamp-2 break-words font-medium text-slate-900">{nama(r.dosen)}</span>
+                          <span className="block truncate text-xs text-slate-500">
                             {[r.dosen?.nidn, r.dosen?.programStudi, r.dosen?.jabatanFungsional].filter(Boolean).join(' · ') || r.dosen?.email}
                           </span>
                         </span>
                       </span>
+                      <span className="mt-1 block text-xs text-slate-500 sm:hidden">
+                        {r.jumlahProposal} proposal · {r.perJenis?.penelitian ?? 0} penelitian · {r.perJenis?.pengabdian ?? 0} pengabdian
+                      </span>
+                      <span className="mt-1.5 block md:hidden">{perStatus}</span>
+                      <span className="mt-1 block text-xs tabular-nums text-slate-500 lg:hidden">
+                        Dana disetujui {rupiah(r.anggaranDisetujui)} · terakhir {hari(r.terakhirDiajukanAt)}
+                      </span>
                     </td>
-                    <td className="text-sm">
+                    <td className="hidden text-sm sm:table-cell">
                       <strong className="tabular-nums">{r.jumlahProposal}</strong>
                       <span className="block text-xs text-slate-500">
                         {r.perJenis?.penelitian ?? 0} penelitian · {r.perJenis?.pengabdian ?? 0} pengabdian
                       </span>
                     </td>
-                    <td>
-                      <span className="flex flex-wrap gap-1">
-                        {STATUS_URUT.filter((k) => Number(r.perStatus?.[k]) > 0).map((k) => (
-                          <span key={k} className={`badge ${STATUS_COLOR[k] || 'badge-neutral'}`}>
-                            {STATUS_LABEL[k]} {r.perStatus[k]}
-                          </span>
-                        ))}
-                      </span>
-                    </td>
-                    <td className="text-right text-sm tabular-nums">
+                    <td className="hidden md:table-cell">{perStatus}</td>
+                    <td className="hidden text-sm tabular-nums lg:table-cell">
                       {rupiah(r.anggaranDisetujui)}
                       <span className="block text-xs text-slate-500">dana disetujui</span>
+                      <span className="mt-1 block text-xs text-slate-500">Terakhir {hari(r.terakhirDiajukanAt)}</span>
                     </td>
-                    <td className="text-sm">{hari(r.terakhirDiajukanAt)}</td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

@@ -69,8 +69,8 @@ function TahapanBadge({ tahapan }) {
 // GET /dosen/proposals/as-member (+ search, status di server). Detail lewat GET /proposals/:id (readOnly).
 // Panel cari standar (PanelCari): cari judul/abstrak · Filter status · Cari.
 function MemberSection({ jenis, label, userId }) {
-  // Mode ringkas (uji coba di Penelitian dulu): tanpa gulir horizontal — Peran saya di bawah Ketua, Tahapan di bawah Status.
-  const ringkas = jenis === 'penelitian'
+  // Mode ringkas: tanpa gulir horizontal — Peran saya di bawah Ketua, Tahapan di bawah Status.
+  const ringkas = true
   const kolom = ringkas ? 4 : 6
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
@@ -450,9 +450,9 @@ export default function KegiatanPage({ jenis }) {
   const usulanTo = `/kegiatan/${jenis}/usulan`
   const isLaporan = tipe === 'laporan'
   const dataLaporan = rowsTipe === 'laporan'
-  // Mode ringkas (uji coba di Penelitian dulu): tanpa gulir horizontal — kolom Jenis dihapus (tab sudah menunjukkan),
+  // Mode ringkas (semua jenis): tanpa gulir horizontal — kolom Jenis dihapus (tab sudah menunjukkan),
   // Tanggal Upload + Update digabung, Skema & Tahapan menumpang di kolom Judul/Status, Luaran = pokoknya saja (luaranPokok).
-  const ringkas = jenis === 'penelitian'
+  const ringkas = true
   const dataColCount = ringkas ? 5 : dataLaporan ? 7 : 9
   const memuatUlang = loading && rows.length > 0
 
@@ -674,15 +674,17 @@ export default function KegiatanPage({ jenis }) {
                   const klik = barisKlik(buka, p.judul)
                   if (ringkas) {
                     const pokok = dataLaporan ? [] : luaranPokok(p.luaran)
+                    // Skema (penelitian) / Mitra (pengabdian) menumpang di baris keterangan judul.
+                    const ekstra = dataLaporan ? null : (jenis === 'pengabdian' ? p.mitra : p.skema) || null
                     return (
                       <tr key={`${tipe}-${p.id}`} {...klik} className={`${klik.className} ${lanjut ? 'bg-amber-50/60' : ''}`}>
                         <td className="min-w-0">
                           <p className="line-clamp-2 break-words font-semibold text-slate-900" title={p.judul}>
                             {p.judul}
                           </p>
-                          <p className="mt-0.5 truncate text-xs text-slate-500" title={[p.periode?.nama, p.skema].filter(Boolean).join(' · ')}>
+                          <p className="mt-0.5 truncate text-xs text-slate-500" title={[p.periode?.nama, ekstra].filter(Boolean).join(' · ')}>
                             {p.periode?.nama || 'Belum ada periode'}
-                            {!dataLaporan && p.skema ? ` · ${p.skema}` : ''}
+                            {ekstra ? ` · ${ekstra}` : ''}
                             {p.anggaran ? ` · ${rupiah(p.anggaran)}` : ''}
                           </p>
                           {/* Ponsel: kolom Status (< sm), Luaran & Tanggal (< md) disembunyikan → ringkasannya di sini. */}

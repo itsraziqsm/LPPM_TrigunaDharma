@@ -194,51 +194,67 @@ export default function DaftarDokumenStmikPage({ tipe = 'proposal' }) {
         ) : (
           <>
             <div className="table-wrap">
-              <table className="table table-tight min-w-[860px]">
+              {/* Ringkas (pola Riwayat Kegiatan): tanpa gulir horizontal — Periode di bawah judul, Tahapan/Realisasi di bawah status;
+                  Anggaran (< lg), Pengusul (< md), Status (< sm) pindah ke sel Judul. */}
+              <table className="table table-tight table-fixed">
+                <colgroup>
+                  <col />
+                  <col className="hidden w-52 md:table-column" />
+                  <col className="hidden w-40 sm:table-column" />
+                  <col className="hidden w-32 lg:table-column" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th scope="col">Judul</th>
-                    <th scope="col">Pengusul</th>
-                    <th scope="col">Periode</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">{tipe === 'proposal' ? 'Tahapan' : 'Realisasi'}</th>
-                    <th scope="col" className="text-right">
+                    <th scope="col" className="hidden md:table-cell">
+                      Pengusul
+                    </th>
+                    <th scope="col" className="hidden sm:table-cell">
+                      Status
+                    </th>
+                    <th scope="col" className="hidden text-right lg:table-cell">
                       Anggaran
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {baris.map((x) => (
+                  {baris.map((x) => {
+                    const lanjutan = tipe === 'proposal' ? x.tahapan?.label || null : `Realisasi ${rupiah(x.realisasiAnggaran)}`
+                    return (
                     <tr key={x.id} {...barisKlik(() => bukaDetail(x), x.judul)}>
-                      <td className="min-w-[16rem] max-w-[28rem]">
-                        <p className="line-clamp-2 font-semibold leading-snug text-slate-900" title={x.judul}>
+                      <td className="min-w-0">
+                        <p className="line-clamp-2 break-words font-semibold leading-snug text-slate-900" title={x.judul}>
                           {x.judul}
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
                           <span className="badge badge-tag">{JENIS_LABEL[x.jenis] || x.jenis || '—'}</span>
-                          <span className="text-xs text-slate-500">ID #{x.id}</span>
+                          <span className="min-w-0 truncate text-xs text-slate-500">{x.periode?.nama || '—'}</span>
+                          {x._aktif ? null : <span className="badge badge-neutral">Di luar periode aktif</span>}
+                        </div>
+                        <p className="mt-1 truncate text-xs text-slate-500 md:hidden">{nama(x.pengusul)}</p>
+                        <p className="mt-0.5 text-xs tabular-nums text-slate-500 lg:hidden">Anggaran {rupiah(x.anggaran)}</p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+                          <span className={`badge ${STATUS_COLOR[x.status] || 'badge-neutral'}`}>{STATUS_LABEL[x.status] || x.status}</span>
+                          {lanjutan ? <span className="text-xs text-slate-500">{lanjutan}</span> : null}
                         </div>
                       </td>
-                      <td>
+                      <td className="hidden md:table-cell">
                         <span className="flex items-center gap-2">
-                          <UserAvatar user={x.pengusul} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
+                          <UserAvatar user={x.pengusul} className="size-7 shrink-0 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
                           <span className="min-w-0">
-                            <span className="block font-medium text-slate-900">{nama(x.pengusul)}</span>
+                            <span className="line-clamp-2 break-words font-medium text-slate-900">{nama(x.pengusul)}</span>
                             {x.pengusul?.nidn ? <span className="block text-xs text-slate-500">NIDN {x.pengusul.nidn}</span> : null}
                           </span>
                         </span>
                       </td>
-                      <td>
-                        <span className="block text-slate-900">{x.periode?.nama || '—'}</span>
-                        {x._aktif ? null : <span className="badge badge-neutral mt-1">Di luar periode aktif</span>}
-                      </td>
-                      <td>
+                      <td className="hidden sm:table-cell">
                         <span className={`badge ${STATUS_COLOR[x.status] || 'badge-neutral'}`}>{STATUS_LABEL[x.status] || x.status}</span>
+                        {lanjutan ? <p className="mt-1 text-xs text-slate-500">{lanjutan}</p> : null}
                       </td>
-                      <td className="text-sm text-slate-700">{tipe === 'proposal' ? x.tahapan?.label || '—' : rupiah(x.realisasiAnggaran)}</td>
-                      <td className="whitespace-nowrap text-right tabular-nums text-slate-900">{rupiah(x.anggaran)}</td>
+                      <td className="hidden whitespace-nowrap text-right tabular-nums text-slate-900 lg:table-cell">{rupiah(x.anggaran)}</td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

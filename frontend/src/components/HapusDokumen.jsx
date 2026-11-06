@@ -9,6 +9,7 @@ import { dokumenHapusApi, pesanGalat } from '../api/dokumenHapus'
 //   sudah diajukan   → permintaan ke Ketua LPPM (W-34): POST /:tipe/:id/deletion-request
 //                      { password, alasan }; status menunggu dari GET .../deletion-request
 //                      + tombol Batalkan. Ketua menyetujui di PermintaanHapusDokumen.
+// compact = tombol ikon saja (teks di tooltip/aria-label) untuk kolom aksi tabel yang sempit.
 export default function HapusDokumen({ tipe = 'proposal', id, status, noun = 'dokumen', judul, onDelete, compact = false }) {
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState(undefined) // undefined = memuat, null = tidak ada
@@ -64,6 +65,13 @@ export default function HapusDokumen({ tipe = 'proposal', id, status, noun = 'do
         setBusy(false)
       }
     }
+    if (compact) {
+      return (
+        <button type="button" onClick={hapus} disabled={busy} aria-label={`Hapus ${noun}`} title={`Hapus ${noun}`} className="icon-btn text-red-700 hover:bg-red-50">
+          <Trash2 className="size-4" aria-hidden="true" />
+        </button>
+      )
+    }
     return (
       <button type="button" onClick={hapus} disabled={busy} className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50">
         <Trash2 className="size-4" aria-hidden="true" />
@@ -73,7 +81,23 @@ export default function HapusDokumen({ tipe = 'proposal', id, status, noun = 'do
   }
 
   if (pending === undefined) {
+    if (compact) return <span className="inline-block size-9" aria-hidden="true" />
     return <span className="text-sm text-slate-400">Memeriksa permintaan hapus…</span>
+  }
+
+  if (pending && compact) {
+    return (
+      <button
+        type="button"
+        onClick={batalkan}
+        disabled={busy}
+        aria-label={`Menunggu izin Ketua untuk dihapus — batalkan permintaan hapus ${noun}`}
+        title="Menunggu izin Ketua untuk dihapus. Klik untuk membatalkan permintaan."
+        className="icon-btn text-amber-700 hover:bg-amber-50"
+      >
+        <Clock className="size-4" aria-hidden="true" />
+      </button>
+    )
   }
 
   if (pending) {
@@ -96,10 +120,11 @@ export default function HapusDokumen({ tipe = 'proposal', id, status, noun = 'do
         type="button"
         onClick={() => setOpen(true)}
         title={`${Noun} yang sudah diajukan hanya bisa dihapus dengan izin Ketua LPPM.`}
-        className="btn btn-ghost btn-sm text-red-700 hover:bg-red-50"
+        aria-label={compact ? `Ajukan hapus ${noun} (izin Ketua)` : undefined}
+        className={compact ? 'icon-btn text-red-700 hover:bg-red-50' : 'btn btn-ghost btn-sm text-red-700 hover:bg-red-50'}
       >
         <Trash2 className="size-4" aria-hidden="true" />
-        Ajukan hapus (izin Ketua)
+        {compact ? null : 'Ajukan hapus (izin Ketua)'}
       </button>
       {open ? (
         <AjukanHapusDialog

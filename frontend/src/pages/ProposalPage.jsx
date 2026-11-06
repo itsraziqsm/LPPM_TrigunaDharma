@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
-import { FileText } from 'lucide-react'
+import { FileText, Gavel, Lock } from 'lucide-react'
 import KartuNavy from '../components/KartuNavy'
 import { barisKlik, tanpaBaris } from '../utils/barisKlik'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
@@ -185,47 +185,73 @@ export default function ProposalPage() {
           ) : (
             <>
               <div className="table-wrap">
-                <table className="table table-tight min-w-[860px]">
+                {/* Ringkas (pola Riwayat Kegiatan): tanpa gulir horizontal — Anggaran di bawah Status, jumlah anggota di bawah Ketua,
+                    aksi berupa ikon; ponsel: Ketua (< md) & Status (< sm) pindah ke sel Judul. */}
+                <table className="table table-tight table-fixed">
+                  <colgroup>
+                    <col />
+                    <col className="hidden w-52 md:table-column" />
+                    <col className="hidden w-36 sm:table-column" />
+                    <col className="w-24" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th scope="col">Judul Proposal</th>
-                      <th scope="col">Ketua</th>
-                      <th scope="col">Anggaran</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">Anggota</th>
+                      <th scope="col" className="hidden md:table-cell">
+                        Ketua
+                      </th>
+                      <th scope="col" className="hidden sm:table-cell">
+                        Status
+                      </th>
                       <th scope="col" className="text-right">
                         <span className="sr-only">Aksi</span>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {proposals.map((p) => (
+                    {proposals.map((p) => {
+                      const ketua = p.pengusul?.fullName || p.pengusul?.name || '—'
+                      const anggaran = p.anggaran ? `Rp ${Number(p.anggaran).toLocaleString('id-ID')}` : null
+                      return (
                       <tr key={p.id} {...barisKlik(() => bukaDetail(p.id), p.judul)}>
-                        <td className="min-w-[16rem] max-w-[28rem]">
-                          <p className="line-clamp-2 font-semibold leading-snug text-slate-900" title={p.judul}>
+                        <td className="min-w-0">
+                          <p className="line-clamp-2 break-words font-semibold leading-snug text-slate-900" title={p.judul}>
                             {p.judul}
                           </p>
                           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
                             <Badge label={JENIS_LABEL[p.jenis] || p.jenis || '—'} className="badge-tag" />
                             <span className="text-xs text-slate-500">ID #{p.id}</span>
                           </div>
+                          <p className="mt-1 truncate text-xs text-slate-500 md:hidden">
+                            {ketua} · {p.anggota?.length ?? 0} anggota{anggaran ? ` · ${anggaran}` : ''}
+                          </p>
+                          <div className="mt-1.5 sm:hidden">
+                            <Badge label={STATUS_LABEL[p.status] || p.status || '—'} className={STATUS_COLOR[p.status] || 'badge-neutral'} />
+                          </div>
                         </td>
-                        <td>
-                          <p className="font-medium text-slate-900">{p.pengusul?.fullName || p.pengusul?.name || '—'}</p>
-                          <p className="mt-0.5 max-w-[12rem] truncate text-xs text-slate-500" title={p.pengusul?.email || undefined}>
+                        <td className="hidden md:table-cell">
+                          <p className="line-clamp-2 break-words font-medium text-slate-900" title={ketua}>
+                            {ketua}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-slate-500" title={p.pengusul?.email || undefined}>
                             {p.pengusul?.email || '—'}
                           </p>
+                          <p className="mt-0.5 text-xs text-slate-500">{p.anggota?.length ?? 0} anggota</p>
                         </td>
-                        <td className="whitespace-nowrap tabular-nums text-slate-900">{p.anggaran ? `Rp ${Number(p.anggaran).toLocaleString('id-ID')}` : '—'}</td>
-                        <td>
+                        <td className="hidden sm:table-cell">
                           <Badge label={STATUS_LABEL[p.status] || p.status || '—'} className={STATUS_COLOR[p.status] || 'badge-neutral'} />
+                          {anggaran ? <p className="mt-1 whitespace-nowrap text-xs tabular-nums text-slate-500">{anggaran}</p> : null}
                         </td>
-                        <td className="whitespace-nowrap text-slate-900">{p.anggota?.length ?? 0} orang</td>
                         <td>
-                          <div className="flex items-center justify-end gap-1">
-                            <button type="button" onClick={tanpaBaris(() => openDokumenWithAuth(p.id))} className="btn btn-ghost btn-sm px-2" title="Lihat dokumen utama">
+                          <div className="flex items-center justify-end gap-0.5">
+                            <button
+                              type="button"
+                              onClick={tanpaBaris(() => openDokumenWithAuth(p.id))}
+                              className="icon-btn text-navy-700 hover:bg-navy-50"
+                              title="Lihat dokumen utama"
+                              aria-label={`Lihat dokumen utama ${p.judul}`}
+                            >
                               <FileText className="size-4" aria-hidden="true" />
-                              Dokumen
                             </button>
                             {viewOnly ? (
                               <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
@@ -248,15 +274,17 @@ export default function ProposalPage() {
                                 onClick={tanpaBaris(() => bukaDetail(p.id, '#keputusan'))}
                                 disabled={isStatusFinal(p.status)}
                                 title={isStatusFinal(p.status) ? 'Proposal sudah disetujui; status tidak dapat diubah lagi.' : 'Ubah status proposal'}
-                                className="btn btn-secondary btn-sm whitespace-nowrap disabled:cursor-not-allowed"
+                                aria-label={isStatusFinal(p.status) ? 'Status final' : `Ubah status ${p.judul}`}
+                                className="icon-btn text-navy-700 hover:bg-navy-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
                               >
-                                {isStatusFinal(p.status) ? 'Final' : 'Ubah Status'}
+                                {isStatusFinal(p.status) ? <Lock className="size-4" aria-hidden="true" /> : <Gavel className="size-4" aria-hidden="true" />}
                               </button>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -15,7 +15,6 @@ disambungkan** di frontend. Setelah disambungkan, pindahkan barisnya ke "Sudah d
 
 | ID | Elemen UI | API yang tersedia | Catatan untuk frontend |
 |---|---|---|---|
-| W-57 | Usulan › Dokumen › Target Luaran wajib (jurnal & poster) | `GET /luaran/jenis` (+ `/master/luaran`) + `wajib`; submit proposal tanpa target jurnal **dan** poster → 400 "Target luaran wajib: artikel jurnal dan poster"; `DELETE /luaran/:id` / `PATCH` ubah `jenis` item jurnal/poster terakhir → 409 (`new-api.md` bagian 32) | Ganti `LUARAN_WAJIB` dengan field `wajib`; tampilkan pesan 400/409 server. |
 | — | (kosong — semua endpoint yang tersedia sudah disambungkan) | | |
 
 ### Sudah disambungkan
@@ -24,6 +23,7 @@ Grup A (`new-api.md` bagian 10), Grup B (bagian 11), Grup C (bagian 12), dan bag
 
 | ID | Disambungkan di |
 |---|---|
+| W-57 | Usulan › Target Luaran: daftar jenis wajib dari `wajib` di `GET /luaran/jenis` (`utils/luaranWajib.js` `wajibDariJenis`, cadangan jurnal & poster); pesan 409 server saat sinkron target ditampilkan di peringatan simpan, pesan 400 submit tampil di dialog Ajukan (Detail Kegiatan) |
 | W-56 | Notifikasi: filter Kategori dikirim ke server (`?kategori=`, paginasi normal), lencana belum dibaca per kategori dari `GET /notifications/ringkasan`, label "dari" = `pengirim` (cadangan `pengirimFor`); baris diklik → Detail Notifikasi (tombol halaman terkait ada di detail) |
 | W-54 | Form Penilaian: nilai awal dari `myReview`, Simpan/Selesaikan mengirim `skor[]` + `danaDisetujui` (proposal; terkunci setelah diputuskan); `KartuPenilaian` & `ReviewList` (Ketua/pengusul) menampilkan rata-rata, kelayakan, skor per komponen, dana; `utils/danaKegiatan.js` memakai `danaDisetujui` kegiatan; dialog Tugaskan proposal = satu reviewer |
 | W-48 | Halaman Terkirim: **Cek status** → `POST /auth/register/status` (email lengkap dari state navigasi atau diketik); 409 `code` sudah ditangani sejak awal |
@@ -129,9 +129,9 @@ Data yang **sudah** tersambung ke API yang ada:
 | Cari anggota (+ kontak) | `GET /users/search` |
 | Rumpun Ilmu, Bidang, Kata Kunci | field `rumpunIlmu`, `bidang`, `kataKunci`; pilihan dari `GET /master/(rumpun-ilmu\|bidang)` |
 | Ketua Pengusul | user yang login (`GET /auth/me`) |
-| **Luaran wajib** jurnal & poster: item bawaan terkunci (tidak bisa dihapus/diganti jenis), ikut tersimpan lewat `POST /luaran` | `utils/luaranWajib.js` (aturan di frontend) |
+| **Luaran wajib** jurnal & poster: item bawaan terkunci (tidak bisa dihapus/diganti jenis), ikut tersimpan lewat `POST /luaran` | `wajib` di `GET /luaran/jenis` (W-57) + `utils/luaranWajib.js`; server menolak submit/hapus (400/409) |
 
-Semua kebutuhan API di bagian ini sudah tersedia (W-57, lihat "API sudah tersedia" di atas).
+Data yang **menunggu API**: tidak ada lagi (W-57 sudah disambungkan).
 
 ## Laporan kegiatan (API `/laporan`, `backend_go/new-api.md` bagian 3–5)
 

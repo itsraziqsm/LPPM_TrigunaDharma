@@ -225,74 +225,110 @@ export default function LuaranDosenPage() {
           <p className="px-5 py-10 text-center text-sm text-slate-500">{adaFilter ? 'Tidak ada luaran yang cocok dengan filter.' : 'Belum ada luaran.'}</p>
         ) : (
           <div className="table-wrap">
-            <table className="table table-tight">
+            {/* Ringkas (pola Riwayat Kegiatan): Kegiatan di bawah Dosen, bukti berupa ikon; Dosen (< md) & Status (< sm) ke sel Luaran. */}
+            <table className="table table-tight table-fixed">
+              <colgroup>
+                <col />
+                <col className="hidden w-36 sm:table-column" />
+                <col className="hidden w-64 md:table-column" />
+                <col className="w-24" />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Luaran</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Dosen</th>
-                  <th scope="col">Kegiatan</th>
-                  <th scope="col">Bukti</th>
+                  <th scope="col" className="hidden sm:table-cell">
+                    Status
+                  </th>
+                  <th scope="col" className="hidden md:table-cell">
+                    Dosen &amp; kegiatan
+                  </th>
+                  <th scope="col" className="text-right">
+                    Bukti
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {state.items.map((l) => (
-                  <tr key={l.id}>
-                    <td className="min-w-56">
-                      <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
-                        {l.jenisLabel || l.jenis}
-                        {l.prioritas ? <span className="badge badge-warning">Prioritas</span> : null}
-                      </span>
-                      <span className="block font-semibold text-slate-900">{l.target}</span>
-                      {l.judulCapaian ? <span className="block text-xs text-slate-600">{l.judulCapaian}</span> : null}
-                      {l.targetTanggal ? <span className="block text-xs text-slate-500">Target {hari(l.targetTanggal)}</span> : null}
-                    </td>
-                    <td>
+                {state.items.map((l) => {
+                  const status = (
+                    <>
                       <span className={`badge ${l.status === 'tercapai' ? 'badge-success' : 'badge-neutral'}`}>{l.status === 'tercapai' ? 'Tercapai' : 'Belum'}</span>
                       {l.dapatDiklaim ? <span className="mt-1 block text-xs font-medium text-green-700">Dapat diklaim</span> : null}
                       {l.tepatWaktu === false ? <span className="mt-1 block text-xs text-amber-700">Lewat target</span> : null}
                       {l.tercapaiAt ? <span className="block text-xs text-slate-500">{hari(l.tercapaiAt)}</span> : null}
-                    </td>
-                    <td>
-                      <span className="flex items-center gap-2">
-                        <UserAvatar user={l.pengusul} className="size-7 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
-                        <span className="min-w-0 text-sm">
-                          <span className="block font-medium text-slate-900">{nama(l.pengusul)}</span>
-                          <span className="block text-xs text-slate-500">{[l.pengusul?.nidn, l.pengusul?.programStudi].filter(Boolean).join(' · ') || '—'}</span>
-                        </span>
-                      </span>
-                    </td>
-                    <td className="min-w-48">
+                    </>
+                  )
+                  const kegiatan = (
+                    <>
                       {l.proposal ? (
-                        <Link to={`/proposals/detail/${l.proposal.id}`} className="block font-medium text-navy-700 hover:text-navy-900">
+                        <Link to={`/proposals/detail/${l.proposal.id}`} className="line-clamp-2 break-words text-sm font-medium text-navy-700 hover:text-navy-900" title={l.proposal.judul}>
                           {l.proposal.judul}
                         </Link>
                       ) : (
                         '—'
                       )}
-                      <span className="block text-xs capitalize text-slate-500">
-                        {[l.proposal?.jenis, l.proposal?.periode?.nama].filter(Boolean).join(' · ')}
+                      <span className="block truncate text-xs capitalize text-slate-500">{[l.proposal?.jenis, l.proposal?.periode?.nama].filter(Boolean).join(' · ')}</span>
+                    </>
+                  )
+                  return (
+                  <tr key={l.id}>
+                    <td className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
+                        {l.jenisLabel || l.jenis}
+                        {l.prioritas ? <span className="badge badge-warning">Prioritas</span> : null}
+                      </span>
+                      <span className="line-clamp-2 break-words font-semibold text-slate-900" title={l.target}>
+                        {l.target}
+                      </span>
+                      {l.judulCapaian ? (
+                        <span className="line-clamp-2 break-words text-xs text-slate-600" title={l.judulCapaian}>
+                          {l.judulCapaian}
+                        </span>
+                      ) : null}
+                      {l.targetTanggal ? <span className="block text-xs text-slate-500">Target {hari(l.targetTanggal)}</span> : null}
+                      <span className="mt-1.5 block sm:hidden">{status}</span>
+                      <span className="mt-1.5 block md:hidden">
+                        <span className="block truncate text-xs font-medium text-slate-700">{nama(l.pengusul)}</span>
+                        {kegiatan}
                       </span>
                     </td>
+                    <td className="hidden sm:table-cell">{status}</td>
+                    <td className="hidden min-w-0 md:table-cell">
+                      <span className="flex items-center gap-2">
+                        <UserAvatar user={l.pengusul} className="size-7 shrink-0 text-xs" fallbackClassName="bg-navy-50 text-navy-700" />
+                        <span className="min-w-0 text-sm">
+                          <span className="block truncate font-medium text-slate-900" title={nama(l.pengusul)}>
+                            {nama(l.pengusul)}
+                          </span>
+                          <span className="block truncate text-xs text-slate-500">{[l.pengusul?.nidn, l.pengusul?.programStudi].filter(Boolean).join(' · ') || '—'}</span>
+                        </span>
+                      </span>
+                      <span className="mt-1.5 block">{kegiatan}</span>
+                    </td>
                     <td>
-                      <span className="flex flex-col items-start gap-1">
+                      <span className="flex items-center justify-end gap-0.5">
                         {l.buktiFile ? (
-                          <button type="button" onClick={() => unduhBukti(l)} disabled={busy === l.id} className="btn btn-ghost btn-sm px-2">
-                            <Download className="size-4" aria-hidden="true" />
-                            {busy === l.id ? 'Mengunduh…' : 'File'}
+                          <button
+                            type="button"
+                            onClick={() => unduhBukti(l)}
+                            disabled={busy === l.id}
+                            className="icon-btn text-navy-700 hover:bg-navy-50"
+                            title="Unduh file bukti"
+                            aria-label={`Unduh file bukti ${l.target}`}
+                          >
+                            {busy === l.id ? <span className="spinner" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />}
                           </button>
                         ) : null}
                         {l.buktiUrl ? (
-                          <a href={l.buktiUrl} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm px-2">
+                          <a href={l.buktiUrl} target="_blank" rel="noreferrer" className="icon-btn text-navy-700 hover:bg-navy-50" title={l.buktiUrl} aria-label={`Buka tautan bukti ${l.target}`}>
                             <ExternalLink className="size-4" aria-hidden="true" />
-                            Link
                           </a>
                         ) : null}
                         {!l.buktiFile && !l.buktiUrl ? <span className="text-sm text-slate-400">—</span> : null}
                       </span>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

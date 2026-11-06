@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import AreaMemuat, { IndikatorMemuat } from '../components/AreaMemuat'
 import KartuNavy from '../components/KartuNavy'
-import { barisKlik, tanpaBaris } from '../utils/barisKlik'
+import { barisKlik } from '../utils/barisKlik'
+import { ChevronRight } from 'lucide-react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { laporanApi } from '../api/laporan'
 import useJejakMenu from '../hooks/useJejakMenu'
@@ -127,15 +128,24 @@ export default function LaporanMasukPage() {
       >
         {/* Muat ulang: tabel lama tetap tampil pudar — tanpa kedip (components/AreaMemuat). */}
         <AreaMemuat memuat={loading && all.length > 0} className="table-wrap">
-          <table className="table table-tight">
+          {/* Ringkas (pola Riwayat Kegiatan): tanpa gulir horizontal — Jenis & periode di bawah judul, tanggal diajukan di bawah
+              pengusul, jumlah reviewer di bawah status; ponsel: Pengusul (< md) & Status (< sm) pindah ke sel Judul. */}
+          <table className="table table-tight table-fixed">
+            <colgroup>
+              <col />
+              <col className="hidden w-52 md:table-column" />
+              <col className="hidden w-36 sm:table-column" />
+              <col className="w-10" />
+            </colgroup>
             <thead>
               <tr>
-                <th scope="col">Diajukan</th>
                 <th scope="col">Judul</th>
-                <th scope="col">Pengusul</th>
-                <th scope="col">Jenis</th>
-                <th scope="col">Status</th>
-                <th scope="col">Reviewer</th>
+                <th scope="col" className="hidden md:table-cell">
+                  Pengusul
+                </th>
+                <th scope="col" className="hidden sm:table-cell">
+                  Status
+                </th>
                 <th scope="col">
                   <span className="sr-only">Aksi</span>
                 </th>
@@ -144,13 +154,13 @@ export default function LaporanMasukPage() {
             <tbody>
               {loading && all.length === 0 ? (
                 <tr aria-hidden="true">
-                  <td colSpan={7}>
+                  <td colSpan={4}>
                     <div className="h-4 w-2/3 animate-pulse rounded bg-slate-100" />
                   </td>
                 </tr>
               ) : failed ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center">
+                  <td colSpan={4} className="py-10 text-center">
                     <p className="text-slate-600">Daftar laporan gagal dimuat.</p>
                     <button type="button" onClick={refresh} className="btn btn-secondary btn-sm mt-3">
                       Coba lagi
@@ -159,31 +169,46 @@ export default function LaporanMasukPage() {
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-slate-500">
+                  <td colSpan={4} className="py-10 text-center text-slate-500">
                     {noPeriode ? 'Tidak ada periode aktif.' : `Tidak ada laporan (${filterLabel.toLowerCase()}) di periode aktif.`}
                   </td>
                 </tr>
               ) : (
-                rows.map((l) => (
+                rows.map((l) => {
+                  const pengusul = l.pengusul?.fullName || l.pengusul?.name || '—'
+                  const reviewer = (l.reviewerTugasan || []).length
+                  return (
                   <tr key={l.id} {...barisKlik(() => open(l.id), l.judul)}>
-                    <td className="whitespace-nowrap tabular-nums">{tanggal(l.submittedAt || l.createdAt)}</td>
-                    <td className="min-w-[16rem] max-w-md">
-                      <p className="line-clamp-2 font-semibold text-slate-900">{l.judul}</p>
-                      <p className="text-xs text-slate-500">{l.periode?.nama || '—'}</p>
+                    <td className="min-w-0">
+                      <p className="line-clamp-2 break-words font-semibold text-slate-900" title={l.judul}>
+                        {l.judul}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500">
+                        {JENIS_LABEL[l.jenis] || l.jenis} · {l.periode?.nama || '—'}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-slate-500 md:hidden">
+                        {pengusul} · diajukan {tanggal(l.submittedAt || l.createdAt)}
+                      </p>
+                      <div className="mt-1.5 sm:hidden">
+                        <StatusBadge status={l.status} />
+                      </div>
                     </td>
-                    <td>{l.pengusul?.fullName || l.pengusul?.name}</td>
-                    <td>{JENIS_LABEL[l.jenis] || l.jenis}</td>
-                    <td>
+                    <td className="hidden md:table-cell">
+                      <p className="line-clamp-2 break-words font-medium text-slate-900" title={pengusul}>
+                        {pengusul}
+                      </p>
+                      <p className="mt-0.5 whitespace-nowrap text-xs tabular-nums text-slate-500">Diajukan {tanggal(l.submittedAt || l.createdAt)}</p>
+                    </td>
+                    <td className="hidden sm:table-cell">
                       <StatusBadge status={l.status} />
+                      <p className="mt-1 text-xs text-slate-500">{reviewer ? `${reviewer} reviewer` : 'Belum ada reviewer'}</p>
                     </td>
-                    <td className="tabular-nums">{(l.reviewerTugasan || []).length}</td>
                     <td className="text-right">
-                      <button type="button" onClick={tanpaBaris(() => open(l.id))} className="btn btn-secondary btn-sm">
-                        {viewOnly ? 'Lihat' : 'Kelola'}
-                      </button>
+                      <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" />
                     </td>
                   </tr>
-                ))
+                  )
+                })
               )}
             </tbody>
           </table>
