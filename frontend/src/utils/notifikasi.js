@@ -4,6 +4,9 @@ import {
   CircleCheck,
   CircleX,
   ClipboardCheck,
+  UserCheck,
+  UserX,
+  Users,
   FileUp,
   KeyRound,
   PencilLine,
@@ -33,6 +36,10 @@ export const TYPE_META = {
   deletion_approved: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan disetujui' },
   deletion_cancelled: { icon: Trash2, tone: 'bg-slate-100 text-slate-600', label: 'Penghapusan ditolak/dibatalkan' },
   password_direset: { icon: KeyRound, tone: 'bg-amber-50 text-amber-700', label: 'Password direset' },
+  // Tanggapan anggota atas undangan tim → pengusul (W-58; jenis disiapkan, menunggu backend).
+  undangan_diterima: { icon: UserCheck, tone: 'bg-green-50 text-green-700', label: 'Anggota menerima undangan' },
+  undangan_ditolak: { icon: UserX, tone: 'bg-red-50 text-red-700', label: 'Anggota menolak undangan' },
+  tim_lengkap: { icon: Users, tone: 'bg-green-50 text-green-700', label: 'Semua anggota menerima' },
 }
 
 // Kategori notifikasi menurut pengirim & jenis kegiatannya — field `kategori` dari backend (W-56); notifikasi dari
@@ -42,7 +49,7 @@ export const TYPE_META = {
 //   review    = penugasan & hasil review (reviewer)
 //   admin     = tindakan Admin/Ketua atas data & akun (hapus dokumen/periode, reset password), juga jenis lain
 export const KATEGORI_NOTIF = [
-  { key: 'kegiatan', label: 'Kegiatan', types: ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah'] },
+  { key: 'kegiatan', label: 'Kegiatan', types: ['proposal_diajukan', 'laporan_diajukan', 'laporan_diunggah', 'undangan_diterima', 'undangan_ditolak', 'tim_lengkap'] },
   { key: 'keputusan', label: 'Keputusan LPPM', types: ['proposal_disetujui', 'proposal_ditolak', 'proposal_revisi', 'laporan_disetujui', 'laporan_ditolak', 'laporan_revisi'] },
   { key: 'review', label: 'Review', types: ['reviewer_ditugaskan', 'review_selesai'] },
   { key: 'admin', label: 'Admin & sistem', types: [] },

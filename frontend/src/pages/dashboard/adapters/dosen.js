@@ -9,6 +9,7 @@ import {
   statusMeta,
 } from '../format'
 import { hitungSiapLapor } from '../../../utils/siapLapor'
+import { hitungTanggapanTim } from '../../../utils/tanggapanTim'
 import {
   PROFILE_SHORTCUT,
   approvalHint,
@@ -51,6 +52,7 @@ export async function load({ withReviewerDigest }) {
     luaran: req('Statistik luaran', () => luaranApi.stats().then((r) => r.data.data)),
     kepercayaan: req('Nilai kepercayaan', () => proposalDosenApi.getKepercayaan().then((r) => r.data.data)),
     siapLapor: req('Proposal siap dilaporkan', hitungSiapLapor),
+    tanggapanTim: req('Tanggapan tim', hitungTanggapanTim),
     ...(withReviewerDigest ? { tugasan: req('Tugasan review', loadTugasan) } : {}),
   })
 
@@ -109,6 +111,31 @@ export async function load({ withReviewerDigest }) {
       detail: 'Belum diajukan ke LPPM.',
       to: `/kegiatan/${firstDraft?.jenis || 'penelitian'}?status=draft`,
       cta: 'Lanjutkan',
+    })
+  }
+
+  // Tanggapan tim atas undangan (proposal draft/revisi): ada yang menolak → ganti anggota; semua menerima → ajukan.
+  const tim = data.tanggapanTim
+  if (tim?.ditolak?.length) {
+    const p = tim.ditolak[0]
+    attention.push({
+      key: 'tim-ditolak',
+      tone: 'danger',
+      title: `${tim.ditolak.length} proposal: ada anggota menolak undangan`,
+      detail: 'Ganti anggota yang menolak sebelum proposal diajukan.',
+      to: tim.ditolak.length === 1 ? `/kegiatan/${p.jenis}/usulan/${p.id}` : `/kegiatan/${p.jenis}?status=${p.status}`,
+      cta: 'Ubah anggota',
+    })
+  }
+  if (tim?.lengkap?.length) {
+    const p = tim.lengkap[0]
+    attention.push({
+      key: 'tim-lengkap',
+      tone: 'warning',
+      title: `${tim.lengkap.length} proposal siap diajukan`,
+      detail: 'Semua anggota tim sudah menerima undangan.',
+      to: tim.lengkap.length === 1 ? `/kegiatan/${p.jenis}/detail/${p.id}` : `/kegiatan/${p.jenis}?status=${p.status}`,
+      cta: 'Ajukan',
     })
   }
 

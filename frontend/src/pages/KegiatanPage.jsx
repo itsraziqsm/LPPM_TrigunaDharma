@@ -12,6 +12,7 @@ import PanelCari, { PilihanFilter } from '../components/PanelCari'
 import { barisKlik } from '../utils/barisKlik'
 import KartuNavy from '../components/KartuNavy'
 import { EVENT_SIAP_LAPOR, hitungSiapLapor } from '../utils/siapLapor'
+import { statusTim } from '../utils/tanggapanTim'
 import { StatusCard } from '../components/KepalaStatus'
 
 // ---------------------------------------------------------------------------
@@ -572,6 +573,8 @@ export default function KegiatanPage({ jenis }) {
               ) : (
                 rows.map((p) => {
                   const lanjut = p.status === 'draft' || p.status === 'revisi'
+                  // Tanggapan tim atas undangan (proposal draft/revisi): semua menerima / ada menolak / belum menanggapi.
+                  const tim = dataLaporan ? null : statusTim(p)
                   const buka = () =>
                     navigate(dataLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}` : `/kegiatan/${p.jenis || jenis}/detail/${p.id}`)
                   const klik = barisKlik(buka, p.judul)
@@ -586,14 +589,25 @@ export default function KegiatanPage({ jenis }) {
                         {p.periode?.nama || 'Belum ada periode'}
                         {p.anggaran ? ` · ${rupiah(p.anggaran)}` : ''}
                       </p>
+                      {tim ? (
+                        <span className={`badge ${tim.tone} mt-1.5`} title={tim.pesan}>
+                          {tim.label}
+                        </span>
+                      ) : null}
                       {lanjut ? (
                         <Link
-                          to={dataLaporan ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi` : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`}
+                          to={
+                            dataLaporan
+                              ? `/kegiatan/${p.jenis || jenis}/laporan/${p.id}/isi`
+                              : tim?.kode === 'lengkap'
+                                ? `/kegiatan/${p.jenis || jenis}/detail/${p.id}`
+                                : `/kegiatan/${p.jenis || jenis}/usulan/${p.id}`
+                          }
                           onClick={(e) => e.stopPropagation()}
                           onKeyDown={(e) => e.stopPropagation()}
-                          className="btn btn-primary btn-sm mt-2"
+                          className="btn btn-primary btn-sm mt-2 flex w-fit"
                         >
-                          Lanjutkan {p.status === 'revisi' ? 'revisi' : 'draf'}
+                          {tim?.kode === 'lengkap' ? 'Ajukan sekarang' : `Lanjutkan ${p.status === 'revisi' ? 'revisi' : 'draf'}`}
                           <ArrowRight className="size-4" aria-hidden="true" />
                         </Link>
                       ) : null}

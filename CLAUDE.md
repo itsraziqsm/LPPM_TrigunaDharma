@@ -356,7 +356,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   `/profil`, di tengah kartu di ponsel, isi rata tengah vertikal, jabatan kecil di atas nama serif besar, kontak kecil; Data Dosen — label kecil abu +
   nilai tebal, 2 kolom; tanpa angka mini), Statistik Dosen (**hanya 3 kartu**: Penelitian, Pengabdian (proposal disetujui), Nilai Kepercayaan
   (`GET /dosen/kepercayaan`, nilai saja — rincian & jumlah komponen **tidak** ditampilkan); ponsel: 2 kolom tanpa ikon, Nilai Kepercayaan selebar 2 kolom)). **Ponsel (< sm)**: isian/kartu yang
-  API-nya belum ada (No. HP, Institusi, TTL, Sertifikasi) disembunyikan, garis pemisah dashboard disembunyikan, daftar "Proposal terbaru" hanya
+  API-nya belum ada (backend lama tanpa No. HP/Institusi/TTL; Sertifikasi **dibatalkan**) disembunyikan, garis pemisah dashboard disembunyikan, daftar "Proposal terbaru" hanya
   judul + status & tanggal (`ItemList` menyembunyikan meta). "Perlu perhatian" tanpa subjudul & tanpa judul berkutip. Data dari `adapters/dosen.js` (`model.dosen`).
   Bagian tanpa endpoint memakai penanda `ApiPending` ("API belum ada") dan **wajib**
   dicatat di `docs/waitingApi-list.md`; hapus barisnya setelah API tersedia.
@@ -371,8 +371,15 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   **Usulkan Proposal Baru** & **Kirim Laporan Baru** ada **di atas** Riwayat (di bawah kartu ringkasan); **Kirim Laporan Baru** diberi lencana
   jumlah proposal disetujui yang belum punya laporan (`GET /laporan/eligible`, disaring per jenis; tombol berbingkai brass + teks "N … disetujui siap dilanjutkan ke pelaporan").
   Hitungan bersama `utils/siapLapor.js` (`hitungSiapLapor`, event `segarkanSiapLapor()` dipanggil setelah laporan dibuat) juga dipakai **lencana sidebar**
-  Kegiatan › Penelitian/Pengabdian (`badge: 'lapor-<jenis>'`; grup tertutup menampilkan total di kepala grup — `NavGroup` prop `lencana`; rail ciut = titik)
-  dan item **Perlu perhatian** Beranda dosen "N proposal disetujui siap dilaporkan" → Kirim laporan (`adapters/dosen.js`, `siapLapor`). Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
+  Kegiatan › Penelitian/Pengabdian (`badge: 'kegiatan-<jenis>'`, digabung dengan tanggapan tim di bawah; grup tertutup menampilkan total di kepala grup — `NavGroup` prop `lencana`; rail ciut = titik)
+  dan item **Perlu perhatian** Beranda dosen "N proposal disetujui siap dilaporkan" → Kirim laporan (`adapters/dosen.js`, `siapLapor`).
+  **Tanggapan tim atas undangan** (`utils/tanggapanTim.js`: `statusTim(p)` dari `anggota[].statusUndangan` proposal draft/revisi = `lengkap`
+  (semua menerima) | `ditolak` (ada menolak) | `menunggu`; `hitungTanggapanTim()` per jenis; event `segarkanTanggapanTim()` setelah Usulan disimpan &
+  proposal diajukan): lencana baris Riwayat ("Semua anggota menerima" → tombol **Ajukan sekarang** ke Detail Kegiatan / "N anggota menolak" /
+  "N belum menanggapi"), banner hijau/merah/kuning di Detail Kegiatan, lencana sidebar Kegiatan › jenis (`badge: 'kegiatan-<jenis>'` = siap lapor +
+  tim lengkap + tim ada penolakan; tooltip merinci; dihitung ulang saat tab kembali aktif), dan Perlu perhatian Beranda ("N proposal: ada anggota
+  menolak undangan" → Ubah anggota, "N proposal siap diajukan" → Ajukan). Notifikasi `undangan_diterima|undangan_ditolak|tim_lengkap` disiapkan di
+  `utils/notifikasi.js` (kategori Kegiatan), menunggu backend W-58. Draft bisa **Hapus** dari Riwayat. Paginasi Riwayat & tabel "sebagai anggota tim" = 5 baris per halaman (`LIMIT`). Tabel **"sebagai anggota tim"** juga punya `PanelCari` (cari judul/abstrak · Filter status → `GET /dosen/proposals/as-member?search=&status=`). **Tanpa tombol Detail**:
   seluruh baris bisa diklik/Enter (`barisKlik`; proposal → Detail Kegiatan, laporan → index laporan; tombol di
   dalam baris menghentikan propagasi). Query `?status=<status>` membuka dengan filter, `?detail=<id>` (tautan
   lama) dialihkan ke Detail Kegiatan.

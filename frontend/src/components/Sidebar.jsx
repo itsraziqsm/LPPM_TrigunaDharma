@@ -11,6 +11,7 @@ import ConfirmDialog from './ConfirmDialog'
 import { Archive, Award, BadgeDollarSign, BookOpen, GraduationCap, ChartNoAxesColumn, FileCheck2, FileCog, Calendar, ChevronRight, FolderKanban, MailPlus, DatabaseBackup, ClipboardCheck, ClipboardList, FileText, HeartHandshake, House, Inbox, LogOut, Menu, Microscope, PanelLeftClose, PanelLeftOpen, Printer, Users, X } from 'lucide-react'
 import { EVENT_TUGASAN, hitungTugasanReview } from '../utils/tugasanReview'
 import { EVENT_SIAP_LAPOR, hitungSiapLapor } from '../utils/siapLapor'
+import { EVENT_TANGGAPAN_TIM, hitungTanggapanTim } from '../utils/tanggapanTim'
 import { canReview } from '../utils/roles'
 
 const ROLE_LABEL = {
@@ -107,8 +108,8 @@ const DOSEN_NAV_ITEMS = [
     ),
     children: [
       // Ikon anak dipakai di rail ciut (tampil sebagai ikon terpisah).
-      { path: '/kegiatan/penelitian', label: 'Penelitian', badge: 'lapor-penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
-      { path: '/kegiatan/pengabdian', label: 'Pengabdian', badge: 'lapor-pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/kegiatan/penelitian', label: 'Penelitian', badge: 'kegiatan-penelitian', icon: <Microscope className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
+      { path: '/kegiatan/pengabdian', label: 'Pengabdian', badge: 'kegiatan-pengabdian', icon: <HeartHandshake className="size-[18px]" strokeWidth={1.5} aria-hidden="true" /> },
     ],
   },
   {
@@ -192,10 +193,15 @@ function Lencana({ jumlah, title }) {
   )
 }
 
-const judulLencana = (item, n) =>
-  item.badge === 'review' ? `${n} review belum selesai` : String(item.badge || '').startsWith('lapor') ? `${n} proposal disetujui siap dilaporkan` : `${n} undangan menunggu`
+// Teks tooltip lencana. Lencana Kegiatan › jenis menggabungkan beberapa hal; rinciannya dari rincianLencana(item).
+const judulLencana = (item, n, rincian) =>
+  item.badge === 'review'
+    ? `${n} review belum selesai`
+    : String(item.badge || '').startsWith('kegiatan-')
+      ? (rincian || []).filter(Boolean).join(' · ') || `${n} perlu ditindaklanjuti`
+      : `${n} undangan menunggu`
 
-function NavGroup({ item, onNavigate, depth = 0, lencana = () => 0 }) {
+function NavGroup({ item, onNavigate, depth = 0, lencana = () => 0, rincian = () => null }) {
   const { pathname } = useLocation()
   const childActive = daunMenu(item.children).some((c) => pathname.startsWith(c.path))
   // Pilihan manual berlaku di halaman tempat ia dibuat; saat pindah halaman
@@ -228,11 +234,11 @@ function NavGroup({ item, onNavigate, depth = 0, lencana = () => 0 }) {
         <div className={`${depth === 0 ? 'ml-[1.3rem]' : 'ml-3'} flex flex-col gap-0.5 border-l border-navy-200 py-0.5 pl-2`}>
           {item.children.map((child) =>
             child.children ? (
-              <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} lencana={lencana} />
+              <NavGroup key={child.path} item={child} onNavigate={onNavigate} depth={depth + 1} lencana={lencana} rincian={rincian} />
             ) : (
               <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClass}>
                 <span className="flex-1 truncate">{child.label}</span>
-                <Lencana jumlah={lencana(child)} title={judulLencana(child, lencana(child))} />
+                <Lencana jumlah={lencana(child)} title={judulLencana(child, lencana(child), rincian(child))} />
               </NavLink>
             ),
           )}
@@ -396,17 +402,44 @@ export default function Sidebar() {
       window.removeEventListener(EVENT_SIAP_LAPOR, hitung)
     }
   }, [isDosen])
-  // badge: true = undangan menunggu; 'review' = review belum selesai; 'lapor-<jenis>' = siap dilaporkan.
-  const jumlahLencana = (item) =>
-    item.badge === 'review'
-      ? reviewBelum
-      : item.badge === 'lapor-penelitian'
-        ? siapLapor.penelitian
-        : item.badge === 'lapor-pengabdian'
-          ? siapLapor.pengabdian
-          : item.badge
-            ? pendingCount
-            : 0
+  // Proposal draft/revisi yang tim-nya sudah menanggapi (semua menerima / ada yang menolak), per jenis (dosen).
+  const [tanggapan, setTanggapan] = useState({ penelitian: { lengkap: 0, ditolak: 0, total: 0 }, pengabdian: { lengkap: 0, ditolak: 0, total: 0 } })
+  useEffect(() => {
+    if (!isDosen) return undefined
+    let alive = true
+    const hitung = () =>
+      hitungTanggapanTim()
+        .then((h) => alive && setTanggapan(h))
+        .catch(() => {})
+    hitung()
+    window.addEventListener(EVENT_TANGGAPAN_TIM, hitung)
+    // Anggota bisa menanggapi kapan saja (belum ada notifikasi server, W-58) → hitung ulang saat tab kembali aktif.
+    const saatTampil = () => document.visibilityState === 'visible' && hitung()
+    document.addEventListener('visibilitychange', saatTampil)
+    return () => {
+      alive = false
+      window.removeEventListener(EVENT_TANGGAPAN_TIM, hitung)
+      document.removeEventListener('visibilitychange', saatTampil)
+    }
+  }, [isDosen])
+  // badge: true = undangan menunggu; 'review' = review belum selesai;
+  // 'kegiatan-<jenis>' = siap dilaporkan + tim sudah menanggapi (semua menerima / ada yang menolak).
+  const jenisLencana = (item) => (String(item.badge || '').startsWith('kegiatan-') ? item.badge.slice('kegiatan-'.length) : null)
+  const jumlahLencana = (item) => {
+    const j = jenisLencana(item)
+    if (j) return (siapLapor[j] || 0) + (tanggapan[j]?.total || 0)
+    return item.badge === 'review' ? reviewBelum : item.badge ? pendingCount : 0
+  }
+  const rincianLencana = (item) => {
+    const j = jenisLencana(item)
+    if (!j) return null
+    const t = tanggapan[j] || {}
+    return [
+      siapLapor[j] ? `${siapLapor[j]} proposal disetujui siap dilaporkan` : null,
+      t.lengkap ? `${t.lengkap} proposal: semua anggota menerima undangan` : null,
+      t.ditolak ? `${t.ditolak} proposal: ada anggota menolak undangan` : null,
+    ]
+  }
 
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -509,7 +542,7 @@ export default function Sidebar() {
           <div ref={setMenuEl} className="relative flex flex-col gap-0.5">
             <SorotNav wadah={menuEl} kunci={`${pathname}|${collapsed}|${mobileOpen}`} />
             {allNavItems.map((item) => item.children ? (
-              <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} lencana={jumlahLencana} />
+              <NavGroup key={item.path} item={item} onNavigate={() => setMobileOpen(false)} lencana={jumlahLencana} rincian={rincianLencana} />
             ) : (
               <NavLink
                 key={item.path}
@@ -528,7 +561,7 @@ export default function Sidebar() {
                 {jumlahLencana(item) > 0 && (
                   <span
                     className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brass-400 px-1.5 text-[0.6875rem] font-bold leading-none text-rail"
-                    title={judulLencana(item, jumlahLencana(item))}
+                    title={judulLencana(item, jumlahLencana(item), rincianLencana(item))}
                   >
                     {jumlahLencana(item)}
                   </span>

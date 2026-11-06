@@ -31,6 +31,7 @@ import { DokumenTab } from './ProposalDosen/DokumenTab'
 import ApiPending from '../components/ApiPending'
 import { danaFinal, danaSementara } from '../utils/danaKegiatan'
 import IdentitasKegiatan from '../components/IdentitasKegiatan'
+import { segarkanTanggapanTim, statusTim } from '../utils/tanggapanTim'
 
 // ---------------------------------------------------------------------------
 // Detail Kegiatan (/kegiatan/:jenis/detail/:id) — halaman, bukan modal. Dipakai
@@ -197,6 +198,7 @@ export default function KegiatanDetailPage({ jenis }) {
   const bisaUbah = sebagaiPengusul && (detail.status === 'draft' || detail.status === 'revisi')
   const anggota = detail.anggota || []
   const belumSetuju = anggota.filter((a) => a.statusUndangan !== 'diterima')
+  const tim = statusTim(detail)
   // Dosen yang diundang (belum menjawab) boleh membaca seluruh kegiatan (W-41); tautkan ke undangannya.
   const undanganSaya = sebagaiPengusul ? null : anggota.find((a) => (a.user?.id ?? a.userId) === user?.id && a.statusUndangan === 'pending')
   const isPengabdian = detail.jenis === 'pengabdian'
@@ -212,6 +214,7 @@ export default function KegiatanDetailPage({ jenis }) {
     setSubmitting(true)
     try {
       await proposalDosenApi.submit(detail.id)
+      segarkanTanggapanTim()
       reload()
     } catch (e) {
       alertDialog({ title: 'Proposal belum dapat diajukan', message: e.response?.data?.message || 'Coba lagi.' })
@@ -291,9 +294,22 @@ export default function KegiatanDetailPage({ jenis }) {
 
         <Tahapan tahapan={detail.tahapan} status={detail.status} />
 
-        {bisaUbah && belumSetuju.length > 0 ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            {belumSetuju.length} anggota belum menerima undangan. Proposal dapat diajukan setelah semua anggota menerima.
+        {bisaUbah && tim ? (
+          <p
+            role="status"
+            className={`rounded-lg border px-4 py-3 text-sm ${
+              tim.kode === 'lengkap'
+                ? 'border-green-200 bg-green-50 text-green-800'
+                : tim.kode === 'ditolak'
+                  ? 'border-red-200 bg-red-50 text-red-800'
+                  : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}
+          >
+            {tim.kode === 'menunggu'
+              ? `${tim.pesan} Proposal dapat diajukan setelah semua anggota menerima.`
+              : tim.kode === 'ditolak'
+                ? `${tim.pesan}${tim.pending ? ` ${tim.pending} anggota lain belum menanggapi.` : ''}`
+                : tim.pesan}
           </p>
         ) : null}
         {detail.catatanRevisi ? (

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import useDrafForm from '../hooks/useDrafForm'
 import { kunciWajib, lengkapiWajib, wajibKurang } from '../utils/luaranWajib'
+import { segarkanTanggapanTim } from '../utils/tanggapanTim'
 import DrafDipulihkan from '../components/DrafDipulihkan'
 import Breadcrumb from '../components/Breadcrumb'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -596,6 +597,7 @@ export default function UsulanPage({ jenis: jenisRoute }) {
         warn.push('sebagian target luaran gagal disimpan')
       }
     }
+    segarkanTanggapanTim() // anggota bisa berubah → lencana tanggapan tim dihitung ulang
     return { savedId, warn }
   }
 

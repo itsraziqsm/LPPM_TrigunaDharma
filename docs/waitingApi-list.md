@@ -82,11 +82,8 @@ Data yang **sudah** tersambung ke API yang ada:
 | Nilai Kepercayaan | `GET /dosen/kepercayaan` |
 | Nama, email, foto, jabatan fungsional, No. HP, NIDN, institusi, TTL, prodi, SINTA | `GET /auth/me` |
 
-Data yang **menunggu API**:
-
-| ID | Elemen UI | Kebutuhan data | Usulan endpoint / perubahan | Catatan |
-|---|---|---|---|---|
-| W-05 | Profil: **Sertifikasi** | Jumlah sertifikasi dosen | `GET /dosen/sertifikasi/stats` → `{ total: number }` | **Ditunda** (keputusan pemilik proyek). Belum ada tabel sertifikasi. |
+Data yang **menunggu API**: tidak ada lagi. (W-05 Sertifikasi **dibatalkan** — keputusan pemilik proyek, 6 Nov 2026;
+kartu & isian Sertifikasi sudah tidak ada di dashboard, backend tidak perlu membuat endpoint.)
 
 ## Menu Kegiatan → Status Penelitian / Pengabdian (`frontend/src/pages/KegiatanPage.jsx`)
 
@@ -105,7 +102,15 @@ Data yang **sudah** tersambung ke API yang ada:
 | Bagian **sebagai anggota tim** | `GET /dosen/proposals/as-member` |
 | Tombol Detail / Edit proposal | `GET /dosen/proposals/:id` (modal detail) / halaman Usulan |
 
-Data yang **menunggu API**: tidak ada lagi.
+Data yang **sudah** tersambung untuk tanggapan tim (`utils/tanggapanTim.js`): lencana **Semua anggota menerima** / **N anggota menolak** /
+**N belum menanggapi** di baris Riwayat (proposal draft/revisi), banner di Detail Kegiatan, lencana menu Kegiatan › jenis (digabung dengan
+"siap dilaporkan"), "Perlu perhatian" Beranda dosen — semuanya dihitung dari `anggota[].statusUndangan` di `GET /dosen/proposals`.
+
+Data yang **menunggu API**:
+
+| ID | Elemen UI | Kebutuhan | Usulan endpoint / perubahan | Catatan |
+|---|---|---|---|---|
+| W-58 | **Notifikasi** ke pengusul saat anggota tim menanggapi undangan | Pengusul diberi tahu tanpa harus membuka halaman | Di `PATCH /dosen/proposals/invitations/:id` (`dosenRespondInvitation`, kini hanya `logActivity`): buat notifikasi untuk `pengusulId` proposal — `type` **`undangan_diterima`** / **`undangan_ditolak`** (judul mis. "Anggota menerima undangan", pesan "<nama> menerima/menolak undangan pada proposal \"<judul>\""), dan bila setelah respons **semua** anggota `diterima` tambahkan **`tim_lengkap`** ("Semua anggota menerima undangan — proposal siap diajukan"); `refType: "proposal"`, `refId` = id proposal, `pengirimId` = anggota yang menanggapi, `kategori` = `kegiatan`. Tambah ketiga nilai ke ENUM `NotifType` (migrasi) dan pemetaan kategori W-56. | Frontend sudah siap: `TYPE_META` (ikon, label) & kategori Kegiatan di `utils/notifikasi.js`; tautan notifikasi → Detail Kegiatan (aturan `refType: proposal` yang ada). Lencana sudah jalan tanpa API ini; selama W-58 belum ada, lencana dihitung ulang saat tab kembali aktif. |
 
 ## Usulan Penelitian / Pengabdian (`frontend/src/pages/UsulanPage.jsx`)
 
