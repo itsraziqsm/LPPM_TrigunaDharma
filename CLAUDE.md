@@ -379,7 +379,7 @@ Base URL API: `VITE_API_URL` (default `http://localhost:3000/api/v1`, di `src/ap
   "N belum menanggapi"), banner hijau/merah/kuning di Detail Kegiatan, lencana sidebar Kegiatan › jenis (`badge: 'kegiatan-<jenis>'` = siap lapor +
   tim lengkap + tim ada penolakan; tooltip merinci; dihitung ulang saat tab kembali aktif), dan Perlu perhatian Beranda ("N proposal: ada anggota
   menolak undangan" → Ubah anggota, "N proposal siap diajukan" → Ajukan).
-  **Riwayat mode ringkas (semua jenis; flag `ringkas` = true di `KegiatanPage` & `MemberSection`, cabang lama belum dibuang)**: tanpa gulir
+  **Riwayat tabel ringkas (semua jenis, `KegiatanPage` & `MemberSection`; tata letak lama 9 kolom sudah dibuang)**: tanpa gulir
   horizontal 360–1920 px — `table-fixed` + `<colgroup>`; kolom Judul (periode · skema · anggaran, lencana tim, tombol Lanjutkan/Ajukan) · Status
   (+ Tahapan di bawahnya) · Luaran = **pokoknya saja** (`utils/luaranPokok.js`: "Jurnal", "Poster", "HKI"…, teks lengkap di tooltip; tab Laporan:
   Luaran Tercapai 3 baris) · Tanggal (diperbarui + "Dibuat …", tanpa jam) · aksi (Hapus draf = ikon). Kolom Jenis dihapus (tab sudah menunjukkan).
